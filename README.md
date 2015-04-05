@@ -1,2 +1,6 @@
 # octastd
-New standard library for the upcoming OctaForge native API
+
+OctaSTD is a collection of C++ utilities to aid the upcoming OctaForge C++
+API. It provides containers (dynamic arrays etc) as well as other utilities.
+
+Currently implemented:
