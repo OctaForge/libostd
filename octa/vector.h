@@ -3,12 +3,12 @@
  * This file is part of OctaSTD. See COPYING.txt for futher information.
  */
 
-#ifndef OCTASTD_VECTOR_H
-#define OCTASTD_VECTOR_H
+#ifndef OCTA_VECTOR_H
+#define OCTA_VECTOR_H
 
-#include <octastd/new.h>
+#include <octa/new.h>
 
-namespace octastd {
+namespace octa {
     template<typename T>
     class vector {
         T *buf;

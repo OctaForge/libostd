@@ -3,8 +3,8 @@
  * This file is part of OctaSTD. See COPYING.txt for futher information.
  */
 
-#ifndef OCTASTD_NEW_H
-#define OCTASTD_NEW_H
+#ifndef OCTA_NEW_H
+#define OCTA_NEW_H
 
 #include <stdlib.h>
 
