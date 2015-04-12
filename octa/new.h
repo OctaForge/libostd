@@ -1,6 +1,6 @@
 /* Default new/delete operator overloads for OctaSTD.
  *
- * This file is part of OctaSTD. See COPYING.txt for futher information.
+ * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
 #ifndef OCTA_NEW_H
