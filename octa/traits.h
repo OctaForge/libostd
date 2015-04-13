@@ -6,6 +6,8 @@
 #ifndef OCTA_TRAITS_H
 #define OCTA_TRAITS_H
 
+#include <stddef.h>
+
 #include "octa/types.h"
 
 namespace octa {
@@ -86,9 +88,8 @@ namespace octa {
 
     /* is pointer */
 
-    template<typename T> struct IsPointerBase: false_t {};
-
-    template<> struct IsPointerBase<T *>: true_t {};
+    template<typename  > struct IsPointerBase     : false_t {};
+    template<typename T> struct IsPointerBase<T *>:  true_t {};
 
     template<typename T>
     struct IsPointer: IsPointerBase<typename RemoveConstVolatile<T>::type> {};
@@ -101,15 +102,30 @@ namespace octa {
 
     /* type equality */
 
-    template<typename, typename>
-    struct IsEqual {
-        static const bool value = false;
-    };
+    template<typename, typename> struct IsEqual      : false_t {};
+    template<typename T        > struct IsEqual<T, T>:  true_t {};
 
-    template<typename T>
-    struct IsEqual<T, T> {
-        static const bool value = true;
-    };
+    /* is lvalue reference */
+
+    template<typename  > struct IsLvalueReference     : false_t {};
+    template<typename T> struct IsLvalueReference<T &>:  true_t {};
+
+    /* is rvalue reference */
+
+    template<typename  > struct IsRvalueReference      : false_t {};
+    template<typename T> struct IsRvalueReference<T &&>:  true_t {};
+
+    /* is reference */
+
+    template<typename T> struct IsReference: IntegralConstant<bool,
+        (IsLvalueReference<T>::value || IsRvalueReference<T>::value)
+    > {};
+
+    /* is array */
+
+    template<typename            > struct IsArray      : false_t {};
+    template<typename T          > struct IsArray<T[] >:  true_t {};
+    template<typename T, size_t N> struct IsArray<T[N]>:  true_t {};
 }
 
 #endif
