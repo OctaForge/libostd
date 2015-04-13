@@ -6,8 +6,8 @@
 #ifndef OCTA_VECTOR_H
 #define OCTA_VECTOR_H
 
-#include <octa/new.h>
-#include <octa/type_traits.h>
+#include "octa/new.h"
+#include "octa/traits.h"
 
 namespace octa {
     template<typename T>
