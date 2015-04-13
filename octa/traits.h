@@ -47,7 +47,7 @@ namespace octa {
         static const T value = val;
 
         typedef T value_type;
-        typedef IntegralConstant<T, v> type;
+        typedef IntegralConstant<T, val> type;
     };
 
     typedef IntegralConstant<bool, true>  true_t;
@@ -79,12 +79,18 @@ namespace octa {
 
     template<typename T> struct IsFloatBase  : false_t {};
 
-    template<> struct IsFloatBase<float>: true_t {};
-    template<> struct IsFloatBase<double>: true_t {};
+    template<> struct IsFloatBase<float  >: true_t {};
+    template<> struct IsFloatBase<double >: true_t {};
     template<> struct IsFloatBase<ldouble>: true_t {};
 
     template<typename T>
     struct IsFloat: IsFloatBase<typename RemoveConstVolatile<T>::type> {};
+
+    /* is number */
+
+    template<typename T> struct IsNumber: IntegralConstant<bool,
+        (IsInteger<T>::value || IsFloat<T>::value)
+    > {};
 
     /* is pointer */
 
@@ -98,6 +104,18 @@ namespace octa {
 
     template<typename T> struct IsPOD: IntegralConstant<bool,
         (IsInteger<T>::value || IsFloat<T>::value || IsPointer<T>::value)
+    > {};
+
+    /* is class */
+
+    struct IsClassBase {
+        template<typename T> static char test(void (T::*)(void));
+        template<typename  > static  int test(...);
+    };
+
+    template<typename T>
+    struct IsClass: IntegralConstant<bool,
+        sizeof(IsClassBase::test<T>(0)) == 1
     > {};
 
     /* type equality */
