@@ -18,6 +18,8 @@ namespace octa {
     typedef long long llong;
 
     typedef long double ldouble;
+
+    typedef decltype(nullptr) nullptr_t;
 }
 
 #endif

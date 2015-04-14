@@ -44,7 +44,7 @@ namespace octa {
 
     template<typename T, T val>
     struct IntegralConstant {
-        static const T value = val;
+        static constexpr const T value = val;
 
         typedef T value_type;
         typedef IntegralConstant<T, val> type;
@@ -53,7 +53,7 @@ namespace octa {
     typedef IntegralConstant<bool, true>  true_t;
     typedef IntegralConstant<bool, false> false_t;
 
-    template<typename T, T val> const T IntegralConstant<T, val>::value;
+    template<typename T, T val> constexpr const T IntegralConstant<T, val>::value;
 
     /* is integer */
 
@@ -100,6 +100,27 @@ namespace octa {
     template<typename T>
     struct IsPointer: IsPointerBase<typename RemoveConstVolatile<T>::type> {};
 
+    /* is pointer to member function */
+
+    template<typename  > struct IsMemberPointerBase: false_t {};
+    template<typename T, typename U>
+    struct IsMemberPointerBase<T U::*>:  true_t {};
+
+    template<typename T>
+    struct IsMemberPointer: IsMemberPointerBase<
+        typename RemoveConstVolatile<T>::type
+    > {};
+
+    /* is null pointer */
+
+    template<typename> struct IsNullPointerBase           : false_t {};
+    template<        > struct IsNullPointerBase<nullptr_t>:  true_t {};
+
+    template<typename T>
+    struct IsNullPointer: IsNullPointerBase<
+        typename RemoveConstVolatile<T>::type
+    > {};
+
     /* is POD: currently wrong */
 
     template<typename T> struct IsPOD: IntegralConstant<bool,
@@ -144,6 +165,28 @@ namespace octa {
     template<typename            > struct IsArray      : false_t {};
     template<typename T          > struct IsArray<T[] >:  true_t {};
     template<typename T, size_t N> struct IsArray<T[N]>:  true_t {};
+
+    /* move */
+
+    template<typename T>
+    static inline constexpr typename RemoveReference<T>::type &&
+    move(T &&v) noexcept {
+        return (typename RemoveReference<T>::type &&)v;
+    }
+
+    /* forward */
+
+    template<typename T>
+    static inline constexpr T &&
+    forward(typename RemoveReference<T>::type &v) noexcept {
+        return (T &&)v;
+    }
+
+    template<typename T>
+    static inline constexpr T &&
+    forward(typename RemoveReference<T>::type &&v) noexcept {
+        return (T &&)v;
+    }
 }
 
 #endif
