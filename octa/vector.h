@@ -22,15 +22,15 @@ namespace octa {
 
         explicit Vector(): p_buf(NULL), p_len(0), p_cap(0) {}
 
-        Vector(const Vector &v): p_buf(NULL), p_len(0), p_cap(0) {
-            *this = v;
-        }
-
-        Vector(size_t n, const T &val = T()): Vector() {
+        explicit Vector(size_t n, const T &val = T()): Vector() {
             p_buf = new uchar[n * sizeof(T)];
             p_len = p_cap = n;
             T *cur = p_buf, *last = p_buf + n;
             while (cur != last) new (cur++) T(val);
+        }
+
+        Vector(const Vector &v): p_buf(NULL), p_len(0), p_cap(0) {
+            *this = v;
         }
 
         ~Vector() {
