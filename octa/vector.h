@@ -33,6 +33,11 @@ namespace octa {
             *this = v;
         }
 
+        Vector(Vector &&v): p_buf(v.p_buf), p_len(v.p_len), p_cap(v.p_cap) {
+            v.p_buf = NULL;
+            v.p_len = v.p_cap = 0;
+        }
+
         ~Vector() {
             clear();
         }
@@ -136,6 +141,13 @@ namespace octa {
         T &push() {
             if (p_len == p_cap) reserve(p_len + 1);
             new (&p_buf[p_len]) T;
+            return p_buf[p_len++];
+        }
+
+        template<typename ...U>
+        T &emplace_back(U &&...args) {
+            if (p_len == p_cap) reserve(p_len + 1);
+            new (&p_buf[p_len]) T(args...);
             return p_buf[p_len++];
         }
 
