@@ -116,7 +116,7 @@ namespace octa {
                 } else {
                     T *cur = p_buf, *tcur = tmp, *last = tmp + p_len;
                     while (tcur != last) {
-                        new (tcur++) T(*cur);
+                        new (tcur++) T(move(*cur));
                         (*cur).~T();
                         ++cur;
                     }
@@ -147,7 +147,7 @@ namespace octa {
         template<typename ...U>
         T &emplace_back(U &&...args) {
             if (p_len == p_cap) reserve(p_len + 1);
-            new (&p_buf[p_len]) T(args...);
+            new (&p_buf[p_len]) T(forward<U>(args)...);
             return p_buf[p_len++];
         }
 
