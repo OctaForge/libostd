@@ -7,9 +7,11 @@
 #define OCTA_VECTOR_H
 
 #include <string.h>
+#include <stddef.h>
 
 #include "octa/new.h"
 #include "octa/traits.h"
+#include "octa/utility.h"
 
 namespace octa {
     template<typename T>
@@ -21,11 +23,13 @@ namespace octa {
         enum { MIN_SIZE = 8 };
 
         struct type {
-            typedef       T  value;
-            typedef       T &reference;
-            typedef const T &const_reference;
-            typedef       T *pointer;
-            typedef const T *const_pointer;
+            typedef       T   value;
+            typedef       T  &reference;
+            typedef const T  &const_reference;
+            typedef       T  *pointer;
+            typedef const T  *const_pointer;
+            typedef size_t    size;
+            typedef ptrdiff_t difference;
         };
 
         explicit Vector(): p_buf(NULL), p_len(0), p_cap(0) {}
@@ -37,13 +41,17 @@ namespace octa {
             while (cur != last) new (cur++) T(val);
         }
 
-        Vector(const Vector &v): p_buf(NULL), p_len(0), p_cap(0) {
+        Vector(const Vector &v): Vector() {
             *this = v;
         }
 
         Vector(Vector &&v): p_buf(v.p_buf), p_len(v.p_len), p_cap(v.p_cap) {
             v.p_buf = NULL;
             v.p_len = v.p_cap = 0;
+        }
+
+        Vector(initializer_list<T> v): Vector() {
+            insert(0, v.length(), v.get());
         }
 
         ~Vector() {
@@ -54,6 +62,7 @@ namespace octa {
             if (p_cap > 0) {
                 if (octa::IsClass<T>::value) {
                     T *cur = p_buf, *last = p_buf + p_len;
+                    while (cur != last) (*cur++).~T();
                 }
                 delete[] (uchar *)p_buf;
                 p_buf = NULL;
@@ -196,6 +205,21 @@ namespace octa {
             p_buf = NULL;
             p_len = p_cap = 0;
             return r;
+        }
+
+        T &insert(size_t idx, const T &v) {
+            push();
+            for (size_t i = p_len - 1; i > idx; --i) p_buf[i] = p_buf[i - 1];
+            p_buf[idx] = v;
+        }
+
+        T *insert(size_t idx, size_t n, const T *v) {
+            if (p_len + n > p_cap) reserve(p_len + n);
+            for (size_t i = 0; i < n; ++i) push();
+            for (size_t i = p_len - 1; i > idx + n; --i)
+                p_buf[i] = p_buf[i - n];
+            for (size_t i = 0; i < n; ++i) p_buf[idx + i] = v[i];
+            return &p_buf[idx];
         }
     };
 }
