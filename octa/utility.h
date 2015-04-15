@@ -27,7 +27,7 @@ namespace std {
             typedef ptrdiff_t difference;
         };
 
-        initializer_list(): p_buf(NULL), p_len(0) {}
+        initializer_list(): p_buf(nullptr), p_len(0) {}
 
         size_t length() const { return p_len; }
 

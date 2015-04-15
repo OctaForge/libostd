@@ -32,7 +32,7 @@ namespace octa {
             typedef ptrdiff_t difference;
         };
 
-        explicit Vector(): p_buf(NULL), p_len(0), p_cap(0) {}
+        explicit Vector(): p_buf(nullptr), p_len(0), p_cap(0) {}
 
         explicit Vector(size_t n, const T &val = T()): Vector() {
             p_buf = new uchar[n * sizeof(T)];
@@ -46,7 +46,7 @@ namespace octa {
         }
 
         Vector(Vector &&v): p_buf(v.p_buf), p_len(v.p_len), p_cap(v.p_cap) {
-            v.p_buf = NULL;
+            v.p_buf = nullptr;
             v.p_len = v.p_cap = 0;
         }
 
@@ -65,7 +65,7 @@ namespace octa {
                     while (cur != last) (*cur++).~T();
                 }
                 delete[] (uchar *)p_buf;
-                p_buf = NULL;
+                p_buf = nullptr;
                 p_len = p_cap = 0;
             }
         }
@@ -202,7 +202,7 @@ namespace octa {
 
         T *disown() {
             T *r = p_buf;
-            p_buf = NULL;
+            p_buf = nullptr;
             p_len = p_cap = 0;
             return r;
         }
