@@ -20,6 +20,14 @@ namespace octa {
     public:
         enum { MIN_SIZE = 8 };
 
+        struct type {
+            typedef       T  value;
+            typedef       T &reference;
+            typedef const T &const_reference;
+            typedef       T *pointer;
+            typedef const T *const_pointer;
+        };
+
         explicit Vector(): p_buf(NULL), p_len(0), p_cap(0) {}
 
         explicit Vector(size_t n, const T &val = T()): Vector() {
@@ -159,12 +167,36 @@ namespace octa {
             }
         }
 
+        T &pop_ret() {
+            return p_buf[--p_len];
+        }
+
+        T &first() { return p_buf[0]; }
+        const T &first() const { return p_buf[0]; };
+
+        T &last() { return p_buf[p_len - 1]; }
+        const T &last() const { return p_buf[p_len - 1]; }
+
         T *get() { return p_buf; }
+        const T *get() const { return p_buf; }
 
         size_t length() const { return p_len; }
         size_t capacity() const { return p_cap; }
 
         bool empty() const { return (p_len == 0); }
+
+        bool in_range(size_t idx) { return idx < p_len; }
+        bool in_range(int idx) { return idx >= 0 && idx < p_len; }
+        bool in_range(const T *ptr) {
+            return ptr >= p_buf && ptr < &p_buf[p_len];
+        }
+
+        T *disown() {
+            T *r = p_buf;
+            p_buf = NULL;
+            p_len = p_cap = 0;
+            return r;
+        }
     };
 }
 
