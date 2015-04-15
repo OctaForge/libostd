@@ -12,8 +12,69 @@
 #include "octa/new.h"
 #include "octa/traits.h"
 #include "octa/utility.h"
+#include "octa/range.h"
 
 namespace octa {
+    template<typename T>
+    class VectorRange: public Range<VectorRange<T> > {
+        T *p_beg, *p_end;
+
+    public:
+        struct type {
+            typedef ptrdiff_t  difference;
+            typedef T          value;
+            typedef T         *pointer;
+            typedef T         &reference;
+        };
+
+        VectorRange(): p_beg(nullptr), p_end(nullptr) {}
+        VectorRange(const VectorRange &v): p_beg(v.p_beg), p_end(v.p_end) {}
+        VectorRange(T *beg, T *end): p_beg(beg), p_end(end) {}
+
+        /* satisfy InputRange */
+
+        bool empty() const { return p_beg == nullptr; }
+
+        T &first() { return *p_beg; }
+        const T &first() const { return *p_beg; }
+
+        void pop_first() {
+            if (p_beg == nullptr) return;
+            if (++p_beg == p_end) p_beg = p_end = nullptr;
+        }
+
+        template<typename U>
+        friend bool operator==(const VectorRange &a, const VectorRange<U> &b) {
+            return a.p_beg == b.p_beg && a.p_end == b.p_end;
+        }
+
+        template<typename U>
+        friend bool operator!=(const VectorRange &a, const VectorRange<U> &b) {
+            return a.p_beg != b.p_beg || a.p_end != b.p_end;
+        }
+
+        /* satisfy ForwardRange */
+
+        VectorRange save() { return *this; }
+
+        /* satisfy BidirectionalRange */
+
+        T &last() { return *(p_end - 1); }
+        const T &last() const { return *(p_end - 1); }
+
+        void pop_last() {
+            if (p_end-- == p_beg) { p_end = nullptr; return; }
+            if (p_end   == p_beg) p_beg = p_end = nullptr;
+        }
+
+        /* satisfy RandomAccessRange */
+
+        T &operator[](size_t i) { return p_beg[i]; }
+        const T &operator[](size_t i) const { return p_beg[i]; }
+
+        size_t length() const { return p_end - p_beg; }
+    };
+
     template<typename T>
     class Vector {
         T *p_buf;
@@ -220,6 +281,10 @@ namespace octa {
                 p_buf[i] = p_buf[i - n];
             for (size_t i = 0; i < n; ++i) p_buf[idx + i] = v[i];
             return &p_buf[idx];
+        }
+
+        VectorRange<T> each() {
+            return VectorRange<T>(p_buf, p_buf + p_len);
         }
     };
 }
