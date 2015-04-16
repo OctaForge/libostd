@@ -308,6 +308,18 @@ namespace octa {
             return &p_buf[idx];
         }
 
+        template<typename U>
+        T *insert(size_t idx, U range) {
+            size_t len = range.length();
+            insert_base(idx, len);
+            for (size_t i = 0; i < len; ++i) {
+                p_buf[idx + i].~T();
+                new (&p_buf[idx + i]) T(range.first());
+                range.pop_first();
+            }
+            return &p_buf[idx];
+        }
+
         typename type::range each() {
             return VectorRange<T>(p_buf, p_buf + p_len);
         }

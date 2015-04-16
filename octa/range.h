@@ -147,6 +147,46 @@ namespace octa {
     ReverseRange<T> reverse(const T &it) {
         return ReverseRange<T>(it);
     }
+
+    template<typename T>
+    struct MoveRange {
+        struct type {
+            typedef typename RangeTraits<T>::category   category;
+            typedef typename RangeTraits<T>::value      value;
+            typedef typename RangeTraits<T>::pointer    pointer;
+            typedef typename RangeTraits<T>::value    &&reference;
+        };
+
+        MoveRange(): p_range() {}
+        MoveRange(const T &range): p_range(range) {}
+        MoveRange(const MoveRange &it): p_range(it.p_range) {}
+        MoveRange(MoveRange &&it): p_range(move(it.p_range)) {}
+
+        bool   empty () const { return p_range.empty (); }
+        size_t length() const { return p_range.length(); }
+
+        void pop_first() { p_range.pop_first(); }
+        void pop_last () { p_range.pop_last (); }
+
+        bool operator==(const MoveRange &v) const {
+            return p_range == v.p_range;
+        }
+        bool operator!=(const MoveRange &v) const {
+            return p_range != v.p_range;
+        }
+
+        typename type::reference first() { return move(p_range.first()); }
+        typename type::reference last () { return move(p_range.last ()); }
+
+        typename type::reference operator[](size_t i) {
+            return move(p_range[i]);
+        }
+
+        OCTA_RANGE_ITERATOR(MoveRange)
+
+    private:
+        T p_range;
+    };
 }
 
 #endif
