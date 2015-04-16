@@ -129,8 +129,12 @@ namespace octa {
               typename T::type::value &last()       { return p_range.first(); }
         const typename T::type::value &last() const { return p_range.first(); }
 
-              typename T::type::value &operator[](size_t i)       { return p_range[i]; }
-        const typename T::type::value &operator[](size_t i) const { return p_range[i]; }
+        typename T::type::value &operator[](size_t i) {
+            return p_range[length() - i - 1];
+        }
+        const typename T::type::value &operator[](size_t i) const {
+            return p_range[length() - i - 1];
+        }
 
     private:
         T p_range;
