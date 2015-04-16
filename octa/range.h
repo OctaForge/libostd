@@ -12,7 +12,7 @@
 
 namespace octa {
     struct InputRange {};
-    struct OutputRange {};
+    struct ForwardRange {};
     struct BidirectionalRange {};
     struct RandomAccessRange {};
 
@@ -84,8 +84,8 @@ namespace octa {
         }
 
         template<typename U>
-        friend bool operator!=(const RangeIterator &a, const RangeIterator<U> &b) {
-            return a.range() != b.range();
+        friend bool operator!=(const RangeIterator &a, const RangeIterator<U> &) {
+            return !a.range().empty();
         }
     };
 
