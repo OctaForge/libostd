@@ -15,6 +15,10 @@
 #include "octa/range.h"
 
 namespace octa {
+    /* Implementation of vector ranges
+     *
+     * See the range specification as documented on OctaForge wiki.
+     */
     template<typename T>
     struct VectorRange: Range<VectorRange, T> {
         struct type {
@@ -26,44 +30,46 @@ namespace octa {
 
         VectorRange(): p_beg(nullptr), p_end(nullptr) {}
         VectorRange(const VectorRange &v): p_beg(v.p_beg), p_end(v.p_end) {}
+        VectorRange(VectorRange &&v): p_beg(v.p_beg), p_end(v.p_end) {
+            v.p_beg = v.p_end = nullptr;
+        }
         VectorRange(T *beg, T *end): p_beg(beg), p_end(end) {}
 
         /* satisfy InputRange */
-
         bool empty() const { return p_beg == nullptr; }
-
-        T &first() { return *p_beg; }
-        const T &first() const { return *p_beg; }
 
         void pop_first() {
             if (p_beg == nullptr) return;
             if (++p_beg == p_end) p_beg = p_end = nullptr;
         }
 
-        template<typename U> bool equals(const VectorRange<U> &v) const {
+              T &first()       { return *p_beg; }
+        const T &first() const { return *p_beg; }
+
+        bool operator==(const VectorRange &v) {
             return p_beg == v.p_beg && p_end == v.p_end;
+        }
+        bool operator!=(const VectorRange &v) {
+            return p_beg != v.p_beg || p_end != v.p_end;
         }
 
         /* satisfy ForwardRange */
-
         VectorRange save() { return *this; }
 
         /* satisfy BidirectionalRange */
-
-        T &last() { return *(p_end - 1); }
-        const T &last() const { return *(p_end - 1); }
-
         void pop_last() {
             if (p_end-- == p_beg) { p_end = nullptr; return; }
             if (p_end   == p_beg) p_beg = p_end = nullptr;
         }
 
+              T &last()       { return *(p_end - 1); }
+        const T &last() const { return *(p_end - 1); }
+
         /* satisfy RandomAccessRange */
-
-        T &operator[](size_t i) { return p_beg[i]; }
-        const T &operator[](size_t i) const { return p_beg[i]; }
-
         size_t length() const { return p_end - p_beg; }
+
+              T &operator[](size_t i)       { return p_beg[i]; }
+        const T &operator[](size_t i) const { return p_beg[i]; }
 
     private:
         T *p_beg, *p_end;
@@ -87,7 +93,7 @@ namespace octa {
             typedef ptrdiff_t difference;
         };
 
-        explicit Vector(): p_buf(nullptr), p_len(0), p_cap(0) {}
+        Vector(): p_buf(nullptr), p_len(0), p_cap(0) {}
 
         explicit Vector(size_t n, const T &val = T()): Vector() {
             p_buf = new uchar[n * sizeof(T)];

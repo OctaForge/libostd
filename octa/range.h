@@ -94,16 +94,6 @@ namespace octa {
         RangeIterator<T<U>> end() {
             return RangeIterator<T<U>>();
         }
-
-        template<typename V>
-        friend bool operator==(const T<U> &a, const T<V> &b) {
-            return a.equals(b);
-        }
-
-        template<typename V>
-        friend bool operator!=(const T<U> &a, const T<V> &b) {
-            return !a.equals(b);
-        }
     };
 }
 
