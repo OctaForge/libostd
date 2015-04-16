@@ -109,30 +109,29 @@ namespace octa {
         ReverseRange(const ReverseRange &it): p_range(it.p_range) {}
         ReverseRange(ReverseRange &&it): p_range(move(it.p_range)) {}
 
-        bool empty() { return p_range.empty(); }
-
+        bool   empty () const { return p_range.empty (); }
         size_t length() const { return p_range.length(); }
 
         void pop_first() { p_range.pop_last (); }
         void pop_last () { p_range.pop_first(); }
 
-        bool operator==(const ReverseRange &v) {
+        bool operator==(const ReverseRange &v) const {
             return p_range == v.p_range;
         }
-        bool operator!=(const ReverseRange &v) {
+        bool operator!=(const ReverseRange &v) const {
             return p_range != v.p_range;
         }
 
-        typename T::type::reference first()       { return p_range.last(); }
-        typename T::type::reference first() const { return p_range.last(); }
+        typename type::reference first()       { return p_range.last(); }
+        typename type::reference first() const { return p_range.last(); }
 
-        typename T::type::reference last()       { return p_range.first(); }
-        typename T::type::reference last() const { return p_range.first(); }
+        typename type::reference last()       { return p_range.first(); }
+        typename type::reference last() const { return p_range.first(); }
 
-        typename T::type::reference operator[](size_t i) {
+        typename type::reference operator[](size_t i) {
             return p_range[length() - i - 1];
         }
-        typename T::type::reference operator[](size_t i) const {
+        typename type::reference operator[](size_t i) const {
             return p_range[length() - i - 1];
         }
 

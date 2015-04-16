@@ -283,6 +283,9 @@ namespace octa {
         VectorRange<T> each() {
             return VectorRange<T>(p_buf, p_buf + p_len);
         }
+        VectorRange<const T> each() const {
+            return VectorRange<const T>(p_buf, p_buf + p_len);
+        }
     };
 }
 
