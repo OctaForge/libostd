@@ -79,6 +79,17 @@ namespace octa {
         T *p_buf;
         size_t p_len, p_cap;
 
+        void insert_base(size_t idx, size_t n) {
+            if (p_len + n > p_cap) reserve(p_len + n);
+            p_len += n;
+            for (size_t i = p_len - 1; i > idx + n - 1; --i) {
+                if (octa::IsClass<T>::value && i < (p_len - n)) {
+                    p_buf[i].~T();
+                }
+                new (&p_buf[i]) T(move(p_buf[i - n]));
+            }
+        }
+
     public:
         enum { MIN_SIZE = 8 };
 
@@ -274,28 +285,22 @@ namespace octa {
             return r;
         }
 
+        T *insert(size_t idx, T &&v) {
+            insert_base(idx, 1);
+            p_buf[idx].~T();
+            new (&p_buf[idx]) T(forward<T>(v));
+            return &p_buf[idx];
+        }
+
         T *insert(size_t idx, const T &v) {
-            if (p_len == p_cap) reserve(p_len + 1);
-            ++p_len;
-            for (size_t i = p_len - 1; i > idx; --i) {
-                if (octa::IsClass<T>::value && i != (p_len - 1))
-                    p_buf[i].~T();
-                new (&p_buf[i]) T(move(p_buf[i - 1]));
-            }
+            insert_base(idx, 1);
             p_buf[idx].~T();
             new (&p_buf[idx]) T(v);
             return &p_buf[idx];
         }
 
         T *insert(size_t idx, size_t n, const T &v) {
-            if (p_len + n > p_cap) reserve(p_len + n);
-            p_len += n;
-            for (size_t i = p_len - 1; i > idx + n - 1; --i) {
-                if (octa::IsClass<T>::value && i < (p_len - n)) {
-                    p_buf[i].~T();
-                }
-                new (&p_buf[i]) T(move(p_buf[i - n]));
-            }
+            insert_base(idx, n);
             for (size_t i = 0; i < n; ++i) {
                 p_buf[idx + i].~T();
                 new (&p_buf[idx + i]) T(v);
