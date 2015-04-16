@@ -113,7 +113,12 @@ namespace octa {
         }
 
         Vector(initializer_list<T> v): Vector() {
-            insert(0, v.length(), v.get());
+            size_t len = v.length();
+            const T *ptr = v.get();
+            reserve(len);
+            for (size_t i = 0; i < len; ++i)
+                new (&p_buf[i]) T(ptr[i]);
+            p_len = len;
         }
 
         ~Vector() {
@@ -269,18 +274,32 @@ namespace octa {
             return r;
         }
 
-        T &insert(size_t idx, const T &v) {
-            push();
-            for (size_t i = p_len - 1; i > idx; --i) p_buf[i] = p_buf[i - 1];
-            p_buf[idx] = v;
+        T *insert(size_t idx, const T &v) {
+            if (p_len == p_cap) reserve(p_len + 1);
+            ++p_len;
+            for (size_t i = p_len - 1; i > idx; --i) {
+                if (octa::IsClass<T>::value && i != (p_len - 1))
+                    p_buf[i].~T();
+                new (&p_buf[i]) T(move(p_buf[i - 1]));
+            }
+            p_buf[idx].~T();
+            new (&p_buf[idx]) T(v);
+            return &p_buf[idx];
         }
 
-        T *insert(size_t idx, size_t n, const T *v) {
+        T *insert(size_t idx, size_t n, const T &v) {
             if (p_len + n > p_cap) reserve(p_len + n);
-            for (size_t i = 0; i < n; ++i) push();
-            for (size_t i = p_len - 1; i > idx + n; --i)
-                p_buf[i] = p_buf[i - n];
-            for (size_t i = 0; i < n; ++i) p_buf[idx + i] = v[i];
+            p_len += n;
+            for (size_t i = p_len - 1; i > idx + n - 1; --i) {
+                if (octa::IsClass<T>::value && i < (p_len - n)) {
+                    p_buf[i].~T();
+                }
+                new (&p_buf[i]) T(move(p_buf[i - n]));
+            }
+            for (size_t i = 0; i < n; ++i) {
+                p_buf[idx + i].~T();
+                new (&p_buf[idx + i]) T(v);
+            }
             return &p_buf[idx];
         }
 
