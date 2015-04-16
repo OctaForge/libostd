@@ -11,41 +11,46 @@
 #include "octa/types.h"
 
 namespace octa {
+    struct InputRange {};
+    struct OutputRange {};
+    struct BidirectionalRange {};
+    struct RandomAccessRange {};
+
     template<typename T>
     struct RangeTraits {
-        typedef typename T::type::difference difference;
-        typedef typename T::type::value      value;
-        typedef typename T::type::pointer    pointer;
-        typedef typename T::type::reference  reference;
+        typedef typename T::type::category  category;
+        typedef typename T::type::value     value;
+        typedef typename T::type::pointer   pointer;
+        typedef typename T::type::reference reference;
     };
 
     template<typename T>
     struct RangeTraits<T *> {
-        typedef ptrdiff_t  difference;
-        typedef T          value;
-        typedef T         *pointer;
-        typedef T         &reference;
+        typedef RandomAccessRange category;
+        typedef T  value;
+        typedef T *pointer;
+        typedef T &reference;
     };
 
     template<typename T>
     struct RangeTraits<const T *> {
-        typedef ptrdiff_t  difference;
-        typedef T          value;
-        typedef const T   *pointer;
-        typedef const T   &reference;
+        typedef RandomAccessRange category;
+        typedef T        value;
+        typedef const T *pointer;
+        typedef const T &reference;
     };
 
     template<>
     struct RangeTraits<void *> {
-        typedef ptrdiff_t  difference;
-        typedef uchar      value;
-        typedef void      *pointer;
-        typedef uchar     &reference;
+        typedef RandomAccessRange category;
+        typedef uchar  value;
+        typedef void  *pointer;
+        typedef uchar &reference;
     };
 
     template<>
     struct RangeTraits<const void *> {
-        typedef ptrdiff_t    difference;
+        typedef RandomAccessRange category;
         typedef uchar        value;
         typedef const void  *pointer;
         typedef const uchar &reference;
@@ -57,10 +62,9 @@ namespace octa {
 
     public:
         struct type {
-            typedef typename RangeTraits<T>::difference difference;
-            typedef typename RangeTraits<T>::value      value;
-            typedef typename RangeTraits<T>::pointer    pointer;
-            typedef typename RangeTraits<T>::reference  reference;
+            typedef typename RangeTraits<T>::value     value;
+            typedef typename RangeTraits<T>::pointer   pointer;
+            typedef typename RangeTraits<T>::reference reference;
         };
 
         RangeIterator(): p_range() {}
@@ -85,23 +89,21 @@ namespace octa {
         }
     };
 
-    template<template<typename> class T, typename U>
-    struct Range {
-        RangeIterator<T<U>> begin() {
-            return RangeIterator<T<U>>((const T<U> &)*this);
-        }
-        RangeIterator<T<U>> end() {
-            return RangeIterator<T<U>>();
-        }
-    };
+#define OCTA_RANGE_ITERATOR(T) \
+    octa::RangeIterator<T> begin() { \
+        return octa::RangeIterator<T>(*this); \
+    } \
+    octa::RangeIterator<T> end() { \
+        return octa::RangeIterator<T>(); \
+    }
 
     template<typename T>
-    struct ReverseRange: Range<ReverseRange, T> {
+    struct ReverseRange {
         struct type {
-            typedef typename RangeTraits<T>::difference difference;
-            typedef typename RangeTraits<T>::value      value;
-            typedef typename RangeTraits<T>::pointer    pointer;
-            typedef typename RangeTraits<T>::reference  reference;
+            typedef typename RangeTraits<T>::category  category;
+            typedef typename RangeTraits<T>::value     value;
+            typedef typename RangeTraits<T>::pointer   pointer;
+            typedef typename RangeTraits<T>::reference reference;
         };
 
         ReverseRange(): p_range() {}
@@ -134,6 +136,8 @@ namespace octa {
         typename type::reference operator[](size_t i) const {
             return p_range[length() - i - 1];
         }
+
+        OCTA_RANGE_ITERATOR(ReverseRange)
 
     private:
         T p_range;

@@ -20,12 +20,12 @@ namespace octa {
      * See the range specification as documented on OctaForge wiki.
      */
     template<typename T>
-    struct VectorRange: Range<VectorRange, T> {
+    struct VectorRange {
         struct type {
-            typedef ptrdiff_t  difference;
-            typedef T          value;
-            typedef T         *pointer;
-            typedef T         &reference;
+            typedef RandomAccessRange category;
+            typedef T  value;
+            typedef T *pointer;
+            typedef T &reference;
         };
 
         VectorRange(): p_beg(nullptr), p_end(nullptr) {}
@@ -67,6 +67,8 @@ namespace octa {
 
               T &operator[](size_t i)       { return p_beg[i]; }
         const T &operator[](size_t i) const { return p_beg[i]; }
+
+        OCTA_RANGE_ITERATOR(VectorRange)
 
     private:
         T *p_beg, *p_end;
