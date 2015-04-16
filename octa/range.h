@@ -187,6 +187,11 @@ namespace octa {
     private:
         T p_range;
     };
+
+    template<typename T>
+    MoveRange<T> move_range(const T &it) {
+        return MoveRange<T>(it);
+    }
 }
 
 #endif

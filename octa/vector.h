@@ -321,7 +321,7 @@ namespace octa {
         }
 
         T *insert(size_t idx, initializer_list<T> il) {
-            return insert(idx, VectorRange<const T>(il.get(),
+            return insert_range(idx, VectorRange<const T>(il.get(),
                 il.get() + il.length()));
         }
 
