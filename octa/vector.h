@@ -320,6 +320,11 @@ namespace octa {
             return &p_buf[idx];
         }
 
+        T *insert(size_t idx, initializer_list<T> il) {
+            return insert(idx, VectorRange<const T>(il.get(),
+                il.get() + il.length()));
+        }
+
         typename type::range each() {
             return VectorRange<T>(p_buf, p_buf + p_len);
         }
