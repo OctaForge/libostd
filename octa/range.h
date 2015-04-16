@@ -144,7 +144,7 @@ namespace octa {
     };
 
     template<typename T>
-    ReverseRange<T> reverse(const T &it) {
+    ReverseRange<T> make_reverse_range(const T &it) {
         return ReverseRange<T>(it);
     }
 
@@ -189,7 +189,7 @@ namespace octa {
     };
 
     template<typename T>
-    MoveRange<T> move_range(const T &it) {
+    MoveRange<T> make_move_range(const T &it) {
         return MoveRange<T>(it);
     }
 }
