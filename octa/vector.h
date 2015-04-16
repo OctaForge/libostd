@@ -46,10 +46,10 @@ namespace octa {
               T &first()       { return *p_beg; }
         const T &first() const { return *p_beg; }
 
-        bool operator==(const VectorRange &v) {
+        bool operator==(const VectorRange &v) const {
             return p_beg == v.p_beg && p_end == v.p_end;
         }
-        bool operator!=(const VectorRange &v) {
+        bool operator!=(const VectorRange &v) const {
             return p_beg != v.p_beg || p_end != v.p_end;
         }
 

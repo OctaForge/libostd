@@ -123,16 +123,16 @@ namespace octa {
             return p_range != v.p_range;
         }
 
-              typename T::type::value &first()       { return p_range.last(); }
-        const typename T::type::value &first() const { return p_range.last(); }
+        typename T::type::reference first()       { return p_range.last(); }
+        typename T::type::reference first() const { return p_range.last(); }
 
-              typename T::type::value &last()       { return p_range.first(); }
-        const typename T::type::value &last() const { return p_range.first(); }
+        typename T::type::reference last()       { return p_range.first(); }
+        typename T::type::reference last() const { return p_range.first(); }
 
-        typename T::type::value &operator[](size_t i) {
+        typename T::type::reference operator[](size_t i) {
             return p_range[length() - i - 1];
         }
-        const typename T::type::value &operator[](size_t i) const {
+        typename T::type::reference operator[](size_t i) const {
             return p_range[length() - i - 1];
         }
 
