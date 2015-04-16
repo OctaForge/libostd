@@ -35,7 +35,7 @@ namespace octa {
         }
         VectorRange(T *beg, T *end): p_beg(beg), p_end(end) {}
 
-        /* satisfy InputRange */
+        /* satisfy InputRange / ForwardRange */
         bool empty() const { return p_beg == nullptr; }
 
         void pop_first() {
@@ -52,9 +52,6 @@ namespace octa {
         bool operator!=(const VectorRange &v) {
             return p_beg != v.p_beg || p_end != v.p_end;
         }
-
-        /* satisfy ForwardRange */
-        VectorRange save() { return *this; }
 
         /* satisfy BidirectionalRange */
         void pop_last() {

@@ -65,9 +65,8 @@ namespace octa {
 
         RangeIterator(): p_range() {}
         RangeIterator(const T &range): p_range(range) {}
-
-        template<typename U>
-        RangeIterator(const RangeIterator<U> &it): p_range(it.range()) {}
+        RangeIterator(const RangeIterator &it): p_range(it.p_range) {}
+        RangeIterator(RangeIterator &&it): p_range(move(it.p_range)) {}
 
         T range() const { return p_range; }
 
@@ -95,6 +94,52 @@ namespace octa {
             return RangeIterator<T<U>>();
         }
     };
+
+    template<typename T>
+    struct ReverseRange: Range<ReverseRange, T> {
+        struct type {
+            typedef typename RangeTraits<T>::difference difference;
+            typedef typename RangeTraits<T>::value      value;
+            typedef typename RangeTraits<T>::pointer    pointer;
+            typedef typename RangeTraits<T>::reference  reference;
+        };
+
+        ReverseRange(): p_range() {}
+        ReverseRange(const T &range): p_range(range) {}
+        ReverseRange(const ReverseRange &it): p_range(it.p_range) {}
+        ReverseRange(ReverseRange &&it): p_range(move(it.p_range)) {}
+
+        bool empty() { return p_range.empty(); }
+
+        size_t length() const { return p_range.length(); }
+
+        void pop_first() { p_range.pop_last (); }
+        void pop_last () { p_range.pop_first(); }
+
+        bool operator==(const ReverseRange &v) {
+            return p_range == v.p_range;
+        }
+        bool operator!=(const ReverseRange &v) {
+            return p_range != v.p_range;
+        }
+
+              typename T::type::value &first()       { return p_range.last(); }
+        const typename T::type::value &first() const { return p_range.last(); }
+
+              typename T::type::value &last()       { return p_range.first(); }
+        const typename T::type::value &last() const { return p_range.first(); }
+
+              typename T::type::value &operator[](size_t i)       { return p_range[i]; }
+        const typename T::type::value &operator[](size_t i) const { return p_range[i]; }
+
+    private:
+        T p_range;
+    };
+
+    template<typename T>
+    ReverseRange<T> reverse(const T &it) {
+        return ReverseRange<T>(it);
+    }
 }
 
 #endif
