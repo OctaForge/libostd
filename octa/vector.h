@@ -16,10 +16,7 @@
 
 namespace octa {
     template<typename T>
-    class VectorRange: public Range<VectorRange<T> > {
-        T *p_beg, *p_end;
-
-    public:
+    struct VectorRange: Range<VectorRange<T> > {
         struct type {
             typedef ptrdiff_t  difference;
             typedef T          value;
@@ -73,6 +70,9 @@ namespace octa {
         const T &operator[](size_t i) const { return p_beg[i]; }
 
         size_t length() const { return p_end - p_beg; }
+
+    private:
+        T *p_beg, *p_end;
     };
 
     template<typename T>
