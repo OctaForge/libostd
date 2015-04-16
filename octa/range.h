@@ -192,6 +192,35 @@ namespace octa {
     MoveRange<T> make_move_range(const T &it) {
         return MoveRange<T>(it);
     }
+
+    template<typename T>
+    struct NumberRange {
+        struct type {
+            typedef ForwardRange category;
+            typedef T  value;
+            typedef T *pointer;
+            typedef T &reference;
+        };
+
+        NumberRange(): p_a(0), p_b(0), p_step(0) {}
+        NumberRange(const NumberRange &it): p_a(it.p_a), p_b(it.p_b),
+            p_step(it.p_step) {}
+        NumberRange(T a, T b, T step = 1): p_a(a), p_b(b), p_step(step) {}
+
+        bool empty() const { return p_a * p_step >= p_b * p_step; }
+        void pop_first() { p_a += p_step; }
+        T &first() { return p_a; }
+
+        OCTA_RANGE_ITERATOR(NumberRange)
+
+    private:
+        T p_a, p_b, p_step;
+    };
+
+    template<typename T>
+    NumberRange<T> range(T a, T b, T step = 1) {
+        return NumberRange<T>(a, b, step);
+    }
 }
 
 #endif
