@@ -309,7 +309,7 @@ namespace octa {
         }
 
         template<typename U>
-        T *insert(size_t idx, U range) {
+        T *insert_range(size_t idx, U range) {
             size_t len = range.length();
             insert_base(idx, len);
             for (size_t i = 0; i < len; ++i) {
