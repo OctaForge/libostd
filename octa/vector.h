@@ -16,7 +16,7 @@
 
 namespace octa {
     template<typename T>
-    struct VectorRange: Range<VectorRange<T> > {
+    struct VectorRange: Range<VectorRange, T> {
         struct type {
             typedef ptrdiff_t  difference;
             typedef T          value;
@@ -40,14 +40,8 @@ namespace octa {
             if (++p_beg == p_end) p_beg = p_end = nullptr;
         }
 
-        template<typename U>
-        friend bool operator==(const VectorRange &a, const VectorRange<U> &b) {
-            return a.p_beg == b.p_beg && a.p_end == b.p_end;
-        }
-
-        template<typename U>
-        friend bool operator!=(const VectorRange &a, const VectorRange<U> &b) {
-            return a.p_beg != b.p_beg || a.p_end != b.p_end;
+        template<typename U> bool equals(const VectorRange<U> &v) const {
+            return p_beg == v.p_beg && p_end == v.p_end;
         }
 
         /* satisfy ForwardRange */

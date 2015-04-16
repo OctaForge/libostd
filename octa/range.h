@@ -86,10 +86,24 @@ namespace octa {
         }
     };
 
-    template<typename T>
+    template<template<typename> class T, typename U>
     struct Range {
-        RangeIterator<T> begin() { return RangeIterator<T>((const T &)*this); }
-        RangeIterator<T> end() { return RangeIterator<T>(); }
+        RangeIterator<T<U>> begin() {
+            return RangeIterator<T<U>>((const T<U> &)*this);
+        }
+        RangeIterator<T<U>> end() {
+            return RangeIterator<T<U>>();
+        }
+
+        template<typename V>
+        friend bool operator==(const T<U> &a, const T<V> &b) {
+            return a.equals(b);
+        }
+
+        template<typename V>
+        friend bool operator!=(const T<U> &a, const T<V> &b) {
+            return !a.equals(b);
+        }
     };
 }
 
