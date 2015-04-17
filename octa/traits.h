@@ -165,28 +165,6 @@ namespace octa {
     template<typename            > struct IsArray      : false_t {};
     template<typename T          > struct IsArray<T[] >:  true_t {};
     template<typename T, size_t N> struct IsArray<T[N]>:  true_t {};
-
-    /* move */
-
-    template<typename T>
-    static inline constexpr typename RemoveReference<T>::type &&
-    move(T &&v) noexcept {
-        return static_cast<typename RemoveReference<T>::type &&>(v);
-    }
-
-    /* forward */
-
-    template<typename T>
-    static inline constexpr T &&
-    forward(typename RemoveReference<T>::type &v) noexcept {
-        return static_cast<T &&>(v);
-    }
-
-    template<typename T>
-    static inline constexpr T &&
-    forward(typename RemoveReference<T>::type &&v) noexcept {
-        return static_cast<T &&>(v);
-    }
 }
 
 #endif

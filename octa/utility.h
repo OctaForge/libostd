@@ -50,6 +50,24 @@ namespace octa {
             swap(a[i], b[i]);
         }
     }
+
+    template<typename T>
+    static inline constexpr typename RemoveReference<T>::type &&
+    move(T &&v) noexcept {
+        return static_cast<typename RemoveReference<T>::type &&>(v);
+    }
+
+    template<typename T>
+    static inline constexpr T &&
+    forward(typename RemoveReference<T>::type &v) noexcept {
+        return static_cast<T &&>(v);
+    }
+
+    template<typename T>
+    static inline constexpr T &&
+    forward(typename RemoveReference<T>::type &&v) noexcept {
+        return static_cast<T &&>(v);
+    }
 }
 
 #endif

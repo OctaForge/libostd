@@ -9,7 +9,7 @@
 #include <stddef.h>
 
 #include "octa/types.h"
-#include "octa/traits.h"
+#include "octa/utility.h"
 
 namespace octa {
     struct InputRange {};
