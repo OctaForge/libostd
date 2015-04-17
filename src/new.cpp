@@ -5,13 +5,13 @@
 
 #include <stdlib.h>
 
-void *operator new(size_t size) noexcept {
+void *operator new(size_t size) {
     void  *p = malloc(size);
     if   (!p) abort();
     return p;
 }
 
-void *operator new[](size_t size) noexcept {
+void *operator new[](size_t size) {
     void  *p = malloc(size);
     if   (!p) abort();
     return p;

@@ -8,6 +8,8 @@
 
 #include <stddef.h>
 
+#include "octa/traits.h"
+
 /* must be in std namespace otherwise the compiler won't know about it */
 namespace std {
     template<typename T>
@@ -37,6 +39,17 @@ namespace std {
 
 namespace octa {
     template<typename T> using InitializerList = std::initializer_list<T>;
+
+    template<typename T> void swap(T &a, T &b) {
+        T c(move(a));
+        a = move(b);
+        b = move(c);
+    }
+    template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N]) {
+        for (size_t i = 0; i < N; ++i) {
+            swap(a[i], b[i]);
+        }
+    }
 }
 
 #endif
