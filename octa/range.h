@@ -61,12 +61,6 @@ namespace octa {
         T p_range;
 
     public:
-        struct type {
-            typedef typename RangeTraits<T>::value     value;
-            typedef typename RangeTraits<T>::pointer   pointer;
-            typedef typename RangeTraits<T>::reference reference;
-        };
-
         RangeIterator(): p_range() {}
         RangeIterator(const T &range): p_range(range) {}
         RangeIterator(const RangeIterator &it): p_range(it.p_range) {}
@@ -79,7 +73,7 @@ namespace octa {
             return *this;
         }
 
-        typename type::reference operator*() {
+        typename RangeTraits<T>::reference operator*() {
             return p_range.first();
         }
 
