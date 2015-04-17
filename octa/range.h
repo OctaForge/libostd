@@ -78,38 +78,30 @@ namespace octa {
         };
     }
 
-    template<typename T>
-    internal::RangeIterator<T> begin(const T &range) {
-        return internal::RangeIterator<T>(range);
-    }
-    template<typename T>
-    internal::RangeIterator<T> end(T) {
-        return internal::RangeIterator<T>();
-    }
-
-#define OCTA_RANGE_ITERATOR_SETUP \
-    auto begin() -> decltype(octa::begin(*this)) { return octa::begin(*this); } \
-    auto end  () -> decltype(octa::begin(*this)) { return octa::end  (*this); }
-
-#define OCTA_RANGE_ITERATOR_GLOBAL_SETUP \
-    template<typename T> \
-    auto begin(const T &v) -> decltype(octa::begin(v)) { \
-        return octa::begin(v); \
-    } \
-    template<typename T> \
-    auto end(const T &v) -> decltype(octa::begin(v)) { \
-        return octa::end(v); \
-    }
-
-    template<typename T>
-    struct ReverseRange {
+    template<typename B, typename C, typename V, typename P = V *, typename R = V &>
+    struct Range {
         struct type {
-            typedef typename RangeTraits<T>::category  category;
-            typedef typename RangeTraits<T>::value     value;
-            typedef typename RangeTraits<T>::pointer   pointer;
-            typedef typename RangeTraits<T>::reference reference;
+            typedef C category;
+            typedef V value;
+            typedef P pointer;
+            typedef R reference;
         };
 
+        internal::RangeIterator<B> begin() {
+            return internal::RangeIterator<B>((const B &)*this);
+        }
+        internal::RangeIterator<B> end() {
+            return internal::RangeIterator<B>();
+        }
+    };
+
+    template<typename T>
+    struct ReverseRange: Range<ReverseRange<T>,
+        typename RangeTraits<T>::category,
+        typename RangeTraits<T>::value,
+        typename RangeTraits<T>::pointer,
+        typename RangeTraits<T>::reference
+    > {
         ReverseRange(): p_range() {}
         ReverseRange(const T &range): p_range(range) {}
         ReverseRange(const ReverseRange &it): p_range(it.p_range) {}
@@ -128,16 +120,16 @@ namespace octa {
             return p_range != v.p_range;
         }
 
-        typename type::reference first()       { return p_range.last(); }
-        typename type::reference first() const { return p_range.last(); }
+        typename RangeTraits<T>::reference first()       { return p_range.last(); }
+        typename RangeTraits<T>::reference first() const { return p_range.last(); }
 
-        typename type::reference last()       { return p_range.first(); }
-        typename type::reference last() const { return p_range.first(); }
+        typename RangeTraits<T>::reference last()       { return p_range.first(); }
+        typename RangeTraits<T>::reference last() const { return p_range.first(); }
 
-        typename type::reference operator[](size_t i) {
+        typename RangeTraits<T>::reference operator[](size_t i) {
             return p_range[length() - i - 1];
         }
-        typename type::reference operator[](size_t i) const {
+        typename RangeTraits<T>::reference operator[](size_t i) const {
             return p_range[length() - i - 1];
         }
 
@@ -151,14 +143,12 @@ namespace octa {
     }
 
     template<typename T>
-    struct MoveRange {
-        struct type {
-            typedef typename RangeTraits<T>::category   category;
-            typedef typename RangeTraits<T>::value      value;
-            typedef typename RangeTraits<T>::pointer    pointer;
-            typedef typename RangeTraits<T>::value    &&reference;
-        };
-
+    struct MoveRange: Range<MoveRange<T>,
+        typename RangeTraits<T>::category,
+        typename RangeTraits<T>::value,
+        typename RangeTraits<T>::pointer,
+        typename RangeTraits<T>::value &&
+    > {
         MoveRange(): p_range() {}
         MoveRange(const T &range): p_range(range) {}
         MoveRange(const MoveRange &it): p_range(it.p_range) {}
@@ -177,10 +167,10 @@ namespace octa {
             return p_range != v.p_range;
         }
 
-        typename type::reference first() { return move(p_range.first()); }
-        typename type::reference last () { return move(p_range.last ()); }
+        typename RangeTraits<T>::value &&first() { return move(p_range.first()); }
+        typename RangeTraits<T>::value &&last () { return move(p_range.last ()); }
 
-        typename type::reference operator[](size_t i) {
+        typename RangeTraits<T>::value &&operator[](size_t i) {
             return move(p_range[i]);
         }
 
@@ -194,14 +184,7 @@ namespace octa {
     }
 
     template<typename T>
-    struct NumberRange {
-        struct type {
-            typedef octa::ForwardRange category;
-            typedef T  value;
-            typedef T *pointer;
-            typedef T &reference;
-        };
-
+    struct NumberRange: Range<NumberRange<T>, ForwardRange, T> {
         NumberRange(): p_a(0), p_b(0), p_step(0) {}
         NumberRange(const NumberRange &it): p_a(it.p_a), p_b(it.p_b),
             p_step(it.p_step) {}
