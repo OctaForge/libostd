@@ -13,6 +13,7 @@
 
 namespace octa {
     struct InputRange {};
+    struct OutputRange {};
     struct ForwardRange {};
     struct BidirectionalRange {};
     struct RandomAccessRange {};
@@ -46,7 +47,7 @@ namespace octa {
     }
 
     template<typename B, typename C, typename V, typename R = V &>
-    struct Range {
+    struct InputRangeBase {
         struct type {
             typedef C category;
             typedef V value;
@@ -61,8 +62,17 @@ namespace octa {
         }
     };
 
+    template<typename V, typename R = V &>
+    struct OutputRangeBase {
+        struct type {
+            typedef OutputRange category;
+            typedef V value;
+            typedef R reference;
+        };
+    };
+
     template<typename T>
-    struct ReverseRange: Range<ReverseRange<T>,
+    struct ReverseRange: InputRangeBase<ReverseRange<T>,
         typename RangeTraits<T>::category,
         typename RangeTraits<T>::value,
         typename RangeTraits<T>::reference
@@ -108,7 +118,7 @@ namespace octa {
     }
 
     template<typename T>
-    struct MoveRange: Range<MoveRange<T>,
+    struct MoveRange: InputRangeBase<MoveRange<T>,
         typename RangeTraits<T>::category,
         typename RangeTraits<T>::value,
         typename RangeTraits<T>::value &&
@@ -148,7 +158,7 @@ namespace octa {
     }
 
     template<typename T>
-    struct NumberRange: Range<NumberRange<T>, ForwardRange, T> {
+    struct NumberRange: InputRangeBase<NumberRange<T>, ForwardRange, T> {
         NumberRange(): p_a(0), p_b(0), p_step(0) {}
         NumberRange(const NumberRange &it): p_a(it.p_a), p_b(it.p_b),
             p_step(it.p_step) {}
