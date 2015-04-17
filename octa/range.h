@@ -21,40 +21,7 @@ namespace octa {
     struct RangeTraits {
         typedef typename T::type::category  category;
         typedef typename T::type::value     value;
-        typedef typename T::type::pointer   pointer;
         typedef typename T::type::reference reference;
-    };
-
-    template<typename T>
-    struct RangeTraits<T *> {
-        typedef RandomAccessRange category;
-        typedef T  value;
-        typedef T *pointer;
-        typedef T &reference;
-    };
-
-    template<typename T>
-    struct RangeTraits<const T *> {
-        typedef RandomAccessRange category;
-        typedef T        value;
-        typedef const T *pointer;
-        typedef const T &reference;
-    };
-
-    template<>
-    struct RangeTraits<void *> {
-        typedef RandomAccessRange category;
-        typedef uchar  value;
-        typedef void  *pointer;
-        typedef uchar &reference;
-    };
-
-    template<>
-    struct RangeTraits<const void *> {
-        typedef RandomAccessRange category;
-        typedef uchar        value;
-        typedef const void  *pointer;
-        typedef const uchar &reference;
     };
 
     namespace internal {
@@ -78,12 +45,11 @@ namespace octa {
         };
     }
 
-    template<typename B, typename C, typename V, typename P = V *, typename R = V &>
+    template<typename B, typename C, typename V, typename R = V &>
     struct Range {
         struct type {
             typedef C category;
             typedef V value;
-            typedef P pointer;
             typedef R reference;
         };
 
@@ -99,7 +65,6 @@ namespace octa {
     struct ReverseRange: Range<ReverseRange<T>,
         typename RangeTraits<T>::category,
         typename RangeTraits<T>::value,
-        typename RangeTraits<T>::pointer,
         typename RangeTraits<T>::reference
     > {
         ReverseRange(): p_range() {}
@@ -146,7 +111,6 @@ namespace octa {
     struct MoveRange: Range<MoveRange<T>,
         typename RangeTraits<T>::category,
         typename RangeTraits<T>::value,
-        typename RangeTraits<T>::pointer,
         typename RangeTraits<T>::value &&
     > {
         MoveRange(): p_range() {}
