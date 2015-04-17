@@ -153,6 +153,7 @@ namespace octa {
         NumberRange(const NumberRange &it): p_a(it.p_a), p_b(it.p_b),
             p_step(it.p_step) {}
         NumberRange(T a, T b, T step = 1): p_a(a), p_b(b), p_step(step) {}
+        NumberRange(T v): p_a(0), p_b(v), p_step(1) {}
 
         bool operator==(const NumberRange &v) const {
             return p_a == v.p_a && p_b == v.p_b && p_step == v.p_step;
@@ -172,6 +173,11 @@ namespace octa {
     template<typename T>
     NumberRange<T> range(T a, T b, T step = 1) {
         return NumberRange<T>(a, b, step);
+    }
+
+    template<typename T>
+    NumberRange<T> range(T v) {
+        return NumberRange<T>(v);
     }
 }
 
