@@ -28,6 +28,13 @@ namespace octa {
         }
         VectorRange(T *beg, T *end): p_beg(beg), p_end(end) {}
 
+        bool operator==(const VectorRange &v) const {
+            return p_beg == v.p_beg && p_end == v.p_end;
+        }
+        bool operator!=(const VectorRange &v) const {
+            return p_beg != v.p_beg || p_end != v.p_end;
+        }
+
         /* satisfy InputRange / ForwardRange */
         bool empty() const { return p_beg == nullptr; }
 
@@ -38,13 +45,6 @@ namespace octa {
 
               T &first()       { return *p_beg; }
         const T &first() const { return *p_beg; }
-
-        bool operator==(const VectorRange &v) const {
-            return p_beg == v.p_beg && p_end == v.p_end;
-        }
-        bool operator!=(const VectorRange &v) const {
-            return p_beg != v.p_beg || p_end != v.p_end;
-        }
 
         /* satisfy BidirectionalRange */
         void pop_last() {

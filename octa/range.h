@@ -190,6 +190,13 @@ namespace octa {
             p_step(it.p_step) {}
         NumberRange(T a, T b, T step = 1): p_a(a), p_b(b), p_step(step) {}
 
+        bool operator==(const NumberRange &v) const {
+            return p_a == v.p_a && p_b == v.p_b && p_step == v.p_step;
+        }
+        bool operator!=(const NumberRange &v) const {
+            return p_a != v.p_a || p_b != v.p_b || p_step != v.p_step;
+        }
+
         bool empty() const { return p_a * p_step >= p_b * p_step; }
         void pop_first() { p_a += p_step; }
         T &first() { return p_a; }
