@@ -68,8 +68,6 @@ namespace octa {
               T &operator[](size_t i)       { return p_beg[i]; }
         const T &operator[](size_t i) const { return p_beg[i]; }
 
-        OCTA_RANGE_ITERATOR(VectorRange)
-
     private:
         T *p_beg, *p_end;
     };
@@ -123,7 +121,7 @@ namespace octa {
             v.p_len = v.p_cap = 0;
         }
 
-        Vector(initializer_list<T> v): Vector() {
+        Vector(InitializerList<T> v): Vector() {
             size_t len = v.length();
             const T *ptr = v.get();
             reserve(len);
@@ -200,7 +198,7 @@ namespace octa {
             }
             size_t oc = p_cap;
             if (!oc) {
-                p_cap = (n > MIN_SIZE) ? n : MIN_SIZE;
+                p_cap = (n > MIN_SIZE) ? n : size_t(MIN_SIZE);
             } else {
                 while (p_cap < n) p_cap *= 2;
             }
@@ -320,7 +318,7 @@ namespace octa {
             return &p_buf[idx];
         }
 
-        T *insert(size_t idx, initializer_list<T> il) {
+        T *insert(size_t idx, InitializerList<T> il) {
             return insert_range(idx, VectorRange<const T>(il.get(),
                 il.get() + il.length()));
         }

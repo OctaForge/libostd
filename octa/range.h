@@ -9,6 +9,7 @@
 #include <stddef.h>
 
 #include "octa/types.h"
+#include "octa/traits.h"
 
 namespace octa {
     struct InputRange {};
@@ -56,39 +57,48 @@ namespace octa {
         typedef const uchar &reference;
     };
 
+    namespace internal {
+        template<typename T>
+        struct RangeIterator {
+            RangeIterator(): p_range() {}
+            explicit RangeIterator(const T &range): p_range(range) {}
+            RangeIterator &operator++() {
+                p_range.pop_first();
+                return *this;
+            }
+            typename RangeTraits<T>::reference operator*() {
+                return p_range.first();
+            }
+            typename RangeTraits<T>::reference operator*() const {
+                return p_range.first();
+            }
+            bool operator!=(RangeIterator) const { return !p_range.empty(); }
+        private:
+            T p_range;
+        };
+    }
+
     template<typename T>
-    class RangeIterator {
-        T p_range;
+    internal::RangeIterator<T> begin(const T &range) {
+        return internal::RangeIterator<T>(range);
+    }
+    template<typename T>
+    internal::RangeIterator<T> end(T) {
+        return internal::RangeIterator<T>();
+    }
 
-    public:
-        RangeIterator(): p_range() {}
-        RangeIterator(const T &range): p_range(range) {}
-        RangeIterator(const RangeIterator &it): p_range(it.p_range) {}
-        RangeIterator(RangeIterator &&it): p_range(move(it.p_range)) {}
+#define OCTA_RANGE_ITERATOR_SETUP \
+    auto begin() -> decltype(octa::begin(*this)) { return octa::begin(*this); } \
+    auto end  () -> decltype(octa::begin(*this)) { return octa::end  (*this); }
 
-        T range() const { return p_range; }
-
-        RangeIterator &operator++() {
-            p_range.pop_first();
-            return *this;
-        }
-
-        typename RangeTraits<T>::reference operator*() {
-            return p_range.first();
-        }
-
-        template<typename U>
-        friend bool operator!=(const RangeIterator &a, const RangeIterator<U> &) {
-            return !a.range().empty();
-        }
-    };
-
-#define OCTA_RANGE_ITERATOR(T) \
-    octa::RangeIterator<T> begin() { \
-        return octa::RangeIterator<T>(*this); \
+#define OCTA_RANGE_ITERATOR_GLOBAL_SETUP \
+    template<typename T> \
+    auto begin(const T &v) -> decltype(octa::begin(v)) { \
+        return octa::begin(v); \
     } \
-    octa::RangeIterator<T> end() { \
-        return octa::RangeIterator<T>(); \
+    template<typename T> \
+    auto end(const T &v) -> decltype(octa::begin(v)) { \
+        return octa::end(v); \
     }
 
     template<typename T>
@@ -130,8 +140,6 @@ namespace octa {
         typename type::reference operator[](size_t i) const {
             return p_range[length() - i - 1];
         }
-
-        OCTA_RANGE_ITERATOR(ReverseRange)
 
     private:
         T p_range;
@@ -176,8 +184,6 @@ namespace octa {
             return move(p_range[i]);
         }
 
-        OCTA_RANGE_ITERATOR(MoveRange)
-
     private:
         T p_range;
     };
@@ -190,7 +196,7 @@ namespace octa {
     template<typename T>
     struct NumberRange {
         struct type {
-            typedef ForwardRange category;
+            typedef octa::ForwardRange category;
             typedef T  value;
             typedef T *pointer;
             typedef T &reference;
@@ -204,8 +210,6 @@ namespace octa {
         bool empty() const { return p_a * p_step >= p_b * p_step; }
         void pop_first() { p_a += p_step; }
         T &first() { return p_a; }
-
-        OCTA_RANGE_ITERATOR(NumberRange)
 
     private:
         T p_a, p_b, p_step;

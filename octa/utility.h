@@ -36,7 +36,7 @@ namespace std {
 }
 
 namespace octa {
-    template<typename T> using initializer_list = std::initializer_list<T>;
+    template<typename T> using InitializerList = std::initializer_list<T>;
 }
 
 #endif
