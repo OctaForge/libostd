@@ -160,6 +160,42 @@ namespace octa {
         (IsLvalueReference<T>::value || IsRvalueReference<T>::value)
     > {};
 
+    /* add lvalue reference */
+
+    template<typename T> struct AddLvalueReference       { typedef T &type; };
+    template<typename T> struct AddLvalueReference<T  &> { typedef T &type; };
+    template<typename T> struct AddLvalueReference<T &&> { typedef T &type; };
+    template<> struct AddLvalueReference<void> {
+        typedef void type;
+    };
+    template<> struct AddLvalueReference<const void> {
+        typedef const void type;
+    };
+    template<> struct AddLvalueReference<volatile void> {
+        typedef volatile void type;
+    };
+    template<> struct AddLvalueReference<const volatile void> {
+        typedef const volatile void type;
+    };
+
+    /* add rvalue reference */
+
+    template<typename T> struct AddRvalueReference       { typedef T &&type; };
+    template<typename T> struct AddRvalueReference<T  &> { typedef T &&type; };
+    template<typename T> struct AddRvalueReference<T &&> { typedef T &&type; };
+    template<> struct AddRvalueReference<void> {
+        typedef void type;
+    };
+    template<> struct AddRvalueReference<const void> {
+        typedef const void type;
+    };
+    template<> struct AddRvalueReference<volatile void> {
+        typedef volatile void type;
+    };
+    template<> struct AddRvalueReference<const volatile void> {
+        typedef const volatile void type;
+    };
+
     /* is array */
 
     template<typename            > struct IsArray      : false_t {};
