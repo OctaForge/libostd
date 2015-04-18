@@ -9,6 +9,7 @@
 #include <stddef.h>
 
 #include "octa/types.h"
+#include "octa/utility.h"
 
 namespace octa {
     /* conditional */
@@ -25,9 +26,7 @@ namespace octa {
 
     /* removers */
 
-    template<typename T> struct RemoveReference      { typedef T type; };
-    template<typename T> struct RemoveReference<T&>  { typedef T type; };
-    template<typename T> struct RemoveReference<T&&> { typedef T type; };
+    template<typename T> using RemoveReference = internal::RemoveReference<T>;
 
     template<typename T> struct RemoveConst          { typedef T type; };
     template<typename T> struct RemoveConst<const T> { typedef T type; };
@@ -180,27 +179,55 @@ namespace octa {
 
     /* add rvalue reference */
 
-    template<typename T> struct AddRvalueReference       { typedef T &&type; };
-    template<typename T> struct AddRvalueReference<T  &> { typedef T &&type; };
-    template<typename T> struct AddRvalueReference<T &&> { typedef T &&type; };
-    template<> struct AddRvalueReference<void> {
-        typedef void type;
-    };
-    template<> struct AddRvalueReference<const void> {
-        typedef const void type;
-    };
-    template<> struct AddRvalueReference<volatile void> {
-        typedef volatile void type;
-    };
-    template<> struct AddRvalueReference<const volatile void> {
-        typedef const volatile void type;
-    };
+    template<typename T> using AddRvalueReference = internal::AddRvalueReference<T>;
 
     /* is array */
 
     template<typename            > struct IsArray      : false_t {};
     template<typename T          > struct IsArray<T[] >:  true_t {};
     template<typename T, size_t N> struct IsArray<T[N]>:  true_t {};
+
+    /* result of call at compile time */
+
+    namespace internal {
+        template<typename F, typename ...A>
+        inline auto result_of_invoke(F &&f, A &&...args) ->
+          decltype(forward<F>(f)(forward<A>(args)...)) {
+            return forward<F>(f)(forward<A>(args)...);
+        }
+        template<typename B, typename T, typename D>
+        inline auto result_of_invoke(T B::*pmd, D &&ref) ->
+          decltype(forward<D>(ref).*pmd) {
+            return forward<D>(ref).*pmd;
+        }
+        template<typename PMD, typename P>
+        inline auto result_of_invoke(PMD &&pmd, P &&ptr) ->
+          decltype((*forward<P>(ptr)).*forward<PMD>(pmd)) {
+            return (*forward<P>(ptr)).*forward<PMD>(pmd);
+        }
+        template<typename B, typename T, typename D, typename ...A>
+        inline auto result_of_invoke(T B::*pmf, D &&ref, A &&...args) ->
+          decltype((forward<D>(ref).*pmf)(forward<A>(args)...)) {
+            return (forward<D>(ref).*pmf)(forward<A>(args)...);
+        }
+        template<typename PMF, typename P, typename ...A>
+        inline auto result_of_invoke(PMF &&pmf, P &&ptr, A &&...args) ->
+          decltype(((*forward<P>(ptr)).*forward<PMF>(pmf))(forward<A>(args)...)) {
+            return ((*forward<P>(ptr)).*forward<PMF>(pmf))(forward<A>(args)...);
+        }
+
+        template<typename, typename = void>
+        struct ResultOf {};
+        template<typename F, typename ...A>
+        struct ResultOf<F(A...), decltype(void(internal::result_of_invoke(
+            declval<F>(), declval<A>()...)))> {
+            using type = decltype(internal::result_of_invoke(declval<F>(),
+                declval<A>()...));
+        };
+    }
+
+    /* cppreference.com used for reference */
+    template<typename T> struct ResultOf: internal::ResultOf<T> {};
 }
 
 #endif
