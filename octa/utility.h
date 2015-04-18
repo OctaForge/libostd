@@ -136,6 +136,16 @@ namespace octa {
               decltype(((obj).*(p_ptr))(args...)) const {
                 return ((obj).*(p_ptr))(args...);
             }
+            template<typename... A>
+            auto operator()(T *obj, A &&...args) ->
+              decltype(((obj)->*(p_ptr))(args...)) {
+                return ((obj)->*(p_ptr))(args...);
+            }
+            template<typename... A>
+            auto operator()(const T *obj, A &&...args) ->
+              decltype(((obj)->*(p_ptr))(args...)) const {
+                return ((obj)->*(p_ptr))(args...);
+            }
         };
     }
 
