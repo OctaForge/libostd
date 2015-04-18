@@ -47,6 +47,9 @@ namespace octa {
 
         typedef T value_type;
         typedef IntegralConstant<T, val> type;
+
+        constexpr operator value_type() const { return value; }
+        constexpr value_type operator()() const { return value; }
     };
 
     typedef IntegralConstant<bool, true>  true_t;
