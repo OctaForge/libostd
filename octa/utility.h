@@ -107,7 +107,17 @@ namespace octa {
             typedef A second;
         };
         template<typename T, typename R, typename ...A>
-        struct MemTypes<T, R(A...) const>: MemTypes<T, R(A...)> {};
+        struct MemTypes<T, R(A...) const> {
+            typedef R result;
+            typedef const T argument;
+        };
+        template<typename T, typename R, typename A>
+        struct MemTypes<T, R(A) const> {
+            typedef R result;
+            typedef const T argument;
+            typedef const T first;
+            typedef A second;
+        };
 
         template<typename R, typename T>
         class MemFn {
