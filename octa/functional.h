@@ -79,6 +79,14 @@ namespace octa {
     private:
         T p_fn;
     };
+
+    template<typename T> UnaryNegate<T> not1(const T &fn) {
+        return UnaryNegate<T>(fn);
+    }
+
+    template<typename T> BinaryNegate<T> not2(const T &fn) {
+        return BinaryNegate<T>(fn);
+    }
 }
 
 #endif
