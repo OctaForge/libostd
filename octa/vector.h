@@ -13,59 +13,9 @@
 #include "octa/traits.h"
 #include "octa/utility.h"
 #include "octa/range.h"
+#include "octa/algorithm.h"
 
 namespace octa {
-    /* Implementation of vector ranges
-     *
-     * See the range specification as documented on OctaForge wiki.
-     */
-    template<typename T>
-    struct VectorRange: InputRangeBase<VectorRange<T>, RandomAccessRange, T> {
-        VectorRange(): p_beg(nullptr), p_end(nullptr) {}
-        VectorRange(const VectorRange &v): p_beg(v.p_beg), p_end(v.p_end) {}
-        VectorRange(T *beg, T *end): p_beg(beg), p_end(end) {}
-
-        bool operator==(const VectorRange &v) const {
-            return p_beg == v.p_beg && p_end == v.p_end;
-        }
-        bool operator!=(const VectorRange &v) const {
-            return p_beg != v.p_beg || p_end != v.p_end;
-        }
-
-        /* satisfy InputRange / ForwardRange */
-        bool empty() const { return p_beg == nullptr; }
-
-        void pop_first() {
-            if (p_beg == nullptr) return;
-            if (++p_beg == p_end) p_beg = p_end = nullptr;
-        }
-
-              T &first()       { return *p_beg; }
-        const T &first() const { return *p_beg; }
-
-        /* satisfy BidirectionalRange */
-        void pop_last() {
-            if (p_end-- == p_beg) { p_end = nullptr; return; }
-            if (p_end   == p_beg) p_beg = p_end = nullptr;
-        }
-
-              T &last()       { return *(p_end - 1); }
-        const T &last() const { return *(p_end - 1); }
-
-        /* satisfy RandomAccessRange */
-        size_t length() const { return p_end - p_beg; }
-
-        VectorRange slice(size_t start, size_t end) {
-            return VectorRange(p_beg + start, p_beg + end);
-        }
-
-              T &operator[](size_t i)       { return p_beg[i]; }
-        const T &operator[](size_t i) const { return p_beg[i]; }
-
-    private:
-        T *p_beg, *p_end;
-    };
-
     template<typename T>
     class Vector {
         T *p_buf;
@@ -83,15 +33,15 @@ namespace octa {
         enum { MIN_SIZE = 8 };
 
         struct type {
-            typedef       T               value;
-            typedef       T              &reference;
-            typedef const T              &const_reference;
-            typedef       T              *pointer;
-            typedef const T              *const_pointer;
-            typedef size_t                size;
-            typedef ptrdiff_t             difference;
-            typedef VectorRange<      T>  range;
-            typedef VectorRange<const T>  const_range;
+            typedef       T                value;
+            typedef       T               &reference;
+            typedef const T               &const_reference;
+            typedef       T               *pointer;
+            typedef const T               *const_pointer;
+            typedef size_t                 size;
+            typedef ptrdiff_t              difference;
+            typedef PointerRange<      T>  range;
+            typedef PointerRange<const T>  const_range;
         };
 
         Vector(): p_buf(nullptr), p_len(0), p_cap(0) {}
@@ -197,7 +147,7 @@ namespace octa {
             }
             size_t oc = p_cap;
             if (!oc) {
-                p_cap = (n > MIN_SIZE) ? n : size_t(MIN_SIZE);
+                p_cap = max(n, size_t(MIN_SIZE));
             } else {
                 while (p_cap < n) p_cap *= 2;
             }
@@ -314,15 +264,15 @@ namespace octa {
         }
 
         T *insert(size_t idx, InitializerList<T> il) {
-            return insert_range(idx, VectorRange<const T>(il.get(),
+            return insert_range(idx, PointerRange<const T>(il.get(),
                 il.get() + il.length()));
         }
 
         typename type::range each() {
-            return VectorRange<T>(p_buf, p_buf + p_len);
+            return PointerRange<T>(p_buf, p_buf + p_len);
         }
         typename type::const_range each() const {
-            return VectorRange<const T>(p_buf, p_buf + p_len);
+            return PointerRange<const T>(p_buf, p_buf + p_len);
         }
     };
 }

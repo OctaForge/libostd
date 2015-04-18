@@ -232,6 +232,53 @@ namespace octa {
     NumberRange<T> range(T v) {
         return NumberRange<T>(v);
     }
+
+    template<typename T>
+    struct PointerRange: InputRangeBase<PointerRange<T>, RandomAccessRange, T> {
+        PointerRange(): p_beg(nullptr), p_end(nullptr) {}
+        PointerRange(const PointerRange &v): p_beg(v.p_beg), p_end(v.p_end) {}
+        PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
+
+        bool operator==(const PointerRange &v) const {
+            return p_beg == v.p_beg && p_end == v.p_end;
+        }
+        bool operator!=(const PointerRange &v) const {
+            return p_beg != v.p_beg || p_end != v.p_end;
+        }
+
+        /* satisfy InputRange / ForwardRange */
+        bool empty() const { return p_beg == nullptr; }
+
+        void pop_first() {
+            if (p_beg == nullptr) return;
+            if (++p_beg == p_end) p_beg = p_end = nullptr;
+        }
+
+              T &first()       { return *p_beg; }
+        const T &first() const { return *p_beg; }
+
+        /* satisfy BidirectionalRange */
+        void pop_last() {
+            if (p_end-- == p_beg) { p_end = nullptr; return; }
+            if (p_end   == p_beg) p_beg = p_end = nullptr;
+        }
+
+              T &last()       { return *(p_end - 1); }
+        const T &last() const { return *(p_end - 1); }
+
+        /* satisfy RandomAccessRange */
+        size_t length() const { return p_end - p_beg; }
+
+        PointerRange slice(size_t start, size_t end) {
+            return PointerRange(p_beg + start, p_beg + end);
+        }
+
+              T &operator[](size_t i)       { return p_beg[i]; }
+        const T &operator[](size_t i) const { return p_beg[i]; }
+
+    private:
+        T *p_beg, *p_end;
+    };
 }
 
 #endif

@@ -118,6 +118,80 @@ namespace octa {
     void sort(R range) {
         sort(range, Less<typename RangeTraits<R>::value>());
     }
+
+    template<typename T>
+    inline const T &min(const T &a, const T &b) {
+        return (a < b) ? a : b;
+    }
+    template<typename T, typename C>
+    inline const T &min(const T &a, const T &b, C compare) {
+        return compare(a, b) ? a : b;
+    }
+
+    template<typename T>
+    inline const T &max(const T &a, const T &b) {
+        return (a < b) ? b : a;
+    }
+    template<typename T, typename C>
+    inline const T &max(const T &a, const T &b, C compare) {
+        return compare(a, b) ? b : a;
+    }
+
+    template<typename R>
+    inline R min_element(R range) {
+        R r = range;
+        for (; !range.empty(); range.pop_first())
+            if (min(r.first(), range.first()) == range.first())
+                r = range;
+        return r;
+    }
+    template<typename R, typename C>
+    inline R min_element(R range, C compare) {
+        R r = range;
+        for (; !range.empty(); range.pop_first())
+            if (min(r.first(), range.first(), compare) == range.first())
+                r = range;
+        return r;
+    }
+
+    template<typename R>
+    inline R max_element(R range) {
+        R r = range;
+        for (; !range.empty(); range.pop_first())
+            if (max(r.first(), range.first()) == range.first())
+                r = range;
+        return r;
+    }
+    template<typename R, typename C>
+    inline R max_element(R range, C compare) {
+        R r = range;
+        for (; !range.empty(); range.pop_first())
+            if (max(r.first(), range.first(), compare) == range.first())
+                r = range;
+        return r;
+    }
+
+    template<typename T>
+    inline T min(InitializerList<T> il) {
+        return min_element(PointerRange<const T>(il.get(),
+            il.get() + il.length())).first();
+    }
+    template<typename T, typename C>
+    inline T min(InitializerList<T> il, C compare) {
+        return min_element(PointerRange<const T>(il.get(),
+            il.get() + il.length(), compare)).first();
+    }
+
+    template<typename T>
+    inline T max(InitializerList<T> il) {
+        return max_element(PointerRange<const T>(il.get(),
+            il.get() + il.length())).first();
+    }
+    template<typename T, typename C>
+    inline T max(InitializerList<T> il, C compare) {
+        return max_element(PointerRange<const T>(il.get(),
+            il.get() + il.length(), compare)).first();
+    }
 }
 
 #endif
