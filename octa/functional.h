@@ -51,6 +51,34 @@ namespace octa {
             typedef T result;
         };
     };
+
+    template<typename T> struct BinaryNegate {
+        struct type {
+            typedef typename T::type::first first;
+            typedef typename T::type::second second;
+            typedef bool result;
+        };
+        explicit BinaryNegate(const T &f): p_fn(f) {}
+        bool operator()(const typename type::first &x,
+                        const typename type::second &y) {
+            return !p_fn(x, y);
+        }
+    private:
+        T p_fn;
+    };
+
+    template<typename T> struct UnaryNegate {
+        struct type {
+            typedef typename T::type::argument argument;
+            typedef bool result;
+        };
+        explicit UnaryNegate(const T &f): p_fn(f) {}
+        bool operator()(const typename type::argument &x) {
+            return !p_fn(x);
+        }
+    private:
+        T p_fn;
+    };
 }
 
 #endif
