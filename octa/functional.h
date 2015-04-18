@@ -6,6 +6,8 @@
 #ifndef OCTA_FUNCTIONAL_H
 #define OCTA_FUNCTIONAL_H
 
+#include "octa/memory.h"
+
 namespace octa {
 #define OCTA_DEFINE_BINARY_OP(name, op, rettype) \
     template<typename T> struct name { \
@@ -87,6 +89,39 @@ namespace octa {
     template<typename T> BinaryNegate<T> not2(const T &fn) {
         return BinaryNegate<T>(fn);
     }
+
+    template<typename T>
+    struct ReferenceWrapper {
+        typedef T type;
+
+        ReferenceWrapper(T &v): p_ptr(address_of(v)) {}
+        ReferenceWrapper(const ReferenceWrapper &) = default;
+        ReferenceWrapper(T &&) = delete;
+
+        ReferenceWrapper &operator=(const ReferenceWrapper &) = default;
+
+        operator T &() const { return *p_ptr; }
+        T &get() const { return *p_ptr; }
+
+    private:
+        T *p_ptr;
+    };
+
+    template<typename T> ReferenceWrapper<T> ref(T &v) {
+        return ReferenceWrapper<T>(v);
+    }
+    template<typename T> ReferenceWrapper<T> ref(ReferenceWrapper<T> v) {
+        return ReferenceWrapper<T>(v);
+    }
+    template<typename T> void ref(const T &&) = delete;
+
+    template<typename T> ReferenceWrapper<const T> cref(const T &v) {
+        return ReferenceWrapper<T>(v);
+    }
+    template<typename T> ReferenceWrapper<const T> cref(ReferenceWrapper<T> v) {
+        return ReferenceWrapper<T>(v);
+    }
+    template<typename T> void cref(const T &&) = delete;
 }
 
 #endif
