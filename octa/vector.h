@@ -55,6 +55,10 @@ namespace octa {
         /* satisfy RandomAccessRange */
         size_t length() const { return p_end - p_beg; }
 
+        VectorRange slice(size_t start, size_t end) {
+            return VectorRange(p_beg + start, p_beg + end);
+        }
+
               T &operator[](size_t i)       { return p_beg[i]; }
         const T &operator[](size_t i) const { return p_beg[i]; }
 

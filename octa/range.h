@@ -125,6 +125,11 @@ namespace octa {
             return p_range[length() - i - 1];
         }
 
+        ReverseRange<T> slice(size_t start, size_t end) {
+            size_t len = p_range.length();
+            return ReverseRange<T>(p_range.slice(len - end, len - start));
+        }
+
     private:
         T p_range;
     };
@@ -180,6 +185,10 @@ namespace octa {
 
         typename RangeTraits<T>::value &&operator[](size_t i) {
             return move(p_range[i]);
+        }
+
+        MoveRange<T> slice(size_t start, size_t end) {
+            return MoveRange<T>(p_range.slice(start, end));
         }
 
     private:
