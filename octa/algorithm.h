@@ -10,6 +10,18 @@
 #include "octa/range.h"
 
 namespace octa {
+    template<typename R, typename U>
+    R partition(R range, U pred) {
+        R ret = range;
+        for (; !range.empty(); range.pop_first()) {
+            if (pred(range.first())) {
+                swap(range.first(), ret.first());
+                ret.pop_first();
+            }
+        }
+        return ret;
+    }
+
     template<typename R, typename C>
     void insertion_sort(R range, C compare) {
         size_t rlen = range.length();
@@ -27,7 +39,6 @@ namespace octa {
     void insertion_sort(R range) {
         insertion_sort(range, Less<typename RangeTraits<R>::value>());
     }
-
 
     template<typename R, typename C>
     void sort(R range, C compare) {

@@ -38,17 +38,6 @@ namespace std {
 namespace octa {
     template<typename T> using InitializerList = std::initializer_list<T>;
 
-    template<typename T> void swap(T &a, T &b) {
-        T c(move(a));
-        a = move(b);
-        b = move(c);
-    }
-    template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N]) {
-        for (size_t i = 0; i < N; ++i) {
-            swap(a[i], b[i]);
-        }
-    }
-
     /* aliased in traits.h later */
     namespace internal {
         template<typename T> struct RemoveReference      { typedef T type; };
@@ -152,6 +141,17 @@ namespace octa {
     template<typename R, typename T>
     internal::MemFn<R, T> mem_fn(R T:: *ptr) {
         return internal::MemFn<R, T>(ptr);
+    }
+
+    template<typename T> void swap(T &a, T &b) {
+        T c(move(a));
+        a = move(b);
+        b = move(c);
+    }
+    template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N]) {
+        for (size_t i = 0; i < N; ++i) {
+            swap(a[i], b[i]);
+        }
     }
 }
 
