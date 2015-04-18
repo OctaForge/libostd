@@ -23,9 +23,6 @@ namespace octa {
     struct VectorRange: InputRangeBase<VectorRange<T>, RandomAccessRange, T> {
         VectorRange(): p_beg(nullptr), p_end(nullptr) {}
         VectorRange(const VectorRange &v): p_beg(v.p_beg), p_end(v.p_end) {}
-        VectorRange(VectorRange &&v): p_beg(v.p_beg), p_end(v.p_end) {
-            v.p_beg = v.p_end = nullptr;
-        }
         VectorRange(T *beg, T *end): p_beg(beg), p_end(end) {}
 
         bool operator==(const VectorRange &v) const {

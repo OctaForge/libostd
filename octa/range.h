@@ -82,6 +82,23 @@ namespace octa {
         ReverseRange(const ReverseRange &it): p_range(it.p_range) {}
         ReverseRange(ReverseRange &&it): p_range(move(it.p_range)) {}
 
+        ReverseRange &operator=(const ReverseRange &v) {
+            p_range = v.p_range;
+            return *this;
+        }
+        ReverseRange &operator=(ReverseRange &&v) {
+            p_range = move(v.p_range);
+            return *this;
+        }
+        ReverseRange &operator=(const T &v) {
+            p_range = v;
+            return *this;
+        }
+        ReverseRange &operator=(T &&v) {
+            p_range = forward<T>(v);
+            return *this;
+        }
+
         bool   empty () const { return p_range.empty (); }
         size_t length() const { return p_range.length(); }
 
@@ -127,6 +144,23 @@ namespace octa {
         MoveRange(const T &range): p_range(range) {}
         MoveRange(const MoveRange &it): p_range(it.p_range) {}
         MoveRange(MoveRange &&it): p_range(move(it.p_range)) {}
+
+        MoveRange &operator=(const MoveRange &v) {
+            p_range = v.p_range;
+            return *this;
+        }
+        MoveRange &operator=(MoveRange &&v) {
+            p_range = move(v.p_range);
+            return *this;
+        }
+        MoveRange &operator=(const T &v) {
+            p_range = v;
+            return *this;
+        }
+        MoveRange &operator=(T &&v) {
+            p_range = forward<T>(v);
+            return *this;
+        }
 
         bool   empty () const { return p_range.empty (); }
         size_t length() const { return p_range.length(); }
