@@ -41,8 +41,30 @@ namespace octa {
     }
 
     template<typename R, typename C>
+    void quicksort(R range, C compare) {
+        if (range.length() <= 10) {
+            insertion_sort(range, compare);
+            return;
+        }
+        typename RangeTraits<R>::reference p = range[range.length() / 2];
+        swap(p, range.last());
+        R r = partition(range, [p, compare](decltype(p) v) {
+            return compare(v, p);
+        });
+        R l = range.slice(0, range.length() - r.length());
+        swap(r.first(), r.last());
+        quicksort(l, compare);
+        quicksort(r, compare);
+    }
+
+    template<typename R>
+    void quicksort(R range) {
+        quicksort(range, Less<typename RangeTraits<R>::value>());
+    }
+
+    template<typename R, typename C>
     void sort(R range, C compare) {
-        insertion_sort(range, compare);
+        quicksort(range, compare);
     }
 
     template<typename R>
