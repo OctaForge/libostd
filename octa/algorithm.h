@@ -40,6 +40,15 @@ namespace octa {
         insertion_sort(range, Less<typename RangeTraits<R>::value>());
     }
 
+    namespace internal {
+        template<typename T, typename U>
+        struct UnaryCompare {
+            T val;
+            U comp;
+            bool operator()(const T &v) const { return comp(v, val); }
+        };
+    }
+
     template<typename R, typename C>
     void quicksort(R range, C compare) {
         if (range.length() <= 10) {
@@ -48,8 +57,8 @@ namespace octa {
         }
         typename RangeTraits<R>::reference p = range[range.length() / 2];
         swap(p, range.last());
-        R r = partition(range, [p, compare](decltype(p) v) {
-            return compare(v, p);
+        R r = partition(range, internal::UnaryCompare<decltype(p), C>{
+            p, compare
         });
         R l = range.slice(0, range.length() - r.length());
         swap(r.first(), r.last());
