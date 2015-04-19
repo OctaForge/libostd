@@ -238,6 +238,7 @@ namespace octa {
         PointerRange(): p_beg(nullptr), p_end(nullptr) {}
         PointerRange(const PointerRange &v): p_beg(v.p_beg), p_end(v.p_end) {}
         PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
+        PointerRange(T *beg, size_t n): p_beg(beg), p_end(beg + n) {}
 
         bool operator==(const PointerRange &v) const {
             return p_beg == v.p_beg && p_end == v.p_end;
