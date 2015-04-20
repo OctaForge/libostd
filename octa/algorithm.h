@@ -24,6 +24,14 @@ namespace octa {
         return ret;
     }
 
+    template<typename R, typename P>
+    bool is_partitioned(R range, P pred) {
+        for (; !range.empty() && pred(range.first()); range.pop_first());
+        for (; !range.empty(); range.pop_first())
+            if (pred(range.first())) return false;
+        return true;
+    }
+
     template<typename R, typename C>
     void insertion_sort(R range, C compare) {
         size_t rlen = range.length();
