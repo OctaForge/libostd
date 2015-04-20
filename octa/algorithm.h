@@ -10,6 +10,7 @@
 
 #include "octa/functional.h"
 #include "octa/range.h"
+#include "octa/utility.h"
 
 namespace octa {
     template<typename R, typename U>
@@ -199,6 +200,13 @@ namespace octa {
     inline T max(InitializerList<T> il, C compare) {
         return max_element(PointerRange<const T>(il.get(),
             il.get() + il.length(), compare)).first();
+    }
+
+    template<typename R, typename F>
+    F for_each(R range, F func) {
+        for (; !range.empty(); range.pop_first())
+            func(range.first());
+        return move(func);
     }
 }
 
