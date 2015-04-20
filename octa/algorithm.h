@@ -6,11 +6,12 @@
 #ifndef OCTA_ALGORITHM_H
 #define OCTA_ALGORITHM_H
 
-#include "math.h"
+#include <math.h>
 
 #include "octa/functional.h"
 #include "octa/range.h"
 #include "octa/utility.h"
+#include "octa/initializer_list.h"
 
 namespace octa {
     template<typename R, typename U>
@@ -182,25 +183,21 @@ namespace octa {
 
     template<typename T>
     inline T min(InitializerList<T> il) {
-        return min_element(PointerRange<const T>(il.get(),
-            il.get() + il.length())).first();
+        return min_element(il.range()).first();
     }
     template<typename T, typename C>
     inline T min(InitializerList<T> il, C compare) {
-        return min_element(PointerRange<const T>(il.get(),
-            il.get() + il.length(), compare)).first();
+        return min_element(il.range(), compare).first();
     }
 
     template<typename T>
     inline T max(InitializerList<T> il) {
-        return max_element(PointerRange<const T>(il.get(),
-            il.get() + il.length())).first();
+        return max_element(il.range()).first();
     }
 
     template<typename T, typename C>
     inline T max(InitializerList<T> il, C compare) {
-        return max_element(PointerRange<const T>(il.get(),
-            il.get() + il.length(), compare)).first();
+        return max_element(il.range(), compare).first();
     }
 
     template<typename R, typename F>

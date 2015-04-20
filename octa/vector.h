@@ -14,6 +14,7 @@
 #include "octa/utility.h"
 #include "octa/range.h"
 #include "octa/algorithm.h"
+#include "octa/initializer_list.h"
 
 namespace octa {
     template<typename T>
@@ -264,8 +265,7 @@ namespace octa {
         }
 
         T *insert(size_t idx, InitializerList<T> il) {
-            return insert_range(idx, PointerRange<const T>(il.get(),
-                il.get() + il.length()));
+            return insert_range(idx, il.range());
         }
 
         typename type::range each() {
