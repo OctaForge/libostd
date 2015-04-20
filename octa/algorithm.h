@@ -196,6 +196,7 @@ namespace octa {
         return max_element(PointerRange<const T>(il.get(),
             il.get() + il.length())).first();
     }
+
     template<typename T, typename C>
     inline T max(InitializerList<T> il, C compare) {
         return max_element(PointerRange<const T>(il.get(),
@@ -207,6 +208,27 @@ namespace octa {
         for (; !range.empty(); range.pop_first())
             func(range.first());
         return move(func);
+    }
+
+    template<typename R, typename P>
+    bool all_of(R range, P pred) {
+        for (; !range.empty(); range.pop_first())
+            if (!pred(range.first())) return false;
+        return true;
+    }
+
+    template<typename R, typename P>
+    bool any_of(R range, P pred) {
+        for (; !range.empty(); range.pop_first())
+            if (pred(range.first())) return true;
+        return false;
+    }
+
+    template<typename R, typename P>
+    bool none_of(R range, P pred) {
+        for (; !range.empty(); range.pop_first())
+            if (pred(range.first())) return false;
+        return true;
     }
 }
 
