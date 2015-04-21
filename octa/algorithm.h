@@ -227,6 +227,76 @@ namespace octa {
             if (pred(range.first())) return false;
         return true;
     }
+
+    template<typename R, typename T>
+    R find(R range, const T &v) {
+        for (; !range.empty(); range.pop_first())
+            if (range.first() == v)
+                break;
+        return range;
+    }
+
+    template<typename R, typename P>
+    R find_if(R range, P pred) {
+        for (; !range.empty(); range.pop_first())
+            if (pred(range.first()))
+                break;
+        return range;
+    }
+
+    template<typename R, typename P>
+    R find_if_not(R range, P pred) {
+        for (; !range.empty(); range.pop_first())
+            if (!pred(range.first()))
+                break;
+        return range;
+    }
+
+    template<typename R, typename T>
+    size_t count(R range, const T &v) {
+        size_t ret = 0;
+        for (; !range.empty(); range.pop_first())
+            if (range.first() == v)
+                ++ret;
+        return ret;
+    }
+
+    template<typename R, typename P>
+    size_t count_if(R range, P pred) {
+        size_t ret = 0;
+        for (; !range.empty(); range.pop_first())
+            if (pred(range.first()))
+                ++ret;
+        return ret;
+    }
+
+    template<typename R, typename P>
+    size_t count_if_not(R range, P pred) {
+        size_t ret = 0;
+        for (; !range.empty(); range.pop_first())
+            if (!pred(range.first()))
+                ++ret;
+        return ret;
+    }
+
+    template<typename R>
+    bool equal(R range1, R range2) {
+        for (; !range1.empty(); range1.pop_first()) {
+            if (range2.empty() || (range1.first() != range2.first()))
+                return false;
+            range2.pop_first();
+        }
+        return range2.empty();
+    }
+
+    template<typename R>
+    void reverse(R range) {
+        while (!range.empty()) {
+            swap(range.first(), range.last());
+            range.pop_first();
+            range.pop_last();
+        }
+    }
 }
 
 #endif
