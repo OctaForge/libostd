@@ -355,6 +355,12 @@ namespace octa {
         }
         return range2;
     }
+
+    template<typename R, typename T>
+    void iota(R range, T value) {
+        for (; !range.empty(); range.pop_first())
+            range.first() = value++;
+    }
 }
 
 #endif
