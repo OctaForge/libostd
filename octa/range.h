@@ -285,6 +285,77 @@ namespace octa {
     private:
         T *p_beg, *p_end;
     };
+
+    template<typename T>
+    struct EnumeratedValue {
+        size_t index;
+        T      value;
+    };
+
+    template<typename T>
+    struct EnumeratedRange: InputRangeBase<EnumeratedRange<T>,
+        InputRange,     typename RangeTraits<T>::value,
+        EnumeratedValue<typename RangeTraits<T>::reference>
+    > {
+        EnumeratedRange(): p_range(), p_index(0) {}
+        EnumeratedRange(const T &range): p_range(range), p_index(0) {}
+        EnumeratedRange(const EnumeratedRange &it): p_range(it.p_range),
+            p_index(it.p_index) {}
+        EnumeratedRange(EnumeratedRange &&it): p_range(move(it.p_range)),
+            p_index(it.p_index) {}
+
+        EnumeratedRange &operator=(const EnumeratedRange &v) {
+            p_range = v.p_range;
+            p_index = v.p_index;
+            return *this;
+        }
+        EnumeratedRange &operator=(EnumeratedRange &&v) {
+            p_range = move(v.p_range);
+            p_index = v.p_index;
+            return *this;
+        }
+        EnumeratedRange &operator=(const T &v) {
+            p_range = v;
+            p_index = 0;
+            return *this;
+        }
+        EnumeratedRange &operator=(T &&v) {
+            p_range = forward<T>(v);
+            p_index = 0;
+            return *this;
+        }
+
+        bool empty() const { return p_range.empty(); }
+
+        void pop_first() { ++p_index; p_range.pop_first(); }
+
+        EnumeratedValue<typename RangeTraits<T>::reference> first() {
+            return EnumeratedValue<typename RangeTraits<T>::reference> {
+                p_index, p_range.first()
+            };
+        }
+        EnumeratedValue<typename RangeTraits<T>::reference> first() const {
+            return EnumeratedValue<typename RangeTraits<T>::reference> {
+                p_index, p_range.first()
+            };
+        }
+
+        bool operator==(const EnumeratedRange &v) const {
+            return p_range == v.p_range;
+        }
+        bool operator!=(const EnumeratedRange &v) const {
+            return p_range != v.p_range;
+        }
+
+    private:
+        T p_range;
+        size_t p_index;
+    };
+
+    template<typename T>
+    EnumeratedRange<T> enumerate(const T &it) {
+        return EnumeratedRange<T>(it);
+    }
 }
 
 #endif
