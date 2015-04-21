@@ -191,6 +191,8 @@ namespace octa {
             return MoveRange<T>(p_range.slice(start, end));
         }
 
+        void put(const typename RangeTraits<T>::value &v) { p_range.put(v); }
+
     private:
         T p_range;
     };
@@ -276,6 +278,9 @@ namespace octa {
 
               T &operator[](size_t i)       { return p_beg[i]; }
         const T &operator[](size_t i) const { return p_beg[i]; }
+
+        /* satisfy OutputRange */
+        void put(const T &v) { *(p_beg++) = v; }
 
     private:
         T *p_beg, *p_end;

@@ -274,7 +274,18 @@ namespace octa {
         typename type::const_range each() const {
             return PointerRange<const T>(p_buf, p_buf + p_len);
         }
+
+        void swap(Vector &v) {
+            swap(p_len, v.p_len);
+            swap(p_cap, v.p_cap);
+            swap(p_buf, v.p_buf);
+        }
     };
+
+    template<typename T>
+    void swap(Vector<T> &a, Vector<T> &b) {
+        a.swap(b);
+    }
 }
 
 #endif

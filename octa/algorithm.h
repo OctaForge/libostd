@@ -289,6 +289,36 @@ namespace octa {
         return range2.empty();
     }
 
+    template<typename R1, typename R2>
+    R2 copy(R1 irange, R2 orange) {
+        for (; !irange.empty(); irange.pop_first())
+            orange.put(irange.first());
+        return orange;
+    }
+
+    template<typename R1, typename R2, typename P>
+    R2 copy_if(R1 irange, R2 orange, P pred) {
+        for (; !irange.empty(); irange.pop_first())
+            if (pred(irange.first()))
+                orange.put(irange.first());
+        return orange;
+    }
+
+    template<typename R1, typename R2, typename P>
+    R2 copy_if_not(R1 irange, R2 orange, P pred) {
+        for (; !irange.empty(); irange.pop_first())
+            if (!pred(irange.first()))
+                orange.put(irange.first());
+        return orange;
+    }
+
+    template<typename R1, typename R2>
+    R2 move(R1 irange, R2 orange) {
+        for (; !irange.empty(); irange.pop_first())
+            orange.put(move(irange.first()));
+        return orange;
+    }
+
     template<typename R>
     void reverse(R range) {
         while (!range.empty()) {
@@ -296,6 +326,34 @@ namespace octa {
             range.pop_first();
             range.pop_last();
         }
+    }
+
+    template<typename R1, typename R2>
+    R2 reverse_copy(R1 irange, R2 orange) {
+        for (; !irange.empty(); irange.pop_last())
+            orange.put(irange.last());
+        return orange;
+    }
+
+    template<typename R, typename T>
+    void fill(R range, const T &v) {
+        for (; !range.empty(); range.pop_first())
+            range.first() = v;
+    }
+
+    template<typename R, typename F>
+    void generate(R range, F gen) {
+        for (; !range.empty(); range.pop_first())
+            range.first() = gen();
+    }
+
+    template<typename R1, typename R2>
+    R2 swap_ranges(R1 range1, R2 range2) {
+        for (; !range1.empty(); range1.pop_first()) {
+            swap(range1.first(), range2.first());
+            range2.pop_first();
+        }
+        return range2;
     }
 }
 
