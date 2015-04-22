@@ -12,18 +12,6 @@
 #include "octa/utility.h"
 
 namespace octa {
-    /* conditional */
-
-    template<bool cond, typename T, typename U>
-    struct Conditional {
-        typedef T type;
-    };
-
-    template<typename T, typename U>
-    struct Conditional<false, T, U> {
-        typedef U type;
-    };
-
     /* removers */
 
     template<typename T> using RemoveReference = internal::RemoveReference<T>;
@@ -57,61 +45,13 @@ namespace octa {
 
     template<typename T, T val> constexpr const T IntegralConstant<T, val>::value;
 
-    /* is integer */
+    /* is void */
 
-    template<typename T> struct IsIntegerBase: false_t {};
-
-    template<> struct IsIntegerBase<bool  >: true_t {};
-    template<> struct IsIntegerBase<char  >: true_t {};
-    template<> struct IsIntegerBase<uchar >: true_t {};
-    template<> struct IsIntegerBase<schar >: true_t {};
-    template<> struct IsIntegerBase<short >: true_t {};
-    template<> struct IsIntegerBase<ushort>: true_t {};
-    template<> struct IsIntegerBase<int   >: true_t {};
-    template<> struct IsIntegerBase<uint  >: true_t {};
-    template<> struct IsIntegerBase<long  >: true_t {};
-    template<> struct IsIntegerBase<ulong >: true_t {};
-    template<> struct IsIntegerBase<llong >: true_t {};
-    template<> struct IsIntegerBase<ullong>: true_t {};
+    template<typename T> struct IsVoidBase      : false_t {};
+    template<          > struct IsVoidBase<void>: true_t  {};
 
     template<typename T>
-    struct IsInteger: IsIntegerBase<typename RemoveConstVolatile<T>::type> {};
-
-    /* is floating point */
-
-    template<typename T> struct IsFloatBase  : false_t {};
-
-    template<> struct IsFloatBase<float  >: true_t {};
-    template<> struct IsFloatBase<double >: true_t {};
-    template<> struct IsFloatBase<ldouble>: true_t {};
-
-    template<typename T>
-    struct IsFloat: IsFloatBase<typename RemoveConstVolatile<T>::type> {};
-
-    /* is number */
-
-    template<typename T> struct IsNumber: IntegralConstant<bool,
-        (IsInteger<T>::value || IsFloat<T>::value)
-    > {};
-
-    /* is pointer */
-
-    template<typename  > struct IsPointerBase     : false_t {};
-    template<typename T> struct IsPointerBase<T *>:  true_t {};
-
-    template<typename T>
-    struct IsPointer: IsPointerBase<typename RemoveConstVolatile<T>::type> {};
-
-    /* is pointer to member function */
-
-    template<typename  > struct IsMemberPointerBase: false_t {};
-    template<typename T, typename U>
-    struct IsMemberPointerBase<T U::*>:  true_t {};
-
-    template<typename T>
-    struct IsMemberPointer: IsMemberPointerBase<
-        typename RemoveConstVolatile<T>::type
-    > {};
+    struct IsVoid: IsVoidBase<typename RemoveConstVolatile<T>::type> {};
 
     /* is null pointer */
 
@@ -123,28 +63,50 @@ namespace octa {
         typename RemoveConstVolatile<T>::type
     > {};
 
-    /* is POD: currently wrong */
+    /* is integer */
 
-    template<typename T> struct IsPOD: IntegralConstant<bool,
-        (IsInteger<T>::value || IsFloat<T>::value || IsPointer<T>::value)
-    > {};
+    template<typename T> struct IsIntegralBase: false_t {};
 
-    /* is class */
-
-    struct IsClassBase {
-        template<typename T> static char test(void (T::*)(void));
-        template<typename  > static  int test(...);
-    };
+    template<> struct IsIntegralBase<bool  >: true_t {};
+    template<> struct IsIntegralBase<char  >: true_t {};
+    template<> struct IsIntegralBase<uchar >: true_t {};
+    template<> struct IsIntegralBase<schar >: true_t {};
+    template<> struct IsIntegralBase<short >: true_t {};
+    template<> struct IsIntegralBase<ushort>: true_t {};
+    template<> struct IsIntegralBase<int   >: true_t {};
+    template<> struct IsIntegralBase<uint  >: true_t {};
+    template<> struct IsIntegralBase<long  >: true_t {};
+    template<> struct IsIntegralBase<ulong >: true_t {};
+    template<> struct IsIntegralBase<llong >: true_t {};
+    template<> struct IsIntegralBase<ullong>: true_t {};
 
     template<typename T>
-    struct IsClass: IntegralConstant<bool,
-        sizeof(IsClassBase::test<T>(0)) == 1
-    > {};
+    struct IsIntegral: IsIntegralBase<typename RemoveConstVolatile<T>::type> {};
 
-    /* type equality */
+    /* is floating point */
 
-    template<typename, typename> struct IsEqual      : false_t {};
-    template<typename T        > struct IsEqual<T, T>:  true_t {};
+    template<typename T> struct IsFloatingPointBase  : false_t {};
+
+    template<> struct IsFloatingPointBase<float  >: true_t {};
+    template<> struct IsFloatingPointBase<double >: true_t {};
+    template<> struct IsFloatingPointBase<ldouble>: true_t {};
+
+    template<typename T>
+    struct IsFloatingPoint: IsFloatingPointBase<typename RemoveConstVolatile<T>::type> {};
+
+    /* is array */
+
+    template<typename            > struct IsArray      : false_t {};
+    template<typename T          > struct IsArray<T[] >:  true_t {};
+    template<typename T, size_t N> struct IsArray<T[N]>:  true_t {};
+
+    /* is pointer */
+
+    template<typename  > struct IsPointerBase     : false_t {};
+    template<typename T> struct IsPointerBase<T *>:  true_t {};
+
+    template<typename T>
+    struct IsPointer: IsPointerBase<typename RemoveConstVolatile<T>::type> {};
 
     /* is lvalue reference */
 
@@ -155,6 +117,46 @@ namespace octa {
 
     template<typename  > struct IsRvalueReference      : false_t {};
     template<typename T> struct IsRvalueReference<T &&>:  true_t {};
+
+    /* is enum */
+
+    template<typename T> struct IsEnum: IntegralConstant<bool, __is_enum(T)> {};
+
+    /* is union */
+
+    template<typename T> struct IsUnion: IntegralConstant<bool, __is_union(T)> {};
+
+    /* is class */
+
+    template<typename T> struct IsClass: IntegralConstant<bool, __is_class(T)> {};
+
+    /* is number */
+
+    template<typename T> struct IsNumber: IntegralConstant<bool,
+        (IsIntegral<T>::value || IsFloatingPoint<T>::value)
+    > {};
+
+    /* is pointer to member */
+
+    template<typename  > struct IsMemberPointerBase: false_t {};
+    template<typename T, typename U>
+    struct IsMemberPointerBase<T U::*>:  true_t {};
+
+    template<typename T>
+    struct IsMemberPointer: IsMemberPointerBase<
+        typename RemoveConstVolatile<T>::type
+    > {};
+
+    /* is POD: currently wrong */
+
+    template<typename T> struct IsPOD: IntegralConstant<bool,
+        (IsIntegral<T>::value || IsFloatingPoint<T>::value || IsPointer<T>::value)
+    > {};
+
+    /* type equality */
+
+    template<typename, typename> struct IsEqual      : false_t {};
+    template<typename T        > struct IsEqual<T, T>:  true_t {};
 
     /* is reference */
 
@@ -184,11 +186,52 @@ namespace octa {
 
     template<typename T> using AddRvalueReference = internal::AddRvalueReference<T>;
 
-    /* is array */
+    /* extent */
 
-    template<typename            > struct IsArray      : false_t {};
-    template<typename T          > struct IsArray<T[] >:  true_t {};
-    template<typename T, size_t N> struct IsArray<T[N]>:  true_t {};
+    template<typename T, unsigned I = 0>
+    struct Extent: IntegralConstant<size_t, 0> {};
+
+    template<typename T>
+    struct Extent<T[], 0>: IntegralConstant<size_t, 0> {};
+
+    template<typename T, unsigned I>
+    struct Extent<T[], I>: IntegralConstant<size_t, Extent<T, I - 1>::value> {};
+
+    template<typename T, size_t N>
+    struct Extent<T[N], 0>: IntegralConstant<size_t, N> {};
+
+    template<typename T, size_t N, unsigned I>
+    struct Extent<T[N], I>: IntegralConstant<size_t, Extent<T, I - 1>::value> {};
+
+    /* remove extent */
+
+    template<typename T          > struct RemoveExtent       { typedef T type; };
+    template<typename T          > struct RemoveExtent<T[ ]> { typedef T type; };
+    template<typename T, size_t N> struct RemoveExtent<T[N]> { typedef T type; };
+
+    /* remove all extents */
+
+    template<typename T> struct RemoveAllExtents { typedef T type; };
+
+    template<typename T> struct RemoveAllExtents<T[]> {
+        typedef typename RemoveAllExtents<T>::type type;
+    };
+
+    template<typename T, size_t N> struct RemoveAllExtents<T[N]> {
+        typedef typename RemoveAllExtents<T>::type type;
+    };
+
+    /* conditional */
+
+    template<bool cond, typename T, typename U>
+    struct Conditional {
+        typedef T type;
+    };
+
+    template<typename T, typename U>
+    struct Conditional<false, T, U> {
+        typedef U type;
+    };
 
     /* result of call at compile time */
 
@@ -222,10 +265,9 @@ namespace octa {
         template<typename, typename = void>
         struct ResultOf {};
         template<typename F, typename ...A>
-        struct ResultOf<F(A...), decltype(void(internal::result_of_invoke(
-            declval<F>(), declval<A>()...)))> {
-            using type = decltype(internal::result_of_invoke(declval<F>(),
-                declval<A>()...));
+        struct ResultOf<F(A...), decltype(void(result_of_invoke(declval<F>(),
+        declval<A>()...)))> {
+            using type = decltype(result_of_invoke(declval<F>(), declval<A>()...));
         };
     }
 
@@ -237,6 +279,24 @@ namespace octa {
     template<bool B, typename T = void> struct enable_if {};
 
     template<typename T> struct enable_if<true, T> { typedef T type; };
+
+    /* decay */
+
+#if 0
+    template<typename T>
+    struct Decay {
+    private:
+        typedef typename RemoveReference<T>::type U;
+    public:
+        typedef typename Conditional<IsArray<U>::value,
+            typename RemoveExtent<U>::type *,
+            typename Conditional<IsFunction<U>::value,
+                typename AddPointer<U>::type,
+                typename RemoveConstVolatile<U>::type
+            >::type
+        >::type type;
+    };
+#endif
 }
 
 #endif
