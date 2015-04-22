@@ -52,66 +52,6 @@ namespace octa {
 
     template<typename T> typename internal::AddRvalueReference<T>::type declval();
 
-    namespace internal {
-        template<typename, typename> struct MemTypes;
-        template<typename T, typename R, typename ...A>
-        struct MemTypes<T, R(A...)> {
-            typedef R result;
-            typedef T argument;
-        };
-        template<typename T, typename R, typename A>
-        struct MemTypes<T, R(A)> {
-            typedef R result;
-            typedef T first;
-            typedef A second;
-        };
-        template<typename T, typename R, typename ...A>
-        struct MemTypes<T, R(A...) const> {
-            typedef R result;
-            typedef const T argument;
-        };
-        template<typename T, typename R, typename A>
-        struct MemTypes<T, R(A) const> {
-            typedef R result;
-            typedef const T first;
-            typedef A second;
-        };
-
-        template<typename R, typename T>
-        class MemFn {
-            R T::*p_ptr;
-        public:
-            struct type: MemTypes<T, R> {};
-
-            MemFn(R T::*ptr): p_ptr(ptr) {}
-            template<typename... A>
-            auto operator()(T &obj, A &&...args) ->
-              decltype(((obj).*(p_ptr))(args...)) {
-                return ((obj).*(p_ptr))(args...);
-            }
-            template<typename... A>
-            auto operator()(const T &obj, A &&...args) ->
-              decltype(((obj).*(p_ptr))(args...)) const {
-                return ((obj).*(p_ptr))(args...);
-            }
-            template<typename... A>
-            auto operator()(T *obj, A &&...args) ->
-              decltype(((obj)->*(p_ptr))(args...)) {
-                return ((obj)->*(p_ptr))(args...);
-            }
-            template<typename... A>
-            auto operator()(const T *obj, A &&...args) ->
-              decltype(((obj)->*(p_ptr))(args...)) const {
-                return ((obj)->*(p_ptr))(args...);
-            }
-        };
-    }
-
-    template<typename R, typename T>
-    internal::MemFn<R, T> mem_fn(R T:: *ptr) {
-        return internal::MemFn<R, T>(ptr);
-    }
-
     template<typename T> void swap(T &a, T &b) {
         T c(move(a));
         a = move(b);
