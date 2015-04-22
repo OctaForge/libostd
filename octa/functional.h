@@ -160,23 +160,23 @@ namespace octa {
             MemFn(R T::*ptr): p_ptr(ptr) {}
             template<typename... A>
             auto operator()(T &obj, A &&...args) ->
-              decltype(((obj).*(p_ptr))(args...)) {
-                return ((obj).*(p_ptr))(args...);
+              decltype(((obj).*(p_ptr))(forward<A>(args)...)) {
+                return ((obj).*(p_ptr))(forward<A>(args)...);
             }
             template<typename... A>
             auto operator()(const T &obj, A &&...args) ->
-              decltype(((obj).*(p_ptr))(args...)) const {
-                return ((obj).*(p_ptr))(args...);
+              decltype(((obj).*(p_ptr))(forward<A>(args)...)) const {
+                return ((obj).*(p_ptr))(forward<A>(args)...);
             }
             template<typename... A>
             auto operator()(T *obj, A &&...args) ->
-              decltype(((obj)->*(p_ptr))(args...)) {
-                return ((obj)->*(p_ptr))(args...);
+              decltype(((obj)->*(p_ptr))(forward<A>(args)...)) {
+                return ((obj)->*(p_ptr))(forward<A>(args)...);
             }
             template<typename... A>
             auto operator()(const T *obj, A &&...args) ->
-              decltype(((obj)->*(p_ptr))(args...)) const {
-                return ((obj)->*(p_ptr))(args...);
+              decltype(((obj)->*(p_ptr))(forward<A>(args)...)) const {
+                return ((obj)->*(p_ptr))(forward<A>(args)...);
             }
         };
     }
