@@ -62,7 +62,6 @@ namespace octa {
         template<typename T, typename R, typename A>
         struct MemTypes<T, R(A)> {
             typedef R result;
-            typedef T argument;
             typedef T first;
             typedef A second;
         };
@@ -74,7 +73,6 @@ namespace octa {
         template<typename T, typename R, typename A>
         struct MemTypes<T, R(A) const> {
             typedef R result;
-            typedef const T argument;
             typedef const T first;
             typedef A second;
         };
