@@ -200,7 +200,8 @@ namespace octa {
         template<typename T>
         struct FunctorInPlace {
             static constexpr bool value = sizeof(T)  <= sizeof(FunctorData)
-              && (alignof(FunctorData) % alignof(T)) == 0;
+              && (alignof(FunctorData) % alignof(T)) == 0
+              && octa::IsNothrowMoveConstructible<T>::value;
         };
 
         template<typename T, typename E = void>
