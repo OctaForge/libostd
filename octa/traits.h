@@ -130,15 +130,31 @@ namespace octa {
 
     template<typename T> struct IsClass: IntegralConstant<bool, __is_class(T)> {};
 
-    /* is number */
+    /* is function TODO */
 
-    template<typename T> struct IsNumber: IntegralConstant<bool,
+    template<typename> struct IsFunction: false_t {};
+
+    /* is arithmetic */
+
+    template<typename T> struct IsArithmetic: IntegralConstant<bool,
         (IsIntegral<T>::value || IsFloatingPoint<T>::value)
+    > {};
+
+    /* is fundamental */
+
+    template<typename T> struct IsFundamental: IntegralConstant<bool,
+        (IsArithmetic<T>::value || IsVoid<T>::value || IsNullPointer<T>::value)
+    > {};
+
+    /* is compound */
+
+    template<typename T> struct IsCompound: IntegralConstant<bool,
+        !IsFundamental<T>::value
     > {};
 
     /* is pointer to member */
 
-    template<typename  > struct IsMemberPointerBase: false_t {};
+    template<typename> struct IsMemberPointerBase: false_t {};
     template<typename T, typename U>
     struct IsMemberPointerBase<T U::*>:  true_t {};
 
@@ -147,22 +163,77 @@ namespace octa {
         typename RemoveConstVolatile<T>::type
     > {};
 
-    /* is POD: currently wrong */
+    /* is reference */
 
-    template<typename T> struct IsPOD: IntegralConstant<bool,
-        (IsIntegral<T>::value || IsFloatingPoint<T>::value || IsPointer<T>::value)
+    template<typename T> struct IsReference: IntegralConstant<bool,
+        (IsLvalueReference<T>::value || IsRvalueReference<T>::value)
+    > {};
+
+    /* is object */
+
+    template<typename T> struct IsObject: IntegralConstant<bool,
+        (!IsFunction<T>::value && !IsVoid<T>::value && !IsReference<T>::value)
+    > {};
+
+    /* is scalar */
+
+    template<typename T> struct IsScalar: IntegralConstant<bool,
+        (IsMemberPointer<T>::value || IsPointer<T>::value || IsEnum<T>::value
+      || IsNullPointer  <T>::value || IsArithmetic<T>::value)
+    > {};
+
+    /* is abstract */
+
+    template<typename T>
+    struct IsAbstract: IntegralConstant<bool, __is_abstract(T)> {};
+
+    /* is const */
+
+    template<typename  > struct IsConst         : false_t {};
+    template<typename T> struct IsConst<const T>:  true_t {};
+
+    /* is volatile */
+
+    template<typename  > struct IsVolatile            : false_t {};
+    template<typename T> struct IsVolatile<volatile T>:  true_t {};
+
+    /* is empty */
+
+    template<typename T> struct IsEmpty: IntegralConstant<bool, __is_empty(T)> {};
+
+    /* is literal type */
+
+    template<typename T>
+    struct IsLiteralType: IntegralConstant<bool, __is_literal_type(T)> {};
+
+    /* is POD */
+
+    template<typename T> struct IsPOD: IntegralConstant<bool, __is_pod(T)> {};
+
+    /* is polymorphic */
+
+    template<typename T>
+    struct IsPolymorphic: IntegralConstant<bool, __is_polymorphic(T)> {};
+
+    /* is signed */
+
+    template<typename T> struct IsSigned: IntegralConstant<bool, T(-1) < T(0)> {};
+
+    /* is unsigned */
+
+    template<typename T> struct IsUnsigned: IntegralConstant<bool, T(0) < T(-1)> {};
+
+    /* is standard layout */
+
+    template<typename T> struct RemoveAllExtents;
+    template<typename T> struct IsStandardLayout: IntegralConstant<bool,
+        IsScalar<typename RemoveAllExtents<T>::type>::value
     > {};
 
     /* type equality */
 
     template<typename, typename> struct IsEqual      : false_t {};
     template<typename T        > struct IsEqual<T, T>:  true_t {};
-
-    /* is reference */
-
-    template<typename T> struct IsReference: IntegralConstant<bool,
-        (IsLvalueReference<T>::value || IsRvalueReference<T>::value)
-    > {};
 
     /* add lvalue reference */
 
