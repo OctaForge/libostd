@@ -875,7 +875,7 @@ namespace octa {
         template<size_t N> struct AlignedStorageTest {
             union type {
                 uchar data[N];
-                max_align_t align;
+                octa::max_align_t align;
             };
         };
     };
