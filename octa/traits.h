@@ -9,19 +9,23 @@
 #include <stddef.h>
 
 #include "octa/types.h"
-#include "octa/utility.h"
 
 namespace octa {
     /* forward declarations */
 
     template<typename> struct RemoveCV;
     template<typename> struct AddLvalueReference;
+    template<typename> struct AddRvalueReference;
     template<typename> struct AddConst;
     template<typename> struct IsReference;
+    template<typename> struct RemoveReference;
     template<typename> struct RemoveAllExtents;
     template<typename> struct IsTriviallyDefaultConstructible;
 
     template<typename...> struct CommonType;
+
+    /* declval also defined here to avoid including utility.h */
+    template<typename T> typename AddRvalueReference<T>::type __octa_declval();
 
     /* integral constant */
 
@@ -300,19 +304,23 @@ namespace octa {
 
     /* is constructible */
 
+#define __OCTA_MOVE(v) static_cast<typename RemoveReference<decltype(v)>::type &&>(v)
+
     template<typename, typename T> struct __OctaSelect2nd { typedef T type; };
     struct __OctaAny { __OctaAny(...); };
 
     template<typename T, typename ...A> typename __OctaSelect2nd<
-        decltype(octa::move(T(octa::declval<A>()...))), true_t
+        decltype(__OCTA_MOVE(T(__octa_declval<A>()...))), true_t
     >::type __octa_is_ctible_test(T &&, A &&...);
+
+#undef __OCTA_MOVE
 
     template<typename ...A> false_t __octa_is_ctible_test(__OctaAny, A &&...);
 
     template<bool, typename T, typename ...A>
     struct __OctaCtibleCore: CommonType<
-        decltype(__octa_is_ctible_test(octa::declval<T>(),
-            octa::declval<A>()...))
+        decltype(__octa_is_ctible_test(__octa_declval<T>(),
+            __octa_declval<A>()...))
     >::type {};
 
     /* function types are not constructible */
@@ -333,7 +341,7 @@ namespace octa {
 
     template<typename T, typename U>
     struct __OctaCtibleCore<true, T, U>: CommonType<
-        decltype(__OctaCtibleRef<T>::test(octa::declval<U>()))
+        decltype(__OctaCtibleRef<T>::test(__octa_declval<U>()))
     >::type {};
 
     /* scalars and references are not constructible from multiple args */
@@ -397,20 +405,20 @@ namespace octa {
     /* is move constructible */
 
     template<typename T> struct IsMoveConstructible: IsConstructible<T,
-        typename internal::AddRvalueReference<T>::type
+        typename AddRvalueReference<T>::type
     > {};
 
     /* is assignable */
 
     template<typename T, typename U> typename __OctaSelect2nd<
-        decltype((octa::declval<T>() = octa::declval<U>())), true_t
+        decltype((__octa_declval<T>() = __octa_declval<U>())), true_t
     >::type __octa_assign_test(T &&, U &&);
 
     template<typename T> false_t __octa_assign_test(__OctaAny, T &&);
 
     template<typename T, typename U, bool = IsVoid<T>::value || IsVoid<U>::value>
     struct __OctaIsAssignable: CommonType<
-        decltype(__octa_assign_test(octa::declval<T>(), octa::declval<U>()))
+        decltype(__octa_assign_test(__octa_declval<T>(), __octa_declval<U>()))
     >::type {};
 
     template<typename T, typename U>
@@ -430,7 +438,7 @@ namespace octa {
 
     template<typename T> struct IsMoveAssignable: IsAssignable<
         typename AddLvalueReference<T>::type,
-        const typename internal::AddRvalueReference<T>::type
+        const typename AddRvalueReference<T>::type
     > {};
 
     /* is destructible */
@@ -439,7 +447,7 @@ namespace octa {
 
     template<typename T> struct IsDestructorWellformed {
         template<typename TT> static char test(typename __OctaIsDtibleApply<
-            decltype(octa::declval<TT &>().~TT())
+            decltype(__octa_declval<TT &>().~TT())
         >::type);
 
         template<typename TT> static int test(...);
@@ -511,7 +519,7 @@ namespace octa {
 
     template<typename T>
     struct IsTriviallyMoveConstructible: IsTriviallyConstructible<T,
-        typename internal::AddRvalueReference<T>::type
+        typename AddRvalueReference<T>::type
     > {};
 
     /* is trivially assignable */
@@ -550,7 +558,7 @@ namespace octa {
 
     template<typename T>
     struct IsTriviallyMoveAssignable: IsTriviallyAssignable<T,
-        typename internal::AddRvalueReference<T>::type
+        typename AddRvalueReference<T>::type
     > {};
 
     /* is trivially destructible */
@@ -601,7 +609,7 @@ namespace octa {
 
     template<typename T>
     struct IsNothrowMoveConstructible: IsNothrowConstructible<T,
-        typename internal::AddRvalueReference<T>::type
+        typename AddRvalueReference<T>::type
     > {};
 
     /* is nothrow assignable */
@@ -640,7 +648,7 @@ namespace octa {
 
     template<typename T>
     struct IsNothrowMoveAssignable: IsNothrowAssignable<T,
-        typename internal::AddRvalueReference<T>::type
+        typename AddRvalueReference<T>::type
     > {};
 
     /* is nothrow destructible */
@@ -649,7 +657,7 @@ namespace octa {
 
     template<typename T>
     struct __OctaIsNothrowDtible<T, false>: IntegralConstant<bool,
-        noexcept(octa::declval<T>().~T())
+        noexcept(__octa_declval<T>().~T())
     > {};
 
     template<typename T>
@@ -683,7 +691,7 @@ namespace octa {
         template<typename TT> static void test_f(TT);
 
         template<typename FF, typename TT,
-            typename = decltype(test_f<TT>(octa::declval<FF>()))
+            typename = decltype(test_f<TT>(__octa_declval<FF>()))
         > static true_t test(int);
 
         template<typename, typename> static false_t test(...);
@@ -772,7 +780,9 @@ namespace octa {
 
     /* remove reference */
 
-    template<typename T> using RemoveReference = internal::RemoveReference<T>;
+    template<typename T> struct RemoveReference       { typedef T type; };
+    template<typename T> struct RemoveReference<T &>  { typedef T type; };
+    template<typename T> struct RemoveReference<T &&> { typedef T type; };
 
     /* remove pointer */
 
@@ -808,7 +818,21 @@ namespace octa {
 
     /* add rvalue reference */
 
-    template<typename T> using AddRvalueReference = internal::AddRvalueReference<T>;
+    template<typename T> struct AddRvalueReference       { typedef T &&type; };
+    template<typename T> struct AddRvalueReference<T  &> { typedef T &&type; };
+    template<typename T> struct AddRvalueReference<T &&> { typedef T &&type; };
+    template<> struct AddRvalueReference<void> {
+        typedef void type;
+    };
+    template<> struct AddRvalueReference<const void> {
+        typedef const void type;
+    };
+    template<> struct AddRvalueReference<volatile void> {
+        typedef volatile void type;
+    };
+    template<> struct AddRvalueReference<const volatile void> {
+        typedef const volatile void type;
+    };
 
     /* remove extent */
 
@@ -979,39 +1003,41 @@ namespace octa {
 
     /* result of call at compile time */
 
+#define __OCTA_FWD(T, v) static_cast<T &&>(v)
     template<typename F, typename ...A>
     inline auto __octa_rof_invoke(F &&f, A &&...args) ->
-      decltype(forward<F>(f)(forward<A>(args)...)) {
-        return forward<F>(f)(forward<A>(args)...);
+      decltype(__OCTA_FWD(F, f)(__OCTA_FWD(A, args)...)) {
+        return __OCTA_FWD(F, f)(__OCTA_FWD(A, args)...);
     }
     template<typename B, typename T, typename D>
     inline auto __octa_rof_invoke(T B::*pmd, D &&ref) ->
-      decltype(forward<D>(ref).*pmd) {
-        return forward<D>(ref).*pmd;
+      decltype(__OCTA_FWD(D, ref).*pmd) {
+        return __OCTA_FWD(D, ref).*pmd;
     }
     template<typename PMD, typename P>
     inline auto __octa_rof_invoke(PMD &&pmd, P &&ptr) ->
-      decltype((*forward<P>(ptr)).*forward<PMD>(pmd)) {
-        return (*forward<P>(ptr)).*forward<PMD>(pmd);
+      decltype((*__OCTA_FWD(P, ptr)).*__OCTA_FWD(PMD, pmd)) {
+        return (*__OCTA_FWD(P, ptr)).*__OCTA_FWD(PMD, pmd);
     }
     template<typename B, typename T, typename D, typename ...A>
     inline auto __octa_rof_invoke(T B::*pmf, D &&ref, A &&...args) ->
-      decltype((forward<D>(ref).*pmf)(forward<A>(args)...)) {
-        return (forward<D>(ref).*pmf)(forward<A>(args)...);
+      decltype((__OCTA_FWD(D, ref).*pmf)(__OCTA_FWD(A, args)...)) {
+        return (__OCTA_FWD(D, ref).*pmf)(__OCTA_FWD(A, args)...);
     }
     template<typename PMF, typename P, typename ...A>
     inline auto __octa_rof_invoke(PMF &&pmf, P &&ptr, A &&...args) ->
-      decltype(((*forward<P>(ptr)).*forward<PMF>(pmf))(forward<A>(args)...)) {
-        return ((*forward<P>(ptr)).*forward<PMF>(pmf))(forward<A>(args)...);
+      decltype(((*__OCTA_FWD(P, ptr)).*__OCTA_FWD(PMF, pmf))(__OCTA_FWD(A, args)...)) {
+        return ((*__OCTA_FWD(P, ptr)).*__OCTA_FWD(PMF, pmf))(__OCTA_FWD(A, args)...);
     }
+#undef __OCTA_FWD
 
     template<typename, typename = void>
     struct __OctaResultOf {};
     template<typename F, typename ...A>
     struct __OctaResultOf<F(A...), decltype(void(__octa_rof_invoke(
-    octa::declval<F>(), octa::declval<A>()...)))> {
-        using type = decltype(__octa_rof_invoke(octa::declval<F>(),
-            octa::declval<A>()...));
+    __octa_declval<F>(), __octa_declval<A>()...)))> {
+        using type = decltype(__octa_rof_invoke(__octa_declval<F>(),
+            __octa_declval<A>()...));
     };
 
     template<typename T> struct ResultOf: __OctaResultOf<T> {};
@@ -1047,7 +1073,7 @@ namespace octa {
     };
 
     template<typename T, typename U> struct CommonType<T, U> {
-        typedef Decay<decltype(true ? octa::declval<T>() : octa::declval<U>())> type;
+        typedef Decay<decltype(true ? __octa_declval<T>() : __octa_declval<U>())> type;
     };
 
     template<typename T, typename U, typename ...V>
