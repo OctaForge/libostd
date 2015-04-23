@@ -11,9 +11,9 @@
 namespace octa {
     /* aliased in traits.h later */
     namespace internal {
-        template<typename T> struct RemoveReference      { typedef T type; };
-        template<typename T> struct RemoveReference<T&>  { typedef T type; };
-        template<typename T> struct RemoveReference<T&&> { typedef T type; };
+        template<typename T> struct RemoveReference       { typedef T type; };
+        template<typename T> struct RemoveReference<T &>  { typedef T type; };
+        template<typename T> struct RemoveReference<T &&> { typedef T type; };
 
         template<typename T> struct AddRvalueReference       { typedef T &&type; };
         template<typename T> struct AddRvalueReference<T  &> { typedef T &&type; };

@@ -21,8 +21,6 @@
 namespace octa {
     /* removers */
 
-    template<typename T> using RemoveReference = internal::RemoveReference<T>;
-
     template<typename T> struct RemoveConst          { typedef T type; };
     template<typename T> struct RemoveConst<const T> { typedef T type; };
 
@@ -181,6 +179,10 @@ namespace octa {
         !IsFundamental<T>::value
     > {};
 
+    /* is pointer to member function */
+
+    template<typename> struct IsMemberFunctionPointer: true_t {};
+
     /* is pointer to member */
 
     template<typename> struct IsMemberPointerBase: false_t {};
@@ -190,6 +192,12 @@ namespace octa {
     template<typename T>
     struct IsMemberPointer: IsMemberPointerBase<
         typename RemoveConstVolatile<T>::type
+    > {};
+
+    /* is pointer to member object */
+
+    template<typename T> struct IsMemberObjectPointer: IntegralConstant<bool,
+        (IsMemberPointer<T>::value && !IsMemberFunctionPointer<T>::value)
     > {};
 
     /* is reference */
@@ -230,11 +238,6 @@ namespace octa {
 
     template<typename T> struct IsEmpty: IntegralConstant<bool, __is_empty(T)> {};
 
-    /* is literal type */
-
-    template<typename T>
-    struct IsLiteralType: IntegralConstant<bool, __is_literal_type(T)> {};
-
     /* is POD */
 
     template<typename T> struct IsPOD: IntegralConstant<bool, __is_pod(T)> {};
@@ -257,6 +260,14 @@ namespace octa {
     template<typename T> struct RemoveAllExtents;
     template<typename T> struct IsStandardLayout: IntegralConstant<bool,
         IsScalar<typename RemoveAllExtents<T>::type>::value
+    > {};
+
+    /* is literal type */
+
+    template<typename T>
+    struct IsLiteralType: IntegralConstant<bool,
+        IsReference<typename RemoveAllExtents<T>::type>::value
+     || IsStandardLayout<T>::value
     > {};
 
     /* is base of */
@@ -295,6 +306,24 @@ namespace octa {
 
     template<typename T, size_t N>
     struct Rank<T[N]>: IntegralConstant<size_t, Rank<T>::value + 1> {};
+
+    /* remove reference */
+
+    template<typename T> using RemoveReference = internal::RemoveReference<T>;
+
+    /* remove pointer */
+
+    template<typename T> struct RemovePointer                     { typedef T type; };
+    template<typename T> struct RemovePointer<T *               > { typedef T type; };
+    template<typename T> struct RemovePointer<T * const         > { typedef T type; };
+    template<typename T> struct RemovePointer<T * volatile      > { typedef T type; };
+    template<typename T> struct RemovePointer<T * const volatile> { typedef T type; };
+
+    /* add pointer */
+
+    template<typename T> struct AddPointer {
+        typedef typename RemoveReference<T>::type *type;
+    };
 
     /* add lvalue reference */
 
@@ -396,7 +425,6 @@ namespace octa {
 
     /* decay */
 
-#if 0
     template<typename T>
     struct Decay {
     private:
@@ -410,7 +438,6 @@ namespace octa {
             >::type
         >::type type;
     };
-#endif
 }
 
 #endif
