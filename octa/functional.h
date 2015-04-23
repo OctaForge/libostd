@@ -228,7 +228,7 @@ namespace octa {
         };
 
         template<typename T>
-        struct FunctorDataManager<T, typename enable_if<!FunctorInPlace<T>
+        struct FunctorDataManager<T, typename EnableIf<!FunctorInPlace<T>
         ::value>::type> {
             template<typename R, typename ...A>
             static R call(const FunctorData &s, A ...args) {

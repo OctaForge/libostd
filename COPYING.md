@@ -28,3 +28,9 @@ CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE
 SOFTWARE.**
+
+Additionally some code from the libc++ project has been used as a reference;
+libc++ is a part of the LLVM project.
+
+Additional thanks to Dale Weiler aka graphitemaster (reference code in the
+Neothyne project) and cppreference.com.
