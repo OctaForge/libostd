@@ -11,6 +11,13 @@
 #include "octa/types.h"
 #include "octa/utility.h"
 
+/* libc++ and cppreference.com occasionally used for reference */
+
+/* missing:
+ *
+ * UnderlyingType<T>
+ */
+
 namespace octa {
     /* removers */
 
@@ -130,9 +137,31 @@ namespace octa {
 
     template<typename T> struct IsClass: IntegralConstant<bool, __is_class(T)> {};
 
-    /* is function TODO */
+    /* is function */
 
-    template<typename> struct IsFunction: false_t {};
+    template<typename> struct IsReference;
+
+    namespace internal {
+        struct FunctionTestDummy {};
+
+        template<typename T> char function_test(T *);
+        template<typename T> char function_test(FunctionTestDummy);
+        template<typename T> int  function_test(...);
+
+        template<typename T> T                 &function_source(int);
+        template<typename T> FunctionTestDummy  function_source(...);
+    }
+
+    template<typename T, bool = IsClass<T>::value || IsUnion<T>::value
+                              || IsVoid<T>::value || IsReference<T>::value
+                              || IsNullPointer<T>::value
+    > struct IsFunctionBase: IntegralConstant<bool,
+        sizeof(internal::function_test<T>(internal::function_source<T>(0))) == 1
+    > {};
+
+    template<typename T> struct IsFunctionBase<T, true>: false_t {};
+
+    template<typename T> struct IsFunction: IsFunctionBase<T> {};
 
     /* is arithmetic */
 
@@ -230,10 +259,42 @@ namespace octa {
         IsScalar<typename RemoveAllExtents<T>::type>::value
     > {};
 
+    /* is base of */
+
+    template<typename B, typename D>
+    struct IsBaseOf: IntegralConstant<bool, __is_base_of(B, D)> {};
+
     /* type equality */
 
-    template<typename, typename> struct IsEqual      : false_t {};
-    template<typename T        > struct IsEqual<T, T>:  true_t {};
+    template<typename, typename> struct IsSame      : false_t {};
+    template<typename T        > struct IsSame<T, T>:  true_t {};
+
+    /* extent */
+
+    template<typename T, unsigned I = 0>
+    struct Extent: IntegralConstant<size_t, 0> {};
+
+    template<typename T>
+    struct Extent<T[], 0>: IntegralConstant<size_t, 0> {};
+
+    template<typename T, unsigned I>
+    struct Extent<T[], I>: IntegralConstant<size_t, Extent<T, I - 1>::value> {};
+
+    template<typename T, size_t N>
+    struct Extent<T[N], 0>: IntegralConstant<size_t, N> {};
+
+    template<typename T, size_t N, unsigned I>
+    struct Extent<T[N], I>: IntegralConstant<size_t, Extent<T, I - 1>::value> {};
+
+    /* rank */
+
+    template<typename T> struct Rank: IntegralConstant<size_t, 0> {};
+
+    template<typename T>
+    struct Rank<T[]>: IntegralConstant<size_t, Rank<T>::value + 1> {};
+
+    template<typename T, size_t N>
+    struct Rank<T[N]>: IntegralConstant<size_t, Rank<T>::value + 1> {};
 
     /* add lvalue reference */
 
@@ -256,23 +317,6 @@ namespace octa {
     /* add rvalue reference */
 
     template<typename T> using AddRvalueReference = internal::AddRvalueReference<T>;
-
-    /* extent */
-
-    template<typename T, unsigned I = 0>
-    struct Extent: IntegralConstant<size_t, 0> {};
-
-    template<typename T>
-    struct Extent<T[], 0>: IntegralConstant<size_t, 0> {};
-
-    template<typename T, unsigned I>
-    struct Extent<T[], I>: IntegralConstant<size_t, Extent<T, I - 1>::value> {};
-
-    template<typename T, size_t N>
-    struct Extent<T[N], 0>: IntegralConstant<size_t, N> {};
-
-    template<typename T, size_t N, unsigned I>
-    struct Extent<T[N], I>: IntegralConstant<size_t, Extent<T, I - 1>::value> {};
 
     /* remove extent */
 
@@ -342,7 +386,6 @@ namespace octa {
         };
     }
 
-    /* cppreference.com used for reference */
     template<typename T> struct ResultOf: internal::ResultOf<T> {};
 
     /* enable_if */
