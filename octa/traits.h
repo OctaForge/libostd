@@ -275,6 +275,29 @@ namespace octa {
     template<typename B, typename D>
     struct IsBaseOf: IntegralConstant<bool, __is_base_of(B, D)> {};
 
+    /* is convertible */
+
+    template<typename F, typename T, bool = IsVoid<F>::value
+        || IsFunction<T>::value || IsArray<T>::value
+    > struct IsConvertibleBase {
+        typedef typename IsVoid<T>::type type;
+    };
+
+    template<typename F, typename T> struct IsConvertibleBase<F, T, false> {
+        template<typename TT> static void test_f(TT);
+
+        template<typename FF, typename TT,
+            typename = decltype(test_f<TT>(declval<FF>()))
+        > static true_t test(int);
+
+        template<typename, typename> static false_t test(...);
+
+        typedef decltype(test<F, T>(0)) type;
+    };
+
+    template<typename F, typename T>
+    struct IsConvertible: IsConvertibleBase<F, T>::type {};
+
     /* type equality */
 
     template<typename, typename> struct IsSame      : false_t {};
