@@ -294,6 +294,43 @@ namespace octa {
     template<typename T>
     struct HasVirtualDestructor: IntegralConstant<bool, __has_virtual_destructor(T)> {};
 
+    /* is destructible - libc++ used as ref */
+
+    template<typename> struct IsDestructibleApply { typedef int type; };
+
+    template<typename T> struct IsDestructorWellformed {
+        template<typename TT> static char test(typename IsDestructibleApply<
+            decltype(declval<TT &>().~TT())
+        >::type);
+
+        template<typename TT> static int test(...);
+
+        static constexpr bool value = (sizeof(test<T>(12)) == sizeof(char));
+    };
+
+    template<typename, bool> struct DestructibleImpl;
+
+    template<typename T>
+    struct DestructibleImpl<T, false>: IntegralConstant<bool,
+        IsDestructorWellformed<typename RemoveAllExtents<T>::type>::value
+    > {};
+
+    template<typename T>
+    struct DestructibleImpl<T, true>: true_t {};
+
+    template<typename T, bool> struct DestructibleFalse;
+
+    template<typename T> struct DestructibleFalse<T, false>
+        : DestructibleImpl<T, IsReference<T>::value> {};
+
+    template<typename T> struct DestructibleFalse<T, true>: false_t {};
+
+    template<typename T>
+    struct IsDestructible: DestructibleFalse<T, IsFunction<T>::value> {};
+
+    template<typename T> struct IsDestructible<T[] >: false_t {};
+    template<          > struct IsDestructible<void>: false_t {};
+
     /* is trivially constructible */
 
     template<typename T, typename ...A>
@@ -474,6 +511,29 @@ namespace octa {
     struct IsNothrowMoveAssignable: IsNothrowAssignable<T,
         typename internal::AddRvalueReference<T>::type
     > {};
+
+    /* is nothrow destructible */
+
+    template<typename, bool> struct IsNothrowDestructibleBase;
+
+    template<typename T>
+    struct IsNothrowDestructibleBase<T, false>: IntegralConstant<bool,
+        noexcept(declval<T>().~T())
+    > {};
+
+    template<typename T>
+    struct IsNothrowDestructible: IsNothrowDestructibleBase<T,
+        IsDestructible<T>::value
+    > {};
+
+    template<typename T, size_t N>
+    struct IsNothrowDestructible<T[N]>: IsNothrowDestructible<T> {};
+
+    template<typename T>
+    struct IsNothrowDestructible<T &>: IsNothrowDestructible<T> {};
+
+    template<typename T>
+    struct IsNothrowDestructible<T &&>: IsNothrowDestructible<T> {};
 
     /* is base of */
 
