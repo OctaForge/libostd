@@ -78,7 +78,7 @@ namespace octa {
 
         void clear() {
             if (p_cap > 0) {
-                if (octa::IsClass<T>::value) {
+                if (!octa::IsPOD<T>::value) {
                     T *cur = p_buf, *last = p_buf + p_len;
                     while (cur != last) (*cur++).~T();
                 }
@@ -92,7 +92,7 @@ namespace octa {
             if (this == &v) return *this;
 
             if (p_cap >= v.p_cap) {
-                if (octa::IsClass<T>::value) {
+                if (!octa::IsPOD<T>::value) {
                     T *cur = p_buf, *last = p_buf + p_len;
                     while (cur != last) (*cur++).~T();
                 }
@@ -104,7 +104,7 @@ namespace octa {
                 p_buf = (T *)new uchar[p_cap * sizeof(T)];
             }
 
-            if (!octa::IsClass<T>::value) {
+            if (octa::IsPOD<T>::value) {
                 memcpy(p_buf, v.p_buf, p_len * sizeof(T));
             } else {
                 T *cur = p_buf, *last = p_buf + p_len;
@@ -129,7 +129,7 @@ namespace octa {
             size_t len = p_len;
             reserve(n);
             p_len = n;
-            if (!octa::IsClass<T>::value) {
+            if (octa::IsPOD<T>::value) {
                 for (size_t i = len; i < p_len; ++i) {
                     p_buf[i] = T(v);
                 }
@@ -154,7 +154,7 @@ namespace octa {
             }
             T *tmp = (T *)new uchar[p_cap * sizeof(T)];
             if (oc > 0) {
-                if (!octa::IsClass<T>::value) {
+                if (octa::IsPOD<T>::value) {
                     memcpy(tmp, p_buf, p_len * sizeof(T));
                 } else {
                     T *cur = p_buf, *tcur = tmp, *last = tmp + p_len;
@@ -195,7 +195,7 @@ namespace octa {
         }
 
         void pop() {
-            if (octa::IsClass<T>::value) {
+            if (!octa::IsPOD<T>::value) {
                 p_buf[--p_len].~T();
             } else {
                 --p_len;
