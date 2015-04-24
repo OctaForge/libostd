@@ -204,7 +204,7 @@ namespace octa {
     struct __OctaFunctorInPlace {
         static constexpr bool value = sizeof(T)  <= sizeof(__OctaFunctorData)
           && (alignof(__OctaFunctorData) % alignof(T)) == 0
-          && octa::IsNothrowMoveConstructible<T>::value;
+          && octa::IsNothrowMoveConstructible<T>();
     };
 
     template<typename T, typename E = void>
@@ -232,8 +232,7 @@ namespace octa {
     };
 
     template<typename T>
-    struct __OctaFunctorDataManager<T, typename EnableIf<!__OctaFunctorInPlace<T>
-    ::value>::type> {
+    struct __OctaFunctorDataManager<T, EnableIf<!__OctaFunctorInPlace<T>::value>> {
         template<typename R, typename ...A>
         static R call(const __OctaFunctorData &s, A ...args) {
             return (*(T *&)s)(forward<A>(args)...);

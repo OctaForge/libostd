@@ -12,24 +12,24 @@
 
 namespace octa {
     template<typename T>
-    static inline constexpr typename RemoveReference<T>::type &&
+    static inline constexpr RemoveReference<T> &&
     move(T &&v) noexcept {
-        return static_cast<typename RemoveReference<T>::type &&>(v);
+        return static_cast<RemoveReference<T> &&>(v);
     }
 
     template<typename T>
     static inline constexpr T &&
-    forward(typename RemoveReference<T>::type &v) noexcept {
+    forward(RemoveReference<T> &v) noexcept {
         return static_cast<T &&>(v);
     }
 
     template<typename T>
     static inline constexpr T &&
-    forward(typename RemoveReference<T>::type &&v) noexcept {
+    forward(RemoveReference<T> &&v) noexcept {
         return static_cast<T &&>(v);
     }
 
-    template<typename T> typename AddRvalueReference<T>::type declval();
+    template<typename T> AddRvalueReference<T> declval();
 
     template<typename T> void swap(T &a, T &b) {
         T c(move(a));
