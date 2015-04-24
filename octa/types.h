@@ -29,4 +29,13 @@ namespace octa {
 #endif
 }
 
+using octa::schar;
+using octa::uchar;
+using octa::ushort;
+using octa::uint;
+using octa::ulong;
+using octa::ullong;
+using octa::llong;
+using octa::ldouble;
+
 #endif
