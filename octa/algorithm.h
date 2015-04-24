@@ -14,6 +14,8 @@
 #include "octa/initializer_list.h"
 
 namespace octa {
+    /* partitioning */
+
     template<typename R, typename U>
     R partition(R range, U pred) {
         R ret = range;
@@ -34,6 +36,8 @@ namespace octa {
         return true;
     }
 
+    /* insertion sort */
+
     template<typename R, typename C>
     void insertion_sort(R range, C compare) {
         size_t rlen = range.length();
@@ -52,82 +56,84 @@ namespace octa {
         insertion_sort(range, Less<typename RangeTraits<R>::value>());
     }
 
-    namespace internal {
-        template<typename T, typename U>
-        struct UnaryCompare {
-            const T &val;
-            U comp;
-            bool operator()(const T &v) const { return comp(v, val); }
-        };
+    /* sort (introsort) */
 
-        template<typename R, typename C>
-        void hs_sift_down(R range, size_t s, size_t e, C compare) {
-            size_t r = s;
-            while ((r * 2 + 1) <= e) {
-                size_t ch = r * 2 + 1;
-                size_t sw = r;
-                if (compare(range[sw], range[ch]))
-                    sw = ch;
-                if (((ch + 1) <= e) && compare(range[sw], range[ch + 1]))
-                    sw = ch + 1;
-                if (sw != r) {
-                    swap(range[r], range[sw]);
-                    r = sw;
-                } else return;
-            }
-        }
+    template<typename T, typename U>
+    struct __OctaUnaryCompare {
+        const T &val;
+        U comp;
+        bool operator()(const T &v) const { return comp(v, val); }
+    };
 
-        template<typename R, typename C>
-        void heapsort(R range, C compare) {
-            size_t len = range.length();
-            size_t st = (len - 2) / 2;
-            for (;;) {
-                hs_sift_down(range, st, len - 1, compare);
-                if (st-- == 0) break;
-            }
-            size_t e = len - 1;
-            while (e > 0) {
-                swap(range[e], range[0]);
-                --e;
-                hs_sift_down(range, 0, e, compare);
-            }
-        }
-
-        template<typename R, typename C>
-        void introloop(R range, C compare, size_t depth) {
-            if (range.length() <= 10) {
-                insertion_sort(range, compare);
-                return;
-            }
-            if (depth == 0) {
-                heapsort(range, compare);
-                return;
-            }
-            typename RangeTraits<R>::reference p = range[range.length() / 2];
-            swap(p, range.last());
-            R r = partition(range, UnaryCompare<decltype(p), C>{ p, compare });
-            R l = range.slice(0, range.length() - r.length());
-            swap(r.first(), r.last());
-            introloop(l, compare, depth - 1);
-            introloop(r, compare, depth - 1);
-        }
-
-        template<typename R, typename C>
-        void introsort(R range, C compare) {
-            introloop(range, compare, size_t(2
-                * (log(range.length()) / log(2))));
+    template<typename R, typename C>
+    void __octa_hs_sift_down(R range, size_t s, size_t e, C compare) {
+        size_t r = s;
+        while ((r * 2 + 1) <= e) {
+            size_t ch = r * 2 + 1;
+            size_t sw = r;
+            if (compare(range[sw], range[ch]))
+                sw = ch;
+            if (((ch + 1) <= e) && compare(range[sw], range[ch + 1]))
+                sw = ch + 1;
+            if (sw != r) {
+                swap(range[r], range[sw]);
+                r = sw;
+            } else return;
         }
     }
 
     template<typename R, typename C>
+    void __octa_heapsort(R range, C compare) {
+        size_t len = range.length();
+        size_t st = (len - 2) / 2;
+        for (;;) {
+            __octa_hs_sift_down(range, st, len - 1, compare);
+            if (st-- == 0) break;
+        }
+        size_t e = len - 1;
+        while (e > 0) {
+            swap(range[e], range[0]);
+            --e;
+            __octa_hs_sift_down(range, 0, e, compare);
+        }
+    }
+
+    template<typename R, typename C>
+    void __octa_introloop(R range, C compare, size_t depth) {
+        if (range.length() <= 10) {
+            insertion_sort(range, compare);
+            return;
+        }
+        if (depth == 0) {
+            __octa_heapsort(range, compare);
+            return;
+        }
+        typename RangeTraits<R>::reference p = range[range.length() / 2];
+        swap(p, range.last());
+        R r = partition(range, __OctaUnaryCompare<decltype(p), C>{ p, compare });
+        R l = range.slice(0, range.length() - r.length());
+        swap(r.first(), r.last());
+        __octa_introloop(l, compare, depth - 1);
+        __octa_introloop(r, compare, depth - 1);
+    }
+
+    template<typename R, typename C>
+    void __octa_introsort(R range, C compare) {
+        __octa_introloop(range, compare, size_t(2
+            * (log(range.length()) / log(2))));
+    }
+
+    template<typename R, typename C>
     void sort(R range, C compare) {
-        internal::introsort(range, compare);
+        __octa_introsort(range, compare);
     }
 
     template<typename R>
     void sort(R range) {
         sort(range, Less<typename RangeTraits<R>::value>());
     }
+
+    /* min/max(_element) */
 
     template<typename T>
     inline const T &min(const T &a, const T &b) {
@@ -199,6 +205,8 @@ namespace octa {
     inline T max(InitializerList<T> il, C compare) {
         return max_element(il.range(), compare).first();
     }
+
+    /* algos that don't change the range */
 
     template<typename R, typename F>
     F for_each(R range, F func) {
@@ -288,6 +296,8 @@ namespace octa {
         }
         return range2.empty();
     }
+
+    /* algos that modify ranges or work with output ranges */
 
     template<typename R1, typename R2>
     R2 copy(R1 irange, R2 orange) {

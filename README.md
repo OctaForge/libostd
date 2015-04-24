@@ -12,7 +12,7 @@ go beyond C++11 level when it comes to core language features.
 Compiler | Version
 -------- | -------
 gcc/g++  | 4.8+
-clang    | 3.4+
+clang    | 3.3+
 MSVC++   | 2015+
 
 Other C++11 compliant compilers might work as well. OctaSTD does not utilize

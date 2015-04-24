@@ -25,26 +25,24 @@ namespace octa {
         typedef typename T::type::reference reference;
     };
 
-    namespace internal {
-        template<typename T>
-        struct RangeIterator {
-            RangeIterator(): p_range() {}
-            explicit RangeIterator(const T &range): p_range(range) {}
-            RangeIterator &operator++() {
-                p_range.pop_first();
-                return *this;
-            }
-            typename RangeTraits<T>::reference operator*() {
-                return p_range.first();
-            }
-            typename RangeTraits<T>::reference operator*() const {
-                return p_range.first();
-            }
-            bool operator!=(RangeIterator) const { return !p_range.empty(); }
-        private:
-            T p_range;
-        };
-    }
+    template<typename T>
+    struct __OctaRangeIterator {
+        __OctaRangeIterator(): p_range() {}
+        explicit __OctaRangeIterator(const T &range): p_range(range) {}
+        __OctaRangeIterator &operator++() {
+            p_range.pop_first();
+            return *this;
+        }
+        typename RangeTraits<T>::reference operator*() {
+            return p_range.first();
+        }
+        typename RangeTraits<T>::reference operator*() const {
+            return p_range.first();
+        }
+        bool operator!=(__OctaRangeIterator) const { return !p_range.empty(); }
+    private:
+        T p_range;
+    };
 
     template<typename B, typename C, typename V, typename R = V &>
     struct InputRangeBase {
@@ -54,11 +52,11 @@ namespace octa {
             typedef R reference;
         };
 
-        internal::RangeIterator<B> begin() {
-            return internal::RangeIterator<B>((const B &)*this);
+        __OctaRangeIterator<B> begin() {
+            return __OctaRangeIterator<B>((const B &)*this);
         }
-        internal::RangeIterator<B> end() {
-            return internal::RangeIterator<B>();
+        __OctaRangeIterator<B> end() {
+            return __OctaRangeIterator<B>();
         }
     };
 
