@@ -9,7 +9,7 @@
 #include "octa/new.h"
 #include "octa/memory.h"
 #include "octa/utility.h"
-#include "octa/traits.h"
+#include "octa/type_traits.h"
 
 namespace octa {
     /* basic function objects */

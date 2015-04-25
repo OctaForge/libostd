@@ -8,7 +8,7 @@
 
 #include <stddef.h>
 
-#include "octa/traits.h"
+#include "octa/type_traits.h"
 
 namespace octa {
     template<typename T>

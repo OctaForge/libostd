@@ -10,7 +10,7 @@
 #include <stddef.h>
 
 #include "octa/new.h"
-#include "octa/traits.h"
+#include "octa/type_traits.h"
 #include "octa/utility.h"
 #include "octa/range.h"
 #include "octa/algorithm.h"
