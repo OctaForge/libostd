@@ -206,6 +206,18 @@ namespace octa {
         return max_element(il.range(), compare).first();
     }
 
+    /* clamp */
+
+    template<typename T, typename U>
+    inline T clamp(const T &v, const U &lo, const U &hi) {
+        return max(T(lo), min(v, T(hi)));
+    }
+
+    template<typename T, typename U, typename C>
+    inline T clamp(const T &v, const U &lo, const U &hi, C compare) {
+        return max(T(lo), min(v, T(hi), compare), compare);
+    }
+
     /* algos that don't change the range */
 
     template<typename R, typename F>
