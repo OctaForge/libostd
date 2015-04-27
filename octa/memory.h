@@ -431,6 +431,31 @@ namespace octa {
         T *p_ptr;
         D  p_del;
     };
+
+    template<typename T> struct __OctaBoxIf {
+        typedef Box<T> __OctaBox;
+    };
+
+    template<typename T> struct __OctaBoxIf<T[]> {
+        typedef Box<T[]> __OctaBoxUnknownSize;
+    };
+
+    template<typename T, size_t N> struct __OctaBoxIf<T[N]> {
+        typedef void __OctaBoxKnownSize;
+    };
+
+    template<typename T, typename ...A>
+    typename __OctaBoxIf<T>::__OctaBox make_box(A &&...args) {
+        return Box<T>(new T(forward<A>(args)...));
+    }
+
+    template<typename T>
+    typename __OctaBoxIf<T>::__OctaBoxUnknownSize make_box(size_t n) {
+        return Box<T>(new RemoveExtent<T>[n]());
+    }
+
+    template<typename T, typename ...A>
+    typename __OctaBoxIf<T>::__OctaBoxKnownSize make_box(A &&...args) = delete;
 }
 
 #endif
