@@ -105,11 +105,11 @@ namespace octa {
         using rebind = typename __OctaPtrTraitsRebind<T, U>::type;
 
     private:
-        struct __OctaNAT {};
+        struct __OctaNat {};
 
     public:
         static T pointer_to(Conditional<IsVoid<element_type>::value,
-            __OctaNAT, element_type
+            __OctaNat, element_type
         > &r) {
             return T::pointer_to(r);
         }
@@ -125,11 +125,11 @@ namespace octa {
         template<typename U> using rebind = U *;
 
     private:
-        struct __OctaNAT {};
+        struct __OctaNat {};
 
     public:
         static T pointer_to(Conditional<IsVoid<element_type>::value,
-            __OctaNAT, element_type
+            __OctaNat, element_type
         > &r) {
             return octa::address_of(r);
         }
@@ -191,7 +191,7 @@ namespace octa {
         typedef typename __OctaPtrType<T, D>::type pointer;
 
     private:
-        struct __OctaNAT { int x; };
+        struct __OctaNat { int x; };
 
         typedef RemoveReference<D> &D_ref;
         typedef const RemoveReference<D> &D_cref;
@@ -227,7 +227,7 @@ namespace octa {
             && IsConvertible<typename Box<TT, DD>::pointer, pointer>::value
             && IsConvertible<DD, D>::value
             && (!IsReference<D>::value || IsSame<D, DD>::value)
-        > = __OctaNAT()): p_ptr(u.release()),
+        > = __OctaNat()): p_ptr(u.release()),
             p_del(forward<DD>(u.get_deleter())) {}
 
         Box &operator=(Box &&u) {
@@ -288,19 +288,19 @@ namespace octa {
     };
 
     template<typename T, typename U, bool = IsSame<
-        RemoveCV<typename PointerTraits<T>::element_type>,
-        RemoveCV<typename PointerTraits<U>::element_type>
-    >::value> struct __OctaSameOrLessCVQualifiedBase: IsConvertible<T, U> {};
+        RemoveCv<typename PointerTraits<T>::element_type>,
+        RemoveCv<typename PointerTraits<U>::element_type>
+    >::value> struct __OctaSameOrLessCvQualifiedBase: IsConvertible<T, U> {};
 
     template<typename T, typename U>
-    struct __OctaSameOrLessCVQualifiedBase<T, U, false>: False {};
+    struct __OctaSameOrLessCvQualifiedBase<T, U, false>: False {};
 
     template<typename T, typename U, bool = IsPointer<T>::value
         || IsSame<T, U>::value || __OctaHasElementType<T>::value
-    > struct __OctaSameOrLessCVQualified: __OctaSameOrLessCVQualifiedBase<T, U> {};
+    > struct __OctaSameOrLessCvQualified: __OctaSameOrLessCvQualifiedBase<T, U> {};
 
     template<typename T, typename U>
-    struct __OctaSameOrLessCVQualified<T, U, false>: False {};
+    struct __OctaSameOrLessCvQualified<T, U, false>: False {};
 
     template<typename T, typename D>
     struct Box<T[], D> {
@@ -309,7 +309,7 @@ namespace octa {
         typedef typename __OctaPtrType<T, D>::type pointer;
 
     private:
-        struct __OctaNAT { int x; };
+        struct __OctaNat { int x; };
 
         typedef RemoveReference<D> &D_ref;
         typedef const RemoveReference<D> &D_cref;
@@ -325,24 +325,24 @@ namespace octa {
         }
 
         template<typename U> explicit Box(U p, EnableIf<
-            __OctaSameOrLessCVQualified<U, pointer>::value, __OctaNAT
-        > = __OctaNAT()): p_ptr(p), p_del() {
+            __OctaSameOrLessCvQualified<U, pointer>::value, __OctaNat
+        > = __OctaNat()): p_ptr(p), p_del() {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
 
         template<typename U> Box(U p, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
-        > d, EnableIf<__OctaSameOrLessCVQualified<U, pointer>::value, __OctaNAT
-        > = __OctaNAT()): p_ptr(p), p_del(d) {}
+        > d, EnableIf<__OctaSameOrLessCvQualified<U, pointer>::value, __OctaNat
+        > = __OctaNat()): p_ptr(p), p_del(d) {}
 
         Box(nullptr_t, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
         > d): p_ptr(), p_del(d) {}
 
         template<typename U> Box(U p, RemoveReference<D> &&d, EnableIf<
-            __OctaSameOrLessCVQualified<U, pointer>::value, __OctaNAT
-        > = __OctaNAT()): p_ptr(p), p_del(move(d)) {
+            __OctaSameOrLessCvQualified<U, pointer>::value, __OctaNat
+        > = __OctaNat()): p_ptr(p), p_del(move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
         }
@@ -356,10 +356,10 @@ namespace octa {
 
         template<typename TT, typename DD>
         Box(Box<TT, DD> &&u, EnableIf<IsArray<TT>::value
-            && __OctaSameOrLessCVQualified<typename Box<TT, DD>::pointer,
+            && __OctaSameOrLessCvQualified<typename Box<TT, DD>::pointer,
                                            pointer>::value
             && IsConvertible<DD, D>::value
-            && (!IsReference<D>::value || IsSame<D, DD>::value)> = __OctaNAT()
+            && (!IsReference<D>::value || IsSame<D, DD>::value)> = __OctaNat()
         ): p_ptr(u.release()), p_del(forward<DD>(u.get_deleter())) {}
 
         Box &operator=(Box &&u) {
@@ -370,7 +370,7 @@ namespace octa {
 
         template<typename TT, typename DD>
         EnableIf<IsArray<TT>::value
-            && __OctaSameOrLessCVQualified<typename Box<TT, DD>::pointer,
+            && __OctaSameOrLessCvQualified<typename Box<TT, DD>::pointer,
                                            pointer>::value
             && IsAssignable<D &, DD &&>::value,
             Box &
@@ -405,7 +405,7 @@ namespace octa {
         }
 
         template<typename U> EnableIf<
-            __OctaSameOrLessCVQualified<U, pointer>::value, void
+            __OctaSameOrLessCvQualified<U, pointer>::value, void
         > reset(U p) {
             pointer tmp = p_ptr;
             p_ptr = p;

@@ -259,7 +259,7 @@ namespace octa {
 
     struct __OctaFunctionManager;
 
-    struct __OctaFMStorage {
+    struct __OctaFmStorage {
         __OctaFunctorData data;
         const __OctaFunctionManager *manager;
     };
@@ -277,15 +277,15 @@ namespace octa {
             };
         }
 
-        void (* const call_move_and_destroy)(__OctaFMStorage &lhs,
-            __OctaFMStorage &&rhs);
-        void (* const call_copy)(__OctaFMStorage &lhs,
-            const __OctaFMStorage &rhs);
-        void (* const call_destroy)(__OctaFMStorage &s);
+        void (* const call_move_and_destroy)(__OctaFmStorage &lhs,
+            __OctaFmStorage &&rhs);
+        void (* const call_copy)(__OctaFmStorage &lhs,
+            const __OctaFmStorage &rhs);
+        void (* const call_destroy)(__OctaFmStorage &s);
 
         template<typename T>
-        static void t_call_move_and_destroy(__OctaFMStorage &lhs,
-        __OctaFMStorage &&rhs) {
+        static void t_call_move_and_destroy(__OctaFmStorage &lhs,
+        __OctaFmStorage &&rhs) {
             typedef __OctaFunctorDataManager<T> spec;
             spec::move_f(lhs.data, move(rhs.data));
             spec::destroy_f(rhs.data);
@@ -293,15 +293,15 @@ namespace octa {
         }
 
         template<typename T>
-        static void t_call_copy(__OctaFMStorage &lhs,
-        const __OctaFMStorage &rhs) {
+        static void t_call_copy(__OctaFmStorage &lhs,
+        const __OctaFmStorage &rhs) {
             typedef __OctaFunctorDataManager<T> spec;
             lhs.manager = &__octa_get_default_fm<T>();
             spec::store_f(lhs.data, spec::get_ref(rhs.data));
         }
 
         template<typename T>
-        static void t_call_destroy(__OctaFMStorage &s) {
+        static void t_call_destroy(__OctaFmStorage &s) {
             typedef __OctaFunctorDataManager<T> spec;
             spec::destroy_f(s.data);
         }
@@ -381,7 +381,7 @@ namespace octa {
         }
 
         void swap(Function &f) {
-            __OctaFMStorage tmp;
+            __OctaFmStorage tmp;
             f.p_stor.manager->call_move_and_destroy(tmp, move(f.p_stor));
             p_stor.manager->call_move_and_destroy(f.p_stor, move(p_stor));
             tmp.manager->call_move_and_destroy(p_stor, move(tmp));
@@ -391,7 +391,7 @@ namespace octa {
         operator bool() const { return p_call != nullptr; }
 
     private:
-        __OctaFMStorage p_stor;
+        __OctaFmStorage p_stor;
         R (*p_call)(const __OctaFunctorData &, A...);
 
         template<typename T>
