@@ -1213,8 +1213,7 @@ namespace octa {
 
     template<typename T> struct __OctaUnderlyingType<T, true> {
         typedef typename __OctaConditional<IsSigned<T>::value,
-            typename MakeSigned<T>::type,
-            typename MakeUnsigned<T>::type
+            MakeSigned<T>, MakeUnsigned<T>
         >::type type;
     };
 
