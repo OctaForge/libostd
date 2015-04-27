@@ -14,6 +14,9 @@
 #include "octa/initializer_list.h"
 
 namespace octa {
+    template<typename T>
+    using __OctaRangeSize = typename RangeTraits<T>::size_type;
+
     /* partitioning */
 
     template<typename R, typename U>
@@ -40,9 +43,9 @@ namespace octa {
 
     template<typename R, typename C>
     void insertion_sort(R range, C compare) {
-        size_t rlen = range.length();
-        for (size_t i = 1; i < rlen; ++i) {
-            size_t j = i, v = range[i];
+        __OctaRangeSize<R> rlen = range.length();
+        for (__OctaRangeSize<R> i = 1; i < rlen; ++i) {
+            __OctaRangeSize<R> j = i, v = range[i];
             while (j > 0 && !compare(range[j - 1], v)) {
                 range[j] = range[j - 1];
                 --j;
@@ -66,11 +69,12 @@ namespace octa {
     };
 
     template<typename R, typename C>
-    void __octa_hs_sift_down(R range, size_t s, size_t e, C compare) {
-        size_t r = s;
+    void __octa_hs_sift_down(R range, __OctaRangeSize<R> s,
+    __OctaRangeSize<R> e, C compare) {
+        __OctaRangeSize<R> r = s;
         while ((r * 2 + 1) <= e) {
-            size_t ch = r * 2 + 1;
-            size_t sw = r;
+            __OctaRangeSize<R> ch = r * 2 + 1;
+            __OctaRangeSize<R> sw = r;
             if (compare(range[sw], range[ch]))
                 sw = ch;
             if (((ch + 1) <= e) && compare(range[sw], range[ch + 1]))
@@ -84,13 +88,13 @@ namespace octa {
 
     template<typename R, typename C>
     void __octa_heapsort(R range, C compare) {
-        size_t len = range.length();
-        size_t st = (len - 2) / 2;
+        __OctaRangeSize<R> len = range.length();
+        __OctaRangeSize<R> st = (len - 2) / 2;
         for (;;) {
             __octa_hs_sift_down(range, st, len - 1, compare);
             if (st-- == 0) break;
         }
-        size_t e = len - 1;
+        __OctaRangeSize<R> e = len - 1;
         while (e > 0) {
             swap(range[e], range[0]);
             --e;
@@ -99,7 +103,7 @@ namespace octa {
     }
 
     template<typename R, typename C>
-    void __octa_introloop(R range, C compare, size_t depth) {
+    void __octa_introloop(R range, C compare, __OctaRangeSize<R> depth) {
         if (range.length() <= 10) {
             insertion_sort(range, compare);
             return;
@@ -119,7 +123,7 @@ namespace octa {
 
     template<typename R, typename C>
     void __octa_introsort(R range, C compare) {
-        __octa_introloop(range, compare, size_t(2
+        __octa_introloop(range, compare, __OctaRangeSize<R>(2
             * (log(range.length()) / log(2))));
     }
 
@@ -273,8 +277,8 @@ namespace octa {
     }
 
     template<typename R, typename T>
-    size_t count(R range, const T &v) {
-        size_t ret = 0;
+    __OctaRangeSize<R> count(R range, const T &v) {
+        __OctaRangeSize<R> ret = 0;
         for (; !range.empty(); range.pop_first())
             if (range.first() == v)
                 ++ret;
@@ -282,8 +286,8 @@ namespace octa {
     }
 
     template<typename R, typename P>
-    size_t count_if(R range, P pred) {
-        size_t ret = 0;
+    __OctaRangeSize<R> count_if(R range, P pred) {
+        __OctaRangeSize<R> ret = 0;
         for (; !range.empty(); range.pop_first())
             if (pred(range.first()))
                 ++ret;
@@ -291,8 +295,8 @@ namespace octa {
     }
 
     template<typename R, typename P>
-    size_t count_if_not(R range, P pred) {
-        size_t ret = 0;
+    __OctaRangeSize<R> count_if_not(R range, P pred) {
+        __OctaRangeSize<R> ret = 0;
         for (; !range.empty(); range.pop_first())
             if (!pred(range.first()))
                 ++ret;

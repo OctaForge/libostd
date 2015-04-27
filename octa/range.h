@@ -21,6 +21,7 @@ namespace octa {
     template<typename T>
     struct RangeTraits {
         typedef typename T::range_category range_category;
+        typedef typename T::size_type      size_type;
         typedef typename T::value_type     value_type;
         typedef typename T::reference      reference;
     };
@@ -44,9 +45,11 @@ namespace octa {
         T p_range;
     };
 
-    template<typename B, typename C, typename V, typename R = V &>
-    struct InputRangeBase {
+    template<typename B, typename C, typename V, typename R = V &,
+             typename S = size_t
+    > struct InputRangeBase {
         typedef C range_category;
+        typedef S size_type;
         typedef V value_type;
         typedef R reference;
 
@@ -58,9 +61,10 @@ namespace octa {
         }
     };
 
-    template<typename V, typename R = V &>
+    template<typename V, typename R = V &, typename S = size_t>
     struct OutputRangeBase {
         typedef OutputRange range_category;
+        typedef S size_type;
         typedef V value_type;
         typedef R reference;
     };
@@ -69,8 +73,14 @@ namespace octa {
     struct ReverseRange: InputRangeBase<ReverseRange<T>,
         typename RangeTraits<T>::range_category,
         typename RangeTraits<T>::value_type,
-        typename RangeTraits<T>::reference
+        typename RangeTraits<T>::reference,
+        typename RangeTraits<T>::size_type
     > {
+    private:
+        typedef typename RangeTraits<T>::reference r_ref;
+        typedef typename RangeTraits<T>::size_type r_size;
+
+    public:
         ReverseRange(): p_range() {}
         ReverseRange(const T &range): p_range(range) {}
         ReverseRange(const ReverseRange &it): p_range(it.p_range) {}
@@ -93,8 +103,9 @@ namespace octa {
             return *this;
         }
 
-        bool   empty () const { return p_range.empty (); }
-        size_t length() const { return p_range.length(); }
+        bool empty() const { return p_range.empty(); }
+
+        r_size length() const { return p_range.length(); }
 
         void pop_first() { p_range.pop_last (); }
         void pop_last () { p_range.pop_first(); }
@@ -106,21 +117,21 @@ namespace octa {
             return p_range != v.p_range;
         }
 
-        typename RangeTraits<T>::reference first()       { return p_range.last(); }
-        typename RangeTraits<T>::reference first() const { return p_range.last(); }
+        r_ref first()       { return p_range.last(); }
+        r_ref first() const { return p_range.last(); }
 
-        typename RangeTraits<T>::reference last()       { return p_range.first(); }
-        typename RangeTraits<T>::reference last() const { return p_range.first(); }
+        r_ref last()       { return p_range.first(); }
+        r_ref last() const { return p_range.first(); }
 
-        typename RangeTraits<T>::reference operator[](size_t i) {
+        r_ref operator[](r_size i) {
             return p_range[length() - i - 1];
         }
-        typename RangeTraits<T>::reference operator[](size_t i) const {
+        r_ref operator[](r_size i) const {
             return p_range[length() - i - 1];
         }
 
-        ReverseRange<T> slice(size_t start, size_t end) {
-            size_t len = p_range.length();
+        ReverseRange<T> slice(r_size start, r_size end) {
+            r_size len = p_range.length();
             return ReverseRange<T>(p_range.slice(len - end, len - start));
         }
 
@@ -137,8 +148,15 @@ namespace octa {
     struct MoveRange: InputRangeBase<MoveRange<T>,
         typename RangeTraits<T>::range_category,
         typename RangeTraits<T>::value_type,
-        typename RangeTraits<T>::value_type &&
+        typename RangeTraits<T>::value_type &&,
+        typename RangeTraits<T>::size_type
     > {
+    private:
+        typedef typename RangeTraits<T>::value_type   r_val;
+        typedef typename RangeTraits<T>::value_type &&r_ref;
+        typedef typename RangeTraits<T>::size_type    r_size;
+
+    public:
         MoveRange(): p_range() {}
         MoveRange(const T &range): p_range(range) {}
         MoveRange(const MoveRange &it): p_range(it.p_range) {}
@@ -162,7 +180,7 @@ namespace octa {
         }
 
         bool   empty () const { return p_range.empty (); }
-        size_t length() const { return p_range.length(); }
+        r_size length() const { return p_range.length(); }
 
         void pop_first() { p_range.pop_first(); }
         void pop_last () { p_range.pop_last (); }
@@ -174,24 +192,18 @@ namespace octa {
             return p_range != v.p_range;
         }
 
-        typename RangeTraits<T>::value_type &&first() {
-            return move(p_range.first());
-        }
-        typename RangeTraits<T>::value_type &&last () {
-            return move(p_range.last());
-        }
+        r_ref first() { return move(p_range.first()); }
+        r_ref last () { return move(p_range.last()); }
 
-        typename RangeTraits<T>::value_type &&operator[](size_t i) {
+        r_ref operator[](r_size i) {
             return move(p_range[i]);
         }
 
-        MoveRange<T> slice(size_t start, size_t end) {
+        MoveRange<T> slice(r_size start, r_size end) {
             return MoveRange<T>(p_range.slice(start, end));
         }
 
-        void put(const typename RangeTraits<T>::value_type &v) {
-            p_range.put(v);
-        }
+        void put(r_val &v) { p_range.put(v); }
 
     private:
         T p_range;
@@ -286,17 +298,24 @@ namespace octa {
         T *p_beg, *p_end;
     };
 
-    template<typename T>
+    template<typename T, typename S>
     struct EnumeratedValue {
-        size_t index;
-        T      value;
+        S index;
+        T value;
     };
 
     template<typename T>
     struct EnumeratedRange: InputRangeBase<EnumeratedRange<T>,
         InputRange,     typename RangeTraits<T>::value_type,
-        EnumeratedValue<typename RangeTraits<T>::reference>
+        EnumeratedValue<typename RangeTraits<T>::reference,
+                        typename RangeTraits<T>::size_type>,
+        typename RangeTraits<T>::size_type
     > {
+    private:
+        typedef typename RangeTraits<T>::reference r_ref;
+        typedef typename RangeTraits<T>::size_type r_size;
+
+    public:
         EnumeratedRange(): p_range(), p_index(0) {}
         EnumeratedRange(const T &range): p_range(range), p_index(0) {}
         EnumeratedRange(const EnumeratedRange &it): p_range(it.p_range),
@@ -329,15 +348,11 @@ namespace octa {
 
         void pop_first() { ++p_index; p_range.pop_first(); }
 
-        EnumeratedValue<typename RangeTraits<T>::reference> first() {
-            return EnumeratedValue<typename RangeTraits<T>::reference> {
-                p_index, p_range.first()
-            };
+        EnumeratedValue<r_ref, r_size> first() {
+            return EnumeratedValue<r_ref, r_size> { p_index, p_range.first() };
         }
-        EnumeratedValue<typename RangeTraits<T>::reference> first() const {
-            return EnumeratedValue<typename RangeTraits<T>::reference> {
-                p_index, p_range.first()
-            };
+        EnumeratedValue<r_ref, r_size> first() const {
+            return EnumeratedValue<r_ref, r_size> { p_index, p_range.first() };
         }
 
         bool operator==(const EnumeratedRange &v) const {
@@ -349,7 +364,7 @@ namespace octa {
 
     private:
         T p_range;
-        size_t p_index;
+        r_size p_index;
     };
 
     template<typename T>
