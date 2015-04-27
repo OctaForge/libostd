@@ -20,9 +20,9 @@ namespace octa {
 
     template<typename T>
     struct RangeTraits {
-        typedef typename T::type::category  category;
-        typedef typename T::type::value     value;
-        typedef typename T::type::reference reference;
+        typedef typename T::range_category range_category;
+        typedef typename T::value_type     value_type;
+        typedef typename T::reference      reference;
     };
 
     template<typename T>
@@ -46,11 +46,9 @@ namespace octa {
 
     template<typename B, typename C, typename V, typename R = V &>
     struct InputRangeBase {
-        struct type {
-            typedef C category;
-            typedef V value;
-            typedef R reference;
-        };
+        typedef C range_category;
+        typedef V value_type;
+        typedef R reference;
 
         __OctaRangeIterator<B> begin() {
             return __OctaRangeIterator<B>((const B &)*this);
@@ -62,17 +60,15 @@ namespace octa {
 
     template<typename V, typename R = V &>
     struct OutputRangeBase {
-        struct type {
-            typedef OutputRange category;
-            typedef V value;
-            typedef R reference;
-        };
+        typedef OutputRange range_category;
+        typedef V value_type;
+        typedef R reference;
     };
 
     template<typename T>
     struct ReverseRange: InputRangeBase<ReverseRange<T>,
-        typename RangeTraits<T>::category,
-        typename RangeTraits<T>::value,
+        typename RangeTraits<T>::range_category,
+        typename RangeTraits<T>::value_type,
         typename RangeTraits<T>::reference
     > {
         ReverseRange(): p_range() {}
@@ -139,9 +135,9 @@ namespace octa {
 
     template<typename T>
     struct MoveRange: InputRangeBase<MoveRange<T>,
-        typename RangeTraits<T>::category,
-        typename RangeTraits<T>::value,
-        typename RangeTraits<T>::value &&
+        typename RangeTraits<T>::range_category,
+        typename RangeTraits<T>::value_type,
+        typename RangeTraits<T>::value_type &&
     > {
         MoveRange(): p_range() {}
         MoveRange(const T &range): p_range(range) {}
@@ -178,10 +174,14 @@ namespace octa {
             return p_range != v.p_range;
         }
 
-        typename RangeTraits<T>::value &&first() { return move(p_range.first()); }
-        typename RangeTraits<T>::value &&last () { return move(p_range.last ()); }
+        typename RangeTraits<T>::value_type &&first() {
+            return move(p_range.first());
+        }
+        typename RangeTraits<T>::value_type &&last () {
+            return move(p_range.last());
+        }
 
-        typename RangeTraits<T>::value &&operator[](size_t i) {
+        typename RangeTraits<T>::value_type &&operator[](size_t i) {
             return move(p_range[i]);
         }
 
@@ -189,7 +189,9 @@ namespace octa {
             return MoveRange<T>(p_range.slice(start, end));
         }
 
-        void put(const typename RangeTraits<T>::value &v) { p_range.put(v); }
+        void put(const typename RangeTraits<T>::value_type &v) {
+            p_range.put(v);
+        }
 
     private:
         T p_range;
@@ -292,7 +294,7 @@ namespace octa {
 
     template<typename T>
     struct EnumeratedRange: InputRangeBase<EnumeratedRange<T>,
-        InputRange,     typename RangeTraits<T>::value,
+        InputRange,     typename RangeTraits<T>::value_type,
         EnumeratedValue<typename RangeTraits<T>::reference>
     > {
         EnumeratedRange(): p_range(), p_index(0) {}

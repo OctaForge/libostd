@@ -13,17 +13,15 @@
 namespace octa {
     template<typename T, size_t N>
     struct Array {
-        struct type {
-            typedef       T                value;
-            typedef       T               &reference;
-            typedef const T               &const_reference;
-            typedef       T               *pointer;
-            typedef const T               *const_pointer;
-            typedef size_t                 size;
-            typedef ptrdiff_t              difference;
-            typedef PointerRange<      T>  range;
-            typedef PointerRange<const T>  const_range;
-        };
+        typedef size_t                 size_type;
+        typedef ptrdiff_t              difference_type;
+        typedef       T                value_type;
+        typedef       T               &reference;
+        typedef const T               &const_reference;
+        typedef       T               *pointer;
+        typedef const T               *const_pointer;
+        typedef PointerRange<      T>  range;
+        typedef PointerRange<const T>  const_range;
 
         T &operator[](size_t i) { return p_buf[i]; }
         const T &operator[](size_t i) const { return p_buf[i]; }
@@ -47,10 +45,10 @@ namespace octa {
             swap(p_buf, v.p_buf);
         }
 
-        typename type::range each() {
+        range each() {
             return PointerRange<T>(p_buf, p_buf + N);
         }
-        typename type::const_range each() const {
+        const_range each() const {
             return PointerRange<const T>(p_buf, p_buf + N);
         }
 

@@ -19,15 +19,13 @@ namespace std {
 
         initializer_list(const T *v, size_t n): p_buf(v), p_len(n) {}
     public:
-        struct type {
-            typedef       T   value;
-            typedef       T  &reference;
-            typedef const T  &const_reference;
-            typedef       T  *pointer;
-            typedef const T  *const_pointer;
-            typedef size_t    size;
-            typedef ptrdiff_t difference;
-        };
+        typedef size_t    size_type;
+        typedef ptrdiff_t difference_type;
+        typedef       T   value_type;
+        typedef       T  &reference;
+        typedef const T  &const_reference;
+        typedef       T  *pointer;
+        typedef const T  *const_pointer;
 
         initializer_list(): p_buf(nullptr), p_len(0) {}
 

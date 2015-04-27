@@ -24,7 +24,7 @@ namespace octa {
         template<typename U>
         static int  __octa_test(...);
         template<typename U>
-        static char __octa_test(typename U::type::element * = 0);
+        static char __octa_test(typename U::element_type * = 0);
 
         static constexpr bool value = (sizeof(__octa_test<T>(0)) == 1);
     };
@@ -33,12 +33,12 @@ namespace octa {
     struct __OctaPtrTraitsElementType;
 
     template<typename T> struct __OctaPtrTraitsElementType<T, true> {
-        typedef typename T::type::element type;
+        typedef typename T::element_type type;
     };
 
     template<template<typename, typename...> class T, typename U, typename ...A>
     struct __OctaPtrTraitsElementType<T<U, A...>, true> {
-        typedef typename T<U, A...>::type::element type;
+        typedef typename T<U, A...>::element_type type;
     };
 
     template<template<typename, typename...> class T, typename U, typename ...A>
@@ -51,7 +51,7 @@ namespace octa {
         template<typename U>
         static int  __octa_test(...);
         template<typename U>
-        static char __octa_test(typename U::type::difference * = 0);
+        static char __octa_test(typename U::difference_type * = 0);
 
         static constexpr bool value = (sizeof(__octa_test<T>(0)) == 1);
     };
@@ -62,7 +62,7 @@ namespace octa {
     };
 
     template<typename T> struct __OctaPtrTraitsDifferenceType<T, true> {
-        typedef typename T::type::difference type;
+        typedef typename T::difference_type type;
     };
 
     template<typename T, typename U>
@@ -70,7 +70,7 @@ namespace octa {
         template<typename V>
         static int  __octa_test(...);
         template<typename V>
-        static char __octa_test(typename V::type::template rebind<U> * = 0);
+        static char __octa_test(typename V::template rebind<U> * = 0);
 
         static constexpr bool value = (sizeof(__octa_test<T>(0)) == 1);
     };
@@ -84,7 +84,7 @@ namespace octa {
         typename ...A, typename V
     >
     struct __OctaPtrTraitsRebind<T<U, A...>, V, true> {
-        typedef typename T<U, A...>::type::template rebind<V> type;
+        typedef typename T<U, A...>::template rebind<V> type;
     };
 
     template<template<typename, typename...> class T, typename U,
@@ -98,8 +98,8 @@ namespace octa {
     struct PointerTraits {
         typedef T pointer;
 
-        typedef typename __OctaPtrTraitsElementType   <T>::type element;
-        typedef typename __OctaPtrTraitsDifferenceType<T>::type difference;
+        typedef typename __OctaPtrTraitsElementType   <T>::type element_type;
+        typedef typename __OctaPtrTraitsDifferenceType<T>::type difference_type;
 
         template<typename U>
         using rebind = typename __OctaPtrTraitsRebind<T, U>::type;
@@ -108,8 +108,8 @@ namespace octa {
         struct __OctaNAT {};
 
     public:
-        static T pointer_to(Conditional<IsVoid<element>::value,
-            __OctaNAT, element
+        static T pointer_to(Conditional<IsVoid<element_type>::value,
+            __OctaNAT, element_type
         > &r) {
             return T::pointer_to(r);
         }
@@ -118,9 +118,9 @@ namespace octa {
     template<typename T>
     struct PointerTraits<T *> {
         typedef T *pointer;
-        typedef T  element;
+        typedef T  element_type;
 
-        typedef ptrdiff_t difference;
+        typedef ptrdiff_t difference_type;
 
         template<typename U> using rebind = U *;
 
@@ -128,8 +128,8 @@ namespace octa {
         struct __OctaNAT {};
 
     public:
-        static T pointer_to(Conditional<IsVoid<element>::value,
-            __OctaNAT, element
+        static T pointer_to(Conditional<IsVoid<element_type>::value,
+            __OctaNAT, element_type
         > &r) {
             return octa::address_of(r);
         }
@@ -165,7 +165,7 @@ namespace octa {
     template<typename T>
     static int __octa_ptr_test(...);
     template<typename T>
-    static char __octa_ptr_test(typename T::type::pointer * = 0);
+    static char __octa_ptr_test(typename T::pointer * = 0);
 
     template<typename T> struct __OctaHasPtr: IntegralConstant<bool,
         (sizeof(__octa_ptr_test<T>(0)) == 1)
@@ -173,7 +173,7 @@ namespace octa {
 
     template<typename T, typename D, bool = __OctaHasPtr<D>::value>
     struct __OctaPtrTypeBase {
-        typedef typename D::type::pointer type;
+        typedef typename D::pointer type;
     };
 
     template<typename T, typename D> struct __OctaPtrTypeBase<T, D, false> {
@@ -186,11 +186,9 @@ namespace octa {
 
     template<typename T, typename D = DefaultDelete<T>>
     struct Box {
-        struct type {
-            typedef T element;
-            typedef D deleter;
-            typedef typename __OctaPtrType<T, D>::type pointer;
-        };
+        typedef T element_type;
+        typedef D deleter_type;
+        typedef typename __OctaPtrType<T, D>::type pointer;
 
     private:
         struct __OctaNAT { int x; };
@@ -208,17 +206,16 @@ namespace octa {
                 "Box constructed with null fptr deleter");
         }
 
-        explicit Box(typename type::pointer p): p_ptr(p), p_del() {
+        explicit Box(pointer p): p_ptr(p), p_del() {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
 
-        Box(typename type::pointer p, Conditional<IsReference<D>::value,
+        Box(pointer p, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
         > d): p_ptr(p), p_del(d) {}
 
-        Box(typename type::pointer p, RemoveReference<D> &&d): p_ptr(p),
-            p_del(move(d)) {
+        Box(pointer p, RemoveReference<D> &&d): p_ptr(p), p_del(move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
         }
@@ -227,9 +224,7 @@ namespace octa {
 
         template<typename TT, typename DD>
         Box(Box<TT, DD> &&u, EnableIf<!IsArray<TT>::value
-            && IsConvertible<typename Box<TT, DD>::type::pointer,
-                             typename type::pointer
-            >::value
+            && IsConvertible<typename Box<TT, DD>::pointer, pointer>::value
             && IsConvertible<DD, D>::value
             && (!IsReference<D>::value || IsSame<D, DD>::value)
         > = __OctaNAT()): p_ptr(u.release()),
@@ -243,8 +238,7 @@ namespace octa {
 
         template<typename TT, typename DD>
         EnableIf<!IsArray<TT>::value
-            && IsConvertible<typename Box<TT, DD>::type::pointer,
-                             typename type::pointer>::value
+            && IsConvertible<typename Box<TT, DD>::pointer, pointer>::value
             && IsAssignable<D &, DD &&>::value,
             Box &
         > operator=(Box<TT, DD> &&u) {
@@ -261,23 +255,23 @@ namespace octa {
         ~Box() { reset(); }
 
         AddLvalueReference<T> operator*() const { return *p_ptr; }
-        typename type::pointer operator->() const { return p_ptr; }
+        pointer operator->() const { return p_ptr; }
 
         explicit operator bool() const { return p_ptr != nullptr; }
 
-        typename type::pointer get() const { return p_ptr; }
+        pointer get() const { return p_ptr; }
 
         D_ref  get_deleter()       { return p_del; }
         D_cref get_deleter() const { return p_del; }
 
-        typename type::pointer release() {
-            typename type::pointer p = p_ptr;
+        pointer release() {
+            pointer p = p_ptr;
             p_ptr = nullptr;
             return p;
         }
 
-        void reset(typename type::pointer p = nullptr) {
-            typename type::pointer tmp = p_ptr;
+        void reset(pointer p = nullptr) {
+            pointer tmp = p_ptr;
             p_ptr = p;
             if (tmp) p_del(tmp);
         }
@@ -294,8 +288,8 @@ namespace octa {
     };
 
     template<typename T, typename U, bool = IsSame<
-        RemoveCV<typename PointerTraits<T>::element>,
-        RemoveCV<typename PointerTraits<U>::element>
+        RemoveCV<typename PointerTraits<T>::element_type>,
+        RemoveCV<typename PointerTraits<U>::element_type>
     >::value> struct __OctaSameOrLessCVQualifiedBase: IsConvertible<T, U> {};
 
     template<typename T, typename U>
@@ -310,11 +304,9 @@ namespace octa {
 
     template<typename T, typename D>
     struct Box<T[], D> {
-        struct type {
-            typedef T element;
-            typedef D deleter;
-            typedef typename __OctaPtrType<T, D>::type pointer;
-        };
+        typedef T element_type;
+        typedef D deleter_type;
+        typedef typename __OctaPtrType<T, D>::type pointer;
 
     private:
         struct __OctaNAT { int x; };
@@ -332,28 +324,24 @@ namespace octa {
                 "Box constructed with null fptr deleter");
         }
 
-        template<typename U>
-        explicit Box(U p, EnableIf<__OctaSameOrLessCVQualified<U,
-            typename type::pointer>::value, __OctaNAT
+        template<typename U> explicit Box(U p, EnableIf<
+            __OctaSameOrLessCVQualified<U, pointer>::value, __OctaNAT
         > = __OctaNAT()): p_ptr(p), p_del() {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
 
-        template<typename U>
-        Box(U p, Conditional<IsReference<D>::value,
+        template<typename U> Box(U p, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
-        > d, EnableIf<__OctaSameOrLessCVQualified<U,
-            typename type::pointer>::value, __OctaNAT
+        > d, EnableIf<__OctaSameOrLessCVQualified<U, pointer>::value, __OctaNAT
         > = __OctaNAT()): p_ptr(p), p_del(d) {}
 
         Box(nullptr_t, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
         > d): p_ptr(), p_del(d) {}
 
-        template<typename U>
-        Box(U p, RemoveReference<D> &&d, EnableIf<__OctaSameOrLessCVQualified<U,
-            typename type::pointer>::value, __OctaNAT
+        template<typename U> Box(U p, RemoveReference<D> &&d, EnableIf<
+            __OctaSameOrLessCVQualified<U, pointer>::value, __OctaNAT
         > = __OctaNAT()): p_ptr(p), p_del(move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
@@ -368,8 +356,8 @@ namespace octa {
 
         template<typename TT, typename DD>
         Box(Box<TT, DD> &&u, EnableIf<IsArray<TT>::value
-            && __OctaSameOrLessCVQualified<typename Box<TT, DD>::type::pointer,
-                                           typename type::pointer>::value
+            && __OctaSameOrLessCVQualified<typename Box<TT, DD>::pointer,
+                                           pointer>::value
             && IsConvertible<DD, D>::value
             && (!IsReference<D>::value || IsSame<D, DD>::value)> = __OctaNAT()
         ): p_ptr(u.release()), p_del(forward<DD>(u.get_deleter())) {}
@@ -382,8 +370,8 @@ namespace octa {
 
         template<typename TT, typename DD>
         EnableIf<IsArray<TT>::value
-            && __OctaSameOrLessCVQualified<typename Box<TT, DD>::type::pointer,
-                                           typename type::pointer>::value
+            && __OctaSameOrLessCVQualified<typename Box<TT, DD>::pointer,
+                                           pointer>::value
             && IsAssignable<D &, DD &&>::value,
             Box &
         > operator=(Box<TT, DD> &&u) {
@@ -405,27 +393,27 @@ namespace octa {
 
         explicit operator bool() const { return p_ptr != nullptr; }
 
-        typename type::pointer get() const { return p_ptr; }
+        pointer get() const { return p_ptr; }
 
         D_ref  get_deleter()       { return p_del; }
         D_cref get_deleter() const { return p_del; }
 
-        typename type::pointer release() {
-            typename type::pointer p = p_ptr;
+        pointer release() {
+            pointer p = p_ptr;
             p_ptr = nullptr;
             return p;
         }
 
         template<typename U> EnableIf<
-            __OctaSameOrLessCVQualified<U, typename type::pointer>::value, void
+            __OctaSameOrLessCVQualified<U, pointer>::value, void
         > reset(U p) {
-            typename type::pointer tmp = p_ptr;
+            pointer tmp = p_ptr;
             p_ptr = p;
             if (tmp) p_del(tmp);
         }
 
         void reset(nullptr_t) {
-            typename type::pointer tmp = p_ptr;
+            pointer tmp = p_ptr;
             p_ptr = nullptr;
             if (tmp) p_del(tmp);
         }

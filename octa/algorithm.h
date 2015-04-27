@@ -53,7 +53,7 @@ namespace octa {
 
     template<typename R>
     void insertion_sort(R range) {
-        insertion_sort(range, Less<typename RangeTraits<R>::value>());
+        insertion_sort(range, Less<typename RangeTraits<R>::value_type>());
     }
 
     /* sort (introsort) */
@@ -130,7 +130,7 @@ namespace octa {
 
     template<typename R>
     void sort(R range) {
-        sort(range, Less<typename RangeTraits<R>::value>());
+        sort(range, Less<typename RangeTraits<R>::value_type>());
     }
 
     /* min/max(_element) */

@@ -33,17 +33,15 @@ namespace octa {
     public:
         enum { MIN_SIZE = 8 };
 
-        struct type {
-            typedef       T                value;
-            typedef       T               &reference;
-            typedef const T               &const_reference;
-            typedef       T               *pointer;
-            typedef const T               *const_pointer;
-            typedef size_t                 size;
-            typedef ptrdiff_t              difference;
-            typedef PointerRange<      T>  range;
-            typedef PointerRange<const T>  const_range;
-        };
+        typedef size_t                 size_type;
+        typedef ptrdiff_t              difference_type;
+        typedef       T                value_type;
+        typedef       T               &reference;
+        typedef const T               &const_reference;
+        typedef       T               *pointer;
+        typedef const T               *const_pointer;
+        typedef PointerRange<      T>  range;
+        typedef PointerRange<const T>  const_range;
 
         Vector(): p_buf(nullptr), p_len(0), p_cap(0) {}
 
@@ -268,10 +266,10 @@ namespace octa {
             return insert_range(idx, il.range());
         }
 
-        typename type::range each() {
+        range each() {
             return PointerRange<T>(p_buf, p_buf + p_len);
         }
-        typename type::const_range each() const {
+        const_range each() const {
             return PointerRange<const T>(p_buf, p_buf + p_len);
         }
 
