@@ -12,11 +12,11 @@
 #include "octa/utility.h"
 
 namespace octa {
-    struct InputRange {};
-    struct OutputRange {};
-    struct ForwardRange {};
-    struct BidirectionalRange {};
-    struct RandomAccessRange {};
+    struct InputRangeTag {};
+    struct OutputRangeTag {};
+    struct ForwardRangeTag {};
+    struct BidirectionalRangeTag {};
+    struct RandomAccessRangeTag {};
 
     template<typename T>
     struct RangeTraits {
@@ -47,7 +47,7 @@ namespace octa {
 
     template<typename B, typename C, typename V, typename R = V &,
              typename S = size_t
-    > struct InputRangeBase {
+    > struct InputRange {
         typedef C range_category;
         typedef S size_type;
         typedef V value_type;
@@ -62,15 +62,15 @@ namespace octa {
     };
 
     template<typename V, typename R = V &, typename S = size_t>
-    struct OutputRangeBase {
-        typedef OutputRange range_category;
+    struct OutputRange {
+        typedef OutputRangeTag range_category;
         typedef S size_type;
         typedef V value_type;
         typedef R reference;
     };
 
     template<typename T>
-    struct ReverseRange: InputRangeBase<ReverseRange<T>,
+    struct ReverseRange: InputRange<ReverseRange<T>,
         typename RangeTraits<T>::range_category,
         typename RangeTraits<T>::value_type,
         typename RangeTraits<T>::reference,
@@ -145,7 +145,7 @@ namespace octa {
     }
 
     template<typename T>
-    struct MoveRange: InputRangeBase<MoveRange<T>,
+    struct MoveRange: InputRange<MoveRange<T>,
         typename RangeTraits<T>::range_category,
         typename RangeTraits<T>::value_type,
         typename RangeTraits<T>::value_type &&,
@@ -215,7 +215,7 @@ namespace octa {
     }
 
     template<typename T>
-    struct NumberRange: InputRangeBase<NumberRange<T>, ForwardRange, T> {
+    struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T> {
         NumberRange(): p_a(0), p_b(0), p_step(0) {}
         NumberRange(const NumberRange &it): p_a(it.p_a), p_b(it.p_b),
             p_step(it.p_step) {}
@@ -248,7 +248,7 @@ namespace octa {
     }
 
     template<typename T>
-    struct PointerRange: InputRangeBase<PointerRange<T>, RandomAccessRange, T> {
+    struct PointerRange: InputRange<PointerRange<T>, RandomAccessRangeTag, T> {
         PointerRange(): p_beg(nullptr), p_end(nullptr) {}
         PointerRange(const PointerRange &v): p_beg(v.p_beg), p_end(v.p_end) {}
         PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
@@ -305,8 +305,8 @@ namespace octa {
     };
 
     template<typename T>
-    struct EnumeratedRange: InputRangeBase<EnumeratedRange<T>,
-        InputRange,     typename RangeTraits<T>::value_type,
+    struct EnumeratedRange: InputRange<EnumeratedRange<T>,
+        InputRangeTag,  typename RangeTraits<T>::value_type,
         EnumeratedValue<typename RangeTraits<T>::reference,
                         typename RangeTraits<T>::size_type>,
         typename RangeTraits<T>::size_type
