@@ -12,7 +12,7 @@
 namespace octa {
     /* address of */
 
-    template<typename T> T *address_of(T &v) {
+    template<typename T> constexpr T *address_of(T &v) noexcept {
         return reinterpret_cast<T *>(&const_cast<char &>
             (reinterpret_cast<const volatile char &>(v)));
     }
@@ -110,7 +110,7 @@ namespace octa {
     public:
         static T pointer_to(Conditional<IsVoid<element_type>::value,
             __OctaNat, element_type
-        > &r) {
+        > &r) noexcept(noexcept(T::pointer_to(r))) {
             return T::pointer_to(r);
         }
     };
@@ -130,7 +130,7 @@ namespace octa {
     public:
         static T pointer_to(Conditional<IsVoid<element_type>::value,
             __OctaNat, element_type
-        > &r) {
+        > &r) noexcept {
             return octa::address_of(r);
         }
     };
@@ -143,7 +143,7 @@ namespace octa {
 
         template<typename U> DefaultDelete(const DefaultDelete<U> &) {};
 
-        void operator()(T *p) const {
+        void operator()(T *p) const noexcept {
             delete p;
         }
     };
@@ -154,7 +154,7 @@ namespace octa {
 
         template<typename U> DefaultDelete(const DefaultDelete<U[]> &) {};
 
-        void operator()(T *p) const {
+        void operator()(T *p) const noexcept {
             delete[] p;
         }
         template<typename U> void operator()(U *) const = delete;
@@ -197,40 +197,40 @@ namespace octa {
         typedef const RemoveReference<D> &D_cref;
 
     public:
-        constexpr Box(): p_ptr(nullptr), p_del() {
+        constexpr Box() noexcept: p_ptr(nullptr), p_del() {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
-        constexpr Box(nullptr_t): p_ptr(nullptr), p_del() {
+        constexpr Box(nullptr_t) noexcept: p_ptr(nullptr), p_del() {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
 
-        explicit Box(pointer p): p_ptr(p), p_del() {
+        explicit Box(pointer p) noexcept: p_ptr(p), p_del() {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
 
         Box(pointer p, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
-        > d): p_ptr(p), p_del(d) {}
+        > d) noexcept: p_ptr(p), p_del(d) {}
 
-        Box(pointer p, RemoveReference<D> &&d): p_ptr(p), p_del(move(d)) {
+        Box(pointer p, RemoveReference<D> &&d) noexcept: p_ptr(p), p_del(move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
         }
 
-        Box(Box &&u): p_ptr(u.release()), p_del(forward<D>(u.get_deleter())) {}
+        Box(Box &&u) noexcept: p_ptr(u.release()), p_del(forward<D>(u.get_deleter())) {}
 
         template<typename TT, typename DD>
         Box(Box<TT, DD> &&u, EnableIf<!IsArray<TT>::value
             && IsConvertible<typename Box<TT, DD>::pointer, pointer>::value
             && IsConvertible<DD, D>::value
             && (!IsReference<D>::value || IsSame<D, DD>::value)
-        > = __OctaNat()): p_ptr(u.release()),
+        > = __OctaNat()) noexcept: p_ptr(u.release()),
             p_del(forward<DD>(u.get_deleter())) {}
 
-        Box &operator=(Box &&u) {
+        Box &operator=(Box &&u) noexcept {
             reset(u.release());
             p_del = forward<D>(u.get_deleter());
             return *this;
@@ -241,13 +241,13 @@ namespace octa {
             && IsConvertible<typename Box<TT, DD>::pointer, pointer>::value
             && IsAssignable<D &, DD &&>::value,
             Box &
-        > operator=(Box<TT, DD> &&u) {
+        > operator=(Box<TT, DD> &&u) noexcept {
             reset(u.release());
             p_del = forward<DD>(u.get_deleter());
             return *this;
         }
 
-        Box &operator=(nullptr_t) {
+        Box &operator=(nullptr_t) noexcept {
             reset();
             return *this;
         }
@@ -255,28 +255,28 @@ namespace octa {
         ~Box() { reset(); }
 
         AddLvalueReference<T> operator*() const { return *p_ptr; }
-        pointer operator->() const { return p_ptr; }
+        pointer operator->() const noexcept { return p_ptr; }
 
-        explicit operator bool() const { return p_ptr != nullptr; }
+        explicit operator bool() const noexcept { return p_ptr != nullptr; }
 
-        pointer get() const { return p_ptr; }
+        pointer get() const noexcept { return p_ptr; }
 
-        D_ref  get_deleter()       { return p_del; }
-        D_cref get_deleter() const { return p_del; }
+        D_ref  get_deleter() noexcept       { return p_del; }
+        D_cref get_deleter() const noexcept { return p_del; }
 
-        pointer release() {
+        pointer release() noexcept {
             pointer p = p_ptr;
             p_ptr = nullptr;
             return p;
         }
 
-        void reset(pointer p = nullptr) {
+        void reset(pointer p = nullptr) noexcept {
             pointer tmp = p_ptr;
             p_ptr = p;
             if (tmp) p_del(tmp);
         }
 
-        void swap(Box &u) {
+        void swap(Box &u) noexcept {
             octa::swap(p_ptr, u.p_ptr);
             octa::swap(p_del, u.p_del);
         }
@@ -315,18 +315,18 @@ namespace octa {
         typedef const RemoveReference<D> &D_cref;
 
     public:
-        constexpr Box(): p_ptr(nullptr), p_del() {
+        constexpr Box() noexcept: p_ptr(nullptr), p_del() {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
-        constexpr Box(nullptr_t): p_ptr(nullptr), p_del() {
+        constexpr Box(nullptr_t) noexcept: p_ptr(nullptr), p_del() {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
 
         template<typename U> explicit Box(U p, EnableIf<
             __OctaSameOrLessCvQualified<U, pointer>::value, __OctaNat
-        > = __OctaNat()): p_ptr(p), p_del() {
+        > = __OctaNat()) noexcept: p_ptr(p), p_del() {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
@@ -334,25 +334,25 @@ namespace octa {
         template<typename U> Box(U p, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
         > d, EnableIf<__OctaSameOrLessCvQualified<U, pointer>::value, __OctaNat
-        > = __OctaNat()): p_ptr(p), p_del(d) {}
+        > = __OctaNat()) noexcept: p_ptr(p), p_del(d) {}
 
         Box(nullptr_t, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
-        > d): p_ptr(), p_del(d) {}
+        > d) noexcept: p_ptr(), p_del(d) {}
 
         template<typename U> Box(U p, RemoveReference<D> &&d, EnableIf<
             __OctaSameOrLessCvQualified<U, pointer>::value, __OctaNat
-        > = __OctaNat()): p_ptr(p), p_del(move(d)) {
+        > = __OctaNat()) noexcept: p_ptr(p), p_del(move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
         }
 
-        Box(nullptr_t, RemoveReference<D> &&d): p_ptr(), p_del(move(d)) {
+        Box(nullptr_t, RemoveReference<D> &&d) noexcept: p_ptr(), p_del(move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
         }
 
-        Box(Box &&u): p_ptr(u.release()), p_del(forward<D>(u.get_deleter())) {}
+        Box(Box &&u) noexcept: p_ptr(u.release()), p_del(forward<D>(u.get_deleter())) {}
 
         template<typename TT, typename DD>
         Box(Box<TT, DD> &&u, EnableIf<IsArray<TT>::value
@@ -360,9 +360,9 @@ namespace octa {
                                            pointer>::value
             && IsConvertible<DD, D>::value
             && (!IsReference<D>::value || IsSame<D, DD>::value)> = __OctaNat()
-        ): p_ptr(u.release()), p_del(forward<DD>(u.get_deleter())) {}
+        ) noexcept: p_ptr(u.release()), p_del(forward<DD>(u.get_deleter())) {}
 
-        Box &operator=(Box &&u) {
+        Box &operator=(Box &&u) noexcept {
             reset(u.release());
             p_del = forward<D>(u.get_deleter());
             return *this;
@@ -374,13 +374,13 @@ namespace octa {
                                            pointer>::value
             && IsAssignable<D &, DD &&>::value,
             Box &
-        > operator=(Box<TT, DD> &&u) {
+        > operator=(Box<TT, DD> &&u) noexcept {
             reset(u.release());
             p_del = forward<DD>(u.get_deleter());
             return *this;
         }
 
-        Box &operator=(nullptr_t) {
+        Box &operator=(nullptr_t) noexcept {
             reset();
             return *this;
         }
@@ -391,14 +391,14 @@ namespace octa {
             return p_ptr[idx];
         }
 
-        explicit operator bool() const { return p_ptr != nullptr; }
+        explicit operator bool() const noexcept { return p_ptr != nullptr; }
 
-        pointer get() const { return p_ptr; }
+        pointer get() const noexcept { return p_ptr; }
 
-        D_ref  get_deleter()       { return p_del; }
-        D_cref get_deleter() const { return p_del; }
+        D_ref  get_deleter() noexcept       { return p_del; }
+        D_cref get_deleter() const noexcept { return p_del; }
 
-        pointer release() {
+        pointer release() noexcept {
             pointer p = p_ptr;
             p_ptr = nullptr;
             return p;
@@ -406,23 +406,23 @@ namespace octa {
 
         template<typename U> EnableIf<
             __OctaSameOrLessCvQualified<U, pointer>::value, void
-        > reset(U p) {
+        > reset(U p) noexcept {
             pointer tmp = p_ptr;
             p_ptr = p;
             if (tmp) p_del(tmp);
         }
 
-        void reset(nullptr_t) {
+        void reset(nullptr_t) noexcept {
             pointer tmp = p_ptr;
             p_ptr = nullptr;
             if (tmp) p_del(tmp);
         }
 
-        void reset() {
+        void reset() noexcept {
             reset(nullptr);
         }
 
-        void swap(Box &u) {
+        void swap(Box &u) noexcept {
             octa::swap(p_ptr, u.p_ptr);
             octa::swap(p_del, u.p_del);
         }
