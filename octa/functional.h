@@ -43,13 +43,13 @@ namespace octa {
 #undef __OCTA_DEFINE_BINARY_OP
 
     template<typename T> struct LogicalNot {
-        bool operator()(const T &x) const { return !x; }
+        bool operator()(const T &x) const noexcept(noexcept(!x)) { return !x; }
         typedef T argument_type;
         typedef bool result_type;
     };
 
     template<typename T> struct Negate {
-        bool operator()(const T &x) const { return -x; }
+        bool operator()(const T &x) const noexcept(noexcept(-x)) { return -x; }
         typedef T argument_type;
         typedef T result_type;
     };
@@ -59,7 +59,9 @@ namespace octa {
         typedef typename T::second_argument_type second_argument_type;
         typedef bool result_type;
 
-        explicit BinaryNegate(const T &f): p_fn(f) {}
+        explicit BinaryNegate(const T &f)
+        noexcept(IsNothrowCopyConstructible<T>::value): p_fn(f) {}
+
         bool operator()(const first_argument_type &x,
                         const second_argument_type &y)
         noexcept(noexcept(p_fn(x, y))) {
@@ -73,7 +75,8 @@ namespace octa {
         typedef typename T::argument_type argument_type;
         typedef bool result_type;
 
-        explicit UnaryNegate(const T &f) noexcept: p_fn(f) {}
+        explicit UnaryNegate(const T &f)
+        noexcept(IsNothrowCopyConstructible<T>::value): p_fn(f) {}
         bool operator()(const argument_type &x) noexcept(noexcept(p_fn(x))) {
             return !p_fn(x);
         }
@@ -82,12 +85,12 @@ namespace octa {
     };
 
     template<typename T> UnaryNegate<T> not1(const T &fn)
-    noexcept(noexcept(UnaryNegate<T>(fn))) {
+    noexcept(IsNothrowCopyConstructible<UnaryNegate<T>>::value) {
         return UnaryNegate<T>(fn);
     }
 
     template<typename T> BinaryNegate<T> not2(const T &fn)
-    noexcept(noexcept(BinaryNegate<T>(fn))) {
+    noexcept(IsNothrowCopyConstructible<BinaryNegate<T>>::value) {
         return BinaryNegate<T>(fn);
     }
 
@@ -97,7 +100,7 @@ namespace octa {
     struct ReferenceWrapper {
         typedef T type;
 
-        ReferenceWrapper(T &v): p_ptr(address_of(v)) {}
+        ReferenceWrapper(T &v) noexcept: p_ptr(address_of(v)) {}
         ReferenceWrapper(const ReferenceWrapper &) = default;
         ReferenceWrapper(T &&) = delete;
 
@@ -216,15 +219,15 @@ namespace octa {
             new (&get_ref(s)) T(forward<T>(v));
         }
 
-        static void move_f(__OctaFunctorData &lhs, __OctaFunctorData &&rhs) {
+        static void move_f(__OctaFunctorData &lhs, __OctaFunctorData &&rhs) noexcept {
             new (&get_ref(lhs)) T(move(get_ref(rhs)));
         }
 
-        static void destroy_f(__OctaFunctorData &s) {
+        static void destroy_f(__OctaFunctorData &s) noexcept {
             get_ref(s).~T();
         }
 
-        static T &get_ref(const __OctaFunctorData &s) {
+        static T &get_ref(const __OctaFunctorData &s) noexcept {
             return (T &)s;
         }
     };
@@ -240,27 +243,27 @@ namespace octa {
             new (&get_ptr_ref(s)) T *(new T(forward<T>(v)));
         }
 
-        static void move_f(__OctaFunctorData &lhs, __OctaFunctorData &&rhs) {
+        static void move_f(__OctaFunctorData &lhs, __OctaFunctorData &&rhs) noexcept {
             new (&get_ptr_ref(lhs)) T *(get_ptr_ref(rhs));
             get_ptr_ref(rhs) = nullptr;
         }
 
-        static void destroy_f(__OctaFunctorData &s) {
+        static void destroy_f(__OctaFunctorData &s) noexcept {
             T *&ptr = get_ptr_ref(s);
             if (!ptr) return;
             delete ptr;
             ptr = nullptr;
         }
 
-        static T &get_ref(const __OctaFunctorData &s) {
+        static T &get_ref(const __OctaFunctorData &s) noexcept {
             return *get_ptr_ref(s);
         }
 
-        static T *&get_ptr_ref(__OctaFunctorData &s) {
+        static T *&get_ptr_ref(__OctaFunctorData &s) noexcept {
             return (T *&)s;
         }
 
-        static T *&get_ptr_ref(const __OctaFunctorData &s) {
+        static T *&get_ptr_ref(const __OctaFunctorData &s) noexcept {
             return (T *&)s;
         }
     };
@@ -345,17 +348,17 @@ namespace octa {
         Function(         ) noexcept { initialize_empty(); }
         Function(nullptr_t) noexcept { initialize_empty(); }
 
-        Function(Function &&f) {
+        Function(Function &&f) noexcept {
             initialize_empty();
             swap(f);
         }
 
-        Function(const Function &f): p_call(f.p_call) {
+        Function(const Function &f) noexcept: p_call(f.p_call) {
             f.p_stor.manager->call_copy(p_stor, f.p_stor);
         }
 
         template<typename T>
-        Function(T f) {
+        Function(T f) noexcept(__OctaFunctorInPlace<T>::value) {
             if (func_is_null(f)) {
                 initialize_empty();
                 return;
@@ -367,13 +370,13 @@ namespace octa {
             p_stor.manager->call_destroy(p_stor);
         }
 
-        Function &operator=(Function &&f) {
+        Function &operator=(Function &&f) noexcept {
             p_stor.manager->call_destroy(p_stor);
             swap(f);
             return *this;
         }
 
-        Function &operator=(const Function &f) {
+        Function &operator=(const Function &f) noexcept {
             p_stor.manager->call_destroy(p_stor);
             f.p_stor.manager->call_copy(p_stor, f.p_stor);
             return *this;
@@ -384,7 +387,7 @@ namespace octa {
         }
 
         template<typename F>
-        void assign(F &&f) {
+        void assign(F &&f) noexcept(__OctaFunctorInPlace<F>::value) {
             Function(forward<F>(f)).swap(*this);
         }
 
@@ -409,7 +412,7 @@ namespace octa {
             __OctaFunctorDataManager<T>::store_f(p_stor.data, forward<T>(f));
         }
 
-        void initialize_empty() {
+        void initialize_empty() noexcept {
             typedef R(*emptyf)(A...);
             p_call = nullptr;
             p_stor.manager = &__octa_get_default_fm<emptyf>();

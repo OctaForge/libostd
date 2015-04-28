@@ -656,8 +656,11 @@ namespace octa {
     template<typename, bool> struct __OctaIsNothrowDtible;
 
     template<typename T>
-    struct __OctaIsNothrowDtible<T, false>: IntegralConstant<bool,
-        noexcept(__octa_declval<T>().~T())
+    struct __OctaIsNothrowDtible<T, false>: False {};
+
+    template<typename T>
+    struct __OctaIsNothrowDtible<T, true>: IntegralConstant<bool,
+        (IsScalar<T>::value || noexcept(__octa_declval<T>().~T()))
     > {};
 
     template<typename T>

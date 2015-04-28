@@ -17,7 +17,7 @@ namespace std {
         const T *p_buf;
         size_t p_len;
 
-        initializer_list(const T *v, size_t n): p_buf(v), p_len(n) {}
+        initializer_list(const T *v, size_t n) noexcept: p_buf(v), p_len(n) {}
     public:
         typedef size_t    size_type;
         typedef ptrdiff_t difference_type;
@@ -27,13 +27,13 @@ namespace std {
         typedef       T  *pointer;
         typedef const T  *const_pointer;
 
-        initializer_list(): p_buf(nullptr), p_len(0) {}
+        initializer_list() noexcept: p_buf(nullptr), p_len(0) {}
 
-        size_t length() const { return p_len; }
+        size_t length() const noexcept { return p_len; }
 
-        const T *get() const { return p_buf; }
+        const T *get() const noexcept { return p_buf; }
 
-        octa::PointerRange<const T> range() {
+        octa::PointerRange<const T> range() noexcept {
             return octa::PointerRange<const T>(p_buf, p_len);
         }
     };

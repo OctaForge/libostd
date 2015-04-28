@@ -23,32 +23,32 @@ namespace octa {
         typedef PointerRange<      T>  range;
         typedef PointerRange<const T>  const_range;
 
-        T &operator[](size_t i) { return p_buf[i]; }
-        const T &operator[](size_t i) const { return p_buf[i]; }
+        T &operator[](size_t i) noexcept { return p_buf[i]; }
+        const T &operator[](size_t i) const noexcept { return p_buf[i]; }
 
-        T &at(size_t i) { return p_buf[i]; }
-        const T &at(size_t i) const { return p_buf[i]; }
+        T &at(size_t i) noexcept { return p_buf[i]; }
+        const T &at(size_t i) const noexcept { return p_buf[i]; }
 
-        T &first() { return p_buf[0]; }
-        const T &first() const { return p_buf[0]; }
+        T &first() noexcept { return p_buf[0]; }
+        const T &first() const noexcept { return p_buf[0]; }
 
-        T &last() { return p_buf[N - 1]; }
-        const T &last() const { return p_buf[N - 1]; }
+        T &last() noexcept { return p_buf[N - 1]; }
+        const T &last() const noexcept { return p_buf[N - 1]; }
 
-        bool empty() const { return (N > 0); }
-        size_t length() const { return N; }
+        bool empty() const noexcept { return (N > 0); }
+        size_t length() const noexcept { return N; }
 
-        T *get() { return p_buf; }
-        const T *get() const { return p_buf; }
+        T *get() noexcept { return p_buf; }
+        const T *get() const noexcept { return p_buf; }
 
-        void swap(Array &v) {
+        void swap(Array &v) noexcept {
             swap(p_buf, v.p_buf);
         }
 
-        range each() {
+        range each() noexcept {
             return PointerRange<T>(p_buf, p_buf + N);
         }
-        const_range each() const {
+        const_range each() const noexcept {
             return PointerRange<const T>(p_buf, p_buf + N);
         }
 
@@ -56,7 +56,7 @@ namespace octa {
     };
 
     template<typename T, size_t N>
-    void swap(Array<T, N> &a, Array<T, N> &b) {
+    void swap(Array<T, N> &a, Array<T, N> &b) noexcept {
         a.swap(b);
     }
 }

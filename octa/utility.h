@@ -31,12 +31,15 @@ namespace octa {
 
     template<typename T> AddRvalueReference<T> declval();
 
-    template<typename T> void swap(T &a, T &b) {
+    template<typename T> void swap(T &a, T &b)
+    noexcept(IsNothrowMoveConstructible<T>::value
+          && IsNothrowMoveAssignable<T>::value) {
         T c(move(a));
         a = move(b);
         b = move(c);
     }
-    template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N]) {
+    template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N])
+    noexcept(noexcept(swap(*a, *b))) {
         for (size_t i = 0; i < N; ++i) {
             swap(a[i], b[i]);
         }
