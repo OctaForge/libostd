@@ -16,7 +16,8 @@ namespace octa {
 
 #define __OCTA_DEFINE_BINARY_OP(name, op, rettype) \
     template<typename T> struct name { \
-        bool operator()(const T &x, const T &y) const { return x op y; } \
+        bool operator()(const T &x, const T &y) \
+        const noexcept(noexcept(x op y)) { return x op y; } \
         typedef T first_argument_type; \
         typedef T second_argument_type; \
         typedef rettype result_type; \
@@ -60,7 +61,8 @@ namespace octa {
 
         explicit BinaryNegate(const T &f): p_fn(f) {}
         bool operator()(const first_argument_type &x,
-                        const second_argument_type &y) {
+                        const second_argument_type &y)
+        noexcept(noexcept(p_fn(x, y))) {
             return !p_fn(x, y);
         }
     private:
@@ -71,19 +73,21 @@ namespace octa {
         typedef typename T::argument_type argument_type;
         typedef bool result_type;
 
-        explicit UnaryNegate(const T &f): p_fn(f) {}
-        bool operator()(const argument_type &x) {
+        explicit UnaryNegate(const T &f) noexcept: p_fn(f) {}
+        bool operator()(const argument_type &x) noexcept(noexcept(p_fn(x))) {
             return !p_fn(x);
         }
     private:
         T p_fn;
     };
 
-    template<typename T> UnaryNegate<T> not1(const T &fn) {
+    template<typename T> UnaryNegate<T> not1(const T &fn)
+    noexcept(noexcept(UnaryNegate<T>(fn))) {
         return UnaryNegate<T>(fn);
     }
 
-    template<typename T> BinaryNegate<T> not2(const T &fn) {
+    template<typename T> BinaryNegate<T> not2(const T &fn)
+    noexcept(noexcept(BinaryNegate<T>(fn))) {
         return BinaryNegate<T>(fn);
     }
 
@@ -106,18 +110,22 @@ namespace octa {
         T *p_ptr;
     };
 
-    template<typename T> ReferenceWrapper<T> ref(T &v) {
+    template<typename T>
+    ReferenceWrapper<T> ref(T &v) noexcept {
         return ReferenceWrapper<T>(v);
     }
-    template<typename T> ReferenceWrapper<T> ref(ReferenceWrapper<T> v) {
+    template<typename T>
+    ReferenceWrapper<T> ref(ReferenceWrapper<T> v) noexcept {
         return ReferenceWrapper<T>(v);
     }
     template<typename T> void ref(const T &&) = delete;
 
-    template<typename T> ReferenceWrapper<const T> cref(const T &v) {
+    template<typename T>
+    ReferenceWrapper<const T> cref(const T &v) noexcept {
         return ReferenceWrapper<T>(v);
     }
-    template<typename T> ReferenceWrapper<const T> cref(ReferenceWrapper<T> v) {
+    template<typename T>
+    ReferenceWrapper<const T> cref(ReferenceWrapper<T> v) noexcept {
         return ReferenceWrapper<T>(v);
     }
     template<typename T> void cref(const T &&) = delete;
@@ -176,7 +184,7 @@ namespace octa {
     };
 
     template<typename R, typename T>
-    __OctaMemFn<R, T> mem_fn(R T:: *ptr) {
+    __OctaMemFn<R, T> mem_fn(R T:: *ptr) noexcept {
         return __OctaMemFn<R, T>(ptr);
     }
 
@@ -334,8 +342,8 @@ namespace octa {
 
     template<typename R, typename ...A>
     struct Function<R(A...)>: __OctaFunction<R, A...> {
-        Function(         ) { initialize_empty(); }
-        Function(nullptr_t) { initialize_empty(); }
+        Function(         ) noexcept { initialize_empty(); }
+        Function(nullptr_t) noexcept { initialize_empty(); }
 
         Function(Function &&f) {
             initialize_empty();
@@ -380,7 +388,7 @@ namespace octa {
             Function(forward<F>(f)).swap(*this);
         }
 
-        void swap(Function &f) {
+        void swap(Function &f) noexcept {
             __OctaFmStorage tmp;
             f.p_stor.manager->call_move_and_destroy(tmp, move(f.p_stor));
             p_stor.manager->call_move_and_destroy(f.p_stor, move(p_stor));
@@ -388,7 +396,7 @@ namespace octa {
             octa::swap(p_call, f.p_call);
         }
 
-        operator bool() const { return p_call != nullptr; }
+        operator bool() const noexcept { return p_call != nullptr; }
 
     private:
         __OctaFmStorage p_stor;
@@ -442,21 +450,21 @@ namespace octa {
     };
 
     template<typename T>
-    void swap(Function<T> &a, Function<T> &b) {
+    void swap(Function<T> &a, Function<T> &b) noexcept {
         a.swap(b);
     }
 
     template<typename T>
-    bool operator==(nullptr_t, const Function<T> &rhs) { return !rhs; }
+    bool operator==(nullptr_t, const Function<T> &rhs) noexcept { return !rhs; }
 
     template<typename T>
-    bool operator==(const Function<T> &lhs, nullptr_t) { return !lhs; }
+    bool operator==(const Function<T> &lhs, nullptr_t) noexcept { return !lhs; }
 
     template<typename T>
-    bool operator!=(nullptr_t, const Function<T> &rhs) { return rhs; }
+    bool operator!=(nullptr_t, const Function<T> &rhs) noexcept { return rhs; }
 
     template<typename T>
-    bool operator!=(const Function<T> &lhs, nullptr_t) { return lhs; }
+    bool operator!=(const Function<T> &lhs, nullptr_t) noexcept { return lhs; }
 }
 
 #endif
