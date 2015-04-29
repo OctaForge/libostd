@@ -55,12 +55,14 @@ namespace octa {
         typedef V value_type;
         typedef R reference;
 
-        __OctaRangeIterator<B> begin()
-        noexcept(IsNothrowCopyConstructible<B>::value) {
+        __OctaRangeIterator<B> begin() noexcept(
+            IsNothrowCopyConstructible<B>::value
+        ) {
             return __OctaRangeIterator<B>((const B &)*this);
         }
-        __OctaRangeIterator<B> end()
-        noexcept(IsNothrowDefaultConstructible<B>::value) {
+        __OctaRangeIterator<B> end() noexcept(
+            IsNothrowDefaultConstructible<B>::value
+        ) {
             return __OctaRangeIterator<B>();
         }
     };
@@ -87,36 +89,42 @@ namespace octa {
         T p_range;
 
     public:
-        ReverseRange()
-        noexcept(IsNothrowDefaultConstructible<T>::value): p_range() {}
+        ReverseRange() noexcept(IsNothrowDefaultConstructible<T>::value):
+            p_range() {}
 
-        ReverseRange(const T &range)
-        noexcept(IsNothrowCopyConstructible<T>::value): p_range(range) {}
+        ReverseRange(const T &range) noexcept(
+            IsNothrowCopyConstructible<T>::value
+        ): p_range(range) {}
 
-        ReverseRange(const ReverseRange &it)
-        noexcept(IsNothrowCopyConstructible<T>::value): p_range(it.p_range) {}
+        ReverseRange(const ReverseRange &it) noexcept(
+            IsNothrowCopyConstructible<T>::value
+        ): p_range(it.p_range) {}
 
-        ReverseRange(ReverseRange &&it)
-        noexcept(IsNothrowMoveConstructible<T>::value):
-            p_range(move(it.p_range)) {}
+        ReverseRange(ReverseRange &&it) noexcept(
+            IsNothrowMoveConstructible<T>::value
+        ): p_range(move(it.p_range)) {}
 
-        ReverseRange &operator=(const ReverseRange &v)
-        noexcept(IsNothrowCopyAssignable<T>::value) {
+        ReverseRange &operator=(const ReverseRange &v) noexcept(
+            IsNothrowCopyAssignable<T>::value
+        ) {
             p_range = v.p_range;
             return *this;
         }
-        ReverseRange &operator=(ReverseRange &&v)
-        noexcept(IsNothrowMoveAssignable<T>::value) {
+        ReverseRange &operator=(ReverseRange &&v) noexcept(
+            IsNothrowMoveAssignable<T>::value
+        ) {
             p_range = move(v.p_range);
             return *this;
         }
-        ReverseRange &operator=(const T &v)
-        noexcept(IsNothrowCopyAssignable<T>::value) {
+        ReverseRange &operator=(const T &v) noexcept(
+            IsNothrowCopyAssignable<T>::value
+        ) {
             p_range = v;
             return *this;
         }
-        ReverseRange &operator=(T &&v)
-        noexcept(IsNothrowMoveAssignable<T>::value) {
+        ReverseRange &operator=(T &&v) noexcept(
+            IsNothrowMoveAssignable<T>::value
+        ) {
             p_range = move(v);
             return *this;
         }
@@ -136,12 +144,14 @@ namespace octa {
             p_range.pop_first();
         }
 
-        bool operator==(const ReverseRange &v) const
-        noexcept(noexcept(p_range == v.p_range)) {
+        bool operator==(const ReverseRange &v) const noexcept(
+            noexcept(p_range == v.p_range)
+        ) {
             return p_range == v.p_range;
         }
-        bool operator!=(const ReverseRange &v) const
-        noexcept(noexcept(p_range != v.p_range)) {
+        bool operator!=(const ReverseRange &v) const noexcept(
+            noexcept(p_range != v.p_range)
+        ) {
             return p_range != v.p_range;
         }
 
@@ -166,17 +176,19 @@ namespace octa {
             return p_range[length() - i - 1];
         }
 
-        ReverseRange<T> slice(r_size start, r_size end)
-        noexcept(noexcept(ReverseRange<T>(p_range.slice(0, 0)))
-        && noexcept(p_range.length())) {
+        ReverseRange<T> slice(r_size start, r_size end) noexcept(
+            noexcept(ReverseRange<T>(p_range.slice(0, 0)))
+         && noexcept(p_range.length())
+        ) {
             r_size len = p_range.length();
             return ReverseRange<T>(p_range.slice(len - end, len - start));
         }
     };
 
     template<typename T>
-    ReverseRange<T> make_reverse_range(const T &it)
-    noexcept(noexcept(ReverseRange<T>(it))) {
+    ReverseRange<T> make_reverse_range(const T &it) noexcept(
+        noexcept(ReverseRange<T>(it))
+    ) {
         return ReverseRange<T>(it);
     }
 
@@ -195,36 +207,42 @@ namespace octa {
         T p_range;
 
     public:
-        MoveRange()
-        noexcept(IsNothrowDefaultConstructible<T>::value): p_range() {}
+        MoveRange() noexcept(IsNothrowDefaultConstructible<T>::value):
+            p_range() {}
 
-        MoveRange(const T &range)
-        noexcept(IsNothrowCopyConstructible<T>::value): p_range(range) {}
+        MoveRange(const T &range) noexcept(
+            IsNothrowCopyConstructible<T>::value
+        ): p_range(range) {}
 
-        MoveRange(const MoveRange &it)
-        noexcept(IsNothrowCopyConstructible<T>::value): p_range(it.p_range) {}
+        MoveRange(const MoveRange &it) noexcept(
+            IsNothrowCopyConstructible<T>::value
+        ): p_range(it.p_range) {}
 
-        MoveRange(MoveRange &&it)
-        noexcept(IsNothrowMoveConstructible<T>::value):
-            p_range(move(it.p_range)) {}
+        MoveRange(MoveRange &&it) noexcept(
+            IsNothrowMoveConstructible<T>::value
+        ): p_range(move(it.p_range)) {}
 
-        MoveRange &operator=(const MoveRange &v)
-        noexcept(IsNothrowCopyAssignable<T>::value) {
+        MoveRange &operator=(const MoveRange &v) noexcept(
+            IsNothrowCopyAssignable<T>::value
+        ) {
             p_range = v.p_range;
             return *this;
         }
-        MoveRange &operator=(MoveRange &&v)
-        noexcept(IsNothrowMoveAssignable<T>::value) {
+        MoveRange &operator=(MoveRange &&v) noexcept(
+            IsNothrowMoveAssignable<T>::value
+        ) {
             p_range = move(v.p_range);
             return *this;
         }
-        MoveRange &operator=(const T &v)
-        noexcept(IsNothrowCopyAssignable<T>::value) {
+        MoveRange &operator=(const T &v) noexcept(
+            IsNothrowCopyAssignable<T>::value
+        ) {
             p_range = v;
             return *this;
         }
-        MoveRange &operator=(T &&v)
-        noexcept(IsNothrowMoveAssignable<T>::value) {
+        MoveRange &operator=(T &&v) noexcept(
+            IsNothrowMoveAssignable<T>::value
+        ) {
             p_range = move(v);
             return *this;
         }
@@ -243,12 +261,14 @@ namespace octa {
             p_range.pop_last();
         }
 
-        bool operator==(const MoveRange &v) const
-        noexcept(noexcept(p_range == v.p_range)) {
+        bool operator==(const MoveRange &v) const noexcept(
+            noexcept(p_range == v.p_range)
+        ) {
             return p_range == v.p_range;
         }
-        bool operator!=(const MoveRange &v) const
-        noexcept(noexcept(p_range != v.p_range)) {
+        bool operator!=(const MoveRange &v) const noexcept(
+            noexcept(p_range != v.p_range)
+        ) {
             return p_range != v.p_range;
         }
 
@@ -263,8 +283,9 @@ namespace octa {
             return move(p_range[i]);
         }
 
-        MoveRange<T> slice(r_size start, r_size end)
-        noexcept(noexcept(MoveRange<T>(p_range.slice(start, end)))) {
+        MoveRange<T> slice(r_size start, r_size end) noexcept(
+            noexcept(MoveRange<T>(p_range.slice(start, end)))
+        ) {
             return MoveRange<T>(p_range.slice(start, end));
         }
 
@@ -274,8 +295,9 @@ namespace octa {
     };
 
     template<typename T>
-    MoveRange<T> make_move_range(const T &it)
-    noexcept(noexcept(MoveRange<T>(it))) {
+    MoveRange<T> make_move_range(const T &it) noexcept(
+        noexcept(MoveRange<T>(it))
+    ) {
         return MoveRange<T>(it);
     }
 
@@ -388,42 +410,45 @@ namespace octa {
         r_size p_index;
 
     public:
-        EnumeratedRange()
-        noexcept(IsNothrowDefaultConstructible<T>::value): p_range(),
-            p_index(0) {}
+        EnumeratedRange() noexcept(IsNothrowDefaultConstructible<T>::value):
+            p_range(), p_index(0) {}
 
-        EnumeratedRange(const T &range)
-        noexcept(IsNothrowCopyConstructible<T>::value): p_range(range),
-            p_index(0) {}
+        EnumeratedRange(const T &range) noexcept(
+            IsNothrowCopyConstructible<T>::value
+        ): p_range(range), p_index(0) {}
 
-        EnumeratedRange(const EnumeratedRange &it)
-        noexcept(IsNothrowCopyConstructible<T>::value): p_range(it.p_range),
-            p_index(it.p_index) {}
+        EnumeratedRange(const EnumeratedRange &it) noexcept(
+            IsNothrowCopyConstructible<T>::value
+        ): p_range(it.p_range), p_index(it.p_index) {}
 
-        EnumeratedRange(EnumeratedRange &&it)
-        noexcept(IsNothrowMoveConstructible<T>::value):
-            p_range(move(it.p_range)), p_index(it.p_index) {}
+        EnumeratedRange(EnumeratedRange &&it) noexcept(
+            IsNothrowMoveConstructible<T>::value
+        ): p_range(move(it.p_range)), p_index(it.p_index) {}
 
-        EnumeratedRange &operator=(const EnumeratedRange &v)
-        noexcept(IsNothrowCopyAssignable<T>::value) {
+        EnumeratedRange &operator=(const EnumeratedRange &v) noexcept(
+            IsNothrowCopyAssignable<T>::value
+        ) {
             p_range = v.p_range;
             p_index = v.p_index;
             return *this;
         }
-        EnumeratedRange &operator=(EnumeratedRange &&v)
-        noexcept(IsNothrowMoveAssignable<T>::value) {
+        EnumeratedRange &operator=(EnumeratedRange &&v) noexcept(
+            IsNothrowMoveAssignable<T>::value
+        ) {
             p_range = move(v.p_range);
             p_index = v.p_index;
             return *this;
         }
-        EnumeratedRange &operator=(const T &v)
-        noexcept(IsNothrowCopyAssignable<T>::value) {
+        EnumeratedRange &operator=(const T &v) noexcept(
+            IsNothrowCopyAssignable<T>::value
+        ) {
             p_range = v;
             p_index = 0;
             return *this;
         }
-        EnumeratedRange &operator=(T &&v)
-        noexcept(IsNothrowMoveAssignable<T>::value) {
+        EnumeratedRange &operator=(T &&v) noexcept(
+            IsNothrowMoveAssignable<T>::value
+        ) {
             p_range = move(v);
             p_index = 0;
             return *this;
@@ -437,28 +462,33 @@ namespace octa {
             ++p_index; p_range.pop_first();
         }
 
-        EnumeratedValue<r_ref, r_size> first()
-        noexcept(noexcept(p_range.first())) {
+        EnumeratedValue<r_ref, r_size> first() noexcept(
+            noexcept(p_range.first())
+        ) {
             return EnumeratedValue<r_ref, r_size> { p_index, p_range.first() };
         }
-        EnumeratedValue<r_ref, r_size> first() const
-        noexcept(noexcept(p_range.first())) {
+        EnumeratedValue<r_ref, r_size> first() const noexcept(
+            noexcept(p_range.first())
+        ) {
             return EnumeratedValue<r_ref, r_size> { p_index, p_range.first() };
         }
 
-        bool operator==(const EnumeratedRange &v) const
-        noexcept(noexcept(p_range == v.p_range)) {
+        bool operator==(const EnumeratedRange &v) const noexcept(
+            noexcept(p_range == v.p_range)
+        ) {
             return p_range == v.p_range;
         }
-        bool operator!=(const EnumeratedRange &v) const
-        noexcept(noexcept(p_range != v.p_range)) {
+        bool operator!=(const EnumeratedRange &v) const noexcept(
+            noexcept(p_range != v.p_range)
+        ) {
             return p_range != v.p_range;
         }
     };
 
     template<typename T>
-    EnumeratedRange<T> enumerate(const T &it)
-    noexcept(noexcept(EnumeratedRange<T>(it))) {
+    EnumeratedRange<T> enumerate(const T &it) noexcept(
+        noexcept(EnumeratedRange<T>(it))
+    ) {
         return EnumeratedRange<T>(it);
     }
 }

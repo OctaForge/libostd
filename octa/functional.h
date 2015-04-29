@@ -16,8 +16,9 @@ namespace octa {
 
 #define __OCTA_DEFINE_BINARY_OP(name, op, rettype) \
     template<typename T> struct name { \
-        bool operator()(const T &x, const T &y) \
-        const noexcept(noexcept(x op y)) { return x op y; } \
+        bool operator()(const T &x, const T &y) const noexcept( \
+            noexcept(x op y) \
+        ) { return x op y; } \
         typedef T first_argument_type; \
         typedef T second_argument_type; \
         typedef rettype result_type; \
@@ -59,12 +60,14 @@ namespace octa {
         typedef typename T::second_argument_type second_argument_type;
         typedef bool result_type;
 
-        explicit BinaryNegate(const T &f)
-        noexcept(IsNothrowCopyConstructible<T>::value): p_fn(f) {}
+        explicit BinaryNegate(const T &f) noexcept(
+            IsNothrowCopyConstructible<T>::value
+        ): p_fn(f) {}
 
         bool operator()(const first_argument_type &x,
-                        const second_argument_type &y)
-        noexcept(noexcept(p_fn(x, y))) {
+                        const second_argument_type &y) noexcept(
+            noexcept(p_fn(x, y))
+        ) {
             return !p_fn(x, y);
         }
     private:
@@ -75,8 +78,9 @@ namespace octa {
         typedef typename T::argument_type argument_type;
         typedef bool result_type;
 
-        explicit UnaryNegate(const T &f)
-        noexcept(IsNothrowCopyConstructible<T>::value): p_fn(f) {}
+        explicit UnaryNegate(const T &f) noexcept(
+            IsNothrowCopyConstructible<T>::value
+        ): p_fn(f) {}
         bool operator()(const argument_type &x) noexcept(noexcept(p_fn(x))) {
             return !p_fn(x);
         }
@@ -84,13 +88,15 @@ namespace octa {
         T p_fn;
     };
 
-    template<typename T> UnaryNegate<T> not1(const T &fn)
-    noexcept(IsNothrowCopyConstructible<UnaryNegate<T>>::value) {
+    template<typename T> UnaryNegate<T> not1(const T &fn) noexcept(
+        IsNothrowCopyConstructible<UnaryNegate<T>>::value
+    ) {
         return UnaryNegate<T>(fn);
     }
 
-    template<typename T> BinaryNegate<T> not2(const T &fn)
-    noexcept(IsNothrowCopyConstructible<BinaryNegate<T>>::value) {
+    template<typename T> BinaryNegate<T> not2(const T &fn) noexcept(
+        IsNothrowCopyConstructible<BinaryNegate<T>>::value
+    ) {
         return BinaryNegate<T>(fn);
     }
 
