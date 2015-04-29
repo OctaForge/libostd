@@ -63,31 +63,55 @@ namespace octa {
         T first;
         U second;
 
-        Pair() = default;
+        Pair() noexcept(
+            IsNothrowDefaultConstructible<T>::value
+         && IsNothrowDefaultConstructible<U>::value
+        ) = default;
         ~Pair() = default;
 
-        Pair(const Pair &) = default;
-        Pair(Pair &&) = default;
+        Pair(const Pair &) noexcept(
+            IsNothrowCopyConstructible<T>::value
+         && IsNothrowCopyConstructible<U>::value
+        ) = default;
+        Pair(Pair &&) noexcept(
+            IsNothrowMoveConstructible<T>::value
+         && IsNothrowMoveConstructible<U>::value
+        ) = default;
 
-        Pair(const T &x, const U &y): first(x), second(y) {}
+        Pair(const T &x, const U &y) noexcept(
+            IsNothrowCopyConstructible<T>::value
+         && IsNothrowCopyConstructible<U>::value
+        ): first(x), second(y) {}
 
         template<typename TT, typename UU>
         Pair(TT &&x, UU &&y): first(forward<TT>(x)), second(forward<UU>(y)) {}
 
         template<typename TT, typename UU>
-        Pair(const Pair<TT, UU> &v): first(v.first), second(v.second) {}
+        Pair(const Pair<TT, UU> &v) noexcept(
+            IsNothrowCopyConstructible<T>::value
+         && IsNothrowCopyConstructible<U>::value
+        ): first(v.first), second(v.second) {}
 
         template<typename TT, typename UU>
-        Pair(Pair<TT, UU> &&v): first(move(v.first)), second(move(v.second)) {}
+        Pair(Pair<TT, UU> &&v) noexcept(
+            IsNothrowMoveConstructible<T>::value
+         && IsNothrowMoveConstructible<U>::value
+        ): first(move(v.first)), second(move(v.second)) {}
 
-        Pair &operator=(const Pair &v) {
+        Pair &operator=(const Pair &v) noexcept(
+            IsNothrowCopyAssignable<T>::value
+         && IsNothrowCopyAssignable<U>::value
+        ) {
             first = v.first;
             second = v.second;
             return *this;
         }
 
         template<typename TT, typename UU>
-        Pair &operator=(const Pair<TT, UU> &v) {
+        Pair &operator=(const Pair<TT, UU> &v) noexcept(
+            IsNothrowCopyAssignable<T>::value
+         && IsNothrowCopyAssignable<U>::value
+        ) {
             first = v.first;
             second = v.second;
             return *this;
