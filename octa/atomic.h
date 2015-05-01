@@ -260,64 +260,59 @@ namespace octa {
         return r;
     }
 
-    static inline bool __octa_msvc_atomic_compare_exchange8(
-        volatile int8_t *dst, int8_t *exp, int8_t src
-    ) {
-        int8_t prev = _InterlockedCompareExchange8(dst, src, *exp);
-        if (prev == *exp) return true;
-        *exp = prev; return false;
-    }
+    template<typename T, size_t N = sizeof(T)>
+    struct __OctaMsvcAtomicCompareExchange;
 
-    static inline bool __octa_msvc_atomic_compare_exchange16(
-        volatile int16_t *dst, int16_t *exp, int16_t src
-    ) {
-        int16_t prev = InterlockedCompareExchange16(dst, src, *exp);
-        if (prev == *exp) return true;
-        *exp = prev; return false;
-    }
+    template<typename T>
+    struct __OctaMsvcAtomicCompareExchange<T, 1> {
+        static inline bool exchange(volatile T *dst, T *exp, T src)
+        noexcept {
+            int8_t prev = _InterlockedCompareExchange8((volatile int8_t *)dst,
+                (int8_t)src, (int8_t)*exp);
+            if (prev == (int8_t)*exp) return true;
+            *exp = (T)prev; return false;
+        }
+    };
 
-    static inline bool __octa_msvc_atomic_compare_exchange32(
-        volatile int32_t *dst, int32_t *exp, int32_t src
-    ) {
-        int32_t prev = InterlockedCompareExchange(dst, src, *exp);
-        if (prev == *exp) return true;
-        *exp = prev; return false;
-    }
+    template<typename T>
+    struct __OctaMsvcAtomicCompareExchange<T, 2> {
+        static inline bool exchange(volatile T *dst, T *exp, T src)
+        noexcept {
+            int16_t prev = _InterlockedCompareExchange16((volatile int16_t *)dst,
+                (int16_t)src, (int16_t)*exp);
+            if (prev == (int16_t)*exp) return true;
+            *exp = (T)prev; return false;
+        }
+    };
 
-    static inline bool __octa_msvc_atomic_compare_exchange64(
-        volatile int64_t *dst, int64_t *exp, int64_t src
-    ) {
-        int64_t prev = InterlockedCompareExchange64(dst, src, *exp);
-        if (prev == *exp) return true;
-        *exp = prev; return false;
-    }
+    template<typename T>
+    struct __OctaMsvcAtomicCompareExchange<T, 4> {
+        static inline bool exchange(volatile T *dst, T *exp, T src)
+        noexcept {
+            int32_t prev = _InterlockedCompareExchange((volatile int32_t *)dst,
+                (int32_t)src, (int32_t)*exp);
+            if (prev == (int32_t)*exp) return true;
+            *exp = (T)prev; return false;
+        }
+    };
 
-    static inline bool __octa_msvc_atomic_compare_exchange_unreachable() {
-        static_assert(false, "atomic operation with size > 8 bytes");
-        return true;
-    }
-
-#define __OCTA_MSVC_ATOMIC_COMPARE_EXCHANGE(dst, exp, src) \
-    ((sizeof(*dst) == 1) ? \
-        __octa_msvc_atomic_compare_exchange8((volatile int8_t *)(dst), \
-                                             (int8_t *)(exp), (int8_t)(src)); \
-    : ((sizeof(*dst) == 2) ? \
-        __octa_msvc_atomic_compare_exchange16((volatile int16_t *)(dst), \
-                                             (int16_t *)(exp), (int16_t)(src)); \
-    : ((sizeof(*dst) == 4) ? \
-        __octa_msvc_atomic_compare_exchange32((volatile int32_t *)(dst), \
-                                             (int32_t *)(exp), (int32_t)(src)); \
-    : ((sizeof(*dst) == 8) ? \
-        __octa_msvc_atomic_compare_exchange64((volatile int64_t *)(dst), \
-                                             (int64_t *)(exp), (int64_t)(src)); \
-    : __octa_msvc_atomic_compare_exchange_unreachable()))));
+    template<typename T>
+    struct __OctaMsvcAtomicCompareExchange<T, 8> {
+        static inline bool exchange(volatile T *dst, T *exp, T src)
+        noexcept {
+            int64_t prev = _InterlockedCompareExchange64((volatile int64_t *)dst,
+                (int64_t)src, (int64_t)*exp);
+            if (prev == (int64_t)*exp) return true;
+            *exp = (T)prev; return false;
+        }
+    };
 
     template<typename T>
     static inline bool __octa_atomic_compare_exchange_strong(
         volatile __OctaAtomicBase<T> *a, T *expected, T v,
         memory_order, memory_order
     ) {
-        return __OCTA_MSVC_ATOMIC_COMPARE_EXCHANGE(&a->value, expected, v);
+        return __OctaMsvcAtomicCompareExchange<T>::exchange(&a->value, expected, v);
     }
 
     template<typename T>
@@ -325,7 +320,7 @@ namespace octa {
         __OctaAtomicBase<T> *a, T *expected, T v,
         memory_order, memory_order
     ) {
-        return __OCTA_MSVC_ATOMIC_COMPARE_EXCHANGE(&a->value, expected, v);
+        return __OctaMsvcAtomicCompareExchange<T>::exchange(&a->value, expected, v);
     }
 
     template<typename T>
@@ -333,7 +328,7 @@ namespace octa {
         volatile __OctaAtomicBase<T> *a, T *expected, T v,
         memory_order, memory_order
     ) {
-        return __OCTA_MSVC_ATOMIC_COMPARE_EXCHANGE(&a->value, expected, v);
+        return __OctaMsvcAtomicCompareExchange<T>::exchange(&a->value, expected, v);
     }
 
     template<typename T>
@@ -341,10 +336,8 @@ namespace octa {
         __OctaAtomicBase<T> *a, T *expected, T v,
         memory_order, memory_order
     ) {
-        return __OCTA_MSVC_ATOMIC_COMPARE_EXCHANGE(&a->value, expected, v);
+        return __OctaMsvcAtomicCompareExchange<T>::exchange(&a->value, expected, v);
     }
-
-#undef __OCTA_MSVC_ATOMIC_COMPARE_EXCHANGE
 
 #define __OCTA_MSVC_ATOMIC_FETCH_OP(opn, dst, val, ret) \
     if (sizeof(*dst) == 1) { \
