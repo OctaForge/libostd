@@ -161,30 +161,43 @@ namespace octa {
         __OctaMsvcAtomicStore<T>::store(&a->value, v, ord);
     }
 
-#undef __OCTA_MSVC_ATOMIC_STORE_N
-#undef __OCTA_MSVC_ATOMIC_STORE
+    template<typename T, size_t N = sizeof(T)>
+    struct __OctaMsvcAtomicLoad;
 
-#define __OCTA_MSVC_ATOMIC_LOAD_N(src, dst, ord) \
-    *(dst) = *(src);
+    template<typename T>
+    struct __OctaMsvcAtomicLoad<T, 1> {
+        static inline void load(volatile T *src, T *dst)
+        noexcept { *dst = *src; }
+    };
 
-#define __OCTA_MSVC_ATOMIC_LOAD_64(src, dst, ord) \
-    __pragma(warning(push)) \
-    __pragma(warning(disable:4047)) \
-    *(dst) = InterlockedOr64((volatile int64_t *)(src), 0); \
-    __pragma(warning(pop))
+    template<typename T>
+    struct __OctaMsvcAtomicLoad<T, 2> {
+        static inline void load(volatile T *src, T *dst)
+        noexcept { *dst = *src; }
+    };
 
-#define __OCTA_MSVC_ATOMIC_LOAD(src, dst, order) \
-    if (sizeof(*dst) == 1 || sizeof(*dst) == 2 || sizeof(*dst) == 4) { \
-        __OCTA_MSVC_ATOMIC_LOAD_N(src, dst, ord); \
-    } else if (sizeof(*dst) == 8) { \
-        __OCTA_MSVC_ATOMIC_LOAD_64(src, dst, ord); \
-    }
+    template<typename T>
+    struct __OctaMsvcAtomicLoad<T, 4> {
+        static inline void load(volatile T *src, T *dst)
+        noexcept { *dst = *src; }
+    };
+
+    template<typename T>
+    struct __OctaMsvcAtomicLoad<T, 8> {
+        static inline void load(volatile T *src, T *dst)
+        noexcept {
+#pragma warning(push)
+#pragma warning(disable:4047)
+            *dst = InterlockedOr64((volatile int64_t *)(src), 0);
+#pragma warning(pop)
+        }
+    };
 
     template<typename T>
     static inline T __octa_atomic_load(volatile __OctaAtomicBase<T> *a,
                                        MemoryOrder ord) {
         T r;
-        __OCTA_MSVC_ATOMIC_LOAD(&a->value, &r, ord);
+        __OctaMsvcAtomicLoad<T>::load(&a->value, &r);
         return r;
     }
 
@@ -192,32 +205,50 @@ namespace octa {
     static inline T __octa_atomic_load(__OctaAtomicBase<T> *a,
                                        MemoryOrder ord) {
         T r;
-        __OCTA_MSVC_ATOMIC_LOAD(&a->value, &r, ord);
+        __OctaMsvcAtomicLoad<T>::load(&a->value, &r);
         return r;
     }
 
-#undef __OCTA_MSVC_ATOMIC_LOAD_N
-#undef __OCTA_MSVC_ATOMIC_LOAD_64
-#undef __OCTA_MSVC_ATOMIC_LOAD
+    template<typename T, size_t N = sizeof(T)>
+    struct __OctaMsvcAtomicExchange;
 
-#define __OCTA_MSVC_ATOMIC_EXCHANGE(dst, src, ret) \
-    if (sizeof(*dst) == 1) { \
-        *(ret) = InterlockedExchange8((volatile int8_t *)(dst), (int8_t)(src)); \
-    } else if (sizeof(*dst) == 2) { \
-        *(ret) = InterlockedExchange16((volatile int16_t *)(dst), (int16_t)(src)); \
-    } else if (sizeof(*dst) == 4) { \
-        *(ret) = InterlockedExchange((volatile int32_t *)(dst), (int32_t)(src)); \
-    } else if (sizeof(*dst) == 8) { \
-        *(ret) = InterlockedExchange64((volatile int64_t *)(dst), (int64_t)(src)); \
-    } else { \
-        abort(); \
-    }
+    template<typename T>
+    struct __OctaMsvcAtomicExchange<T, 1> {
+        static inline void exchange(volatile T *dst, T src, T *ret)
+        noexcept {
+            *ret = InterlockedExchange8((volatile int8_t *)dst, (int8_t)src);
+        }
+    };
+
+    template<typename T>
+    struct __OctaMsvcAtomicExchange<T, 2> {
+        static inline void exchange(volatile T *dst, T src, T *ret)
+        noexcept {
+            *ret = InterlockedExchange16((volatile int16_t *)dst, (int16_t)src);
+        }
+    };
+
+    template<typename T>
+    struct __OctaMsvcAtomicExchange<T, 4> {
+        static inline void exchange(volatile T *dst, T src, T *ret)
+        noexcept {
+            *ret = InterlockedExchange((volatile int32_t *)dst, (int32_t)src);
+        }
+    };
+
+    template<typename T>
+    struct __OctaMsvcAtomicExchange<T, 8> {
+        static inline void exchange(volatile T *dst, T src, T *ret)
+        noexcept {
+            *ret = InterlockedExchange64((volatile int64_t *)dst, (int64_t)src);
+        }
+    };
 
     template<typename T>
     static inline T __octa_atomic_exchange(volatile __OctaAtomicBase<T> *a,
                                            T v, memory_order) {
         T r;
-        __OCTA_MSVC_ATOMIC_EXCHANGE(&a->value, v, &r);
+        __OctaMsvcAtomicExchange<T>::exchange(&a->value, v, &r);
         return r;
     }
 
@@ -225,11 +256,9 @@ namespace octa {
     static inline T __octa_atomic_exchange(__OctaAtomicBase<T> *a,
                                            T v, memory_order) {
         T r;
-        __OCTA_MSVC_ATOMIC_EXCHANGE(&a->value, v, &r);
+        __OctaMsvcAtomicExchange<T>::exchange(&a->value, v, &r);
         return r;
     }
-
-#undef __OCTA_MSVC_ATOMIC_EXCHANGE
 
     static inline bool __octa_msvc_atomic_compare_exchange8(
         volatile int8_t *dst, int8_t *exp, int8_t src
