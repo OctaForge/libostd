@@ -88,10 +88,12 @@ namespace octa {
 #define ATOMIC_POINTER_LOCK_FREE 2
 
     static inline void __octa_atomic_thread_fence(MemoryOrder ord) {
-        if (ord > memory_order_consume) _ReadWriteBarrier();
-        if (ord == memory_order_seq_cst) {
-            MemoryBarrier();
-            if (ord > memory_order_consume) _ReadWriteBarrier();
+        if (ord > memory_order_consume) {
+            _ReadWriteBarrier();
+            if (ord == memory_order_seq_cst) {
+                MemoryBarrier();
+                _ReadWriteBarrier();
+            }
         }
     }
 
@@ -103,52 +105,60 @@ namespace octa {
         return size <= sizeof(void *);
     }
 
-#define __OCTA_MSVC_ATOMIC_STORE_N(n, dst, src, ord) \
-    if (ord == memory_order_seq_cst) { \
-        InterlockedExchange##n((volatile int##n##_t *)(dst), \
-                               (int##n##_t)(src)); \
-    } else { \
-        *(dst) = (src); \
-    }
+    template<typename T, size_t N = sizeof(T)>
+    struct __OctaMsvcAtomicStore;
 
-#define __OCTA_MSVC_ATOMIC_STORE_32(dst, src, ord) \
-    if (ord == memory_order_seq_cst) { \
-        InterlockedExchange((volatile int32_t *)(dst), (int32_t)(src)); \
-    } else { \
-        *(dst) = (src); \
-    }
+    template<typename T>
+    struct __OctaMsvcAtomicStore<T, 1> {
+        static inline void store(volatile T *dst, T src, MemoryOrder ord)
+        noexcept {
+            if (ord == memory_order_seq_cst)
+                InterlockedExchange8((volatile int8_t *)dst, (int8_t)src);
+            else *dst = src;
+        }
+    };
 
-#define __OCTA_MSVC_ATOMIC_STORE_64(dst, src, ord) \
-    if (ord == memory_order_relaxed) { \
-        InterlockedExchangeNoFence64((volatile int64_t *)(dst), \
-                                     (int64_t)(src)); \
-    } else { \
-        InterlockedExchange64((volatile int64_t *)(dst), (int64_t)(src)); \
-    }
+    template<typename T>
+    struct __OctaMsvcAtomicStore<T, 2> {
+        static inline void store(volatile T *dst, T src, MemoryOrder ord)
+        noexcept {
+            if (ord == memory_order_seq_cst)
+                InterlockedExchange16((volatile int16_t *)dst, (int16_t)src);
+            else *dst = src;
+        }
+    };
 
-#define __OCTA_MSVC_ATOMIC_STORE(dst, src, ord) \
-    if (sizeof(*dst) == 1) { \
-        __OCTA_MSVC_ATOMIC_STORE_N(8, dst, src, ord); \
-    } else if (sizeof(*dst) == 2) { \
-        __OCTA_MSVC_ATOMIC_STORE_N(16, dst, src, ord); \
-    } else if (sizeof(*dst) == 4) { \
-        __OCTA_MSVC_ATOMIC_STORE_32(32, dst, src, ord); \
-    } else if (sizeof(*dst) == 8) { \
-        __OCTA_MSVC_ATOMIC_STORE_64(64, dst, src, ord); \
-    } else { \
-        abort(); \
-    }
+    template<typename T>
+    struct __OctaMsvcAtomicStore<T, 4> {
+        static inline void store(volatile T *dst, T src, MemoryOrder ord)
+        noexcept {
+            if (ord == memory_order_seq_cst)
+                InterlockedExchange((volatile int32_t *)dst, (int32_t)src);
+            else *dst = src;
+        }
+    };
+
+    template<typename T>
+    struct __OctaMsvcAtomicStore<T, 8> {
+        static inline void store(volatile T *dst, T src, MemoryOrder ord)
+        noexcept {
+            if (ord == memory_order_relaxed)
+                InterlockedExchangeNoFence64((volatile int64_t *)dst, (int64_t)src);
+            else
+                InterlockedExchange64((volatile int64_t *)dst, (int64_t)src);
+        }
+    };
 
     template<typename T>
     static inline void __octa_atomic_store(volatile __OctaAtomicBase<T> *a,
                                            T v, MemoryOrder ord) {
-        __OCTA_MSVC_ATOMIC_STORE(&a->value, v, __octa_to_gcc_order(ord));
+        __OctaMsvcAtomicStore<T>::store(&a->value, v, ord);
     }
 
     template<typename T>
     static inline void __octa_atomic_store(__OctaAtomicBase<T> *a,
                                            T v, MemoryOrder ord) {
-        __OCTA_MSVC_ATOMIC_STORE(&a->value, v, __octa_to_gcc_order(ord));
+        __OctaMsvcAtomicStore<T>::store(&a->value, v, ord);
     }
 
 #undef __OCTA_MSVC_ATOMIC_STORE_N
