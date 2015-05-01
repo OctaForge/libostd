@@ -261,15 +261,21 @@ namespace octa {
             return r;
         }
 
-        T *insert(size_t idx, T &&v) noexcept(noexcept(insert_base(idx, 1))) {
+        T *insert(size_t idx, T &&v) noexcept(
+            IsNothrowDestructible<T>::value
+         && IsNothrowMoveConstructible<T>::value
+         && IsNothrowMoveAssignable<T>::value
+        ) {
             insert_base(idx, 1);
             p_buf[idx] = move(v);
             return &p_buf[idx];
         }
 
         T *insert(size_t idx, const T &v) noexcept(
-            noexcept(insert_base(idx, 1))
-            && IsNothrowCopyAssignable<T>::value
+            IsNothrowDestructible<T>::value
+         && IsNothrowMoveConstructible<T>::value
+         && IsNothrowMoveAssignable<T>::value
+         && IsNothrowCopyAssignable<T>::value
         ) {
             insert_base(idx, 1);
             p_buf[idx] = v;
@@ -277,8 +283,10 @@ namespace octa {
         }
 
         T *insert(size_t idx, size_t n, const T &v) noexcept(
-            noexcept(insert_base(idx, 1))
-            && IsNothrowCopyAssignable<T>::value
+            IsNothrowDestructible<T>::value
+         && IsNothrowMoveConstructible<T>::value
+         && IsNothrowMoveAssignable<T>::value
+         && IsNothrowCopyAssignable<T>::value
         ) {
             insert_base(idx, n);
             for (size_t i = 0; i < n; ++i) {
@@ -306,7 +314,7 @@ namespace octa {
         }
 
         T *insert(size_t idx, InitializerList<T> il) noexcept(
-            noexcept(insert_range(idx, il.range()))
+            noexcept(declval<Vector<T>>().insert_range(idx, il.range()))
         ) {
             return insert_range(idx, il.range());
         }
