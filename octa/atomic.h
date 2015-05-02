@@ -76,6 +76,8 @@ namespace octa {
 
 #ifdef _MSC_VER
 
+/* MSVC support is disabled for now */
+#if 0
 #define ATOMIC_BOOL_LOCK_FREE 2
 #define ATOMIC_CHAR_LOCK_FREE 2
 #define ATOMIC_CHAR16_T_LOCK_FREE 2
@@ -448,6 +450,9 @@ namespace octa {
     }
 
 #undef __OCTA_MSVC_ATOMIC_FETCH_OP
+#else
+#error No MSVC support right now!
+#endif
 
 #else
 

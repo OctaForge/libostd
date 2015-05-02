@@ -13,7 +13,6 @@ Compiler | Version
 -------- | -------
 gcc/g++  | 4.8+
 clang    | 3.3+
-MSVC++   | 2015+
 
 Other C++11 compliant compilers might work as well. OctaSTD does not utilize
 compiler specific extensions except certain builtin type traits - to implement
@@ -21,3 +20,8 @@ traits that are not normally possible to implement without compiler support.
 
 OctaSTD does not provide fallbacks for those traits. The compiler is expected
 to support these builtins. So far the 3 above-mentioned compilers support them.
+
+MSVC++ is currently unsupported. It is likely that it will never be supported,
+as it seems that MS will start supporting Clang in Visual Studio; however,
+if that does not happen and the MS C++ compiler gains the required features,
+support will be added.
