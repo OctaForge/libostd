@@ -79,6 +79,10 @@ namespace octa {
     template<> struct __OctaIsIntegral<llong >: True {};
     template<> struct __OctaIsIntegral<ullong>: True {};
 
+    template<> struct __OctaIsIntegral<char16_t>: True {};
+    template<> struct __OctaIsIntegral<char32_t>: True {};
+    template<> struct __OctaIsIntegral< wchar_t>: True {};
+
     template<typename T>
     struct IsIntegral: __OctaIsIntegral<typename __OctaRemoveCv<T>::Type> {};
 
