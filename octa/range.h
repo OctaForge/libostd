@@ -19,13 +19,10 @@ namespace octa {
     struct BidirectionalRangeTag {};
     struct RandomAccessRangeTag {};
 
-    template<typename T>
-    struct RangeTraits {
-        typedef typename T::range_category range_category;
-        typedef typename T::size_type      size_type;
-        typedef typename T::value_type     value_type;
-        typedef typename T::reference      reference;
-    };
+    template<typename T> using RangeCategory  = typename T::range_category;
+    template<typename T> using RangeSize      = typename T::size_type;
+    template<typename T> using RangeValue     = typename T::value_type;
+    template<typename T> using RangeReference = typename T::reference;
 
     template<typename T>
     struct __OctaRangeIterator {
@@ -36,10 +33,10 @@ namespace octa {
             p_range.pop_first();
             return *this;
         }
-        typename RangeTraits<T>::reference operator*() {
+        RangeReference<T> operator*() {
             return p_range.first();
         }
-        typename RangeTraits<T>::reference operator*() const {
+        RangeReference<T> operator*() const {
             return p_range.first();
         }
         bool operator!=(__OctaRangeIterator) const { return !p_range.empty(); }
@@ -77,14 +74,11 @@ namespace octa {
 
     template<typename T>
     struct ReverseRange: InputRange<ReverseRange<T>,
-        typename RangeTraits<T>::range_category,
-        typename RangeTraits<T>::value_type,
-        typename RangeTraits<T>::reference,
-        typename RangeTraits<T>::size_type
+        RangeCategory<T>, RangeValue<T>, RangeReference<T>, RangeSize<T>
     > {
     private:
-        typedef typename RangeTraits<T>::reference r_ref;
-        typedef typename RangeTraits<T>::size_type r_size;
+        typedef RangeReference<T> r_ref;
+        typedef RangeSize<T> r_size;
 
         T p_range;
 
@@ -194,15 +188,12 @@ namespace octa {
 
     template<typename T>
     struct MoveRange: InputRange<MoveRange<T>,
-        typename RangeTraits<T>::range_category,
-        typename RangeTraits<T>::value_type,
-        typename RangeTraits<T>::value_type &&,
-        typename RangeTraits<T>::size_type
+        RangeCategory<T>, RangeValue<T>, RangeValue<T> &&, RangeSize<T>
     > {
     private:
-        typedef typename RangeTraits<T>::value_type   r_val;
-        typedef typename RangeTraits<T>::value_type &&r_ref;
-        typedef typename RangeTraits<T>::size_type    r_size;
+        typedef RangeValue<T>   r_val;
+        typedef RangeValue<T> &&r_ref;
+        typedef RangeSize<T>    r_size;
 
         T p_range;
 
@@ -397,14 +388,13 @@ namespace octa {
 
     template<typename T>
     struct EnumeratedRange: InputRange<EnumeratedRange<T>,
-        InputRangeTag,  typename RangeTraits<T>::value_type,
-        EnumeratedValue<typename RangeTraits<T>::reference,
-                        typename RangeTraits<T>::size_type>,
-        typename RangeTraits<T>::size_type
+        InputRangeTag, RangeValue<T>,
+        EnumeratedValue<RangeReference<T>, RangeSize<T>>,
+        RangeSize<T>
     > {
     private:
-        typedef typename RangeTraits<T>::reference r_ref;
-        typedef typename RangeTraits<T>::size_type r_size;
+        typedef RangeReference<T> r_ref;
+        typedef RangeSize<T> r_size;
 
         T p_range;
         r_size p_index;
