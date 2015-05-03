@@ -33,17 +33,17 @@ namespace octa {
     struct __OctaPtrTraitsElementType;
 
     template<typename T> struct __OctaPtrTraitsElementType<T, true> {
-        typedef typename T::ElementType type;
+        typedef typename T::ElementType Type;
     };
 
     template<template<typename, typename...> class T, typename U, typename ...A>
     struct __OctaPtrTraitsElementType<T<U, A...>, true> {
-        typedef typename T<U, A...>::ElementType type;
+        typedef typename T<U, A...>::ElementType Type;
     };
 
     template<template<typename, typename...> class T, typename U, typename ...A>
     struct __OctaPtrTraitsElementType<T<U, A...>, false> {
-        typedef U type;
+        typedef U Type;
     };
 
     template<typename T>
@@ -51,18 +51,18 @@ namespace octa {
         template<typename U>
         static int  __octa_test(...);
         template<typename U>
-        static char __octa_test(typename U::difference_type * = 0);
+        static char __octa_test(typename U::DiffType * = 0);
 
         static constexpr bool value = (sizeof(__octa_test<T>(0)) == 1);
     };
 
     template<typename T, bool = __OctaHasDiffType<T>::value>
     struct __OctaPtrTraitsDiffType {
-        typedef ptrdiff_t type;
+        typedef ptrdiff_t Type;
     };
 
     template<typename T> struct __OctaPtrTraitsDiffType<T, true> {
-        typedef typename T::difference_type type;
+        typedef typename T::DiffType Type;
     };
 
     template<typename T, typename U>
@@ -77,66 +77,66 @@ namespace octa {
 
     template<typename T, typename U, bool = __OctaHasRebind<T, U>::value>
     struct __OctaPtrTraitsRebindType {
-        typedef typename T::template rebind<U> type;
+        typedef typename T::template rebind<U> Type;
     };
 
     template<template<typename, typename...> class T, typename U,
         typename ...A, typename V
     >
     struct __OctaPtrTraitsRebindType<T<U, A...>, V, true> {
-        typedef typename T<U, A...>::template rebind<V> type;
+        typedef typename T<U, A...>::template rebind<V> Type;
     };
 
     template<template<typename, typename...> class T, typename U,
         typename ...A, typename V
     >
     struct __OctaPtrTraitsRebindType<T<U, A...>, V, false> {
-        typedef T<V, A...> type;
+        typedef T<V, A...> Type;
     };
 
     template<typename T>
     struct __OctaPtrTraitsPointer {
-        typedef T type;
+        typedef T Type;
     };
 
     template<typename T>
     struct __OctaPtrTraitsPointer<T *> {
-        typedef T *type;
+        typedef T *Type;
     };
 
     template<typename T>
-    using PtrType = typename __OctaPtrTraitsPointer<T>::type;
+    using PtrType = typename __OctaPtrTraitsPointer<T>::Type;
 
     template<typename T>
     struct __OctaPtrTraitsElement {
-        typedef typename __OctaPtrTraitsElementType<T>::type type;
+        typedef typename __OctaPtrTraitsElementType<T>::Type Type;
     };
 
     template<typename T>
     struct __OctaPtrTraitsElement<T *> {
-        typedef T type;
+        typedef T Type;
     };
 
     template<typename T>
-    using PointerElement = typename __OctaPtrTraitsElement<T>::type;
+    using PointerElement = typename __OctaPtrTraitsElement<T>::Type;
 
     template<typename T>
     struct __OctaPtrTraitsDifference {
-        typedef typename __OctaPtrTraitsDiffType<T>::type type;
+        typedef typename __OctaPtrTraitsDiffType<T>::Type Type;
     };
 
 
     template<typename T>
     struct __OctaPtrTraitsDifference<T *> {
-        typedef ptrdiff_t difference_type;
+        typedef ptrdiff_t DiffType;
     };
 
     template<typename T>
-    using PointerDifference = typename __OctaPtrTraitsDifference<T>::type;
+    using PointerDifference = typename __OctaPtrTraitsDifference<T>::Type;
 
     template<typename T, typename U>
     struct __OctaPtrTraitsRebind {
-        using type = typename __OctaPtrTraitsRebindType<T, U>::type;
+        using type = typename __OctaPtrTraitsRebindType<T, U>::Type;
     };
 
     template<typename T, typename U>
@@ -145,7 +145,7 @@ namespace octa {
     };
 
     template<typename T, typename U>
-    using PointerRebind = typename __OctaPtrTraitsRebind<T, U>::type;
+    using PointerRebind = typename __OctaPtrTraitsRebind<T, U>::Type;
 
     struct __OctaPtrTraitsNat {};
 
@@ -250,22 +250,22 @@ namespace octa {
 
     template<typename T, typename D, bool = __OctaHasPtr<D>::value>
     struct __OctaPtrTypeBase {
-        typedef typename D::PtrType type;
+        typedef typename D::PtrType Type;
     };
 
     template<typename T, typename D> struct __OctaPtrTypeBase<T, D, false> {
-        typedef T *type;
+        typedef T *Type;
     };
 
     template<typename T, typename D> struct __OctaPtrType {
-        typedef typename __OctaPtrTypeBase<T, RemoveReference<D>>::type type;
+        typedef typename __OctaPtrTypeBase<T, RemoveReference<D>>::Type Type;
     };
 
     template<typename T, typename D = DefaultDelete<T>>
     struct Box {
         typedef T ElementType;
         typedef D DeleterType;
-        typedef typename __OctaPtrType<T, D>::type PtrType;
+        typedef typename __OctaPtrType<T, D>::Type PtrType;
 
     private:
         struct __OctaNat { int x; };
@@ -382,7 +382,7 @@ namespace octa {
     struct Box<T[], D> {
         typedef T ElementType;
         typedef D DeleterType;
-        typedef typename __OctaPtrType<T, D>::type PtrType;
+        typedef typename __OctaPtrType<T, D>::Type PtrType;
 
     private:
         struct __OctaNat { int x; };
