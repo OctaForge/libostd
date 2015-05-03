@@ -19,13 +19,13 @@ namespace std {
 
         initializer_list(const T *v, size_t n) noexcept: p_buf(v), p_len(n) {}
     public:
-        typedef size_t    size_type;
-        typedef ptrdiff_t difference_type;
-        typedef       T   value_type;
-        typedef       T  &reference;
-        typedef const T  &const_reference;
-        typedef       T  *pointer;
-        typedef const T  *const_pointer;
+        typedef size_t    SizeType;
+        typedef ptrdiff_t DiffType;
+        typedef       T   ValType;
+        typedef       T  &RefType;
+        typedef const T  &ConstRefType;
+        typedef       T  *PtrType;
+        typedef const T  *ConstPtrType;
 
         initializer_list() noexcept: p_buf(nullptr), p_len(0) {}
 

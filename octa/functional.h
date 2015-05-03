@@ -19,9 +19,9 @@ namespace octa {
         bool operator()(const T &x, const T &y) const noexcept( \
             noexcept(x op y) \
         ) { return x op y; } \
-        typedef T first_argument_type; \
-        typedef T second_argument_type; \
-        typedef rettype result_type; \
+        typedef T FirstArgType; \
+        typedef T SecondArgType; \
+        typedef rettype ResultType; \
     };
 
     __OCTA_DEFINE_BINARY_OP(Less, <, bool)
@@ -45,27 +45,27 @@ namespace octa {
 
     template<typename T> struct LogicalNot {
         bool operator()(const T &x) const noexcept(noexcept(!x)) { return !x; }
-        typedef T argument_type;
-        typedef bool result_type;
+        typedef T ArgType;
+        typedef bool ResultType;
     };
 
     template<typename T> struct Negate {
         bool operator()(const T &x) const noexcept(noexcept(-x)) { return -x; }
-        typedef T argument_type;
-        typedef T result_type;
+        typedef T ArgType;
+        typedef T ResultType;
     };
 
     template<typename T> struct BinaryNegate {
-        typedef typename T::first_argument_type first_argument_type;
-        typedef typename T::second_argument_type second_argument_type;
-        typedef bool result_type;
+        typedef typename T::FirstArgType FirstArgType;
+        typedef typename T::SecondArgType SecondArgType;
+        typedef bool ResultType;
 
         explicit BinaryNegate(const T &f) noexcept(
             IsNothrowCopyConstructible<T>::value
         ): p_fn(f) {}
 
-        bool operator()(const first_argument_type &x,
-                        const second_argument_type &y) noexcept(
+        bool operator()(const FirstArgType &x,
+                        const SecondArgType &y) noexcept(
             noexcept(p_fn(x, y))
         ) {
             return !p_fn(x, y);
@@ -75,13 +75,13 @@ namespace octa {
     };
 
     template<typename T> struct UnaryNegate {
-        typedef typename T::argument_type argument_type;
-        typedef bool result_type;
+        typedef typename T::ArgType ArgType;
+        typedef bool ResultType;
 
         explicit UnaryNegate(const T &f) noexcept(
             IsNothrowCopyConstructible<T>::value
         ): p_fn(f) {}
-        bool operator()(const argument_type &x) noexcept(noexcept(p_fn(x))) {
+        bool operator()(const ArgType &x) noexcept(noexcept(p_fn(x))) {
             return !p_fn(x);
         }
     private:
@@ -144,25 +144,25 @@ namespace octa {
     template<typename, typename> struct __OctaMemTypes;
     template<typename T, typename R, typename ...A>
     struct __OctaMemTypes<T, R(A...)> {
-        typedef R result_type;
-        typedef T argument_type;
+        typedef R ResultType;
+        typedef T ArgType;
     };
     template<typename T, typename R, typename A>
     struct __OctaMemTypes<T, R(A)> {
-        typedef R result_type;
-        typedef T first_argument_type;
-        typedef A second_argument_type;
+        typedef R ResultType;
+        typedef T FirstArgType;
+        typedef A SecondArgType;
     };
     template<typename T, typename R, typename ...A>
     struct __OctaMemTypes<T, R(A...) const> {
-        typedef R result_type;
-        typedef const T argument_type;
+        typedef R ResultType;
+        typedef const T ArgType;
     };
     template<typename T, typename R, typename A>
     struct __OctaMemTypes<T, R(A) const> {
-        typedef R result_type;
-        typedef const T first_argument_type;
-        typedef A second_argument_type;
+        typedef R ResultType;
+        typedef const T FirstArgType;
+        typedef A SecondArgType;
     };
 
     template<typename R, typename T>
@@ -333,20 +333,20 @@ namespace octa {
 
     template<typename R, typename...>
     struct __OctaFunction {
-        typedef R result_type;
+        typedef R ResultType;
     };
 
     template<typename R, typename T>
     struct __OctaFunction<R, T> {
-        typedef R result_type;
-        typedef T argument_type;
+        typedef R ResultType;
+        typedef T ArgType;
     };
 
     template<typename R, typename T, typename U>
     struct __OctaFunction<R, T, U> {
-        typedef R result_type;
-        typedef T first_argument_type;
-        typedef U second_argument_type;
+        typedef R ResultType;
+        typedef T FirstArgType;
+        typedef U SecondArgType;
     };
 
     template<typename, typename>

@@ -19,10 +19,10 @@ namespace octa {
     struct BidirectionalRangeTag {};
     struct RandomAccessRangeTag {};
 
-    template<typename T> using RangeCategory  = typename T::range_category;
-    template<typename T> using RangeSize      = typename T::size_type;
-    template<typename T> using RangeValue     = typename T::value_type;
-    template<typename T> using RangeReference = typename T::reference;
+    template<typename T> using RangeCategory  = typename T::Category;
+    template<typename T> using RangeSize      = typename T::SizeType;
+    template<typename T> using RangeValue     = typename T::ValType;
+    template<typename T> using RangeReference = typename T::RefType;
 
     template<typename T>
     struct __OctaRangeIterator {
@@ -47,10 +47,10 @@ namespace octa {
     template<typename B, typename C, typename V, typename R = V &,
              typename S = size_t
     > struct InputRange {
-        typedef C range_category;
-        typedef S size_type;
-        typedef V value_type;
-        typedef R reference;
+        typedef C Category;
+        typedef S SizeType;
+        typedef V ValType;
+        typedef R RefType;
 
         __OctaRangeIterator<B> begin() noexcept(
             IsNothrowCopyConstructible<B>::value
@@ -66,10 +66,10 @@ namespace octa {
 
     template<typename V, typename R = V &, typename S = size_t>
     struct OutputRange {
-        typedef OutputRangeTag range_category;
-        typedef S size_type;
-        typedef V value_type;
-        typedef R reference;
+        typedef OutputRangeTag Category;
+        typedef S SizeType;
+        typedef V ValType;
+        typedef R RefType;
     };
 
     template<typename T>
