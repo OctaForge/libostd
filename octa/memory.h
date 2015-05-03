@@ -76,64 +76,102 @@ namespace octa {
     };
 
     template<typename T, typename U, bool = __OctaHasRebind<T, U>::value>
-    struct __OctaPtrTraitsRebind {
+    struct __OctaPtrTraitsRebindType {
         typedef typename T::template rebind<U> type;
     };
 
     template<template<typename, typename...> class T, typename U,
         typename ...A, typename V
     >
-    struct __OctaPtrTraitsRebind<T<U, A...>, V, true> {
+    struct __OctaPtrTraitsRebindType<T<U, A...>, V, true> {
         typedef typename T<U, A...>::template rebind<V> type;
     };
 
     template<template<typename, typename...> class T, typename U,
         typename ...A, typename V
     >
-    struct __OctaPtrTraitsRebind<T<U, A...>, V, false> {
+    struct __OctaPtrTraitsRebindType<T<U, A...>, V, false> {
         typedef T<V, A...> type;
     };
 
     template<typename T>
-    struct PointerTraits {
-        typedef T pointer;
+    struct __OctaPtrTraitsPointer {
+        typedef T type;
+    };
 
-        typedef typename __OctaPtrTraitsElementType   <T>::type element_type;
-        typedef typename __OctaPtrTraitsDifferenceType<T>::type difference_type;
+    template<typename T>
+    struct __OctaPtrTraitsPointer<T *> {
+        typedef T *type;
+    };
 
-        template<typename U>
-        using rebind = typename __OctaPtrTraitsRebind<T, U>::type;
+    template<typename T>
+    using PointerType = typename __OctaPtrTraitsPointer<T>::type;
 
-    private:
-        struct __OctaNat {};
+    template<typename T>
+    struct __OctaPtrTraitsElement {
+        typedef typename __OctaPtrTraitsElementType<T>::type type;
+    };
 
-    public:
-        static T pointer_to(Conditional<IsVoid<element_type>::value,
-            __OctaNat, element_type
+    template<typename T>
+    struct __OctaPtrTraitsElement<T *> {
+        typedef T type;
+    };
+
+    template<typename T>
+    using PointerElement = typename __OctaPtrTraitsElement<T>::type;
+
+    template<typename T>
+    struct __OctaPtrTraitsDifference {
+        typedef typename __OctaPtrTraitsDifferenceType<T>::type type;
+    };
+
+
+    template<typename T>
+    struct __OctaPtrTraitsDifference<T *> {
+        typedef ptrdiff_t difference_type;
+    };
+
+    template<typename T>
+    using PointerDifference = typename __OctaPtrTraitsDifference<T>::type;
+
+    template<typename T, typename U>
+    struct __OctaPtrTraitsRebind {
+        using type = typename __OctaPtrTraitsRebindType<T, U>::type;
+    };
+
+    template<typename T, typename U>
+    struct __OctaPtrTraitsRebind<T *, U> {
+        using type = U *;
+    };
+
+    template<typename T, typename U>
+    using PointerRebind = typename __OctaPtrTraitsRebind<T, U>::type;
+
+    struct __OctaPtrTraitsNat {};
+
+    template<typename T>
+    struct __OctaPtrTraitsPointerTo {
+        static T pointer_to(Conditional<IsVoid<PointerElement<T>>::value,
+            __OctaPtrTraitsNat, PointerElement<T>
         > &r) noexcept(noexcept(T::pointer_to(r))) {
             return T::pointer_to(r);
         }
     };
 
     template<typename T>
-    struct PointerTraits<T *> {
-        typedef T *pointer;
-        typedef T  element_type;
-
-        typedef ptrdiff_t difference_type;
-
-        template<typename U> using rebind = U *;
-
-    private:
-        struct __OctaNat {};
-
-    public:
-        static T pointer_to(Conditional<IsVoid<element_type>::value,
-            __OctaNat, element_type
-        > &r) noexcept {
+    struct __OctaPtrTraitsPointerTo<T *> {
+        static T pointer_to(Conditional<IsVoid<T>::value, __OctaPtrTraitsNat, T> &r)
+        noexcept {
             return octa::address_of(r);
         }
     };
+
+    template<typename T>
+    static T pointer_to(Conditional<IsVoid<PointerElement<T>>::value,
+        __OctaPtrTraitsNat, PointerElement<T>
+    > &r)  noexcept(noexcept(__OctaPtrTraitsPointerTo<T>::pointer_to(r))) {
+        return __OctaPtrTraitsPointerTo<T>::pointer_to(r);
+    }
 
     /* default deleter */
 
@@ -326,8 +364,8 @@ namespace octa {
     };
 
     template<typename T, typename U, bool = IsSame<
-        RemoveCv<typename PointerTraits<T>::element_type>,
-        RemoveCv<typename PointerTraits<U>::element_type>
+        RemoveCv<PointerElement<T>>,
+        RemoveCv<PointerElement<U>>
     >::value> struct __OctaSameOrLessCvQualifiedBase: IsConvertible<T, U> {};
 
     template<typename T, typename U>
