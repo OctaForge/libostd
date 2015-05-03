@@ -349,6 +349,46 @@ namespace octa {
         typedef U second_argument_type;
     };
 
+    template<typename, typename>
+    struct IsValidFunctor {
+        static constexpr bool value = false;
+    };
+
+    template<typename R, typename ...A>
+    struct IsValidFunctor<Function<R(A...)>, R(A...)> {
+        static constexpr bool value = false;
+    };
+
+    struct __OctaEmpty {
+    };
+
+    template<typename T>
+    T func_to_functor(T &&f) {
+        return forward<T>(f);
+    }
+
+    template<typename RR, typename T, typename ...AA>
+    auto func_to_functor(RR (T::*f)(AA...)) -> decltype(mem_fn(f)) {
+        return mem_fn(f);
+    }
+
+    template<typename RR, typename T, typename ...AA>
+    auto func_to_functor(RR (T::*f)(AA...) const) -> decltype(mem_fn(f)) {
+        return mem_fn(f);
+    }
+
+    template<typename T, typename R, typename ...A>
+    struct IsValidFunctor<T, R(A...)> {
+        template<typename U>
+        static decltype(func_to_functor(declval<U>())(declval<A>()...)) __octa_test(U *);
+        template<typename>
+        static __OctaEmpty __octa_test(...);
+
+        static constexpr bool value = IsConvertible<
+            decltype(__octa_test<T>(nullptr)), R
+        >::value;
+    };
+
     template<typename R, typename ...A>
     struct Function<R(A...)>: __OctaFunction<R, A...> {
         Function(         ) noexcept { initialize_empty(); }
@@ -364,7 +404,9 @@ namespace octa {
         }
 
         template<typename T>
-        Function(T f) noexcept(__OctaFunctorInPlace<T>::value) {
+        Function(T f, EnableIf<IsValidFunctor<T, R(A...)>::value, __OctaEmpty>
+            = __OctaEmpty())
+        noexcept(__OctaFunctorInPlace<T>::value) {
             if (func_is_null(f)) {
                 initialize_empty();
                 return;
@@ -440,21 +482,6 @@ namespace octa {
         template<typename RR, typename T, typename ...AA>
         static bool func_is_null(RR (T::* const &fptr)(AA...) const) {
             return fptr == nullptr;
-        }
-
-        template<typename T>
-        T func_to_functor(T &&f) {
-            return forward<T>(f);
-        }
-
-        template<typename RR, typename T, typename ...AA>
-        auto func_to_functor(RR (T::*f)(AA...)) -> decltype(mem_fn(f)) {
-            return mem_fn(f);
-        }
-
-        template<typename RR, typename T, typename ...AA>
-        auto func_to_functor(RR (T::*f)(AA...) const) -> decltype(mem_fn(f)) {
-            return mem_fn(f);
         }
     };
 
