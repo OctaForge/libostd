@@ -24,7 +24,7 @@ namespace octa {
         template<typename U>
         static int  __octa_test(...);
         template<typename U>
-        static char __octa_test(typename U::element_type * = 0);
+        static char __octa_test(typename U::ElementType * = 0);
 
         static constexpr bool value = (sizeof(__octa_test<T>(0)) == 1);
     };
@@ -33,12 +33,12 @@ namespace octa {
     struct __OctaPtrTraitsElementType;
 
     template<typename T> struct __OctaPtrTraitsElementType<T, true> {
-        typedef typename T::element_type type;
+        typedef typename T::ElementType type;
     };
 
     template<template<typename, typename...> class T, typename U, typename ...A>
     struct __OctaPtrTraitsElementType<T<U, A...>, true> {
-        typedef typename T<U, A...>::element_type type;
+        typedef typename T<U, A...>::ElementType type;
     };
 
     template<template<typename, typename...> class T, typename U, typename ...A>
@@ -242,7 +242,7 @@ namespace octa {
     template<typename T>
     static int __octa_ptr_test(...);
     template<typename T>
-    static char __octa_ptr_test(typename T::pointer * = 0);
+    static char __octa_ptr_test(typename T::PointerType * = 0);
 
     template<typename T> struct __OctaHasPtr: IntegralConstant<bool,
         (sizeof(__octa_ptr_test<T>(0)) == 1)
@@ -250,7 +250,7 @@ namespace octa {
 
     template<typename T, typename D, bool = __OctaHasPtr<D>::value>
     struct __OctaPtrTypeBase {
-        typedef typename D::pointer type;
+        typedef typename D::PointerType type;
     };
 
     template<typename T, typename D> struct __OctaPtrTypeBase<T, D, false> {
@@ -263,9 +263,9 @@ namespace octa {
 
     template<typename T, typename D = DefaultDelete<T>>
     struct Box {
-        typedef T element_type;
-        typedef D deleter_type;
-        typedef typename __OctaPtrType<T, D>::type pointer;
+        typedef T ElementType;
+        typedef D DeleterType;
+        typedef typename __OctaPtrType<T, D>::type PointerType;
 
     private:
         struct __OctaNat { int x; };
@@ -283,16 +283,16 @@ namespace octa {
                 "Box constructed with null fptr deleter");
         }
 
-        explicit Box(pointer p) noexcept: p_stor(p, D()) {
+        explicit Box(PointerType p) noexcept: p_stor(p, D()) {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
 
-        Box(pointer p, Conditional<IsReference<D>::value,
+        Box(PointerType p, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
         > d) noexcept: p_stor(p, d) {}
 
-        Box(pointer p, RemoveReference<D> &&d) noexcept: p_stor(p, move(d)) {
+        Box(PointerType p, RemoveReference<D> &&d) noexcept: p_stor(p, move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
         }
@@ -301,7 +301,7 @@ namespace octa {
 
         template<typename TT, typename DD>
         Box(Box<TT, DD> &&u, EnableIf<!IsArray<TT>::value
-            && IsConvertible<typename Box<TT, DD>::pointer, pointer>::value
+            && IsConvertible<typename Box<TT, DD>::PointerType, PointerType>::value
             && IsConvertible<DD, D>::value
             && (!IsReference<D>::value || IsSame<D, DD>::value)
         > = __OctaNat()) noexcept: p_stor(u.release(),
@@ -315,7 +315,7 @@ namespace octa {
 
         template<typename TT, typename DD>
         EnableIf<!IsArray<TT>::value
-            && IsConvertible<typename Box<TT, DD>::pointer, pointer>::value
+            && IsConvertible<typename Box<TT, DD>::PointerType, PointerType>::value
             && IsAssignable<D &, DD &&>::value,
             Box &
         > operator=(Box<TT, DD> &&u) noexcept {
@@ -332,25 +332,25 @@ namespace octa {
         ~Box() { reset(); }
 
         AddLvalueReference<T> operator*() const { return *p_stor.i_ptr; }
-        pointer operator->() const noexcept { return p_stor.i_ptr; }
+        PointerType operator->() const noexcept { return p_stor.i_ptr; }
 
         explicit operator bool() const noexcept {
             return p_stor.i_ptr != nullptr;
         }
 
-        pointer get() const noexcept { return p_stor.i_ptr; }
+        PointerType get() const noexcept { return p_stor.i_ptr; }
 
         D_ref  get_deleter() noexcept       { return p_stor.get_deleter(); }
         D_cref get_deleter() const noexcept { return p_stor.get_deleter(); }
 
-        pointer release() noexcept {
-            pointer p = p_stor.i_ptr;
+        PointerType release() noexcept {
+            PointerType p = p_stor.i_ptr;
             p_stor.i_ptr = nullptr;
             return p;
         }
 
-        void reset(pointer p = nullptr) noexcept {
-            pointer tmp = p_stor.i_ptr;
+        void reset(PointerType p = nullptr) noexcept {
+            PointerType tmp = p_stor.i_ptr;
             p_stor.i_ptr = p;
             if (tmp) p_stor.get_deleter()(tmp);
         }
@@ -380,9 +380,9 @@ namespace octa {
 
     template<typename T, typename D>
     struct Box<T[], D> {
-        typedef T element_type;
-        typedef D deleter_type;
-        typedef typename __OctaPtrType<T, D>::type pointer;
+        typedef T ElementType;
+        typedef D DeleterType;
+        typedef typename __OctaPtrType<T, D>::type PointerType;
 
     private:
         struct __OctaNat { int x; };
@@ -401,7 +401,7 @@ namespace octa {
         }
 
         template<typename U> explicit Box(U p, EnableIf<
-            __OctaSameOrLessCvQualified<U, pointer>::value, __OctaNat
+            __OctaSameOrLessCvQualified<U, PointerType>::value, __OctaNat
         > = __OctaNat()) noexcept: p_stor(p, D()) {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
@@ -409,7 +409,7 @@ namespace octa {
 
         template<typename U> Box(U p, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
-        > d, EnableIf<__OctaSameOrLessCvQualified<U, pointer>::value, __OctaNat
+        > d, EnableIf<__OctaSameOrLessCvQualified<U, PointerType>::value, __OctaNat
         > = __OctaNat()) noexcept: p_stor(p, d) {}
 
         Box(nullptr_t, Conditional<IsReference<D>::value,
@@ -417,7 +417,7 @@ namespace octa {
         > d) noexcept: p_stor(nullptr, d) {}
 
         template<typename U> Box(U p, RemoveReference<D> &&d, EnableIf<
-            __OctaSameOrLessCvQualified<U, pointer>::value, __OctaNat
+            __OctaSameOrLessCvQualified<U, PointerType>::value, __OctaNat
         > = __OctaNat()) noexcept: p_stor(p, move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
@@ -432,8 +432,8 @@ namespace octa {
 
         template<typename TT, typename DD>
         Box(Box<TT, DD> &&u, EnableIf<IsArray<TT>::value
-            && __OctaSameOrLessCvQualified<typename Box<TT, DD>::pointer,
-                                           pointer>::value
+            && __OctaSameOrLessCvQualified<typename Box<TT, DD>::PointerType,
+                                           PointerType>::value
             && IsConvertible<DD, D>::value
             && (!IsReference<D>::value || IsSame<D, DD>::value)> = __OctaNat()
         ) noexcept: p_stor(u.release(), forward<DD>(u.get_deleter())) {}
@@ -446,8 +446,8 @@ namespace octa {
 
         template<typename TT, typename DD>
         EnableIf<IsArray<TT>::value
-            && __OctaSameOrLessCvQualified<typename Box<TT, DD>::pointer,
-                                           pointer>::value
+            && __OctaSameOrLessCvQualified<typename Box<TT, DD>::PointerType,
+                                           PointerType>::value
             && IsAssignable<D &, DD &&>::value,
             Box &
         > operator=(Box<TT, DD> &&u) noexcept {
@@ -471,27 +471,27 @@ namespace octa {
             return p_stor.i_ptr != nullptr;
         }
 
-        pointer get() const noexcept { return p_stor.i_ptr; }
+        PointerType get() const noexcept { return p_stor.i_ptr; }
 
         D_ref  get_deleter() noexcept       { return p_stor.get_deleter(); }
         D_cref get_deleter() const noexcept { return p_stor.get_deleter(); }
 
-        pointer release() noexcept {
-            pointer p = p_stor.i_ptr;
+        PointerType release() noexcept {
+            PointerType p = p_stor.i_ptr;
             p_stor.i_ptr = nullptr;
             return p;
         }
 
         template<typename U> EnableIf<
-            __OctaSameOrLessCvQualified<U, pointer>::value, void
+            __OctaSameOrLessCvQualified<U, PointerType>::value, void
         > reset(U p) noexcept {
-            pointer tmp = p_stor.i_ptr;
+            PointerType tmp = p_stor.i_ptr;
             p_stor.i_ptr = p;
             if (tmp) p_stor.get_deleter()(tmp);
         }
 
         void reset(nullptr_t) noexcept {
-            pointer tmp = p_stor.i_ptr;
+            PointerType tmp = p_stor.i_ptr;
             p_stor.i_ptr = nullptr;
             if (tmp) p_stor.get_deleter()(tmp);
         }
