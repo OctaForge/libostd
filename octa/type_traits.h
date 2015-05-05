@@ -273,17 +273,12 @@ namespace octa {
     /* is standard layout */
 
     template<typename T>
-    struct IsStandardLayout: IntegralConstant<bool,
-        IsScalar<typename __OctaRemoveAllExtents<T>::Type>::value
-    > {};
+    struct IsStandardLayout: IntegralConstant<bool, __is_standard_layout(T)> {};
 
     /* is literal type */
 
     template<typename T>
-    struct IsLiteralType: IntegralConstant<bool,
-        IsReference<typename __OctaRemoveAllExtents<T>::Type>::value
-     || IsStandardLayout<T>::value
-    > {};
+    struct IsLiteralType: IntegralConstant<bool, __is_literal_type(T)> {};
 
     /* is trivially copyable */
 
@@ -295,9 +290,7 @@ namespace octa {
     /* is trivial */
 
     template<typename T>
-    struct IsTrivial: IntegralConstant<bool,
-        (IsTriviallyCopyable<T>::value && IsTriviallyDefaultConstructible<T>::value)
-    > {};
+    struct IsTrivial: IntegralConstant<bool, __is_trivial(T)> {};
 
     /* has virtual destructor */
 
@@ -1216,12 +1209,9 @@ namespace octa {
 
     /* underlying type */
 
-    template<typename T, bool = IsEnum<T>::value> struct __OctaUnderlyingType;
-
-    template<typename T> struct __OctaUnderlyingType<T, true> {
-        typedef typename __OctaConditional<IsSigned<T>::value,
-            MakeSigned<T>, MakeUnsigned<T>
-        >::Type Type;
+    /* gotta wrap, in a struct otherwise clang ICEs... */
+    template<typename T> struct __OctaUnderlyingType {
+        typedef __underlying_type(T) Type;
     };
 
     template<typename T>
