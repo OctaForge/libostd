@@ -19,7 +19,8 @@ compiler specific extensions except certain builtin type traits - to implement
 traits that are not normally possible to implement without compiler support.
 
 OctaSTD does not provide fallbacks for those traits. The compiler is expected
-to support these builtins. So far the 3 above-mentioned compilers support them.
+to support these builtins. So far the 2 above-mentioned compilers support them
+(MSVC++ supports most of these as well).
 
 MSVC++ is currently unsupported. It is likely that it will never be supported,
 as it seems that MS will start supporting Clang in Visual Studio; however,
