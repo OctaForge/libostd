@@ -297,7 +297,7 @@ namespace octa {
         NumberRange() noexcept: p_a(0), p_b(0), p_step(0) {}
         NumberRange(const NumberRange &it) noexcept: p_a(it.p_a), p_b(it.p_b),
             p_step(it.p_step) {}
-        NumberRange(T a, T b, T step = 1) noexcept: p_a(a), p_b(b),
+        NumberRange(T a, T b, T step = T(1)) noexcept: p_a(a), p_b(b),
             p_step(step) {}
         NumberRange(T v) noexcept: p_a(0), p_b(v), p_step(1) {}
 
@@ -317,7 +317,7 @@ namespace octa {
     };
 
     template<typename T>
-    NumberRange<T> range(T a, T b, T step = 1) noexcept {
+    NumberRange<T> range(T a, T b, T step = T(1)) noexcept {
         return NumberRange<T>(a, b, step);
     }
 
