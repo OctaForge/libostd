@@ -280,8 +280,11 @@ namespace octa {
             return MoveRange<T>(p_range.slice(start, end));
         }
 
-        void put(r_val &v) noexcept(noexcept(p_range.put(v))) {
+        void put(const r_val &v) noexcept(noexcept(p_range.put(v))) {
             p_range.put(v);
+        }
+        void put(r_val &&v) noexcept(noexcept(p_range.put(move(v)))) {
+            p_range.put(move(v));
         }
     };
 
@@ -334,6 +337,12 @@ namespace octa {
         PointerRange(T *beg, T *end) noexcept: p_beg(beg), p_end(end) {}
         PointerRange(T *beg, size_t n) noexcept: p_beg(beg), p_end(beg + n) {}
 
+        PointerRange &operator=(const PointerRange &v) noexcept {
+            p_beg = v.p_beg;
+            p_end = v.p_end;
+            return *this;
+        }
+
         bool operator==(const PointerRange &v) const noexcept {
             return p_beg == v.p_beg && p_end == v.p_end;
         }
@@ -374,6 +383,9 @@ namespace octa {
         /* satisfy OutputRange */
         void put(const T &v) noexcept(IsNothrowCopyAssignable<T>::value) {
             *(p_beg++) = v;
+        }
+        void put(T &&v) noexcept(IsNothrowMoveAssignable<T>::value) {
+            *(p_beg++) = move(v);
         }
 
     private:
