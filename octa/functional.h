@@ -100,6 +100,152 @@ namespace octa {
         return BinaryNegate<T>(fn);
     }
 
+    /* hash */
+
+    template<typename T> struct Hash;
+
+    template<typename T> struct __OctaHashBase {
+        typedef T ArgType;
+        typedef size_t ResultType;
+
+        size_t operator()(T v) const noexcept {
+            return (size_t)v;
+        }
+    };
+
+#define __OCTA_HASH_BASIC(T) template<> struct Hash<T>: __OctaHashBase<T> {};
+
+    __OCTA_HASH_BASIC(bool)
+    __OCTA_HASH_BASIC(char)
+    __OCTA_HASH_BASIC(schar)
+    __OCTA_HASH_BASIC(uchar)
+    __OCTA_HASH_BASIC(char16_t)
+    __OCTA_HASH_BASIC(char32_t)
+    __OCTA_HASH_BASIC(wchar_t)
+    __OCTA_HASH_BASIC(short)
+    __OCTA_HASH_BASIC(ushort)
+    __OCTA_HASH_BASIC(int)
+    __OCTA_HASH_BASIC(uint)
+    __OCTA_HASH_BASIC(long)
+    __OCTA_HASH_BASIC(ulong)
+
+#undef __OCTA_HASH_BASIC
+
+    static inline size_t __octa_mem_hash(const void *p, size_t l) {
+        const uchar *d = (const uchar *)p;
+        size_t h = 5381;
+        for (size_t i = 0; i < l; ++i) h = ((h << 5) + h) ^ d[i];
+        return h;
+    }
+
+    template<typename T, size_t = sizeof(T) / sizeof(size_t)>
+    struct __OctaScalarHash;
+
+    template<typename T> struct __OctaScalarHash<T, 0> {
+        typedef T ArgType;
+        typedef size_t ResultType;
+
+        size_t operator()(T v) const noexcept {
+            union { T v; size_t h; } u;
+            u.h = 0;
+            u.v = v;
+            return u.h;
+        }
+    };
+
+    template<typename T> struct __OctaScalarHash<T, 1> {
+        typedef T ArgType;
+        typedef size_t ResultType;
+
+        size_t operator()(T v) const noexcept {
+            union { T v; size_t h; } u;
+            u.v = v;
+            return u.h;
+        }
+    };
+
+    template<typename T> struct __OctaScalarHash<T, 2> {
+        typedef T ArgType;
+        typedef size_t ResultType;
+
+        size_t operator()(T v) const noexcept {
+            union { T v; struct { size_t h1, h2; }; } u;
+            u.v = v;
+            return __octa_mem_hash((const void *)&u, sizeof(u));
+        }
+    };
+
+    template<typename T> struct __OctaScalarHash<T, 3> {
+        typedef T ArgType;
+        typedef size_t ResultType;
+
+        size_t operator()(T v) const noexcept {
+            union { T v; struct { size_t h1, h2, h3; }; } u;
+            u.v = v;
+            return __octa_mem_hash((const void *)&u, sizeof(u));
+        }
+    };
+
+    template<typename T> struct __OctaScalarHash<T, 4> {
+        typedef T ArgType;
+        typedef size_t ResultType;
+
+        size_t operator()(T v) const noexcept {
+            union { T v; struct { size_t h1, h2, h3, h4; }; } u;
+            u.v = v;
+            return __octa_mem_hash((const void *)&u, sizeof(u));
+        }
+    };
+
+    template<> struct Hash<llong>: __OctaScalarHash<llong> {};
+    template<> struct Hash<ullong>: __OctaScalarHash<ullong> {};
+
+    template<> struct Hash<float>: __OctaScalarHash<float> {
+        size_t operator()(float v) const noexcept {
+            if (v == 0) return 0;
+            return __OctaScalarHash<float>::operator()(v);
+        }
+    };
+
+    template<> struct Hash<double>: __OctaScalarHash<double> {
+        size_t operator()(double v) const noexcept {
+            if (v == 0) return 0;
+            return __OctaScalarHash<double>::operator()(v);
+        }
+    };
+
+    template<> struct Hash<ldouble>: __OctaScalarHash<ldouble> {
+        size_t operator()(ldouble v) const noexcept {
+            if (v == 0) return 0;
+#ifdef __i386__
+            union { ldouble v; struct { size_t h1, h2, h3, h4; }; } u;
+            u.h1 = u.h2 = u.h3 = u.h4 = 0;
+            u.v = v;
+            return (u.h1 ^ u.h2 ^ u.h3 ^ u.h4);
+#else
+#ifdef __x86_64__
+            union { ldouble v; struct { size_t h1, h2; }; } u;
+            u.h1 = u.h2 = 0;
+            u.v = v;
+            return (u.h1 ^ u.h2);
+#else
+            return __OctaScalarHash<ldouble>::operator()(v);
+#endif
+#endif
+        }
+    };
+
+    template<typename T> struct Hash<T *> {
+        typedef T *ArgType;
+        typedef size_t ResultType;
+
+        size_t operator()(T *v) const noexcept {
+            union { T *v; size_t h; } u;
+            u.v = v;
+            return __octa_mem_hash((const void *)&u, sizeof(u));
+        }
+    };
+
     /* reference wrapper */
 
     template<typename T>

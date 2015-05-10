@@ -7,6 +7,7 @@
 #define OCTA_MEMORY_H
 
 #include "octa/new.h"
+#include "octa/utility.h"
 #include "octa/type_traits.h"
 
 namespace octa {
