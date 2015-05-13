@@ -6,6 +6,8 @@
 #ifndef OCTA_MEMORY_H
 #define OCTA_MEMORY_H
 
+#include <stddef.h>
+
 #include "octa/new.h"
 #include "octa/utility.h"
 #include "octa/type_traits.h"
@@ -533,6 +535,101 @@ namespace octa {
 
     template<typename T, typename ...A>
     typename __OctaBoxIf<T>::__OctaBoxKnownSize make_box(A &&...args) = delete;
+
+    /* allocator */
+
+    template<typename> struct Allocator;
+
+    template<> struct Allocator<void> {
+        typedef void        ValType;
+        typedef void       *PtrType;
+        typedef const void *ConstPtrType;
+
+        template<typename U> using Rebind = Allocator<U>;
+    };
+
+    template<> struct Allocator<const void> {
+        typedef const void  ValType;
+        typedef const void *PtrType;
+        typedef const void *ConstPtrType;
+
+        template<typename U> using Rebind = Allocator<U>;
+    };
+
+    template<typename T> struct Allocator {
+        typedef size_t    SizeType;
+        typedef ptrdiff_t DiffType;
+        typedef T         ValType;
+        typedef T        &RefType;
+        typedef const T  &ConstRefType;
+        typedef T        *PtrType;
+        typedef const T  *ConstPtrType;
+
+        template<typename U> using Rebind = Allocator<U>;
+
+        PtrType address(RefType v) const noexcept {
+            return address_of(v);
+        };
+        ConstPtrType address(ConstRefType v) const noexcept {
+            return address_of(v);
+        };
+
+        SizeType max_size() const noexcept { return SizeType(~0) / sizeof(T); }
+
+        PtrType allocate(SizeType n, Allocator<void>::ConstPtrType = nullptr) noexcept {
+            return (PtrType) ::new uchar[n * sizeof(T)];
+        }
+
+        void deallocate(PtrType p, SizeType) { ::delete[] (uchar *) p; }
+
+        template<typename U, typename ...A>
+        void construct(U *p, A &&...args) {
+            ::new((void *)p) U(forward<A>(args)...);
+        }
+
+        void destroy(PtrType p) { p->~T(); }
+    };
+
+    template<typename T> struct Allocator<const T> {
+        typedef size_t    SizeType;
+        typedef ptrdiff_t DiffType;
+        typedef const T   ValType;
+        typedef const T  &RefType;
+        typedef const T  &ConstRefType;
+        typedef const T  *PtrType;
+        typedef const T  *ConstPtrType;
+
+        template<typename U> using Rebind = Allocator<U>;
+
+        ConstPtrType address(ConstRefType v) const noexcept {
+            return address_of(v);
+        };
+
+        SizeType max_size() const noexcept { return SizeType(~0) / sizeof(T); }
+
+        PtrType allocate(SizeType n, Allocator<void>::ConstPtrType = nullptr) noexcept {
+            return (PtrType) ::new uchar[n * sizeof(T)];
+        }
+
+        void deallocate(PtrType p, SizeType) { ::delete[] (uchar *) p; }
+
+        template<typename U, typename ...A>
+        void construct(U *p, A &&...args) {
+            ::new((void *)p) U(forward<A>(args)...);
+        }
+
+        void destroy(PtrType p) { p->~T(); }
+    };
+
+    template<typename T, typename U>
+    bool operator==(const Allocator<T> &, const Allocator<U> &) noexcept {
+        return true;
+    }
+
+    template<typename T, typename U>
+    bool operator!=(const Allocator<T> &, const Allocator<U> &) noexcept {
+        return false;
+    }
 }
 
 #endif
