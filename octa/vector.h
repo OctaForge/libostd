@@ -102,21 +102,9 @@ namespace octa {
          && IsNothrowCopyConstructible<T>::value
         ) {
             if (this == &v) return *this;
-
-            if (p_cap >= v.p_cap) {
-                if (!octa::IsPod<T>()) {
-                    T *cur = p_buf, *last = p_buf + p_len;
-                    while (cur != last) (*cur++).~T();
-                }
-                p_len = v.p_len;
-            } else {
-                clear();
-                delete[] (uchar *)p_buf;
-                p_len = v.p_len;
-                p_cap = v.p_cap;
-                p_buf = (T *)new uchar[p_cap * sizeof(T)];
-            }
-
+            clear();
+            reserve(v.p_cap);
+            p_len = v.p_len;
             if (octa::IsPod<T>()) {
                 memcpy(p_buf, v.p_buf, p_len * sizeof(T));
             } else {
@@ -126,7 +114,6 @@ namespace octa {
                     new (cur++) T(*vbuf++);
                 }
             }
-
             return *this;
         }
 
