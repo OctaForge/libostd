@@ -84,18 +84,17 @@ namespace octa {
 
         ~Vector() noexcept(IsNothrowDestructible<T>::value) {
             clear();
+            delete[] (uchar *)p_buf;
+            p_buf = nullptr;
+            p_cap = 0;
         }
 
         void clear() noexcept(IsNothrowDestructible<T>::value) {
-            if (p_cap > 0) {
-                if (!octa::IsPod<T>()) {
-                    T *cur = p_buf, *last = p_buf + p_len;
-                    while (cur != last) (*cur++).~T();
-                }
-                delete[] (uchar *)p_buf;
-                p_buf = nullptr;
-                p_len = p_cap = 0;
+            if (p_len > 0 && !octa::IsPod<T>()) {
+                T *cur = p_buf, *last = p_buf + p_len;
+                while (cur != last) (*cur++).~T();
             }
+            p_len = 0;
         }
 
         Vector<T> &operator=(const Vector<T> &v) noexcept(
@@ -112,6 +111,7 @@ namespace octa {
                 p_len = v.p_len;
             } else {
                 clear();
+                delete[] (uchar *)p_buf;
                 p_len = v.p_len;
                 p_cap = v.p_cap;
                 p_buf = (T *)new uchar[p_cap * sizeof(T)];
@@ -134,9 +134,29 @@ namespace octa {
             IsNothrowDestructible<T>::value
         ) {
             clear();
+            delete[] (uchar *)p_buf;
             p_len = v.p_len;
             p_cap = v.p_cap;
             p_buf = v.disown();
+            return *this;
+        }
+
+        Vector<T> &operator=(InitializerList<T> il) noexcept(
+            IsNothrowDestructible<T>::value &&
+            IsNothrowCopyConstructible<T>::value
+        ) {
+            clear();
+            size_t ilen = il.length();
+            reserve(ilen);
+            if (octa::IsPod<T>()) {
+                memcpy(p_buf, il.get(), ilen);
+            } else {
+                T *buf = p_buf, *ibuf = il.get(), *last = il.get() + ilen;
+                while (ibuf != last) {
+                    new (buf++) T(*ibuf++);
+                }
+            }
+            p_len = ilen;
             return *this;
         }
 
