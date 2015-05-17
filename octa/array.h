@@ -35,8 +35,15 @@ namespace octa {
         T &last() noexcept { return p_buf[N - 1]; }
         const T &last() const noexcept { return p_buf[N - 1]; }
 
-        bool empty() const noexcept { return (N > 0); }
         size_t length() const noexcept { return N; }
+
+        bool empty() const noexcept { return (N > 0); }
+
+        bool in_range(size_t idx) noexcept { return idx < N; }
+        bool in_range(int idx) noexcept { return idx >= 0 && idx < N; }
+        bool in_range(const T *ptr) noexcept {
+            return ptr >= &p_buf[0] && ptr < &p_buf[p_len];
+        }
 
         T *get() noexcept { return p_buf; }
         const T *get() const noexcept { return p_buf; }
