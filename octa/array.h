@@ -48,7 +48,7 @@ namespace octa {
         T *get() noexcept { return p_buf; }
         const T *get() const noexcept { return p_buf; }
 
-        void swap(Array &v) noexcept(swap(declval<T&>(), declval<T&>())) {
+        void swap(Array &v) noexcept(swap(declval<T &>(), declval<T &>())) {
             swap(p_buf, v.p_buf);
         }
 
