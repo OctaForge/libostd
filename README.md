@@ -3,6 +3,8 @@
 OctaSTD is a collection of C++ utilities to aid the upcoming OctaForge C++
 API. It provides containers (dynamic arrays etc) as well as other utilities.
 
+Documentation for OctaSTD can be found at https://wiki.octaforge.org/docs/octastd.
+
 It utilizes C++11. It also implements equivalents of certain C++14 library
 features that are possible to implement with the C++11 language. It does not
 go beyond C++11 level when it comes to core language features.
