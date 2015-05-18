@@ -42,7 +42,7 @@ namespace octa {
         bool in_range(size_t idx) noexcept { return idx < N; }
         bool in_range(int idx) noexcept { return idx >= 0 && idx < N; }
         bool in_range(const T *ptr) noexcept {
-            return ptr >= &p_buf[0] && ptr < &p_buf[p_len];
+            return ptr >= &p_buf[0] && ptr < &p_buf[N];
         }
 
         T *get() noexcept { return p_buf; }
