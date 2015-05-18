@@ -37,7 +37,7 @@ namespace octa {
 
         size_t length() const noexcept { return N; }
 
-        bool empty() const noexcept { return (N > 0); }
+        bool empty() const noexcept { return N == 0; }
 
         bool in_range(size_t idx) noexcept { return idx < N; }
         bool in_range(int idx) noexcept { return idx >= 0 && idx < N; }
