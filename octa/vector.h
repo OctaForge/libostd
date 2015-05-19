@@ -205,8 +205,8 @@ namespace octa {
         const T &at(size_t i) const noexcept { return p_buf[i]; }
 
         T &push(const T &v) noexcept(
-            noexcept(reserve(p_len + 1))
-            && IsNothrowCopyConstructible<T>::value
+            noexcept(noexcept(reserve(0))) &&
+            IsNothrowCopyConstructible<T>::value
         ) {
             if (p_len == p_cap) reserve(p_len + 1);
             new (&p_buf[p_len]) T(v);
@@ -214,8 +214,8 @@ namespace octa {
         }
 
         T &push() noexcept(
-            noexcept(reserve(p_len + 1))
-            && IsNothrowDefaultConstructible<T>::value
+            noexcept(noexcept(reserve(0))) &&
+            IsNothrowDefaultConstructible<T>::value
         ) {
             if (p_len == p_cap) reserve(p_len + 1);
             new (&p_buf[p_len]) T;
