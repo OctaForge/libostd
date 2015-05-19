@@ -13,14 +13,14 @@
 #include "octa/type_traits.h"
 
 namespace octa {
-    typedef enum MemoryOrder {
-        memory_order_relaxed = 0,
-        memory_order_consume,
-        memory_order_acquire,
-        memory_order_release,
-        memory_order_acq_rel,
-        memory_order_seq_cst
-    } MemoryOrder;
+    enum class MemoryOrder {
+        relaxed = 0,
+        consume,
+        acquire,
+        release,
+        acq_rel,
+        seq_cst
+    };
 
     template<typename T>
     struct __OctaAtomicBase {
@@ -90,9 +90,9 @@ namespace octa {
 #define ATOMIC_POINTER_LOCK_FREE 2
 
     static inline void __octa_atomic_thread_fence(MemoryOrder ord) {
-        if (ord > memory_order_consume) {
+        if (ord > MemoryOrder::consume) {
             _ReadWriteBarrier();
-            if (ord == memory_order_seq_cst) {
+            if (ord == MemoryOrder::seq_cst) {
                 MemoryBarrier();
                 _ReadWriteBarrier();
             }
@@ -100,7 +100,7 @@ namespace octa {
     }
 
     static inline void __octa_atomic_signal_fence(MemoryOrder ord) {
-        if (ord > memory_order_consume) _ReadWriteBarrier();
+        if (ord > MemoryOrder::consume) _ReadWriteBarrier();
     }
 
     static inline bool __octa_atomic_is_lock_free(size_t size) {
@@ -114,7 +114,7 @@ namespace octa {
     struct __OctaMsvcAtomicStore<T, 1> {
         static inline void store(volatile T *dst, T src, MemoryOrder ord)
         noexcept {
-            if (ord == memory_order_seq_cst)
+            if (ord == MemoryOrder::seq_cst)
                 InterlockedExchange8((volatile int8_t *)dst, (int8_t)src);
             else *dst = src;
         }
@@ -124,7 +124,7 @@ namespace octa {
     struct __OctaMsvcAtomicStore<T, 2> {
         static inline void store(volatile T *dst, T src, MemoryOrder ord)
         noexcept {
-            if (ord == memory_order_seq_cst)
+            if (ord == MemoryOrder::seq_cst)
                 InterlockedExchange16((volatile int16_t *)dst, (int16_t)src);
             else *dst = src;
         }
@@ -134,7 +134,7 @@ namespace octa {
     struct __OctaMsvcAtomicStore<T, 4> {
         static inline void store(volatile T *dst, T src, MemoryOrder ord)
         noexcept {
-            if (ord == memory_order_seq_cst)
+            if (ord == MemoryOrder::seq_cst)
                 InterlockedExchange((volatile int32_t *)dst, (int32_t)src);
             else *dst = src;
         }
@@ -144,7 +144,7 @@ namespace octa {
     struct __OctaMsvcAtomicStore<T, 8> {
         static inline void store(volatile T *dst, T src, MemoryOrder ord)
         noexcept {
-            if (ord == memory_order_relaxed)
+            if (ord == MemoryOrder::relaxed)
                 InterlockedExchangeNoFence64((volatile int64_t *)dst, (int64_t)src);
             else
                 InterlockedExchange64((volatile int64_t *)dst, (int64_t)src);
@@ -475,20 +475,20 @@ namespace octa {
 #define ATOMIC_POINTER_LOCK_FREE   __GCC_ATOMIC_POINTER_LOCK_FREE
 
     static inline constexpr int __octa_to_gcc_order(MemoryOrder ord) {
-        return ((ord == memory_order_relaxed) ? __ATOMIC_RELAXED :
-               ((ord == memory_order_acquire) ? __ATOMIC_ACQUIRE :
-               ((ord == memory_order_release) ? __ATOMIC_RELEASE :
-               ((ord == memory_order_seq_cst) ? __ATOMIC_SEQ_CST :
-               ((ord == memory_order_acq_rel) ? __ATOMIC_ACQ_REL :
+        return ((ord == MemoryOrder::relaxed) ? __ATOMIC_RELAXED :
+               ((ord == MemoryOrder::acquire) ? __ATOMIC_ACQUIRE :
+               ((ord == MemoryOrder::release) ? __ATOMIC_RELEASE :
+               ((ord == MemoryOrder::seq_cst) ? __ATOMIC_SEQ_CST :
+               ((ord == MemoryOrder::acq_rel) ? __ATOMIC_ACQ_REL :
                                                 __ATOMIC_CONSUME)))));
     }
 
     static inline constexpr int __octa_to_gcc_failure_order(MemoryOrder ord) {
-        return ((ord == memory_order_relaxed) ? __ATOMIC_RELAXED :
-               ((ord == memory_order_acquire) ? __ATOMIC_ACQUIRE :
-               ((ord == memory_order_release) ? __ATOMIC_RELAXED :
-               ((ord == memory_order_seq_cst) ? __ATOMIC_SEQ_CST :
-               ((ord == memory_order_acq_rel) ? __ATOMIC_ACQUIRE :
+        return ((ord == MemoryOrder::relaxed) ? __ATOMIC_RELAXED :
+               ((ord == MemoryOrder::acquire) ? __ATOMIC_ACQUIRE :
+               ((ord == MemoryOrder::release) ? __ATOMIC_RELAXED :
+               ((ord == MemoryOrder::seq_cst) ? __ATOMIC_SEQ_CST :
+               ((ord == MemoryOrder::acq_rel) ? __ATOMIC_ACQUIRE :
                                                 __ATOMIC_CONSUME)))));
     }
 
@@ -693,32 +693,32 @@ namespace octa {
             return __octa_atomic_is_lock_free(sizeof(T));
         }
 
-        void store(T v, MemoryOrder ord = memory_order_seq_cst)
+        void store(T v, MemoryOrder ord = MemoryOrder::seq_cst)
         volatile noexcept {
             __octa_atomic_store(&p_a, v, ord);
         }
 
-        void store(T v, MemoryOrder ord = memory_order_seq_cst) noexcept {
+        void store(T v, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
             __octa_atomic_store(&p_a, v, ord);
         }
 
-        T load(MemoryOrder ord = memory_order_seq_cst) const volatile noexcept {
+        T load(MemoryOrder ord = MemoryOrder::seq_cst) const volatile noexcept {
             return __octa_atomic_load(&p_a, ord);
         }
 
-        T load(MemoryOrder ord = memory_order_seq_cst) const noexcept {
+        T load(MemoryOrder ord = MemoryOrder::seq_cst) const noexcept {
             return __octa_atomic_load(&p_a, ord);
         }
 
         operator T() const volatile noexcept { return load(); }
         operator T() const noexcept          { return load(); }
 
-        T exchange(T v, MemoryOrder ord = memory_order_seq_cst)
+        T exchange(T v, MemoryOrder ord = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_exchange(&p_a, v, ord);
         }
 
-        T exchange(T v, MemoryOrder ord = memory_order_seq_cst) noexcept {
+        T exchange(T v, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
             return __octa_atomic_exchange(&p_a, v, ord);
         }
 
@@ -743,25 +743,25 @@ namespace octa {
         }
 
         bool compare_exchange_weak(T& e, T v, MemoryOrder ord
-                                                  = memory_order_seq_cst)
+                                                  = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_compare_exchange_weak(&p_a, &e, v, ord, ord);
         }
 
         bool compare_exchange_weak(T& e, T v, MemoryOrder ord
-                                                  = memory_order_seq_cst)
+                                                  = MemoryOrder::seq_cst)
         noexcept {
             return __octa_atomic_compare_exchange_weak(&p_a, &e, v, ord, ord);
         }
 
         bool compare_exchange_strong(T& e, T v, MemoryOrder ord
-                                                    = memory_order_seq_cst)
+                                                    = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_compare_exchange_strong(&p_a, &e, v, ord, ord);
         }
 
         bool compare_exchange_strong(T& e, T v, MemoryOrder ord
-                                                    = memory_order_seq_cst)
+                                                    = MemoryOrder::seq_cst)
         noexcept {
             return __octa_atomic_compare_exchange_strong(&p_a, &e, v, ord, ord);
         }
@@ -775,48 +775,48 @@ namespace octa {
 
         constexpr __OctaAtomic(T v) noexcept: base_t(v) {}
 
-        T fetch_add(T op, MemoryOrder ord = memory_order_seq_cst)
+        T fetch_add(T op, MemoryOrder ord = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_fetch_add(&this->p_a, op, ord);
         }
 
-        T fetch_add(T op, MemoryOrder ord = memory_order_seq_cst) noexcept {
+        T fetch_add(T op, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
             return __octa_atomic_fetch_add(&this->p_a, op, ord);
         }
 
-        T fetch_sub(T op, MemoryOrder ord = memory_order_seq_cst)
+        T fetch_sub(T op, MemoryOrder ord = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_fetch_sub(&this->p_a, op, ord);
         }
 
-        T fetch_sub(T op, MemoryOrder ord = memory_order_seq_cst) noexcept {
+        T fetch_sub(T op, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
             return __octa_atomic_fetch_sub(&this->p_a, op, ord);
         }
 
-        T fetch_and(T op, MemoryOrder ord = memory_order_seq_cst)
+        T fetch_and(T op, MemoryOrder ord = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_fetch_and(&this->p_a, op, ord);
         }
 
-        T fetch_and(T op, MemoryOrder ord = memory_order_seq_cst) noexcept {
+        T fetch_and(T op, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
             return __octa_atomic_fetch_and(&this->p_a, op, ord);
         }
 
-        T fetch_or(T op, MemoryOrder ord = memory_order_seq_cst)
+        T fetch_or(T op, MemoryOrder ord = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_fetch_or(&this->p_a, op, ord);
         }
 
-        T fetch_or(T op, MemoryOrder ord = memory_order_seq_cst) noexcept {
+        T fetch_or(T op, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
             return __octa_atomic_fetch_or(&this->p_a, op, ord);
         }
 
-        T fetch_xor(T op, MemoryOrder ord = memory_order_seq_cst)
+        T fetch_xor(T op, MemoryOrder ord = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_fetch_xor(&this->p_a, op, ord);
         }
 
-        T fetch_xor(T op, MemoryOrder ord = memory_order_seq_cst) noexcept {
+        T fetch_xor(T op, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
             return __octa_atomic_fetch_xor(&this->p_a, op, ord);
         }
 
@@ -874,22 +874,22 @@ namespace octa {
             base_t::store(v); return v;
         }
 
-        T *fetch_add(ptrdiff_t op, MemoryOrder ord = memory_order_seq_cst)
+        T *fetch_add(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_fetch_add(&this->p_a, op, ord);
         }
 
-        T *fetch_add(ptrdiff_t op, MemoryOrder ord = memory_order_seq_cst)
+        T *fetch_add(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst)
         noexcept {
             return __octa_atomic_fetch_add(&this->p_a, op, ord);
         }
 
-        T *fetch_sub(ptrdiff_t op, MemoryOrder ord = memory_order_seq_cst)
+        T *fetch_sub(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_fetch_sub(&this->p_a, op, ord);
         }
 
-        T *fetch_sub(ptrdiff_t op, MemoryOrder ord = memory_order_seq_cst)
+        T *fetch_sub(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst)
         noexcept {
             return __octa_atomic_fetch_sub(&this->p_a, op, ord);
         }
@@ -1241,20 +1241,20 @@ namespace octa {
         AtomicFlag &operator=(const AtomicFlag &) = delete;
         AtomicFlag &operator=(const AtomicFlag &) volatile = delete;
 
-        bool test_and_set(MemoryOrder ord = memory_order_seq_cst)
+        bool test_and_set(MemoryOrder ord = MemoryOrder::seq_cst)
         volatile noexcept {
             return __octa_atomic_exchange(&p_a, true, ord);
         }
 
-        bool test_and_set(MemoryOrder ord = memory_order_seq_cst) noexcept {
+        bool test_and_set(MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
             return __octa_atomic_exchange(&p_a, true, ord);
         }
 
-        void clear(MemoryOrder ord = memory_order_seq_cst) volatile noexcept {
+        void clear(MemoryOrder ord = MemoryOrder::seq_cst) volatile noexcept {
             __octa_atomic_store(&p_a, false, ord);
         }
 
-        void clear(MemoryOrder ord = memory_order_seq_cst) noexcept {
+        void clear(MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
             __octa_atomic_store(&p_a, false, ord);
         }
     };
