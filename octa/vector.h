@@ -237,10 +237,6 @@ namespace octa {
             }
         }
 
-        T &pop_ret() noexcept {
-            return p_buf[--p_len];
-        }
-
         T &first() noexcept { return p_buf[0]; }
         const T &first() const noexcept { return p_buf[0]; };
 
