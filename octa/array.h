@@ -8,6 +8,7 @@
 
 #include <stddef.h>
 
+#include "octa/algorithm.h"
 #include "octa/range.h"
 
 namespace octa {
@@ -32,8 +33,8 @@ namespace octa {
         T &first() { return p_buf[0]; }
         const T &first() const { return p_buf[0]; }
 
-        T &last() { return p_buf[N - 1]; }
-        const T &last() const { return p_buf[N - 1]; }
+        T &last() { return p_buf[(N > 0) ? (N - 1) : 0]; }
+        const T &last() const { return p_buf[(N > 0) ? (N - 1) : 0]; }
 
         size_t length() const { return N; }
 
@@ -48,10 +49,6 @@ namespace octa {
         T *get() { return p_buf; }
         const T *get() const { return p_buf; }
 
-        void swap(Array &v)(swap(declval<T &>(), declval<T &>())) {
-            swap(p_buf, v.p_buf);
-        }
-
         RangeType each() {
             return PointerRange<T>(p_buf, p_buf + N);
         }
@@ -59,7 +56,11 @@ namespace octa {
             return PointerRange<const T>(p_buf, p_buf + N);
         }
 
-        T p_buf[N];
+        void swap(Array &v) {
+            swap_ranges(each(), v.each());
+        }
+
+        T p_buf[(N > 0) ? N : 1];
     };
 
     template<typename T, size_t N>
