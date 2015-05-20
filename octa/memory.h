@@ -15,7 +15,7 @@
 namespace octa {
     /* address of */
 
-    template<typename T> constexpr T *address_of(T &v) noexcept {
+    template<typename T> constexpr T *address_of(T &v) {
         return reinterpret_cast<T *>(&const_cast<char &>
             (reinterpret_cast<const volatile char &>(v)));
     }
@@ -156,15 +156,15 @@ namespace octa {
     struct __OctaPtrTraitsPointerTo {
         static T pointer_to(Conditional<IsVoid<PointerElement<T>>::value,
             __OctaPtrTraitsNat, PointerElement<T>
-        > &r) noexcept(noexcept(T::pointer_to(r))) {
+        > &r) {
             return T::pointer_to(r);
         }
     };
 
     template<typename T>
     struct __OctaPtrTraitsPointerTo<T *> {
-        static T pointer_to(Conditional<IsVoid<T>::value, __OctaPtrTraitsNat, T> &r)
-        noexcept {
+        static T pointer_to(Conditional<IsVoid<T>::value, __OctaPtrTraitsNat, T
+        > &r) {
             return octa::address_of(r);
         }
     };
@@ -172,7 +172,7 @@ namespace octa {
     template<typename T>
     static T pointer_to(Conditional<IsVoid<PointerElement<T>>::value,
         __OctaPtrTraitsNat, PointerElement<T>
-    > &r)  noexcept(noexcept(__OctaPtrTraitsPointerTo<T>::pointer_to(r))) {
+    > &r) {
         return __OctaPtrTraitsPointerTo<T>::pointer_to(r);
     }
 
@@ -184,7 +184,7 @@ namespace octa {
 
         template<typename U> DefaultDelete(const DefaultDelete<U> &) {};
 
-        void operator()(T *p) const noexcept {
+        void operator()(T *p) const {
             delete p;
         }
     };
@@ -195,7 +195,7 @@ namespace octa {
 
         template<typename U> DefaultDelete(const DefaultDelete<U[]> &) {};
 
-        void operator()(T *p) const noexcept {
+        void operator()(T *p) const {
             delete[] p;
         }
         template<typename U> void operator()(U *) const = delete;
@@ -214,13 +214,12 @@ namespace octa {
 
     public:
         template<typename D>
-        __OctaBoxPair(T *ptr, D &&dltr) noexcept:
-            i_ptr(ptr), p_del(forward<D>(dltr)) {}
+        __OctaBoxPair(T *ptr, D &&dltr): i_ptr(ptr), p_del(forward<D>(dltr)) {}
 
-        U &get_deleter() noexcept { return p_del; }
-        const U &get_deleter() const noexcept { return p_del; }
+        U &get_deleter() { return p_del; }
+        const U &get_deleter() const { return p_del; }
 
-        void swap(__OctaBoxPair &v) noexcept {
+        void swap(__OctaBoxPair &v) {
             octa::swap(i_ptr, v.i_ptr);
             octa::swap(p_del, v.p_del);
         }
@@ -231,13 +230,12 @@ namespace octa {
         T *i_ptr;
 
         template<typename D>
-        __OctaBoxPair(T *ptr, D &&dltr) noexcept:
-            U(forward<D>(dltr)), i_ptr(ptr) {}
+        __OctaBoxPair(T *ptr, D &&dltr): U(forward<D>(dltr)), i_ptr(ptr) {}
 
-        U &get_deleter() noexcept { return *this; }
-        const U &get_deleter() const noexcept { return *this; }
+        U &get_deleter() { return *this; }
+        const U &get_deleter() const { return *this; }
 
-        void swap(__OctaBoxPair &v) noexcept {
+        void swap(__OctaBoxPair &v) {
             octa::swap(i_ptr, v.i_ptr);
         }
     };
@@ -277,40 +275,39 @@ namespace octa {
         typedef const RemoveReference<D> &D_cref;
 
     public:
-        constexpr Box() noexcept: p_stor(nullptr, D()) {
+        constexpr Box(): p_stor(nullptr, D()) {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
-        constexpr Box(nullptr_t) noexcept: p_stor(nullptr, D()) {
+        constexpr Box(nullptr_t): p_stor(nullptr, D()) {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
 
-        explicit Box(PtrType p) noexcept: p_stor(p, D()) {
+        explicit Box(PtrType p): p_stor(p, D()) {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
 
         Box(PtrType p, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
-        > d) noexcept: p_stor(p, d) {}
+        > d): p_stor(p, d) {}
 
-        Box(PtrType p, RemoveReference<D> &&d) noexcept: p_stor(p, move(d)) {
+        Box(PtrType p, RemoveReference<D> &&d): p_stor(p, move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
         }
 
-        Box(Box &&u) noexcept: p_stor(u.release(), forward<D>(u.get_deleter())) {}
+        Box(Box &&u): p_stor(u.release(), forward<D>(u.get_deleter())) {}
 
         template<typename TT, typename DD>
         Box(Box<TT, DD> &&u, EnableIf<!IsArray<TT>::value
             && IsConvertible<typename Box<TT, DD>::PtrType, PtrType>::value
             && IsConvertible<DD, D>::value
             && (!IsReference<D>::value || IsSame<D, DD>::value)
-        > = __OctaNat()) noexcept: p_stor(u.release(),
-            forward<DD>(u.get_deleter())) {}
+        > = __OctaNat()): p_stor(u.release(), forward<DD>(u.get_deleter())) {}
 
-        Box &operator=(Box &&u) noexcept {
+        Box &operator=(Box &&u) {
             reset(u.release());
             p_stor.get_deleter() = forward<D>(u.get_deleter());
             return *this;
@@ -321,13 +318,13 @@ namespace octa {
             && IsConvertible<typename Box<TT, DD>::PtrType, PtrType>::value
             && IsAssignable<D &, DD &&>::value,
             Box &
-        > operator=(Box<TT, DD> &&u) noexcept {
+        > operator=(Box<TT, DD> &&u) {
             reset(u.release());
             p_stor.get_deleter() = forward<DD>(u.get_deleter());
             return *this;
         }
 
-        Box &operator=(nullptr_t) noexcept {
+        Box &operator=(nullptr_t) {
             reset();
             return *this;
         }
@@ -335,30 +332,30 @@ namespace octa {
         ~Box() { reset(); }
 
         AddLvalueReference<T> operator*() const { return *p_stor.i_ptr; }
-        PtrType operator->() const noexcept { return p_stor.i_ptr; }
+        PtrType operator->() const { return p_stor.i_ptr; }
 
-        explicit operator bool() const noexcept {
+        explicit operator bool() const {
             return p_stor.i_ptr != nullptr;
         }
 
-        PtrType get() const noexcept { return p_stor.i_ptr; }
+        PtrType get() const { return p_stor.i_ptr; }
 
-        D_ref  get_deleter() noexcept       { return p_stor.get_deleter(); }
-        D_cref get_deleter() const noexcept { return p_stor.get_deleter(); }
+        D_ref  get_deleter()       { return p_stor.get_deleter(); }
+        D_cref get_deleter() const { return p_stor.get_deleter(); }
 
-        PtrType release() noexcept {
+        PtrType release() {
             PtrType p = p_stor.i_ptr;
             p_stor.i_ptr = nullptr;
             return p;
         }
 
-        void reset(PtrType p = nullptr) noexcept {
+        void reset(PtrType p = nullptr) {
             PtrType tmp = p_stor.i_ptr;
             p_stor.i_ptr = p;
             if (tmp) p_stor.get_deleter()(tmp);
         }
 
-        void swap(Box &u) noexcept {
+        void swap(Box &u) {
             p_stor.swap(u.p_stor);
         }
 
@@ -394,18 +391,18 @@ namespace octa {
         typedef const RemoveReference<D> &D_cref;
 
     public:
-        constexpr Box() noexcept: p_stor(nullptr, D()) {
+        constexpr Box(): p_stor(nullptr, D()) {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
-        constexpr Box(nullptr_t) noexcept: p_stor(nullptr, D()) {
+        constexpr Box(nullptr_t): p_stor(nullptr, D()) {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
 
         template<typename U> explicit Box(U p, EnableIf<
             __OctaSameOrLessCvQualified<U, PtrType>::value, __OctaNat
-        > = __OctaNat()) noexcept: p_stor(p, D()) {
+        > = __OctaNat()): p_stor(p, D()) {
             static_assert(!IsPointer<D>::value,
                 "Box constructed with null fptr deleter");
         }
@@ -413,25 +410,25 @@ namespace octa {
         template<typename U> Box(U p, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
         > d, EnableIf<__OctaSameOrLessCvQualified<U, PtrType>::value, __OctaNat
-        > = __OctaNat()) noexcept: p_stor(p, d) {}
+        > = __OctaNat()): p_stor(p, d) {}
 
         Box(nullptr_t, Conditional<IsReference<D>::value,
             D, AddLvalueReference<const D>
-        > d) noexcept: p_stor(nullptr, d) {}
+        > d): p_stor(nullptr, d) {}
 
         template<typename U> Box(U p, RemoveReference<D> &&d, EnableIf<
             __OctaSameOrLessCvQualified<U, PtrType>::value, __OctaNat
-        > = __OctaNat()) noexcept: p_stor(p, move(d)) {
+        > = __OctaNat()): p_stor(p, move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
         }
 
-        Box(nullptr_t, RemoveReference<D> &&d) noexcept: p_stor(nullptr, move(d)) {
+        Box(nullptr_t, RemoveReference<D> &&d): p_stor(nullptr, move(d)) {
             static_assert(!IsReference<D>::value,
                 "rvalue deleter cannot be a ref");
         }
 
-        Box(Box &&u) noexcept: p_stor(u.release(), forward<D>(u.get_deleter())) {}
+        Box(Box &&u): p_stor(u.release(), forward<D>(u.get_deleter())) {}
 
         template<typename TT, typename DD>
         Box(Box<TT, DD> &&u, EnableIf<IsArray<TT>::value
@@ -439,9 +436,9 @@ namespace octa {
                                            PtrType>::value
             && IsConvertible<DD, D>::value
             && (!IsReference<D>::value || IsSame<D, DD>::value)> = __OctaNat()
-        ) noexcept: p_stor(u.release(), forward<DD>(u.get_deleter())) {}
+        ): p_stor(u.release(), forward<DD>(u.get_deleter())) {}
 
-        Box &operator=(Box &&u) noexcept {
+        Box &operator=(Box &&u) {
             reset(u.release());
             p_stor.get_deleter() = forward<D>(u.get_deleter());
             return *this;
@@ -453,13 +450,13 @@ namespace octa {
                                            PtrType>::value
             && IsAssignable<D &, DD &&>::value,
             Box &
-        > operator=(Box<TT, DD> &&u) noexcept {
+        > operator=(Box<TT, DD> &&u) {
             reset(u.release());
             p_stor.get_deleter() = forward<DD>(u.get_deleter());
             return *this;
         }
 
-        Box &operator=(nullptr_t) noexcept {
+        Box &operator=(nullptr_t) {
             reset();
             return *this;
         }
@@ -470,16 +467,16 @@ namespace octa {
             return p_stor.i_ptr[idx];
         }
 
-        explicit operator bool() const noexcept {
+        explicit operator bool() const {
             return p_stor.i_ptr != nullptr;
         }
 
-        PtrType get() const noexcept { return p_stor.i_ptr; }
+        PtrType get() const { return p_stor.i_ptr; }
 
-        D_ref  get_deleter() noexcept       { return p_stor.get_deleter(); }
-        D_cref get_deleter() const noexcept { return p_stor.get_deleter(); }
+        D_ref  get_deleter()       { return p_stor.get_deleter(); }
+        D_cref get_deleter() const { return p_stor.get_deleter(); }
 
-        PtrType release() noexcept {
+        PtrType release() {
             PtrType p = p_stor.i_ptr;
             p_stor.i_ptr = nullptr;
             return p;
@@ -487,23 +484,23 @@ namespace octa {
 
         template<typename U> EnableIf<
             __OctaSameOrLessCvQualified<U, PtrType>::value, void
-        > reset(U p) noexcept {
+        > reset(U p) {
             PtrType tmp = p_stor.i_ptr;
             p_stor.i_ptr = p;
             if (tmp) p_stor.get_deleter()(tmp);
         }
 
-        void reset(nullptr_t) noexcept {
+        void reset(nullptr_t) {
             PtrType tmp = p_stor.i_ptr;
             p_stor.i_ptr = nullptr;
             if (tmp) p_stor.get_deleter()(tmp);
         }
 
-        void reset() noexcept {
+        void reset() {
             reset(nullptr);
         }
 
-        void swap(Box &u) noexcept {
+        void swap(Box &u) {
             p_stor.swap(u.p_stor);
         }
 
@@ -567,16 +564,16 @@ namespace octa {
 
         template<typename U> using Rebind = Allocator<U>;
 
-        PtrType address(RefType v) const noexcept {
+        PtrType address(RefType v) const {
             return address_of(v);
         };
-        ConstPtrType address(ConstRefType v) const noexcept {
+        ConstPtrType address(ConstRefType v) const {
             return address_of(v);
         };
 
-        SizeType max_size() const noexcept { return SizeType(~0) / sizeof(T); }
+        SizeType max_size() const { return SizeType(~0) / sizeof(T); }
 
-        PtrType allocate(SizeType n, Allocator<void>::ConstPtrType = nullptr) noexcept {
+        PtrType allocate(SizeType n, Allocator<void>::ConstPtrType = nullptr) {
             return (PtrType) ::new uchar[n * sizeof(T)];
         }
 
@@ -601,13 +598,13 @@ namespace octa {
 
         template<typename U> using Rebind = Allocator<U>;
 
-        ConstPtrType address(ConstRefType v) const noexcept {
+        ConstPtrType address(ConstRefType v) const {
             return address_of(v);
         };
 
-        SizeType max_size() const noexcept { return SizeType(~0) / sizeof(T); }
+        SizeType max_size() const { return SizeType(~0) / sizeof(T); }
 
-        PtrType allocate(SizeType n, Allocator<void>::ConstPtrType = nullptr) noexcept {
+        PtrType allocate(SizeType n, Allocator<void>::ConstPtrType = nullptr) {
             return (PtrType) ::new uchar[n * sizeof(T)];
         }
 
@@ -622,12 +619,12 @@ namespace octa {
     };
 
     template<typename T, typename U>
-    bool operator==(const Allocator<T> &, const Allocator<U> &) noexcept {
+    bool operator==(const Allocator<T> &, const Allocator<U> &) {
         return true;
     }
 
     template<typename T, typename U>
-    bool operator!=(const Allocator<T> &, const Allocator<U> &) noexcept {
+    bool operator!=(const Allocator<T> &, const Allocator<U> &) {
         return false;
     }
 }

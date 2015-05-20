@@ -23,39 +23,39 @@ namespace octa {
         typedef PointerRange<      T>  RangeType;
         typedef PointerRange<const T>  ConstRangeType;
 
-        T &operator[](size_t i) noexcept { return p_buf[i]; }
-        const T &operator[](size_t i) const noexcept { return p_buf[i]; }
+        T &operator[](size_t i) { return p_buf[i]; }
+        const T &operator[](size_t i) const { return p_buf[i]; }
 
-        T &at(size_t i) noexcept { return p_buf[i]; }
-        const T &at(size_t i) const noexcept { return p_buf[i]; }
+        T &at(size_t i) { return p_buf[i]; }
+        const T &at(size_t i) const { return p_buf[i]; }
 
-        T &first() noexcept { return p_buf[0]; }
-        const T &first() const noexcept { return p_buf[0]; }
+        T &first() { return p_buf[0]; }
+        const T &first() const { return p_buf[0]; }
 
-        T &last() noexcept { return p_buf[N - 1]; }
-        const T &last() const noexcept { return p_buf[N - 1]; }
+        T &last() { return p_buf[N - 1]; }
+        const T &last() const { return p_buf[N - 1]; }
 
-        size_t length() const noexcept { return N; }
+        size_t length() const { return N; }
 
-        bool empty() const noexcept { return N == 0; }
+        bool empty() const { return N == 0; }
 
-        bool in_range(size_t idx) noexcept { return idx < N; }
-        bool in_range(int idx) noexcept { return idx >= 0 && idx < N; }
-        bool in_range(const T *ptr) noexcept {
+        bool in_range(size_t idx) { return idx < N; }
+        bool in_range(int idx) { return idx >= 0 && idx < N; }
+        bool in_range(const T *ptr) {
             return ptr >= &p_buf[0] && ptr < &p_buf[N];
         }
 
-        T *get() noexcept { return p_buf; }
-        const T *get() const noexcept { return p_buf; }
+        T *get() { return p_buf; }
+        const T *get() const { return p_buf; }
 
-        void swap(Array &v) noexcept(swap(declval<T &>(), declval<T &>())) {
+        void swap(Array &v)(swap(declval<T &>(), declval<T &>())) {
             swap(p_buf, v.p_buf);
         }
 
-        RangeType each() noexcept {
+        RangeType each() {
             return PointerRange<T>(p_buf, p_buf + N);
         }
-        ConstRangeType each() const noexcept {
+        ConstRangeType each() const {
             return PointerRange<const T>(p_buf, p_buf + N);
         }
 
@@ -63,7 +63,7 @@ namespace octa {
     };
 
     template<typename T, size_t N>
-    void swap(Array<T, N> &a, Array<T, N> &b) noexcept(noexcept(a.swap(b))) {
+    void swap(Array<T, N> &a, Array<T, N> &b) {
         a.swap(b);
     }
 }

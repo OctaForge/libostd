@@ -24,8 +24,8 @@ namespace octa {
 
     template<typename T>
     struct __OctaAtomicBase {
-        __OctaAtomicBase() noexcept {}
-        explicit __OctaAtomicBase(T v) noexcept: value(v) {}
+        __OctaAtomicBase() {}
+        explicit __OctaAtomicBase(T v): value(v) {}
         T value;
     };
 
@@ -112,8 +112,7 @@ namespace octa {
 
     template<typename T>
     struct __OctaMsvcAtomicStore<T, 1> {
-        static inline void store(volatile T *dst, T src, MemoryOrder ord)
-        noexcept {
+        static inline void store(volatile T *dst, T src, MemoryOrder ord) {
             if (ord == MemoryOrder::seq_cst)
                 InterlockedExchange8((volatile int8_t *)dst, (int8_t)src);
             else *dst = src;
@@ -122,8 +121,7 @@ namespace octa {
 
     template<typename T>
     struct __OctaMsvcAtomicStore<T, 2> {
-        static inline void store(volatile T *dst, T src, MemoryOrder ord)
-        noexcept {
+        static inline void store(volatile T *dst, T src, MemoryOrder ord) {
             if (ord == MemoryOrder::seq_cst)
                 InterlockedExchange16((volatile int16_t *)dst, (int16_t)src);
             else *dst = src;
@@ -132,8 +130,7 @@ namespace octa {
 
     template<typename T>
     struct __OctaMsvcAtomicStore<T, 4> {
-        static inline void store(volatile T *dst, T src, MemoryOrder ord)
-        noexcept {
+        static inline void store(volatile T *dst, T src, MemoryOrder ord) {
             if (ord == MemoryOrder::seq_cst)
                 InterlockedExchange((volatile int32_t *)dst, (int32_t)src);
             else *dst = src;
@@ -142,8 +139,7 @@ namespace octa {
 
     template<typename T>
     struct __OctaMsvcAtomicStore<T, 8> {
-        static inline void store(volatile T *dst, T src, MemoryOrder ord)
-        noexcept {
+        static inline void store(volatile T *dst, T src, MemoryOrder ord) {
             if (ord == MemoryOrder::relaxed)
                 InterlockedExchangeNoFence64((volatile int64_t *)dst, (int64_t)src);
             else
@@ -168,26 +164,22 @@ namespace octa {
 
     template<typename T>
     struct __OctaMsvcAtomicLoad<T, 1> {
-        static inline void load(volatile T *src, T *dst)
-        noexcept { *dst = *src; }
+        static inline void load(volatile T *src, T *dst) { *dst = *src; }
     };
 
     template<typename T>
     struct __OctaMsvcAtomicLoad<T, 2> {
-        static inline void load(volatile T *src, T *dst)
-        noexcept { *dst = *src; }
+        static inline void load(volatile T *src, T *dst) { *dst = *src; }
     };
 
     template<typename T>
     struct __OctaMsvcAtomicLoad<T, 4> {
-        static inline void load(volatile T *src, T *dst)
-        noexcept { *dst = *src; }
+        static inline void load(volatile T *src, T *dst) { *dst = *src; }
     };
 
     template<typename T>
     struct __OctaMsvcAtomicLoad<T, 8> {
-        static inline void load(volatile T *src, T *dst)
-        noexcept {
+        static inline void load(volatile T *src, T *dst) {
 #pragma warning(push)
 #pragma warning(disable:4047)
             *dst = InterlockedOr64((volatile int64_t *)(src), 0);
@@ -216,32 +208,28 @@ namespace octa {
 
     template<typename T>
     struct __OctaMsvcAtomicExchange<T, 1> {
-        static inline void exchange(volatile T *dst, T src, T *ret)
-        noexcept {
+        static inline void exchange(volatile T *dst, T src, T *ret) {
             *ret = InterlockedExchange8((volatile int8_t *)dst, (int8_t)src);
         }
     };
 
     template<typename T>
     struct __OctaMsvcAtomicExchange<T, 2> {
-        static inline void exchange(volatile T *dst, T src, T *ret)
-        noexcept {
+        static inline void exchange(volatile T *dst, T src, T *ret) {
             *ret = InterlockedExchange16((volatile int16_t *)dst, (int16_t)src);
         }
     };
 
     template<typename T>
     struct __OctaMsvcAtomicExchange<T, 4> {
-        static inline void exchange(volatile T *dst, T src, T *ret)
-        noexcept {
+        static inline void exchange(volatile T *dst, T src, T *ret) {
             *ret = InterlockedExchange((volatile int32_t *)dst, (int32_t)src);
         }
     };
 
     template<typename T>
     struct __OctaMsvcAtomicExchange<T, 8> {
-        static inline void exchange(volatile T *dst, T src, T *ret)
-        noexcept {
+        static inline void exchange(volatile T *dst, T src, T *ret) {
             *ret = InterlockedExchange64((volatile int64_t *)dst, (int64_t)src);
         }
     };
@@ -267,8 +255,7 @@ namespace octa {
 
     template<typename T>
     struct __OctaMsvcAtomicCompareExchange<T, 1> {
-        static inline bool exchange(volatile T *dst, T *exp, T src)
-        noexcept {
+        static inline bool exchange(volatile T *dst, T *exp, T src) {
             int8_t prev = _InterlockedCompareExchange8((volatile int8_t *)dst,
                 (int8_t)src, (int8_t)*exp);
             if (prev == (int8_t)*exp) return true;
@@ -278,8 +265,7 @@ namespace octa {
 
     template<typename T>
     struct __OctaMsvcAtomicCompareExchange<T, 2> {
-        static inline bool exchange(volatile T *dst, T *exp, T src)
-        noexcept {
+        static inline bool exchange(volatile T *dst, T *exp, T src) {
             int16_t prev = _InterlockedCompareExchange16((volatile int16_t *)dst,
                 (int16_t)src, (int16_t)*exp);
             if (prev == (int16_t)*exp) return true;
@@ -289,8 +275,7 @@ namespace octa {
 
     template<typename T>
     struct __OctaMsvcAtomicCompareExchange<T, 4> {
-        static inline bool exchange(volatile T *dst, T *exp, T src)
-        noexcept {
+        static inline bool exchange(volatile T *dst, T *exp, T src) {
             int32_t prev = _InterlockedCompareExchange((volatile int32_t *)dst,
                 (int32_t)src, (int32_t)*exp);
             if (prev == (int32_t)*exp) return true;
@@ -300,8 +285,7 @@ namespace octa {
 
     template<typename T>
     struct __OctaMsvcAtomicCompareExchange<T, 8> {
-        static inline bool exchange(volatile T *dst, T *exp, T src)
-        noexcept {
+        static inline bool exchange(volatile T *dst, T *exp, T src) {
             int64_t prev = _InterlockedCompareExchange64((volatile int64_t *)dst,
                 (int64_t)src, (int64_t)*exp);
             if (prev == (int64_t)*exp) return true;
@@ -668,7 +652,7 @@ namespace octa {
 #endif
 #endif
 
-    template <typename T> inline T kill_dependency(T v) noexcept {
+    template <typename T> inline T kill_dependency(T v) {
         return v;
     }
 
@@ -676,93 +660,87 @@ namespace octa {
     struct __OctaAtomic {
         mutable __OctaAtomicBase<T> p_a;
 
-        __OctaAtomic() noexcept = default;
+        __OctaAtomic() = default;
 
-        constexpr __OctaAtomic(T v) noexcept: p_a(v) {}
+        constexpr __OctaAtomic(T v): p_a(v) {}
 
         __OctaAtomic(const __OctaAtomic &) = delete;
 
         __OctaAtomic &operator=(const __OctaAtomic &) = delete;
         __OctaAtomic &operator=(const __OctaAtomic &) volatile = delete;
 
-        bool is_lock_free() const volatile noexcept {
+        bool is_lock_free() const volatile {
             return __octa_atomic_is_lock_free(sizeof(T));
         }
 
-        bool is_lock_free() const noexcept {
+        bool is_lock_free() const {
             return __octa_atomic_is_lock_free(sizeof(T));
         }
 
-        void store(T v, MemoryOrder ord = MemoryOrder::seq_cst)
-        volatile noexcept {
+        void store(T v, MemoryOrder ord = MemoryOrder::seq_cst) volatile {
             __octa_atomic_store(&p_a, v, ord);
         }
 
-        void store(T v, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
+        void store(T v, MemoryOrder ord = MemoryOrder::seq_cst) {
             __octa_atomic_store(&p_a, v, ord);
         }
 
-        T load(MemoryOrder ord = MemoryOrder::seq_cst) const volatile noexcept {
+        T load(MemoryOrder ord = MemoryOrder::seq_cst) const volatile {
             return __octa_atomic_load(&p_a, ord);
         }
 
-        T load(MemoryOrder ord = MemoryOrder::seq_cst) const noexcept {
+        T load(MemoryOrder ord = MemoryOrder::seq_cst) const {
             return __octa_atomic_load(&p_a, ord);
         }
 
-        operator T() const volatile noexcept { return load(); }
-        operator T() const noexcept          { return load(); }
+        operator T() const volatile { return load(); }
+        operator T() const          { return load(); }
 
-        T exchange(T v, MemoryOrder ord = MemoryOrder::seq_cst)
-        volatile noexcept {
+        T exchange(T v, MemoryOrder ord = MemoryOrder::seq_cst) volatile {
             return __octa_atomic_exchange(&p_a, v, ord);
         }
 
-        T exchange(T v, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
+        T exchange(T v, MemoryOrder ord = MemoryOrder::seq_cst) {
             return __octa_atomic_exchange(&p_a, v, ord);
         }
 
         bool compare_exchange_weak(T &e, T v, MemoryOrder s, MemoryOrder f)
-        volatile noexcept {
+        volatile {
             return __octa_atomic_compare_exchange_weak(&p_a, &e, v, s, f);
         }
 
-        bool compare_exchange_weak(T& e, T v, MemoryOrder s, MemoryOrder f)
-        noexcept {
+        bool compare_exchange_weak(T& e, T v, MemoryOrder s, MemoryOrder f) {
             return __octa_atomic_compare_exchange_weak(&p_a, &e, v, s, f);
         }
 
         bool compare_exchange_strong(T& e, T v, MemoryOrder s, MemoryOrder f)
-        volatile noexcept {
+        volatile {
             return __octa_atomic_compare_exchange_strong(&p_a, &e, v, s, f);
         }
 
-        bool compare_exchange_strong(T& e, T v, MemoryOrder s, MemoryOrder f)
-        noexcept {
+        bool compare_exchange_strong(T& e, T v, MemoryOrder s, MemoryOrder f) {
             return __octa_atomic_compare_exchange_strong(&p_a, &e, v, s, f);
         }
 
         bool compare_exchange_weak(T& e, T v, MemoryOrder ord
                                                   = MemoryOrder::seq_cst)
-        volatile noexcept {
+        volatile {
             return __octa_atomic_compare_exchange_weak(&p_a, &e, v, ord, ord);
         }
 
         bool compare_exchange_weak(T& e, T v, MemoryOrder ord
-                                                  = MemoryOrder::seq_cst)
-        noexcept {
+                                                  = MemoryOrder::seq_cst) {
             return __octa_atomic_compare_exchange_weak(&p_a, &e, v, ord, ord);
         }
 
         bool compare_exchange_strong(T& e, T v, MemoryOrder ord
                                                     = MemoryOrder::seq_cst)
-        volatile noexcept {
+        volatile {
             return __octa_atomic_compare_exchange_strong(&p_a, &e, v, ord, ord);
         }
 
         bool compare_exchange_strong(T& e, T v, MemoryOrder ord
-                                                    = MemoryOrder::seq_cst)
-        noexcept {
+                                                    = MemoryOrder::seq_cst) {
             return __octa_atomic_compare_exchange_strong(&p_a, &e, v, ord, ord);
         }
     };
@@ -771,89 +749,84 @@ namespace octa {
     struct __OctaAtomic<T, true>: __OctaAtomic<T, false> {
         typedef __OctaAtomic<T, false> base_t;
 
-        __OctaAtomic() noexcept = default;
+        __OctaAtomic() = default;
 
-        constexpr __OctaAtomic(T v) noexcept: base_t(v) {}
+        constexpr __OctaAtomic(T v): base_t(v) {}
 
-        T fetch_add(T op, MemoryOrder ord = MemoryOrder::seq_cst)
-        volatile noexcept {
+        T fetch_add(T op, MemoryOrder ord = MemoryOrder::seq_cst) volatile {
             return __octa_atomic_fetch_add(&this->p_a, op, ord);
         }
 
-        T fetch_add(T op, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
+        T fetch_add(T op, MemoryOrder ord = MemoryOrder::seq_cst) {
             return __octa_atomic_fetch_add(&this->p_a, op, ord);
         }
 
-        T fetch_sub(T op, MemoryOrder ord = MemoryOrder::seq_cst)
-        volatile noexcept {
+        T fetch_sub(T op, MemoryOrder ord = MemoryOrder::seq_cst) volatile {
             return __octa_atomic_fetch_sub(&this->p_a, op, ord);
         }
 
-        T fetch_sub(T op, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
+        T fetch_sub(T op, MemoryOrder ord = MemoryOrder::seq_cst) {
             return __octa_atomic_fetch_sub(&this->p_a, op, ord);
         }
 
-        T fetch_and(T op, MemoryOrder ord = MemoryOrder::seq_cst)
-        volatile noexcept {
+        T fetch_and(T op, MemoryOrder ord = MemoryOrder::seq_cst) volatile {
             return __octa_atomic_fetch_and(&this->p_a, op, ord);
         }
 
-        T fetch_and(T op, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
+        T fetch_and(T op, MemoryOrder ord = MemoryOrder::seq_cst) {
             return __octa_atomic_fetch_and(&this->p_a, op, ord);
         }
 
-        T fetch_or(T op, MemoryOrder ord = MemoryOrder::seq_cst)
-        volatile noexcept {
+        T fetch_or(T op, MemoryOrder ord = MemoryOrder::seq_cst) volatile {
             return __octa_atomic_fetch_or(&this->p_a, op, ord);
         }
 
-        T fetch_or(T op, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
+        T fetch_or(T op, MemoryOrder ord = MemoryOrder::seq_cst) {
             return __octa_atomic_fetch_or(&this->p_a, op, ord);
         }
 
-        T fetch_xor(T op, MemoryOrder ord = MemoryOrder::seq_cst)
-        volatile noexcept {
+        T fetch_xor(T op, MemoryOrder ord = MemoryOrder::seq_cst) volatile {
             return __octa_atomic_fetch_xor(&this->p_a, op, ord);
         }
 
-        T fetch_xor(T op, MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
+        T fetch_xor(T op, MemoryOrder ord = MemoryOrder::seq_cst) {
             return __octa_atomic_fetch_xor(&this->p_a, op, ord);
         }
 
-        T operator++(int) volatile noexcept { return fetch_add(T(1));        }
-        T operator++(int)          noexcept { return fetch_add(T(1));        }
-        T operator--(int) volatile noexcept { return fetch_sub(T(1));        }
-        T operator--(int)          noexcept { return fetch_sub(T(1));        }
-        T operator++(   ) volatile noexcept { return fetch_add(T(1)) + T(1); }
-        T operator++(   )          noexcept { return fetch_add(T(1)) + T(1); }
-        T operator--(   ) volatile noexcept { return fetch_sub(T(1)) - T(1); }
-        T operator--(   )          noexcept { return fetch_sub(T(1)) - T(1); }
+        T operator++(int) volatile { return fetch_add(T(1));        }
+        T operator++(int)          { return fetch_add(T(1));        }
+        T operator--(int) volatile { return fetch_sub(T(1));        }
+        T operator--(int)          { return fetch_sub(T(1));        }
+        T operator++(   ) volatile { return fetch_add(T(1)) + T(1); }
+        T operator++(   )          { return fetch_add(T(1)) + T(1); }
+        T operator--(   ) volatile { return fetch_sub(T(1)) - T(1); }
+        T operator--(   )          { return fetch_sub(T(1)) - T(1); }
 
-        T operator+=(T op) volatile noexcept { return fetch_add(op) + op; }
-        T operator+=(T op)          noexcept { return fetch_add(op) + op; }
-        T operator-=(T op) volatile noexcept { return fetch_sub(op) - op; }
-        T operator-=(T op)          noexcept { return fetch_sub(op) - op; }
-        T operator&=(T op) volatile noexcept { return fetch_and(op) & op; }
-        T operator&=(T op)          noexcept { return fetch_and(op) & op; }
-        T operator|=(T op) volatile noexcept { return fetch_or (op) | op; }
-        T operator|=(T op)          noexcept { return fetch_or (op) | op; }
-        T operator^=(T op) volatile noexcept { return fetch_xor(op) ^ op; }
-        T operator^=(T op)          noexcept { return fetch_xor(op) ^ op; }
+        T operator+=(T op) volatile { return fetch_add(op) + op; }
+        T operator+=(T op)          { return fetch_add(op) + op; }
+        T operator-=(T op) volatile { return fetch_sub(op) - op; }
+        T operator-=(T op)          { return fetch_sub(op) - op; }
+        T operator&=(T op) volatile { return fetch_and(op) & op; }
+        T operator&=(T op)          { return fetch_and(op) & op; }
+        T operator|=(T op) volatile { return fetch_or (op) | op; }
+        T operator|=(T op)          { return fetch_or (op) | op; }
+        T operator^=(T op) volatile { return fetch_xor(op) ^ op; }
+        T operator^=(T op)          { return fetch_xor(op) ^ op; }
     };
 
     template<typename T>
     struct Atomic: __OctaAtomic<T> {
         typedef __OctaAtomic<T> base_t;
 
-        Atomic() noexcept = default;
+        Atomic() = default;
 
-        constexpr Atomic(T v) noexcept: base_t(v) {}
+        constexpr Atomic(T v): base_t(v) {}
 
-        T operator=(T v) volatile noexcept {
+        T operator=(T v) volatile {
             base_t::store(v); return v;
         }
 
-        T operator=(T v) noexcept {
+        T operator=(T v) {
             base_t::store(v); return v;
         }
     };
@@ -862,163 +835,152 @@ namespace octa {
     struct Atomic<T *>: __OctaAtomic<T *> {
         typedef __OctaAtomic<T *> base_t;
 
-        Atomic() noexcept = default;
+        Atomic() = default;
 
-        constexpr Atomic(T *v) noexcept: base_t(v) {}
+        constexpr Atomic(T *v): base_t(v) {}
 
-        T *operator=(T *v) volatile noexcept {
+        T *operator=(T *v) volatile {
             base_t::store(v); return v;
         }
 
-        T *operator=(T *v) noexcept {
+        T *operator=(T *v) {
             base_t::store(v); return v;
         }
 
         T *fetch_add(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst)
-        volatile noexcept {
+        volatile {
             return __octa_atomic_fetch_add(&this->p_a, op, ord);
         }
 
-        T *fetch_add(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst)
-        noexcept {
+        T *fetch_add(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst) {
             return __octa_atomic_fetch_add(&this->p_a, op, ord);
         }
 
         T *fetch_sub(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst)
-        volatile noexcept {
+        volatile {
             return __octa_atomic_fetch_sub(&this->p_a, op, ord);
         }
 
-        T *fetch_sub(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst)
-        noexcept {
+        T *fetch_sub(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst) {
             return __octa_atomic_fetch_sub(&this->p_a, op, ord);
         }
 
 
-        T *operator++(int) volatile noexcept { return fetch_add(1);     }
-        T *operator++(int)          noexcept { return fetch_add(1);     }
-        T *operator--(int) volatile noexcept { return fetch_sub(1);     }
-        T *operator--(int)          noexcept { return fetch_sub(1);     }
-        T *operator++(   ) volatile noexcept { return fetch_add(1) + 1; }
-        T *operator++(   )          noexcept { return fetch_add(1) + 1; }
-        T *operator--(   ) volatile noexcept { return fetch_sub(1) - 1; }
-        T *operator--(   )          noexcept { return fetch_sub(1) - 1; }
+        T *operator++(int) volatile { return fetch_add(1);     }
+        T *operator++(int)          { return fetch_add(1);     }
+        T *operator--(int) volatile { return fetch_sub(1);     }
+        T *operator--(int)          { return fetch_sub(1);     }
+        T *operator++(   ) volatile { return fetch_add(1) + 1; }
+        T *operator++(   )          { return fetch_add(1) + 1; }
+        T *operator--(   ) volatile { return fetch_sub(1) - 1; }
+        T *operator--(   )          { return fetch_sub(1) - 1; }
 
-        T *operator+=(ptrdiff_t op) volatile noexcept { return fetch_add(op) + op; }
-        T *operator+=(ptrdiff_t op)          noexcept { return fetch_add(op) + op; }
-        T *operator-=(ptrdiff_t op) volatile noexcept { return fetch_sub(op) - op; }
-        T *operator-=(ptrdiff_t op)          noexcept { return fetch_sub(op) - op; }
+        T *operator+=(ptrdiff_t op) volatile { return fetch_add(op) + op; }
+        T *operator+=(ptrdiff_t op)          { return fetch_add(op) + op; }
+        T *operator-=(ptrdiff_t op) volatile { return fetch_sub(op) - op; }
+        T *operator-=(ptrdiff_t op)          { return fetch_sub(op) - op; }
     };
 
     template<typename T>
-    inline bool atomic_is_lock_free(const volatile Atomic<T> *a) noexcept {
+    inline bool atomic_is_lock_free(const volatile Atomic<T> *a) {
         return a->is_lock_free();
     }
 
     template<typename T>
-    inline bool atomic_is_lock_free(const Atomic<T> *a) noexcept {
+    inline bool atomic_is_lock_free(const Atomic<T> *a) {
         return a->is_lock_free();
     }
 
     template<typename T>
-    inline void atomic_init(volatile Atomic<T> *a, T v) noexcept {
+    inline void atomic_init(volatile Atomic<T> *a, T v) {
         __octa_atomic_init(&a->p_a, v);
     }
 
     template<typename T>
-    inline void atomic_init(Atomic<T> *a, T v) noexcept {
+    inline void atomic_init(Atomic<T> *a, T v) {
         __octa_atomic_init(&a->p_a, v);
     }
 
     template <typename T>
-    inline void atomic_store(volatile Atomic<T> *a, T v) noexcept {
+    inline void atomic_store(volatile Atomic<T> *a, T v) {
         a->store(v);
     }
 
     template <typename T>
-    inline void atomic_store(Atomic<T> *a, T v) noexcept {
+    inline void atomic_store(Atomic<T> *a, T v) {
         a->store(v);
     }
 
     template <typename T>
     inline void atomic_store_explicit(volatile Atomic<T> *a, T v,
-                                      MemoryOrder ord)
-    noexcept {
+                                      MemoryOrder ord) {
         a->store(v, ord);
     }
 
     template <typename T>
-    inline void atomic_store_explicit(Atomic<T> *a, T v, MemoryOrder ord)
-    noexcept {
+    inline void atomic_store_explicit(Atomic<T> *a, T v, MemoryOrder ord) {
         a->store(v, ord);
     }
 
     template <typename T>
-    inline T atomic_load(const volatile Atomic<T> *a) noexcept {
+    inline T atomic_load(const volatile Atomic<T> *a) {
         return a->load();
     }
 
     template <typename T>
-    inline T atomic_load(const Atomic<T> *a) noexcept {
+    inline T atomic_load(const Atomic<T> *a) {
         return a->load();
     }
 
     template <typename T>
     inline  T atomic_load_explicit(const volatile Atomic<T> *a,
-                                   MemoryOrder ord)
-    noexcept {
+                                   MemoryOrder ord) {
         return a->load(ord);
     }
 
     template <typename T>
-    inline T atomic_load_explicit(const Atomic<T> *a, MemoryOrder ord)
-    noexcept {
+    inline T atomic_load_explicit(const Atomic<T> *a, MemoryOrder ord) {
         return a->load(ord);
     }
 
     template <typename T>
-    inline T atomic_exchange(volatile Atomic<T> *a, T v) noexcept {
+    inline T atomic_exchange(volatile Atomic<T> *a, T v) {
         return a->exchange(v);
     }
 
     template <typename T>
-    inline T atomic_exchange(Atomic<T> *a, T v) noexcept {
+    inline T atomic_exchange(Atomic<T> *a, T v) {
         return a->exchange(v);
     }
 
     template <typename T>
     inline T atomic_exchange_explicit(volatile Atomic<T> *a, T v,
-                                      MemoryOrder ord)
-    noexcept {
+                                      MemoryOrder ord) {
         return a->exchange(v, ord);
     }
 
     template <typename T>
-    inline T atomic_exchange_explicit(Atomic<T> *a, T v, MemoryOrder ord)
-    noexcept {
+    inline T atomic_exchange_explicit(Atomic<T> *a, T v, MemoryOrder ord) {
         return a->exchange(v, ord);
     }
 
     template <typename T>
-    inline bool atomic_compare_exchange_weak(volatile Atomic<T> *a, T *e, T v)
-    noexcept {
+    inline bool atomic_compare_exchange_weak(volatile Atomic<T> *a, T *e, T v) {
         return a->compare_exchange_weak(*e, v);
     }
 
     template <typename T>
-    inline bool atomic_compare_exchange_weak(Atomic<T> *a, T *e, T v) noexcept {
+    inline bool atomic_compare_exchange_weak(Atomic<T> *a, T *e, T v) {
         return a->compare_exchange_weak(*e, v);
     }
 
     template <typename T>
-    inline bool atomic_compare_exchange_strong(volatile Atomic<T> *a, T *e, T v)
-    noexcept {
+    inline bool atomic_compare_exchange_strong(volatile Atomic<T> *a, T *e, T v) {
         return a->compare_exchange_strong(*e, v);
     }
 
     template <typename T>
-    inline bool atomic_compare_exchange_strong(Atomic<T> *a, T *e, T v)
-    noexcept {
+    inline bool atomic_compare_exchange_strong(Atomic<T> *a, T *e, T v) {
         return a->compare_exchange_strong(*e, v);
     }
 
@@ -1026,16 +988,14 @@ namespace octa {
     inline bool atomic_compare_exchange_weak_explicit(volatile Atomic<T> *a,
                                                       T *e, T v,
                                                       MemoryOrder s,
-                                                      MemoryOrder f)
-    noexcept {
+                                                      MemoryOrder f) {
         return a->compare_exchange_weak(*e, v, s, f);
     }
 
     template <typename T>
     inline bool atomic_compare_exchange_weak_explicit(Atomic<T> *a, T *e, T v,
                                                       MemoryOrder s,
-                                                      MemoryOrder f)
-    noexcept {
+                                                      MemoryOrder f) {
         return a->compare_exchange_weak(*e, v, s, f);
     }
 
@@ -1043,267 +1003,250 @@ namespace octa {
     inline bool atomic_compare_exchange_strong_explicit(volatile Atomic<T> *a,
                                                         T *e, T v,
                                                         MemoryOrder s,
-                                                        MemoryOrder f)
-    noexcept {
+                                                        MemoryOrder f) {
         return a->compare_exchange_strong(*e, v, s, f);
     }
 
     template <typename T>
     inline bool atomic_compare_exchange_strong_explicit(Atomic<T> *a, T *e, T v,
                                                         MemoryOrder s,
-                                                        MemoryOrder f)
-    noexcept {
+                                                        MemoryOrder f) {
         return a->compare_exchange_strong(*e, v, s, f);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_add(volatile Atomic<T> *a, T op) noexcept {
+    atomic_fetch_add(volatile Atomic<T> *a, T op) {
         return a->fetch_add(op);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_add(Atomic<T> *a, T op) noexcept {
+    atomic_fetch_add(Atomic<T> *a, T op) {
         return a->fetch_add(op);
     }
 
     template <typename T>
-    inline T *atomic_fetch_add(volatile Atomic<T *> *a, ptrdiff_t op) noexcept {
+    inline T *atomic_fetch_add(volatile Atomic<T *> *a, ptrdiff_t op) {
         return a->fetch_add(op);
     }
 
     template <typename T>
-    inline T *atomic_fetch_add(Atomic<T *> *a, ptrdiff_t op) noexcept {
+    inline T *atomic_fetch_add(Atomic<T *> *a, ptrdiff_t op) {
         return a->fetch_add(op);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_add_explicit(volatile Atomic<T> *a, T op, MemoryOrder ord)
-    noexcept {
+    atomic_fetch_add_explicit(volatile Atomic<T> *a, T op, MemoryOrder ord) {
         return a->fetch_add(op, ord);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_add_explicit(Atomic<T> *a, T op, MemoryOrder ord) noexcept {
+    atomic_fetch_add_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
         return a->fetch_add(op, ord);
     }
 
     template <typename T>
     inline T *atomic_fetch_add_explicit(volatile Atomic<T *> *a, ptrdiff_t op,
-                                        MemoryOrder ord)
-    noexcept {
+                                        MemoryOrder ord) {
         return a->fetch_add(op, ord);
     }
 
     template <typename T>
     inline T *atomic_fetch_add_explicit(Atomic<T *> *a, ptrdiff_t op,
-                                        MemoryOrder ord)
-    noexcept {
+                                        MemoryOrder ord) {
         return a->fetch_add(op, ord);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_sub(volatile Atomic<T> *a, T op) noexcept {
+    atomic_fetch_sub(volatile Atomic<T> *a, T op) {
         return a->fetch_sub(op);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_sub(Atomic<T> *a, T op) noexcept {
+    atomic_fetch_sub(Atomic<T> *a, T op) {
         return a->fetch_sub(op);
     }
 
     template <typename T>
-    inline T *atomic_fetch_sub(volatile Atomic<T *> *a, ptrdiff_t op) noexcept {
+    inline T *atomic_fetch_sub(volatile Atomic<T *> *a, ptrdiff_t op) {
         return a->fetch_sub(op);
     }
 
     template <typename T>
-    inline T *atomic_fetch_sub(Atomic<T *> *a, ptrdiff_t op) noexcept {
+    inline T *atomic_fetch_sub(Atomic<T *> *a, ptrdiff_t op) {
         return a->fetch_sub(op);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_sub_explicit(volatile Atomic<T> *a, T op, MemoryOrder ord)
-    noexcept {
+    atomic_fetch_sub_explicit(volatile Atomic<T> *a, T op, MemoryOrder ord) {
         return a->fetch_sub(op, ord);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_sub_explicit(Atomic<T> *a, T op, MemoryOrder ord) noexcept {
+    atomic_fetch_sub_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
         return a->fetch_sub(op, ord);
     }
 
     template <typename T>
     inline T *atomic_fetch_sub_explicit(volatile Atomic<T *> *a, ptrdiff_t op,
-                                        MemoryOrder ord)
-    noexcept {
+                                        MemoryOrder ord) {
         return a->fetch_sub(op, ord);
     }
 
     template <typename T>
     inline T *atomic_fetch_sub_explicit(Atomic<T *> *a, ptrdiff_t op,
-                                        MemoryOrder ord)
-    noexcept {
+                                        MemoryOrder ord) {
         return a->fetch_sub(op, ord);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_and(volatile Atomic<T> *a, T op) noexcept {
+    atomic_fetch_and(volatile Atomic<T> *a, T op) {
         return a->fetch_and(op);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_and(Atomic<T> *a, T op) noexcept {
+    atomic_fetch_and(Atomic<T> *a, T op) {
         return a->fetch_and(op);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_and_explicit(volatile Atomic<T> *a, T op, MemoryOrder ord)
-    noexcept {
+    atomic_fetch_and_explicit(volatile Atomic<T> *a, T op, MemoryOrder ord) {
         return a->fetch_and(op, ord);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_and_explicit(Atomic<T> *a, T op, MemoryOrder ord) noexcept {
+    atomic_fetch_and_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
         return a->fetch_and(op, ord);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_or(volatile Atomic<T> *a, T op) noexcept {
+    atomic_fetch_or(volatile Atomic<T> *a, T op) {
         return a->fetch_or(op);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_or(Atomic<T> *a, T op) noexcept {
+    atomic_fetch_or(Atomic<T> *a, T op) {
         return a->fetch_or(op);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_or_explicit(volatile Atomic<T> *a, T op, MemoryOrder ord)
-    noexcept {
+    atomic_fetch_or_explicit(volatile Atomic<T> *a, T op, MemoryOrder ord) {
         return a->fetch_or(op, ord);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_or_explicit(Atomic<T> *a, T op, MemoryOrder ord) noexcept {
+    atomic_fetch_or_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
         return a->fetch_or(op, ord);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_xor(volatile Atomic<T> *a, T op) noexcept {
+    atomic_fetch_xor(volatile Atomic<T> *a, T op) {
         return a->fetch_xor(op);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_xor(Atomic<T> *a, T op) noexcept {
+    atomic_fetch_xor(Atomic<T> *a, T op) {
         return a->fetch_xor(op);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_xor_explicit(volatile Atomic<T> *a, T op, MemoryOrder ord)
-    noexcept {
+    atomic_fetch_xor_explicit(volatile Atomic<T> *a, T op, MemoryOrder ord) {
         return a->fetch_xor(op, ord);
     }
 
     template <typename T>
     inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
-    atomic_fetch_xor_explicit(Atomic<T> *a, T op, MemoryOrder ord) noexcept {
+    atomic_fetch_xor_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
         return a->fetch_xor(op, ord);
     }
 
     struct AtomicFlag {
         __OctaAtomicBase<bool> p_a;
 
-        AtomicFlag() noexcept = default;
+        AtomicFlag() = default;
 
-        AtomicFlag(bool b) noexcept: p_a(b) {}
+        AtomicFlag(bool b): p_a(b) {}
 
         AtomicFlag(const AtomicFlag &) = delete;
 
         AtomicFlag &operator=(const AtomicFlag &) = delete;
         AtomicFlag &operator=(const AtomicFlag &) volatile = delete;
 
-        bool test_and_set(MemoryOrder ord = MemoryOrder::seq_cst)
-        volatile noexcept {
+        bool test_and_set(MemoryOrder ord = MemoryOrder::seq_cst) volatile {
             return __octa_atomic_exchange(&p_a, true, ord);
         }
 
-        bool test_and_set(MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
+        bool test_and_set(MemoryOrder ord = MemoryOrder::seq_cst) {
             return __octa_atomic_exchange(&p_a, true, ord);
         }
 
-        void clear(MemoryOrder ord = MemoryOrder::seq_cst) volatile noexcept {
+        void clear(MemoryOrder ord = MemoryOrder::seq_cst) volatile {
             __octa_atomic_store(&p_a, false, ord);
         }
 
-        void clear(MemoryOrder ord = MemoryOrder::seq_cst) noexcept {
+        void clear(MemoryOrder ord = MemoryOrder::seq_cst) {
             __octa_atomic_store(&p_a, false, ord);
         }
     };
 
-    inline bool atomic_flag_test_and_set(volatile AtomicFlag *a)
-    noexcept {
+    inline bool atomic_flag_test_and_set(volatile AtomicFlag *a) {
         return a->test_and_set();
     }
 
-    inline bool atomic_flag_test_and_set(AtomicFlag *a) noexcept {
+    inline bool atomic_flag_test_and_set(AtomicFlag *a) {
         return a->test_and_set();
     }
 
     inline bool atomic_flag_test_and_set_explicit(volatile AtomicFlag *a,
-                                                  MemoryOrder ord)
-    noexcept {
+                                                  MemoryOrder ord) {
         return a->test_and_set(ord);
     }
 
     inline bool atomic_flag_test_and_set_explicit(AtomicFlag *a,
-                                                  MemoryOrder ord)
-    noexcept {
+                                                  MemoryOrder ord) {
         return a->test_and_set(ord);
     }
 
-    inline void atomic_flag_clear(volatile AtomicFlag *a) noexcept {
+    inline void atomic_flag_clear(volatile AtomicFlag *a) {
         a->clear();
     }
 
-    inline void atomic_flag_clear(AtomicFlag *a) noexcept {
+    inline void atomic_flag_clear(AtomicFlag *a) {
         a->clear();
     }
 
     inline void atomic_flag_clear_explicit(volatile AtomicFlag *a,
-                                           MemoryOrder ord)
-    noexcept {
+                                           MemoryOrder ord) {
         a->clear(ord);
     }
 
-    inline void atomic_flag_clear_explicit(AtomicFlag *a, MemoryOrder ord)
-    noexcept {
+    inline void atomic_flag_clear_explicit(AtomicFlag *a, MemoryOrder ord) {
         a->clear(ord);
     }
 
-    inline void atomic_thread_fence(MemoryOrder ord) noexcept {
+    inline void atomic_thread_fence(MemoryOrder ord) {
         __octa_atomic_thread_fence(ord);
     }
 
-    inline void atomic_signal_fence(MemoryOrder ord) noexcept {
+    inline void atomic_signal_fence(MemoryOrder ord) {
         __octa_atomic_signal_fence(ord);
     }
 

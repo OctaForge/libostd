@@ -325,7 +325,7 @@ namespace octa {
         decltype(__OCTA_MOVE(T(__octa_declval<A>()...))), True
     >::Type __octa_is_ctible_test(T &&, A &&...);
 
-#undef __OCTA_MOVE
+//#undef __OCTA_MOVE
 
     template<typename ...A> False __octa_is_ctible_test(__OctaAny, A &&...);
 
@@ -577,115 +577,6 @@ namespace octa {
     struct IsTriviallyDestructible: IntegralConstant<bool,
         __has_trivial_destructor(T)
     > {};
-
-    /* is nothrow constructible */
-
-    template<typename T, typename ...A>
-    struct IsNothrowConstructible: False {};
-
-    template<typename T>
-    struct IsNothrowConstructible<T>: IntegralConstant<bool,
-        __has_nothrow_constructor(T)
-    > {};
-
-    template<typename T>
-    struct IsNothrowConstructible<T, T &>: IntegralConstant<bool,
-        __has_nothrow_copy(T)
-    > {};
-
-    template<typename T>
-    struct IsNothrowConstructible<T, const T &>: IntegralConstant<bool,
-        __has_nothrow_copy(T)
-    > {};
-
-    template<typename T>
-    struct IsNothrowConstructible<T, T &&>: IntegralConstant<bool,
-        __has_nothrow_copy(T)
-    > {};
-
-    /* is nothrow default constructible */
-
-    template<typename T>
-    struct IsNothrowDefaultConstructible: IsNothrowConstructible<T> {};
-
-    /* is nothrow copy constructible */
-
-    template<typename T>
-    struct IsNothrowCopyConstructible: IsNothrowConstructible<T,
-        AddLvalueReference<const T>
-    > {};
-
-    /* is nothrow move constructible */
-
-    template<typename T>
-    struct IsNothrowMoveConstructible: IsNothrowConstructible<T,
-        AddRvalueReference<T>
-    > {};
-
-    /* is nothrow assignable */
-
-    template<typename T, typename ...A>
-    struct IsNothrowAssignable: False {};
-
-    template<typename T>
-    struct IsNothrowAssignable<T>: IntegralConstant<bool,
-        __has_nothrow_assign(T)
-    > {};
-
-    template<typename T>
-    struct IsNothrowAssignable<T, T &>: IntegralConstant<bool,
-        __has_nothrow_copy(T)
-    > {};
-
-    template<typename T>
-    struct IsNothrowAssignable<T, const T &>: IntegralConstant<bool,
-        __has_nothrow_copy(T)
-    > {};
-
-    template<typename T>
-    struct IsNothrowAssignable<T, T &&>: IntegralConstant<bool,
-        __has_nothrow_copy(T)
-    > {};
-
-    /* is nothrow copy assignable */
-
-    template<typename T>
-    struct IsNothrowCopyAssignable: IsNothrowAssignable<T,
-        AddLvalueReference<const T>
-    > {};
-
-    /* is nothrow move assignable */
-
-    template<typename T>
-    struct IsNothrowMoveAssignable: IsNothrowAssignable<T,
-        AddRvalueReference<T>
-    > {};
-
-    /* is nothrow destructible */
-
-    template<typename, bool> struct __OctaIsNothrowDtible;
-
-    template<typename T>
-    struct __OctaIsNothrowDtible<T, false>: False {};
-
-    template<typename T>
-    struct __OctaIsNothrowDtible<T, true>: IntegralConstant<bool,
-        (IsScalar<T>::value || noexcept(__octa_declval<T>().~T()))
-    > {};
-
-    template<typename T>
-    struct IsNothrowDestructible: __OctaIsNothrowDtible<T,
-        IsDestructible<T>::value
-    > {};
-
-    template<typename T, size_t N>
-    struct IsNothrowDestructible<T[N]>: IsNothrowDestructible<T> {};
-
-    template<typename T>
-    struct IsNothrowDestructible<T &>: IsNothrowDestructible<T> {};
-
-    template<typename T>
-    struct IsNothrowDestructible<T &&>: IsNothrowDestructible<T> {};
 
     /* is base of */
 
@@ -1127,11 +1018,11 @@ namespace octa {
     template<typename ...T> struct __OctaCommonType;
 
     template<typename T> struct __OctaCommonType<T> {
-        typedef __OctaDecay<T> Type;
+        typedef Decay<T> Type;
     };
 
     template<typename T, typename U> struct __OctaCommonType<T, U> {
-        typedef __OctaDecay<decltype(true ? __octa_declval<T>()
+        typedef Decay<decltype(true ? __octa_declval<T>()
             : __octa_declval<U>())> Type;
     };
 

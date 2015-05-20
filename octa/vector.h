@@ -22,11 +22,7 @@ namespace octa {
         T *p_buf;
         size_t p_len, p_cap;
 
-        void insert_base(size_t idx, size_t n) noexcept(
-            IsNothrowDestructible<T>::value
-         && IsNothrowMoveConstructible<T>::value
-         && IsNothrowMoveAssignable<T>::value
-        ) {
+        void insert_base(size_t idx, size_t n) {
             if (p_len + n > p_cap) reserve(p_len + n);
             p_len += n;
             for (size_t i = p_len - 1; i > idx + n - 1; --i) {
@@ -47,33 +43,25 @@ namespace octa {
         typedef PointerRange<      T>  RangeType;
         typedef PointerRange<const T>  ConstRangeType;
 
-        Vector() noexcept: p_buf(nullptr), p_len(0), p_cap(0) {}
+        Vector(): p_buf(nullptr), p_len(0), p_cap(0) {}
 
-        explicit Vector(size_t n, const T &val = T()) noexcept(
-            IsNothrowCopyConstructible<T>::value
-        ): Vector() {
+        explicit Vector(size_t n, const T &val = T()): Vector() {
             p_buf = new uchar[n * sizeof(T)];
             p_len = p_cap = n;
             T *cur = p_buf, *last = p_buf + n;
             while (cur != last) new (cur++) T(val);
         }
 
-        Vector(const Vector &v) noexcept(
-            IsNothrowDestructible<T>::value
-         && IsNothrowCopyConstructible<T>::value
-        ): Vector() {
+        Vector(const Vector &v): Vector() {
             *this = v;
         }
 
-        Vector(Vector &&v) noexcept: p_buf(v.p_buf), p_len(v.p_len),
-        p_cap(v.p_cap) {
+        Vector(Vector &&v): p_buf(v.p_buf), p_len(v.p_len), p_cap(v.p_cap) {
             v.p_buf = nullptr;
             v.p_len = v.p_cap = 0;
         }
 
-        Vector(InitializerList<T> v) noexcept(
-            IsNothrowCopyConstructible<T>::value
-        ): Vector() {
+        Vector(InitializerList<T> v): Vector() {
             size_t len = v.length();
             const T *ptr = v.get();
             reserve(len);
@@ -82,14 +70,14 @@ namespace octa {
             p_len = len;
         }
 
-        ~Vector() noexcept(IsNothrowDestructible<T>::value) {
+        ~Vector() {
             clear();
             delete[] (uchar *)p_buf;
             p_buf = nullptr;
             p_cap = 0;
         }
 
-        void clear() noexcept(IsNothrowDestructible<T>::value) {
+        void clear() {
             if (p_len > 0 && !octa::IsPod<T>()) {
                 T *cur = p_buf, *last = p_buf + p_len;
                 while (cur != last) (*cur++).~T();
@@ -97,10 +85,7 @@ namespace octa {
             p_len = 0;
         }
 
-        Vector<T> &operator=(const Vector<T> &v) noexcept(
-            IsNothrowDestructible<T>::value
-         && IsNothrowCopyConstructible<T>::value
-        ) {
+        Vector<T> &operator=(const Vector<T> &v) {
             if (this == &v) return *this;
             clear();
             reserve(v.p_cap);
@@ -117,9 +102,7 @@ namespace octa {
             return *this;
         }
 
-        Vector<T> &operator=(Vector<T> &&v) noexcept(
-            IsNothrowDestructible<T>::value
-        ) {
+        Vector<T> &operator=(Vector<T> &&v) {
             clear();
             delete[] (uchar *)p_buf;
             p_len = v.p_len;
@@ -128,10 +111,7 @@ namespace octa {
             return *this;
         }
 
-        Vector<T> &operator=(InitializerList<T> il) noexcept(
-            IsNothrowDestructible<T>::value &&
-            IsNothrowCopyConstructible<T>::value
-        ) {
+        Vector<T> &operator=(InitializerList<T> il) {
             clear();
             size_t ilen = il.length();
             reserve(ilen);
@@ -147,11 +127,7 @@ namespace octa {
             return *this;
         }
 
-        void resize(size_t n, const T &v = T()) noexcept(
-            IsNothrowDestructible<T>::value
-         && IsNothrowMoveConstructible<T>::value
-         && IsNothrowCopyConstructible<T>::value
-        ) {
+        void resize(size_t n, const T &v = T()) {
             size_t len = p_len;
             reserve(n);
             p_len = n;
@@ -166,10 +142,7 @@ namespace octa {
             }
         }
 
-        void reserve(size_t n) noexcept(
-            IsNothrowDestructible<T>::value
-         && IsNothrowMoveConstructible<T>::value
-        ) {
+        void reserve(size_t n) {
             if (n <= p_len) {
                 if (n == p_len) return;
                 while (p_len > n) pop();
@@ -198,25 +171,19 @@ namespace octa {
             p_buf = tmp;
         }
 
-        T &operator[](size_t i) noexcept { return p_buf[i]; }
-        const T &operator[](size_t i) const noexcept { return p_buf[i]; }
+        T &operator[](size_t i) { return p_buf[i]; }
+        const T &operator[](size_t i) const { return p_buf[i]; }
 
-        T &at(size_t i) noexcept { return p_buf[i]; }
-        const T &at(size_t i) const noexcept { return p_buf[i]; }
+        T &at(size_t i) { return p_buf[i]; }
+        const T &at(size_t i) const { return p_buf[i]; }
 
-        T &push(const T &v) noexcept(
-            noexcept(noexcept(reserve(0))) &&
-            IsNothrowCopyConstructible<T>::value
-        ) {
+        T &push(const T &v) {
             if (p_len == p_cap) reserve(p_len + 1);
             new (&p_buf[p_len]) T(v);
             return p_buf[p_len++];
         }
 
-        T &push() noexcept(
-            noexcept(noexcept(reserve(0))) &&
-            IsNothrowDefaultConstructible<T>::value
-        ) {
+        T &push() {
             if (p_len == p_cap) reserve(p_len + 1);
             new (&p_buf[p_len]) T;
             return p_buf[p_len++];
@@ -229,7 +196,7 @@ namespace octa {
             return p_buf[p_len++];
         }
 
-        void pop() noexcept(IsNothrowDestructible<T>::value) {
+        void pop() {
             if (!octa::IsPod<T>()) {
                 p_buf[--p_len].~T();
             } else {
@@ -237,60 +204,46 @@ namespace octa {
             }
         }
 
-        T &first() noexcept { return p_buf[0]; }
-        const T &first() const noexcept { return p_buf[0]; };
+        T &first() { return p_buf[0]; }
+        const T &first() const { return p_buf[0]; };
 
-        T &last() noexcept { return p_buf[p_len - 1]; }
-        const T &last() const noexcept { return p_buf[p_len - 1]; }
+        T &last() { return p_buf[p_len - 1]; }
+        const T &last() const { return p_buf[p_len - 1]; }
 
-        T *get() noexcept { return p_buf; }
-        const T *get() const noexcept { return p_buf; }
+        T *get() { return p_buf; }
+        const T *get() const { return p_buf; }
 
-        size_t length() const noexcept { return p_len; }
-        size_t capacity() const noexcept { return p_cap; }
+        size_t length() const { return p_len; }
+        size_t capacity() const { return p_cap; }
 
-        bool empty() const noexcept { return (p_len == 0); }
+        bool empty() const { return (p_len == 0); }
 
-        bool in_range(size_t idx) noexcept { return idx < p_len; }
-        bool in_range(int idx) noexcept { return idx >= 0 && idx < p_len; }
-        bool in_range(const T *ptr) noexcept {
+        bool in_range(size_t idx) { return idx < p_len; }
+        bool in_range(int idx) { return idx >= 0 && idx < p_len; }
+        bool in_range(const T *ptr) {
             return ptr >= p_buf && ptr < &p_buf[p_len];
         }
 
-        T *disown() noexcept {
+        T *disown() {
             T *r = p_buf;
             p_buf = nullptr;
             p_len = p_cap = 0;
             return r;
         }
 
-        T *insert(size_t idx, T &&v) noexcept(
-            IsNothrowDestructible<T>::value
-         && IsNothrowMoveConstructible<T>::value
-         && IsNothrowMoveAssignable<T>::value
-        ) {
+        T *insert(size_t idx, T &&v) {
             insert_base(idx, 1);
             p_buf[idx] = move(v);
             return &p_buf[idx];
         }
 
-        T *insert(size_t idx, const T &v) noexcept(
-            IsNothrowDestructible<T>::value
-         && IsNothrowMoveConstructible<T>::value
-         && IsNothrowMoveAssignable<T>::value
-         && IsNothrowCopyAssignable<T>::value
-        ) {
+        T *insert(size_t idx, const T &v) {
             insert_base(idx, 1);
             p_buf[idx] = v;
             return &p_buf[idx];
         }
 
-        T *insert(size_t idx, size_t n, const T &v) noexcept(
-            IsNothrowDestructible<T>::value
-         && IsNothrowMoveConstructible<T>::value
-         && IsNothrowMoveAssignable<T>::value
-         && IsNothrowCopyAssignable<T>::value
-        ) {
+        T *insert(size_t idx, size_t n, const T &v) {
             insert_base(idx, n);
             for (size_t i = 0; i < n; ++i) {
                 p_buf[idx + i] = v;
@@ -299,14 +252,7 @@ namespace octa {
         }
 
         template<typename U>
-        T *insert_range(size_t idx, U range) noexcept(
-            IsNothrowDestructible<T>::value
-         && IsNothrowMoveConstructible<T>::value
-         && IsNothrowMoveAssignable<T>::value
-         && noexcept(range.first())
-         && noexcept(range.pop_first())
-         && noexcept((*p_buf = range.first()))
-        ) {
+        T *insert_range(size_t idx, U range) {
             size_t len = range.length();
             insert_base(idx, len);
             for (size_t i = 0; i < len; ++i) {
@@ -316,20 +262,18 @@ namespace octa {
             return &p_buf[idx];
         }
 
-        T *insert(size_t idx, InitializerList<T> il) noexcept(
-            noexcept(declval<Vector<T>>().insert_range(idx, il.range()))
-        ) {
+        T *insert(size_t idx, InitializerList<T> il) {
             return insert_range(idx, il.range());
         }
 
-        RangeType each() noexcept {
+        RangeType each() {
             return PointerRange<T>(p_buf, p_buf + p_len);
         }
-        ConstRangeType each() const noexcept {
+        ConstRangeType each() const {
             return PointerRange<const T>(p_buf, p_buf + p_len);
         }
 
-        void swap(Vector &v) noexcept {
+        void swap(Vector &v) {
             swap(p_len, v.p_len);
             swap(p_cap, v.p_cap);
             swap(p_buf, v.p_buf);
@@ -337,7 +281,7 @@ namespace octa {
     };
 
     template<typename T>
-    void swap(Vector<T> &a, Vector<T> &b) noexcept {
+    void swap(Vector<T> &a, Vector<T> &b) {
         a.swap(b);
     }
 }

@@ -14,22 +14,19 @@ namespace octa {
     /* move */
 
     template<typename T>
-    static inline constexpr RemoveReference<T> &&
-    move(T &&v) noexcept {
+    static inline constexpr RemoveReference<T> &&move(T &&v) {
         return static_cast<RemoveReference<T> &&>(v);
     }
 
     /* forward */
 
     template<typename T>
-    static inline constexpr T &&
-    forward(RemoveReference<T> &v) noexcept {
+    static inline constexpr T &&forward(RemoveReference<T> &v) {
         return static_cast<T &&>(v);
     }
 
     template<typename T>
-    static inline constexpr T &&
-    forward(RemoveReference<T> &&v) noexcept {
+    static inline constexpr T &&forward(RemoveReference<T> &&v) {
         return static_cast<T &&>(v);
     }
 
@@ -39,18 +36,13 @@ namespace octa {
 
     /* swap */
 
-    template<typename T> void swap(T &a, T &b) noexcept(
-        IsNothrowMoveConstructible<T>::value
-     && IsNothrowMoveAssignable<T>::value
-    ) {
+    template<typename T> void swap(T &a, T &b) {
         T c(move(a));
         a = move(b);
         b = move(c);
     }
 
-    template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N]) noexcept(
-        noexcept(swap(*a, *b))
-    ) {
+    template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N]) {
         for (size_t i = 0; i < N; ++i) {
             swap(a[i], b[i]);
         }
@@ -63,64 +55,37 @@ namespace octa {
         T first;
         U second;
 
-        Pair() noexcept(
-            IsNothrowDefaultConstructible<T>::value
-         && IsNothrowDefaultConstructible<U>::value
-        ) = default;
+        Pair() = default;
         ~Pair() = default;
 
-        Pair(const Pair &) noexcept(
-            IsNothrowCopyConstructible<T>::value
-         && IsNothrowCopyConstructible<U>::value
-        ) = default;
-        Pair(Pair &&) noexcept(
-            IsNothrowMoveConstructible<T>::value
-         && IsNothrowMoveConstructible<U>::value
-        ) = default;
+        Pair(const Pair &) = default;
+        Pair(Pair &&) = default;
 
-        Pair(const T &x, const U &y) noexcept(
-            IsNothrowCopyConstructible<T>::value
-         && IsNothrowCopyConstructible<U>::value
-        ): first(x), second(y) {}
+        Pair(const T &x, const U &y): first(x), second(y) {}
 
         template<typename TT, typename UU>
         Pair(TT &&x, UU &&y): first(forward<TT>(x)), second(forward<UU>(y)) {}
 
         template<typename TT, typename UU>
-        Pair(const Pair<TT, UU> &v) noexcept(
-            IsNothrowCopyConstructible<T>::value
-         && IsNothrowCopyConstructible<U>::value
-        ): first(v.first), second(v.second) {}
+        Pair(const Pair<TT, UU> &v): first(v.first), second(v.second) {}
 
         template<typename TT, typename UU>
-        Pair(Pair<TT, UU> &&v) noexcept(
-            IsNothrowMoveConstructible<T>::value
-         && IsNothrowMoveConstructible<U>::value
-        ): first(move(v.first)), second(move(v.second)) {}
+        Pair(Pair<TT, UU> &&v): first(move(v.first)), second(move(v.second)) {}
 
-        Pair &operator=(const Pair &v) noexcept(
-            IsNothrowCopyAssignable<T>::value
-         && IsNothrowCopyAssignable<U>::value
-        ) {
+        Pair &operator=(const Pair &v) {
             first = v.first;
             second = v.second;
             return *this;
         }
 
         template<typename TT, typename UU>
-        Pair &operator=(const Pair<TT, UU> &v) noexcept(
-            IsNothrowCopyAssignable<T>::value
-         && IsNothrowCopyAssignable<U>::value
-        ) {
+        Pair &operator=(const Pair<TT, UU> &v) {
             first = v.first;
             second = v.second;
             return *this;
         }
 
-        Pair &operator=(Pair &&v) noexcept(
-            IsNothrowMoveAssignable<T>::value
-         && IsNothrowMoveAssignable<U>::value
-        ) {
+        Pair &operator=(Pair &&v) {
             first = move(v.first);
             second = move(v.second);
             return *this;
@@ -133,17 +98,14 @@ namespace octa {
             return *this;
         }
 
-        void swap(Pair &v) noexcept(
-            noexcept(octa::swap(first, v.first))
-         && noexcept(octa::swap(second, v.second))
-        ) {
+        void swap(Pair &v) {
             octa::swap(first, v.first);
             octa::swap(second, v.second);
         }
     };
 
     template<typename T, typename U>
-    void swap(Pair<T, U> &a, Pair<T, U> &b) noexcept(noexcept(a.swap(b))) {
+    void swap(Pair<T, U> &a, Pair<T, U> &b) {
         a.swap(b);
     }
 }
