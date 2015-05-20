@@ -46,8 +46,8 @@ namespace octa {
             return ptr >= &p_buf[0] && ptr < &p_buf[N];
         }
 
-        T *get() { return p_buf; }
-        const T *get() const { return p_buf; }
+        T *data() { return p_buf; }
+        const T *data() const { return p_buf; }
 
         RangeType each() {
             return PointerRange<T>(p_buf, p_buf + N);

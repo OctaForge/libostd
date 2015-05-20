@@ -210,8 +210,8 @@ namespace octa {
         T &last() { return p_buf[p_len - 1]; }
         const T &last() const { return p_buf[p_len - 1]; }
 
-        T *get() { return p_buf; }
-        const T *get() const { return p_buf; }
+        T *data() { return p_buf; }
+        const T *data() const { return p_buf; }
 
         size_t length() const { return p_len; }
         size_t capacity() const { return p_cap; }
