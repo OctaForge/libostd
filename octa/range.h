@@ -43,6 +43,24 @@ namespace octa {
         T p_range;
     };
 
+    template<typename R>
+    RangeSize<R> __octa_pop_first_n(R &range, RangeSize<R> n) {
+        for (RangeSize<R> i = 0; i < n; ++i) {
+            if (range.empty()) return i;
+            range.pop_first();
+        }
+        return n;
+    }
+
+    template<typename R>
+    RangeSize<R> __octa_pop_last_n(R &range, RangeSize<R> n) {
+        for (RangeSize<R> i = 0; i < n; ++i) {
+            if (range.empty()) return i;
+            range.pop_last();
+        }
+        return n;
+    }
+
     template<typename B, typename C, typename V, typename R = V &,
              typename S = size_t
     > struct InputRange {
@@ -56,6 +74,14 @@ namespace octa {
         }
         __OctaRangeIterator<B> end() {
             return __OctaRangeIterator<B>();
+        }
+
+        SizeType pop_first_n(SizeType n) {
+            return __octa_pop_first_n<B>(*((B *)this), n);
+        }
+
+        SizeType pop_last_n(SizeType n) {
+            return __octa_pop_last_n<B>(*((B *)this), n);
         }
     };
 
@@ -116,6 +142,13 @@ namespace octa {
         }
         void pop_last() {
             p_range.pop_first();
+        }
+
+        r_size pop_first_n(r_size n) {
+            return p_range.pop_first_n(n);
+        }
+        r_size pop_last_n(r_size n) {
+            return p_range.pop_last_n(n);
         }
 
         bool operator==(const ReverseRange &v) const {
@@ -206,6 +239,13 @@ namespace octa {
         }
         void pop_last() {
             p_range.pop_last();
+        }
+
+        r_size pop_first_n(r_size n) {
+            return p_range.pop_first_n(n);
+        }
+        r_size pop_last_n(r_size n) {
+            return p_range.pop_last_n(n);
         }
 
         bool operator==(const MoveRange &v) const {
@@ -306,6 +346,17 @@ namespace octa {
             if (++p_beg == p_end) p_beg = p_end = nullptr;
         }
 
+        size_t pop_first_n(size_t n) {
+            T *obeg = p_beg;
+            size_t olen = p_end - p_beg;
+            p_beg += n;
+            if (p_beg >= p_end) {
+                p_beg = p_end = nullptr;
+                return olen;
+            }
+            return p_beg - obeg;
+        }
+
               T &first()       { return *p_beg; }
         const T &first() const { return *p_beg; }
 
@@ -313,6 +364,17 @@ namespace octa {
         void pop_last() {
             if (p_end-- == p_beg) { p_end = nullptr; return; }
             if (p_end   == p_beg) p_beg = p_end = nullptr;
+        }
+
+        size_t pop_last_n(size_t n) {
+            T *oend = p_end;
+            size_t olen = p_end - p_beg;
+            p_end -= n;
+            if (p_end <= (p_beg + 1)) {
+                p_beg = p_end = nullptr;
+                return olen;
+            }
+            return oend - p_end;
         }
 
               T &last()       { return *(p_end - 1); }
@@ -397,6 +459,10 @@ namespace octa {
 
         void pop_first() {
             ++p_index; p_range.pop_first();
+        }
+
+        r_size pop_first_n(r_size n) {
+            return p_range.pop_first_n(n);
         }
 
         EnumeratedValue<r_ref, r_size> first() {
