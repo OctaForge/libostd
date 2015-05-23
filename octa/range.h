@@ -15,15 +15,78 @@
 namespace octa {
     struct InputRangeTag {};
     struct OutputRangeTag {};
-    struct ForwardRangeTag {};
-    struct BidirectionalRangeTag {};
-    struct RandomAccessRangeTag {};
+    struct ForwardRangeTag: InputRangeTag {};
+    struct BidirectionalRangeTag: ForwardRangeTag {};
+    struct RandomAccessRangeTag: BidirectionalRangeTag {};
     struct FiniteRandomAccessRangeTag: RandomAccessRangeTag {};
 
     template<typename T> using RangeCategory  = typename T::Category;
     template<typename T> using RangeSize      = typename T::SizeType;
     template<typename T> using RangeValue     = typename T::ValType;
     template<typename T> using RangeReference = typename T::RefType;
+
+    // is input range
+
+    template<typename T, bool = IsConvertible<
+        RangeCategory<T>, InputRangeTag
+    >::value> struct IsInputRange: False {};
+
+    template<typename T>
+    struct IsInputRange<T, true>: True {};
+
+    // is forward range
+
+    template<typename T, bool = IsConvertible<
+        RangeCategory<T>, ForwardRangeTag
+    >::value> struct IsForwardRange: False {};
+
+    template<typename T>
+    struct IsForwardRange<T, true>: True {};
+
+    // is bidirectional range
+
+    template<typename T, bool = IsConvertible<
+        RangeCategory<T>, BidirectionalRangeTag
+    >::value> struct IsBidirectionalRange: False {};
+
+    template<typename T>
+    struct IsBidirectionalRange<T, true>: True {};
+
+    // is random access range
+
+    template<typename T, bool = IsConvertible<
+        RangeCategory<T>, RandomAccessRangeTag
+    >::value> struct IsRandomAccessRange: False {};
+
+    template<typename T>
+    struct IsRandomAccessRange<T, true>: True {};
+
+    // is finite random access range
+
+    template<typename T, bool = IsConvertible<
+        RangeCategory<T>, FiniteRandomAccessRangeTag
+    >::value> struct IsFiniteRandomAccessRange: False {};
+
+    template<typename T>
+    struct IsFiniteRandomAccessRange<T, true>: True {};
+
+    // is infinite random access range
+
+    template<typename T>
+    struct IsInfiniteRandomAccessRange: IntegralConstant<bool,
+        (IsRandomAccessRange<T>::value && !IsFiniteRandomAccessRange<T>::value)
+    > {};
+
+    // is output range
+
+    template<typename T, bool = IsConvertible<
+        RangeCategory<T>, OutputRangeTag
+    >::value> struct IsOutputRange: False {};
+
+    template<typename T>
+    struct IsOutputRange<T, true>: True {};
+
+    // range iterator
 
     template<typename T>
     struct __OctaRangeIterator {
