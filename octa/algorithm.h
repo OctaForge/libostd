@@ -388,7 +388,7 @@ namespace octa {
 
     template<typename T>
     struct MapRange: InputRange<
-        MapRange<T>, InputRangeTag, RangeValue<T>, RangeValue<T>, RangeSize<T>
+        MapRange<T>, RangeCategory<T>, RangeValue<T>, RangeValue<T>, RangeSize<T>
     > {
     private:
         T p_range;
@@ -413,10 +413,22 @@ namespace octa {
         }
 
         bool empty() const { return p_range.empty(); }
+        RangeSize<T> length() const { return p_range.length(); }
+
         void pop_first() { p_range.pop_first(); }
+        void pop_last() { p_range.pop_last(); }
+
         RangeSize<T> pop_first_n(RangeSize<T> n) { p_range.pop_first_n(n); }
+        RangeSize<T> pop_last_n(RangeSize<T> n) { p_range.pop_last_n(n); }
 
         RangeValue<T> first() { return p_func(p_range.first()); }
+        RangeValue<T> last() { return p_func(p_range.last()); }
+
+        RangeValue<T> operator[](RangeSize<T> idx) { return p_func(p_range[idx]); }
+
+        MapRange<T> slice(RangeSize<T> start, RangeSize<T> end) {
+            return MapRange<T>(p_range.slice(start, end), p_func);
+        }
 
         bool operator==(const MapRange &v) const {
             return (p_range == v.p_range) && (p_func == v.p_func);
