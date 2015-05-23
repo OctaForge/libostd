@@ -30,6 +30,32 @@ namespace octa {
             }
         }
 
+        template<typename R>
+        void ctor_from_range(R &range, EnableIf<IsSame<
+            RangeCategory<R>, RandomAccessRangeTag
+        >::value, bool> = true) {
+            RangeSize<R> len = range.length();
+            reserve(len);
+            p_len = len;
+            for (size_t i = 0; !range.empty(); range.pop_first()) {
+                new (&p_buf[i]) T(range.first());
+                ++i;
+            }
+        }
+
+        template<typename R>
+        void ctor_from_range(R &range, EnableIf<!IsSame<
+            RangeCategory<R>, RandomAccessRangeTag
+        >::value, bool> = true) {
+            size_t i = 0;
+            for (; !range.empty(); range.pop_first()) {
+                reserve(i + 1);
+                new (&p_buf[i]) T(range.first());
+                ++i;
+            }
+            p_len = i;
+        }
+
     public:
         enum { MIN_SIZE = 8 };
 
@@ -68,6 +94,10 @@ namespace octa {
             for (size_t i = 0; i < len; ++i)
                 new (&p_buf[i]) T(ptr[i]);
             p_len = len;
+        }
+
+        template<typename R> Vector(R range): Vector() {
+            ctor_from_range(range);
         }
 
         ~Vector() {
@@ -127,6 +157,12 @@ namespace octa {
             return *this;
         }
 
+        template<typename R>
+        Vector<T> &operator=(R range) {
+            clear();
+            ctor_from_range(range);
+        }
+
         void resize(size_t n, const T &v = T()) {
             size_t len = p_len;
             reserve(n);
@@ -143,11 +179,7 @@ namespace octa {
         }
 
         void reserve(size_t n) {
-            if (n <= p_len) {
-                if (n == p_len) return;
-                while (p_len > n) pop();
-                return;
-            }
+            if (n <= p_cap) return;
             size_t oc = p_cap;
             if (!oc) {
                 p_cap = max(n, size_t(MIN_SIZE));
