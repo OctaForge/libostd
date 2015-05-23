@@ -32,7 +32,7 @@ namespace octa {
 
         template<typename R>
         void ctor_from_range(R &range, EnableIf<IsSame<
-            RangeCategory<R>, RandomAccessRangeTag
+            RangeCategory<R>, FiniteRandomAccessRangeTag
         >::value, bool> = true) {
             RangeSize<R> len = range.length();
             reserve(len);
@@ -45,7 +45,7 @@ namespace octa {
 
         template<typename R>
         void ctor_from_range(R &range, EnableIf<!IsSame<
-            RangeCategory<R>, RandomAccessRangeTag
+            RangeCategory<R>, FiniteRandomAccessRangeTag
         >::value, bool> = true) {
             size_t i = 0;
             for (; !range.empty(); range.pop_first()) {

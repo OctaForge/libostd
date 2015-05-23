@@ -18,6 +18,7 @@ namespace octa {
     struct ForwardRangeTag {};
     struct BidirectionalRangeTag {};
     struct RandomAccessRangeTag {};
+    struct FiniteRandomAccessRangeTag: RandomAccessRangeTag {};
 
     template<typename T> using RangeCategory  = typename T::Category;
     template<typename T> using RangeSize      = typename T::SizeType;
@@ -318,7 +319,7 @@ namespace octa {
     }
 
     template<typename T>
-    struct PointerRange: InputRange<PointerRange<T>, RandomAccessRangeTag, T> {
+    struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> {
         PointerRange(): p_beg(nullptr), p_end(nullptr) {}
         PointerRange(const PointerRange &v): p_beg(v.p_beg),
             p_end(v.p_end) {}
@@ -380,7 +381,7 @@ namespace octa {
               T &last()       { return *(p_end - 1); }
         const T &last() const { return *(p_end - 1); }
 
-        /* satisfy RandomAccessRange */
+        /* satisfy FiniteRandomAccessRange */
         size_t length() const { return p_end - p_beg; }
 
         PointerRange slice(size_t start, size_t end) {
