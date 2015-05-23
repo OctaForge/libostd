@@ -87,11 +87,12 @@ namespace octa {
         static constexpr bool value = (sizeof(__octa_test<T>(0)) == sizeof(char));
     };
 
-    template<typename T, bool
-        = (IsConvertible<RangeCategory<T>, OutputRangeTag>::value ||
-        __OctaOutputRangeTest<T, const RangeValue<T> &>::value ||
-        __OctaOutputRangeTest<T, RangeValue<T> &&>::value)
-    > struct IsOutputRange: False {};
+    template<typename T, bool = (IsConvertible<
+        RangeCategory<T>, OutputRangeTag
+    >::value || (IsInputRange<T>::value &&
+        (__OctaOutputRangeTest<T, const RangeValue<T>  &>::value ||
+         __OctaOutputRangeTest<T,       RangeValue<T> &&>::value)
+    ))> struct IsOutputRange: False {};
 
     template<typename T>
     struct IsOutputRange<T, true>: True {};
