@@ -19,11 +19,10 @@ namespace octa {
     struct BidirectionalRangeTag {};
     struct RandomAccessRangeTag {};
 
-    template<typename T> using RangeCategory   = typename T::Category;
-    template<typename T> using RangeSize       = typename T::SizeType;
-    template<typename T> using RangeDifference = typename T::DiffType;
-    template<typename T> using RangeValue      = typename T::ValType;
-    template<typename T> using RangeReference  = typename T::RefType;
+    template<typename T> using RangeCategory  = typename T::Category;
+    template<typename T> using RangeSize      = typename T::SizeType;
+    template<typename T> using RangeValue     = typename T::ValType;
+    template<typename T> using RangeReference = typename T::RefType;
 
     template<typename T>
     struct __OctaRangeIterator {
@@ -63,11 +62,10 @@ namespace octa {
     }
 
     template<typename B, typename C, typename V, typename R = V &,
-             typename S = size_t, typename D = ptrdiff_t
+             typename S = size_t
     > struct InputRange {
         typedef C Category;
         typedef S SizeType;
-        typedef D DiffType;
         typedef V ValType;
         typedef R RefType;
 
@@ -87,20 +85,17 @@ namespace octa {
         }
     };
 
-    template<typename V, typename R = V &, typename S = size_t,
-                                           typename D = ptrdiff_t
-    > struct OutputRange {
+    template<typename V, typename R = V &, typename S = size_t>
+    struct OutputRange {
         typedef OutputRangeTag Category;
         typedef S SizeType;
-        typedef D DiffType;
         typedef V ValType;
         typedef R RefType;
     };
 
     template<typename T>
     struct ReverseRange: InputRange<ReverseRange<T>,
-        RangeCategory<T>, RangeValue<T>, RangeReference<T>, RangeSize<T>,
-        RangeDifference<T>
+        RangeCategory<T>, RangeValue<T>, RangeReference<T>, RangeSize<T>
     > {
     private:
         typedef RangeReference<T> r_ref;
@@ -197,8 +192,7 @@ namespace octa {
 
     template<typename T>
     struct MoveRange: InputRange<MoveRange<T>,
-        RangeCategory<T>, RangeValue<T>, RangeValue<T> &&, RangeSize<T>,
-        RangeDifference<T>
+        RangeCategory<T>, RangeValue<T>, RangeValue<T> &&, RangeSize<T>
     > {
     private:
         typedef RangeValue<T>   r_val;
@@ -418,7 +412,7 @@ namespace octa {
     struct EnumeratedRange: InputRange<EnumeratedRange<T>,
         InputRangeTag, RangeValue<T>,
         EnumeratedValue<RangeReference<T>, RangeSize<T>>,
-        RangeSize<T>, RangeDifference<T>
+        RangeSize<T>
     > {
     private:
         typedef RangeReference<T> r_ref;
