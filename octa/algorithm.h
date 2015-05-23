@@ -385,6 +385,51 @@ namespace octa {
         for (; !range.empty(); range.pop_first())
             range.first() = value++;
     }
+
+    template<typename T>
+    struct MapRange: InputRange<
+        MapRange<T>, InputRangeTag, RangeValue<T>, RangeValue<T>, RangeSize<T>
+    > {
+    private:
+        T p_range;
+        Function<RangeValue<T>(RangeReference<T>)> p_func;
+
+    public:
+        MapRange(): p_range(), p_func() {}
+        template<typename F>
+        MapRange(const T &range, const F &func): p_range(range), p_func(func) {}
+        MapRange(const MapRange &it): p_range(it.p_range), p_func(it.p_func) {}
+        MapRange(MapRange &&it): p_range(move(it.p_range)), p_func(move(it.p_func)) {}
+
+        MapRange &operator=(const MapRange &v) {
+            p_range = v.p_range;
+            p_func  = v.p_func;
+            return *this;
+        }
+        MapRange &operator=(MapRange &&v) {
+            p_range = mpve(v.p_range);
+            p_func  = move(v.p_func);
+            return *this;
+        }
+
+        bool empty() const { return p_range.empty(); }
+        void pop_first() { p_range.pop_first(); }
+        RangeSize<T> pop_first_n(RangeSize<T> n) { p_range.pop_first_n(n); }
+
+        RangeValue<T> first() { return p_func(p_range.first()); }
+
+        bool operator==(const MapRange &v) const {
+            return (p_range == v.p_range) && (p_func == v.p_func);
+        }
+        bool operator!=(const MapRange &v) const {
+            return (p_range != v.p_range) || (p_func != v.p_func);
+        }
+    };
+
+    template<typename R, typename F>
+    MapRange<R> map(R range, F func) {
+        return MapRange<R>(range, func);
+    }
 }
 
 #endif
