@@ -421,10 +421,18 @@ namespace octa {
         RangeSize<T> pop_first_n(RangeSize<T> n) { p_range.pop_first_n(n); }
         RangeSize<T> pop_last_n(RangeSize<T> n) { p_range.pop_last_n(n); }
 
+        RangeValue<T> first() const { return p_func(p_range.first()); }
+        RangeValue<T> last() const { return p_func(p_range.last()); }
+
         RangeValue<T> first() { return p_func(p_range.first()); }
         RangeValue<T> last() { return p_func(p_range.last()); }
 
-        RangeValue<T> operator[](RangeSize<T> idx) { return p_func(p_range[idx]); }
+        RangeValue<T> operator[](RangeSize<T> idx) const {
+            return p_func(p_range[idx]);
+        }
+        RangeValue<T> operator[](RangeSize<T> idx) {
+            return p_func(p_range[idx]);
+        }
 
         MapRange<T> slice(RangeSize<T> start, RangeSize<T> end) {
             return MapRange<T>(p_range.slice(start, end), p_func);
