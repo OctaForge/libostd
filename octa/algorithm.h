@@ -386,13 +386,13 @@ namespace octa {
             range.first() = value++;
     }
 
-    template<typename T>
+    template<typename T, typename R>
     struct MapRange: InputRange<
-        MapRange<T>, RangeCategory<T>, RangeValue<T>, RangeValue<T>, RangeSize<T>
+        MapRange<T, R>, RangeCategory<T>, R, R, RangeSize<T>
     > {
     private:
         T p_range;
-        Function<RangeValue<T>(RangeReference<T>)> p_func;
+        Function<R(RangeReference<T>)> p_func;
 
     public:
         MapRange(): p_range(), p_func() {}
@@ -421,21 +421,21 @@ namespace octa {
         RangeSize<T> pop_first_n(RangeSize<T> n) { p_range.pop_first_n(n); }
         RangeSize<T> pop_last_n(RangeSize<T> n) { p_range.pop_last_n(n); }
 
-        RangeValue<T> first() const { return p_func(p_range.first()); }
-        RangeValue<T> last() const { return p_func(p_range.last()); }
+        R first() const { return p_func(p_range.first()); }
+        R last() const { return p_func(p_range.last()); }
 
-        RangeValue<T> first() { return p_func(p_range.first()); }
-        RangeValue<T> last() { return p_func(p_range.last()); }
+        R first() { return p_func(p_range.first()); }
+        R last() { return p_func(p_range.last()); }
 
-        RangeValue<T> operator[](RangeSize<T> idx) const {
+        R operator[](RangeSize<T> idx) const {
             return p_func(p_range[idx]);
         }
-        RangeValue<T> operator[](RangeSize<T> idx) {
+        R operator[](RangeSize<T> idx) {
             return p_func(p_range[idx]);
         }
 
-        MapRange<T> slice(RangeSize<T> start, RangeSize<T> end) {
-            return MapRange<T>(p_range.slice(start, end), p_func);
+        MapRange<T, R> slice(RangeSize<T> start, RangeSize<T> end) {
+            return MapRange<T, R>(p_range.slice(start, end), p_func);
         }
 
         bool operator==(const MapRange &v) const {
@@ -447,8 +447,11 @@ namespace octa {
     };
 
     template<typename R, typename F>
-    MapRange<R> map(R range, F func) {
-        return MapRange<R>(range, func);
+    using __OctaMapReturnType = decltype(declval<F>()(declval<RangeReference<R>>()));
+
+    template<typename R, typename F>
+    MapRange<R, __OctaMapReturnType<R, F>> map(R range, F func) {
+        return MapRange<R, __OctaMapReturnType<R, F>>(range, func);
     }
 
     template<typename T>
