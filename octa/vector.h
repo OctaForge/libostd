@@ -295,7 +295,7 @@ namespace octa {
         }
 
         T *insert(size_t idx, InitializerList<T> il) {
-            return insert_range(idx, il.range());
+            return insert_range(idx, il.each());
         }
 
         RangeType each() {

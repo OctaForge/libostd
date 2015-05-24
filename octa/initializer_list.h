@@ -33,7 +33,7 @@ namespace std {
 
         const T *get() const { return p_buf; }
 
-        octa::PointerRange<const T> range() {
+        octa::PointerRange<const T> each() {
             return octa::PointerRange<const T>(p_buf, p_len);
         }
     };

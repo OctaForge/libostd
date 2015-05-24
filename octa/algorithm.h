@@ -191,21 +191,21 @@ namespace octa {
 
     template<typename T>
     inline T min(InitializerList<T> il) {
-        return min_element(il.range()).first();
+        return min_element(il.each()).first();
     }
     template<typename T, typename C>
     inline T min(InitializerList<T> il, C compare) {
-        return min_element(il.range(), compare).first();
+        return min_element(il.each(), compare).first();
     }
 
     template<typename T>
     inline T max(InitializerList<T> il) {
-        return max_element(il.range()).first();
+        return max_element(il.each()).first();
     }
 
     template<typename T, typename C>
     inline T max(InitializerList<T> il, C compare) {
-        return max_element(il.range(), compare).first();
+        return max_element(il.each(), compare).first();
     }
 
     /* clamp */
@@ -407,7 +407,7 @@ namespace octa {
             return *this;
         }
         MapRange &operator=(MapRange &&v) {
-            p_range = mpve(v.p_range);
+            p_range = move(v.p_range);
             p_func  = move(v.p_func);
             return *this;
         }
@@ -449,6 +449,72 @@ namespace octa {
     template<typename R, typename F>
     MapRange<R> map(R range, F func) {
         return MapRange<R>(range, func);
+    }
+
+    template<typename T>
+    struct FilterRange: InputRange<
+        FilterRange<T>, ForwardRangeTag, RangeValue<T>, RangeReference<T>,
+        RangeSize<T>
+    > {
+    private:
+        T p_range;
+        Function<bool(RangeReference<T>)> p_pred;
+
+        void advance_valid() {
+            while (!p_range.empty() && !p_pred(first())) p_range.pop_first();
+        }
+
+    public:
+        FilterRange(): p_range(), p_pred() {}
+
+        template<typename P>
+        FilterRange(const T &range, const P &pred): p_range(range),
+        p_pred(pred) {
+            advance_valid();
+        }
+        FilterRange(const FilterRange &it): p_range(it.p_range),
+        p_pred(it.p_pred) {
+            advance_valid();
+        }
+        FilterRange(FilterRange &&it): p_range(move(it.p_range)),
+        p_pred(move(it.p_pred)) {
+            advance_valid();
+        }
+
+        FilterRange &operator=(const FilterRange &v) {
+            p_range = v.p_range;
+            p_pred  = v.p_pred;
+            advance_valid();
+            return *this;
+        }
+        FilterRange &operator=(FilterRange &&v) {
+            p_range = move(v.p_range);
+            p_pred  = move(v.p_pred);
+            advance_valid();
+            return *this;
+        }
+
+        bool empty() const { return p_range.empty(); }
+
+        void pop_first() {
+            p_range.pop_first();
+            advance_valid();
+        }
+
+        RangeReference<T> first() const { return p_range.first(); }
+        RangeReference<T> first() { return p_range.first(); }
+
+        bool operator==(const FilterRange &v) const {
+            return (p_range == v.p_range) && (p_pred == v.p_pred);
+        }
+        bool operator!=(const FilterRange &v) const {
+            return (p_range != v.p_range) || (p_pred != v.p_pred);
+        }
+    };
+
+    template<typename R, typename P>
+    FilterRange<R> filter(R range, P pred) {
+        return FilterRange<R>(range, pred);
     }
 }
 
