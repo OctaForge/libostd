@@ -37,13 +37,14 @@ namespace octa {
         return true;
     }
 
-    /* insertion sort */
+    /* sorting */
 
     template<typename R, typename C>
-    void insertion_sort(R range, C compare) {
+    void __octa_insort(R range, C compare) {
         RangeSize<R> rlen = range.length();
         for (RangeSize<R> i = 1; i < rlen; ++i) {
-            RangeSize<R> j = i, v = range[i];
+            RangeSize<R> j = i;
+            RangeReference<R> v = range[i];
             while (j > 0 && !compare(range[j - 1], v)) {
                 range[j] = range[j - 1];
                 --j;
@@ -51,13 +52,6 @@ namespace octa {
             range[j] = v;
         }
     }
-
-    template<typename R>
-    void insertion_sort(R range) {
-        insertion_sort(range, Less<RangeValue<R>>());
-    }
-
-    /* sort (introsort) */
 
     template<typename T, typename U>
     struct __OctaUnaryCompare {
@@ -103,7 +97,7 @@ namespace octa {
     template<typename R, typename C>
     void __octa_introloop(R range, C compare, RangeSize<R> depth) {
         if (range.length() <= 10) {
-            insertion_sort(range, compare);
+            __octa_insort(range, compare);
             return;
         }
         if (depth == 0) {
