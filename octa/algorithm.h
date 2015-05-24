@@ -453,8 +453,8 @@ namespace octa {
 
     template<typename T>
     struct FilterRange: InputRange<
-        FilterRange<T>, ForwardRangeTag, RangeValue<T>, RangeReference<T>,
-        RangeSize<T>
+        FilterRange<T>, CommonType<RangeCategory<T>, ForwardRangeTag>,
+        RangeValue<T>, RangeReference<T>, RangeSize<T>
     > {
     private:
         T p_range;
