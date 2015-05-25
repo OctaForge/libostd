@@ -89,7 +89,7 @@ namespace octa {
 
         Vector(InitializerList<T> v): Vector() {
             size_t len = v.length();
-            const T *ptr = v.get();
+            const T *ptr = v.data();
             reserve(len);
             for (size_t i = 0; i < len; ++i)
                 new (&p_buf[i]) T(ptr[i]);
@@ -146,9 +146,9 @@ namespace octa {
             size_t ilen = il.length();
             reserve(ilen);
             if (octa::IsPod<T>()) {
-                memcpy(p_buf, il.get(), ilen);
+                memcpy(p_buf, il.data(), ilen);
             } else {
-                T *buf = p_buf, *ibuf = il.get(), *last = il.get() + ilen;
+                T *buf = p_buf, *ibuf = il.data(), *last = il.data() + ilen;
                 while (ibuf != last) {
                     new (buf++) T(*ibuf++);
                 }

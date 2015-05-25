@@ -19,19 +19,21 @@ namespace std {
 
         initializer_list(const T *v, size_t n): p_buf(v), p_len(n) {}
     public:
-        typedef size_t    SizeType;
-        typedef ptrdiff_t DiffType;
-        typedef       T   ValType;
-        typedef       T  &RefType;
-        typedef const T  &ConstRefType;
-        typedef       T  *PtrType;
-        typedef const T  *ConstPtrType;
+        typedef size_t     SizeType;
+        typedef ptrdiff_t  DiffType;
+        typedef       T    ValType;
+        typedef const T   &RefType;
+        typedef const T   &ConstRefType;
+        typedef const T   *PtrType;
+        typedef const T   *ConstPtrType;
+        typedef octa::PointerRange<const T>  RangeType;
+        typedef octa::PointerRange<const T>  ConstRangeType;
 
         initializer_list(): p_buf(nullptr), p_len(0) {}
 
         size_t length() const { return p_len; }
 
-        const T *get() const { return p_buf; }
+        const T *data() const { return p_buf; }
 
         octa::PointerRange<const T> each() {
             return octa::PointerRange<const T>(p_buf, p_len);
