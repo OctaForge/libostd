@@ -380,6 +380,34 @@ namespace octa {
             range.first() = value++;
     }
 
+    template<typename R, typename T>
+    T foldl(R range, T init) {
+        for (; !range.empty(); range.pop_first())
+            init = init + range.first();
+        return init;
+    }
+
+    template<typename R, typename T, typename F>
+    T foldl(R range, T init, F func) {
+        for (; !range.empty(); range.pop_first())
+            init = func(init, range.first());
+        return init;
+    }
+
+    template<typename R, typename T>
+    T foldr(R range, T init) {
+        for (; !range.empty(); range.pop_last())
+            init = init + range.last();
+        return init;
+    }
+
+    template<typename R, typename T, typename F>
+    T foldr(R range, T init, F func) {
+        for (; !range.empty(); range.pop_last())
+            init = func(init, range.last());
+        return init;
+    }
+
     template<typename T, typename R>
     struct MapRange: InputRange<
         MapRange<T, R>, RangeCategory<T>, R, R, RangeSize<T>

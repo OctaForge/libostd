@@ -26,8 +26,8 @@ namespace std {
         typedef const T   &ConstRefType;
         typedef const T   *PtrType;
         typedef const T   *ConstPtrType;
-        typedef octa::PointerRange<const T>  RangeType;
-        typedef octa::PointerRange<const T>  ConstRangeType;
+        typedef octa::PointerRange<const T> RangeType;
+        typedef octa::PointerRange<const T> ConstRangeType;
 
         initializer_list(): p_buf(nullptr), p_len(0) {}
 
