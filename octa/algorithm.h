@@ -366,12 +366,13 @@ namespace octa {
     }
 
     template<typename R1, typename R2>
-    R2 swap_ranges(R1 range1, R2 range2) {
-        for (; !range1.empty(); range1.pop_first()) {
+    Pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
+        while (!range1.empty() && !range2.empty()) {
             swap(range1.first(), range2.first());
+            range1.pop_first();
             range2.pop_first();
         }
-        return range2;
+        return Pair<R1, R2>(range1, range2);
     }
 
     template<typename R, typename T>
