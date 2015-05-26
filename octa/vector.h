@@ -306,9 +306,9 @@ namespace octa {
         }
 
         void swap(Vector &v) {
-            swap(p_len, v.p_len);
-            swap(p_cap, v.p_cap);
-            swap(p_buf, v.p_buf);
+            octa::swap(p_len, v.p_len);
+            octa::swap(p_cap, v.p_cap);
+            octa::swap(p_buf, v.p_buf);
         }
     };
 
