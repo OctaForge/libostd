@@ -311,11 +311,6 @@ namespace octa {
             octa::swap(p_buf, v.p_buf);
         }
     };
-
-    template<typename T>
-    void swap(Vector<T> &a, Vector<T> &b) {
-        a.swap(b);
-    }
 }
 
 #endif

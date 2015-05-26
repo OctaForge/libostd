@@ -62,11 +62,6 @@ namespace octa {
 
         T p_buf[(N > 0) ? N : 1];
     };
-
-    template<typename T, size_t N>
-    void swap(Array<T, N> &a, Array<T, N> &b) {
-        a.swap(b);
-    }
 }
 
 #endif

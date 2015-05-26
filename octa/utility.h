@@ -36,10 +36,30 @@ namespace octa {
 
     /* swap */
 
-    template<typename T> void swap(T &a, T &b) {
+    template<typename T>
+    struct __OctaSwapTest {
+        template<typename U, void (U::*)(U &)> struct __OctaTest {};
+        template<typename U> static char __octa_test(__OctaTest<U, &U::swap> *);
+        template<typename U> static  int __octa_test(...);
+        static constexpr bool value = (sizeof(__octa_test<T>(0)) == sizeof(char));
+    };
+
+    template<typename T> inline void __octa_swap(T &a, T &b, EnableIf<
+        __OctaSwapTest<T>::value, bool
+    > = true) {
+        a.swap(b);
+    }
+
+    template<typename T> inline void __octa_swap(T &a, T &b, EnableIf<
+        !__OctaSwapTest<T>::value, bool
+    > = true) {
         T c(move(a));
         a = move(b);
         b = move(c);
+    }
+
+    template<typename T> void swap(T &a, T &b) {
+        __octa_swap(a, b);
     }
 
     template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N]) {
@@ -103,11 +123,6 @@ namespace octa {
             octa::swap(second, v.second);
         }
     };
-
-    template<typename T, typename U>
-    void swap(Pair<T, U> &a, Pair<T, U> &b) {
-        a.swap(b);
-    }
 }
 
 #endif

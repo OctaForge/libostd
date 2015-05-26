@@ -618,11 +618,6 @@ namespace octa {
     };
 
     template<typename T>
-    void swap(Function<T> &a, Function<T> &b) {
-        a.swap(b);
-    }
-
-    template<typename T>
     bool operator==(nullptr_t, const Function<T> &rhs) { return !rhs; }
 
     template<typename T>
