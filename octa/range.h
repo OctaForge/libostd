@@ -559,6 +559,21 @@ namespace octa {
     EnumeratedRange<T> enumerate(const T &it) {
         return EnumeratedRange<T>(it);
     }
+
+    template<typename T>
+    auto each(T &r) -> decltype(r.each()) {
+        return r.each();
+    }
+
+    template<typename T>
+    auto each(const T &r) -> decltype(r.each()) {
+        return r.each();
+    }
+
+    template<typename T, size_t N>
+    PointerRange<T> each(T (&array)[N]) {
+        return PointerRange<T>(array, N);
+    }
 }
 
 #endif

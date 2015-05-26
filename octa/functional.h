@@ -16,7 +16,7 @@ namespace octa {
 
 #define __OCTA_DEFINE_BINARY_OP(name, op, rettype) \
     template<typename T> struct name { \
-        bool operator()(const T &x, const T &y) const { return x op y; } \
+        rettype operator()(const T &x, const T &y) const { return x op y; } \
         typedef T FirstArgType; \
         typedef T SecondArgType; \
         typedef rettype ResultType; \

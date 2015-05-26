@@ -43,6 +43,11 @@ namespace std {
 
 namespace octa {
     template<typename T> using InitializerList = std::initializer_list<T>;
+
+    template<typename T>
+    auto each(InitializerList<T> init) -> decltype(init.each()) {
+        return init.each();
+    }
 }
 
 #endif
