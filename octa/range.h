@@ -485,7 +485,7 @@ namespace octa {
 
     template<typename T>
     struct EnumeratedRange: InputRange<EnumeratedRange<T>,
-        InputRangeTag, RangeValue<T>,
+        CommonType<RangeCategory<T>, ForwardRangeTag>, RangeValue<T>,
         EnumeratedValue<RangeReference<T>, RangeSize<T>>,
         RangeSize<T>
     > {
@@ -548,16 +548,107 @@ namespace octa {
         }
 
         bool operator==(const EnumeratedRange &v) const {
-            return p_range == v.p_range;
+            return p_index == v.p_index && p_range == v.p_range;
         }
         bool operator!=(const EnumeratedRange &v) const {
-            return p_range != v.p_range;
+            return p_index != v.p_index || p_range != v.p_range;
         }
     };
 
     template<typename T>
     EnumeratedRange<T> enumerate(const T &it) {
         return EnumeratedRange<T>(it);
+    }
+
+    template<typename T>
+    struct TakeRange: InputRange<TakeRange<T>,
+        Conditional<IsRandomAccessRange<T>::value,
+            FiniteRandomAccessRangeTag,
+            CommonType<RangeCategory<T>, ForwardRangeTag>
+        >,
+        RangeValue<T>, RangeReference<T>, RangeSize<T>
+    > {
+    private:
+        T p_range;
+        RangeSize<T> p_remaining;
+    public:
+        TakeRange(): p_range(), p_remaining(0) {}
+        TakeRange(const T &range, RangeSize<T> rem): p_range(range),
+            p_remaining(rem) {}
+        TakeRange(const TakeRange &it): p_range(it.p_range),
+            p_remaining(it.p_remaining) {}
+        TakeRange(TakeRange &&it): p_range(move(it.p_range)),
+            p_remaining(it.p_remaining) {}
+
+        TakeRange &operator=(const TakeRange &v) {
+            p_range = v.p_range; p_remaining = v.p_remaining; return *this;
+        }
+        TakeRange &operator=(TakeRange &&v) {
+            p_range = move(v.p_range); p_remaining = v.p_remaining; return *this;
+        }
+
+        bool empty() const { return (p_remaining <= 0) || p_range.empty(); }
+
+        void pop_first() { --p_remaining; p_range.pop_first(); }
+        RangeSize<T> pop_first_n(RangeSize<T> n) {
+            p_remaining -= n;
+            return p_range.pop_first_n((n > p_remaining) ? p_remaining : n);
+        }
+
+        RangeReference<T> first() { return p_range.first(); }
+        RangeReference<T> first() const { return p_range.first(); }
+
+        RangeSize<T> length() const {
+            if (p_remaining <= 0) return 0;
+            if (IsFiniteRandomAccessRange<T>::value) {
+                RangeSize<T> ol = p_range.length();
+                return (ol > p_remaining) ? p_remaining : ol;
+            }
+            return p_remaining;
+        }
+
+        void pop_last() {
+            static_assert(IsRandomAccessRange<T>::value,
+                "pop_last() only available for random access ranges");
+            --p_remaining;
+        }
+        RangeSize<T> pop_last_n(RangeSize<T> n) {
+            static_assert(IsRandomAccessRange<T>::value,
+                "pop_last_n() only available for random access ranges");
+            RangeSize<T> ol = length();
+            p_remaining -= n;
+            return (ol < n) ? ol : n;
+        }
+
+        RangeReference<T> last() {
+            static_assert(IsRandomAccessRange<T>::value,
+                "last() only available for random access ranges");
+            return p_range[length() - 1];
+        }
+        RangeReference<T> last() const {
+            static_assert(IsRandomAccessRange<T>::value,
+                "last() only available for random access ranges");
+            return p_range[length() - 1];
+        }
+
+        RangeReference<T> operator[](RangeSize<T> idx) {
+            return p_range[idx];
+        }
+        RangeReference<T> operator[](RangeSize<T> idx) const {
+            return p_range[idx];
+        }
+
+        bool operator==(const TakeRange &v) const {
+            return p_remaining == v.p_remaining && p_range == v.p_range;
+        }
+        bool operator!=(const TakeRange &v) const {
+            return p_remaining != v.p_remaining || p_range != v.p_range;
+        }
+    };
+
+    template<typename T>
+    TakeRange<T> take(const T &it, RangeSize<T> n) {
+        return TakeRange<T>(it, n);
     }
 
     template<typename T>
