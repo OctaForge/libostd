@@ -10,6 +10,7 @@
 
 #include "octa/range.h"
 
+#ifndef OCTA_ALLOW_CXXSTD
 /* must be in std namespace otherwise the compiler won't know about it */
 namespace std {
     template<typename T>
@@ -37,6 +38,9 @@ namespace std {
         const T *end() const { return p_buf + p_len; }
     };
 }
+#else
+#include <initializer_list>
+#endif
 
 namespace octa {
     template<typename T> using InitializerList = std::initializer_list<T>;
