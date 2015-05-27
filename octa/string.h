@@ -130,6 +130,19 @@ namespace octa {
 
     typedef StringBase<char> String;
 
+    template<typename R, typename F>
+    String concat(R range, F func, String sep) {
+        String ret;
+        if (range.empty()) return move(ret);
+        for (;;) {
+            ret += func(range.first());
+            range.pop_first();
+            if (range.empty()) break;
+            ret += sep;
+        }
+        return move(ret);
+    }
+
     template<typename R>
     String concat(R range, String sep = " ") {
         String ret;
@@ -143,22 +156,31 @@ namespace octa {
         return move(ret);
     }
 
-    template<typename T>
-    String to_string(const T &) {
-        return "";
-    }
+    template<typename T> struct ToString {
+        typedef T ArgType;
+        typedef String ResultType;
+        String operator()(const T &) { return ""; }
+    };
 
-    String to_string(char c) {
-        String ret;
-        ret.push(c);
-        return move(ret);
-    }
+    template<> struct ToString<char> {
+        typedef char ArgType;
+        typedef String ResultType;
+        String operator()(char c) {
+            String ret;
+            ret.push(c);
+            return move(ret);
+        }
+    };
 
-    String to_string(int v) {
-        char buf[128];
-        sprintf(buf, "%d", v);
-        return String((const char *)buf);
-    }
+    template<> struct ToString<int> {
+        typedef int ArgType;
+        typedef String ResultType;
+        String operator()(int v) {
+            char buf[128];
+            sprintf(buf, "%d", v);
+            return String((const char *)buf);
+        }
+    };
 }
 
 #endif
