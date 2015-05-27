@@ -72,7 +72,7 @@ namespace octa {
         Vector(): p_buf(nullptr), p_len(0), p_cap(0) {}
 
         explicit Vector(size_t n, const T &val = T()): Vector() {
-            p_buf = new uchar[n * sizeof(T)];
+            p_buf = (T *)new uchar[n * sizeof(T)];
             p_len = p_cap = n;
             T *cur = p_buf, *last = p_buf + n;
             while (cur != last) new (cur++) T(val);

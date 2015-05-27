@@ -123,6 +123,19 @@ namespace octa {
     };
 
     typedef StringBase<char> String;
+
+    template<typename R>
+    String concat(R range, String sep = " ") {
+        String ret;
+        if (range.empty()) return move(ret);
+        for (;;) {
+            ret += range.first();
+            range.pop_first();
+            if (range.empty()) break;
+            ret += sep;
+        }
+        return move(ret);
+    }
 }
 
 #endif
