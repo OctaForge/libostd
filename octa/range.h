@@ -652,6 +652,51 @@ namespace octa {
     }
 
     template<typename T>
+    struct ChunksRange: InputRange<ChunksRange<T>,
+        CommonType<RangeCategory<T>, ForwardRangeTag>,
+        TakeRange<T>, TakeRange<T>, RangeSize<T>
+    > {
+    private:
+        T p_range;
+        RangeSize<T> p_chunksize;
+    public:
+        ChunksRange(): p_range(), p_chunksize(0) {}
+        ChunksRange(const T &range, RangeSize<T> chs): p_range(range),
+            p_chunksize(chs) {}
+        ChunksRange(const ChunksRange &it): p_range(it.p_range),
+            p_chunksize(it.p_chunksize) {}
+        ChunksRange(ChunksRange &&it): p_range(move(it.p_range)),
+            p_chunksize(it.p_chunksize) {}
+
+        ChunksRange &operator=(const ChunksRange &v) {
+            p_range = v.p_range; p_chunksize = v.p_chunksize; return *this;
+        }
+        ChunksRange &operator=(ChunksRange &&v) {
+            p_range = move(v.p_range); p_chunksize = v.p_chunksize; return *this;
+        }
+
+        bool empty() const { return p_range.empty(); }
+        void pop_first() { p_range.pop_first_n(p_chunksize); }
+        RangeSize<T> pop_first_n(RangeSize<T> n) {
+            return p_range.pop_first_n(p_chunksize * n);
+        }
+
+        TakeRange<T> first() { return take(p_range, p_chunksize); }
+
+        bool operator==(const ChunksRange &v) const {
+            return p_chunksize == v.p_chunksize && p_range == v.p_range;
+        }
+        bool operator!=(const ChunksRange &v) const {
+            return p_chunksize != v.p_chunksize || p_range != v.p_range;
+        }
+    };
+
+    template<typename T>
+    ChunksRange<T> chunks(const T &it, RangeSize<T> chs) {
+        return ChunksRange<T>(it, chs);
+    }
+
+    template<typename T>
     auto each(T &r) -> decltype(r.each()) {
         return r.each();
     }
