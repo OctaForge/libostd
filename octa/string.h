@@ -6,6 +6,7 @@
 #ifndef OCTA_STRING_H
 #define OCTA_STRING_H
 
+#include <stdio.h>
 #include <stddef.h>
 
 #include "octa/utility.h"
@@ -92,6 +93,11 @@ namespace octa {
 
         bool empty() const { return (length() == 0); }
 
+        void push(T v) {
+            p_buf.last() = v;
+            p_buf.push('\0');
+        }
+
         StringBase<T> &operator+=(const StringBase &s) {
             p_buf.pop();
             p_buf.insert_range(p_buf.length(), s.p_buf.each());
@@ -135,6 +141,23 @@ namespace octa {
             ret += sep;
         }
         return move(ret);
+    }
+
+    template<typename T>
+    String to_string(const T &) {
+        return "";
+    }
+
+    String to_string(char c) {
+        String ret;
+        ret.push(c);
+        return move(ret);
+    }
+
+    String to_string(int v) {
+        char buf[128];
+        sprintf(buf, "%d", v);
+        return String((const char *)buf);
     }
 }
 
