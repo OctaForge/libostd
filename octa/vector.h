@@ -34,7 +34,7 @@ namespace octa {
         void ctor_from_range(R &range, EnableIf<IsFiniteRandomAccessRange<R>
                 ::value, bool
         > = true) {
-            RangeSize<R> len = range.length();
+            RangeSize<R> len = range.size();
             reserve(len);
             p_len = len;
             for (size_t i = 0; !range.empty(); range.pop_first()) {
@@ -88,7 +88,7 @@ namespace octa {
         }
 
         Vector(InitializerList<T> v): Vector() {
-            size_t len = v.length();
+            size_t len = v.size();
             const T *ptr = v.data();
             reserve(len);
             for (size_t i = 0; i < len; ++i)
@@ -143,7 +143,7 @@ namespace octa {
 
         Vector<T> &operator=(InitializerList<T> il) {
             clear();
-            size_t ilen = il.length();
+            size_t ilen = il.size();
             reserve(ilen);
             if (octa::IsPod<T>()) {
                 memcpy(p_buf, il.data(), ilen);
@@ -245,7 +245,7 @@ namespace octa {
         T *data() { return p_buf; }
         const T *data() const { return p_buf; }
 
-        size_t length() const { return p_len; }
+        size_t size() const { return p_len; }
         size_t capacity() const { return p_cap; }
 
         bool empty() const { return (p_len == 0); }
@@ -285,7 +285,7 @@ namespace octa {
 
         template<typename U>
         T *insert_range(size_t idx, U range) {
-            size_t len = range.length();
+            size_t len = range.size();
             insert_base(idx, len);
             for (size_t i = 0; i < len; ++i) {
                 p_buf[idx + i] = range.first();

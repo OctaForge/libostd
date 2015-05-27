@@ -31,7 +31,7 @@ namespace std {
 
         initializer_list(): p_buf(nullptr), p_len(0) {}
 
-        size_t length() const { return p_len; }
+        size_t size() const { return p_len; }
 
         const T *data() const { return p_buf; }
 

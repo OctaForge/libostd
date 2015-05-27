@@ -208,8 +208,8 @@ namespace octa {
             return p_range.empty();
         }
 
-        r_size length() const {
-            return p_range.length();
+        r_size size() const {
+            return p_range.size();
         }
 
         void pop_first() {
@@ -248,14 +248,14 @@ namespace octa {
         }
 
         r_ref operator[](r_size i) {
-            return p_range[length() - i - 1];
+            return p_range[size() - i - 1];
         }
         r_ref operator[](r_size i) const {
-            return p_range[length() - i - 1];
+            return p_range[size() - i - 1];
         }
 
         ReverseRange<T> slice(r_size start, r_size end) {
-            r_size len = p_range.length();
+            r_size len = p_range.size();
             return ReverseRange<T>(p_range.slice(len - end, len - start));
         }
     };
@@ -305,8 +305,8 @@ namespace octa {
         bool empty() const {
             return p_range.empty();
         }
-        r_size length() const {
-            return p_range.length();
+        r_size size() const {
+            return p_range.size();
         }
 
         void pop_first() {
@@ -456,7 +456,7 @@ namespace octa {
         const T &last() const { return *(p_end - 1); }
 
         /* satisfy FiniteRandomAccessRange */
-        size_t length() const { return p_end - p_beg; }
+        size_t size() const { return p_end - p_beg; }
 
         PointerRange slice(size_t start, size_t end) {
             return PointerRange(p_beg + start, p_beg + end);
@@ -598,10 +598,10 @@ namespace octa {
         RangeReference<T> first() { return p_range.first(); }
         RangeReference<T> first() const { return p_range.first(); }
 
-        RangeSize<T> length() const {
+        RangeSize<T> size() const {
             if (p_remaining <= 0) return 0;
             if (IsFiniteRandomAccessRange<T>::value) {
-                RangeSize<T> ol = p_range.length();
+                RangeSize<T> ol = p_range.size();
                 return (ol > p_remaining) ? p_remaining : ol;
             }
             return p_remaining;
@@ -615,7 +615,7 @@ namespace octa {
         RangeSize<T> pop_last_n(RangeSize<T> n) {
             static_assert(IsRandomAccessRange<T>::value,
                 "pop_last_n() only available for random access ranges");
-            RangeSize<T> ol = length();
+            RangeSize<T> ol = size();
             p_remaining -= n;
             return (ol < n) ? ol : n;
         }
@@ -623,12 +623,12 @@ namespace octa {
         RangeReference<T> last() {
             static_assert(IsRandomAccessRange<T>::value,
                 "last() only available for random access ranges");
-            return p_range[length() - 1];
+            return p_range[size() - 1];
         }
         RangeReference<T> last() const {
             static_assert(IsRandomAccessRange<T>::value,
                 "last() only available for random access ranges");
-            return p_range[length() - 1];
+            return p_range[size() - 1];
         }
 
         RangeReference<T> operator[](RangeSize<T> idx) {

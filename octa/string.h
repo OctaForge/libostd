@@ -42,7 +42,7 @@ namespace octa {
 
         StringBase(const StringBase &s, size_t pos, size_t len = npos):
             p_buf(s.p_buf.each().slice(pos,
-                (len == npos) ? s.p_buf.length() : (pos + len))) {
+                (len == npos) ? s.p_buf.size() : (pos + len))) {
             terminate();
         }
 
@@ -77,21 +77,21 @@ namespace octa {
         T &first() { return p_buf[0]; }
         const T &first() const { return p_buf[0]; };
 
-        T &last() { return p_buf[length() - 1]; }
-        const T &last() const { return p_buf[length() - 1]; }
+        T &last() { return p_buf[size() - 1]; }
+        const T &last() const { return p_buf[size() - 1]; }
 
         T *data() { return p_buf.data(); }
         const T *data() const { return p_buf.data(); }
 
-        size_t length() const {
-            return p_buf.length() - 1;
+        size_t size() const {
+            return p_buf.size() - 1;
         }
 
         size_t capacity() const {
             return p_buf.capacity() - 1;
         }
 
-        bool empty() const { return (length() == 0); }
+        bool empty() const { return (size() == 0); }
 
         void push(T v) {
             p_buf.last() = v;
@@ -100,12 +100,12 @@ namespace octa {
 
         StringBase<T> &operator+=(const StringBase &s) {
             p_buf.pop();
-            p_buf.insert_range(p_buf.length(), s.p_buf.each());
+            p_buf.insert_range(p_buf.size(), s.p_buf.each());
             return *this;
         }
         StringBase<T> &operator+=(const T *s) {
             p_buf.pop();
-            p_buf.insert_range(p_buf.length(), PointerRange<const T>(s,
+            p_buf.insert_range(p_buf.size(), PointerRange<const T>(s,
                 strlen(s) + 1));
             return *this;
         }
@@ -117,10 +117,10 @@ namespace octa {
         }
 
         RangeType each() {
-            return PointerRange<T>(p_buf.data(), length());
+            return PointerRange<T>(p_buf.data(), size());
         }
         ConstRangeType each() const {
-            return PointerRange<const T>(p_buf.data(), length());
+            return PointerRange<const T>(p_buf.data(), size());
         }
 
         void swap(StringBase &v) {

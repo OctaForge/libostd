@@ -36,7 +36,7 @@ namespace octa {
         T &last() { return p_buf[(N > 0) ? (N - 1) : 0]; }
         const T &last() const { return p_buf[(N > 0) ? (N - 1) : 0]; }
 
-        size_t length() const { return N; }
+        size_t size() const { return N; }
 
         bool empty() const { return N == 0; }
 

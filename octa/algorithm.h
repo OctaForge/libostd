@@ -41,7 +41,7 @@ namespace octa {
 
     template<typename R, typename C>
     void __octa_insort(R range, C compare) {
-        RangeSize<R> rlen = range.length();
+        RangeSize<R> rlen = range.size();
         for (RangeSize<R> i = 1; i < rlen; ++i) {
             RangeSize<R> j = i;
             RangeReference<R> v = range[i];
@@ -80,7 +80,7 @@ namespace octa {
 
     template<typename R, typename C>
     void __octa_heapsort(R range, C compare) {
-        RangeSize<R> len = range.length();
+        RangeSize<R> len = range.size();
         RangeSize<R> st = (len - 2) / 2;
         for (;;) {
             __octa_hs_sift_down(range, st, len - 1, compare);
@@ -96,7 +96,7 @@ namespace octa {
 
     template<typename R, typename C>
     void __octa_introloop(R range, C compare, RangeSize<R> depth) {
-        if (range.length() <= 10) {
+        if (range.size() <= 10) {
             __octa_insort(range, compare);
             return;
         }
@@ -104,10 +104,10 @@ namespace octa {
             __octa_heapsort(range, compare);
             return;
         }
-        RangeReference<R> p = range[range.length() / 2];
+        RangeReference<R> p = range[range.size() / 2];
         swap(p, range.last());
         R r = partition(range, __OctaUnaryCompare<decltype(p), C>{ p, compare });
-        R l = range.slice(0, range.length() - r.length());
+        R l = range.slice(0, range.size() - r.size());
         swap(r.first(), r.last());
         __octa_introloop(l, compare, depth - 1);
         __octa_introloop(r, compare, depth - 1);
@@ -116,7 +116,7 @@ namespace octa {
     template<typename R, typename C>
     void __octa_introsort(R range, C compare) {
         __octa_introloop(range, compare, RangeSize<R>(2
-            * (log(range.length()) / log(2))));
+            * (log(range.size()) / log(2))));
     }
 
     template<typename R, typename C>
@@ -436,7 +436,7 @@ namespace octa {
         }
 
         bool empty() const { return p_range.empty(); }
-        RangeSize<T> length() const { return p_range.length(); }
+        RangeSize<T> size() const { return p_range.size(); }
 
         void pop_first() { p_range.pop_first(); }
         void pop_last() { p_range.pop_last(); }
