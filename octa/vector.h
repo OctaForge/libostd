@@ -88,8 +88,8 @@ namespace octa {
         }
 
         Vector(InitializerList<T> v): Vector() {
-            size_t len = v.size();
-            const T *ptr = v.data();
+            size_t len = v.end() - v.begin();
+            const T *ptr = v.begin();
             reserve(len);
             for (size_t i = 0; i < len; ++i)
                 new (&p_buf[i]) T(ptr[i]);
@@ -143,12 +143,12 @@ namespace octa {
 
         Vector<T> &operator=(InitializerList<T> il) {
             clear();
-            size_t ilen = il.size();
+            size_t ilen = il.end() - il.begin();
             reserve(ilen);
             if (octa::IsPod<T>()) {
-                memcpy(p_buf, il.data(), ilen);
+                memcpy(p_buf, il.begin(), ilen);
             } else {
-                T *buf = p_buf, *ibuf = il.data(), *last = il.data() + ilen;
+                T *buf = p_buf, *ibuf = il.begin(), *last = il.end();
                 while (ibuf != last) {
                     new (buf++) T(*ibuf++);
                 }
@@ -295,7 +295,7 @@ namespace octa {
         }
 
         T *insert(size_t idx, InitializerList<T> il) {
-            return insert_range(idx, il.each());
+            return insert_range(idx, octa::each(il));
         }
 
         RangeType each() {

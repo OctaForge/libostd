@@ -33,11 +33,8 @@ namespace std {
 
         size_t size() const { return p_len; }
 
-        const T *data() const { return p_buf; }
-
-        octa::PointerRange<const T> each() {
-            return octa::PointerRange<const T>(p_buf, p_len);
-        }
+        const T *begin() const { return p_buf; }
+        const T *end() const { return p_buf + p_len; }
     };
 }
 
@@ -45,8 +42,8 @@ namespace octa {
     template<typename T> using InitializerList = std::initializer_list<T>;
 
     template<typename T>
-    auto each(InitializerList<T> init) -> decltype(init.each()) {
-        return init.each();
+    PointerRange<const T> each(InitializerList<T> init) {
+        return PointerRange<const T>(init.begin(), init.end());
     }
 }
 

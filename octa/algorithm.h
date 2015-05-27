@@ -185,21 +185,21 @@ namespace octa {
 
     template<typename T>
     inline T min(InitializerList<T> il) {
-        return min_element(il.each()).first();
+        return min_element(each(il)).first();
     }
     template<typename T, typename C>
     inline T min(InitializerList<T> il, C compare) {
-        return min_element(il.each(), compare).first();
+        return min_element(each(il), compare).first();
     }
 
     template<typename T>
     inline T max(InitializerList<T> il) {
-        return max_element(il.each()).first();
+        return max_element(each(il)).first();
     }
 
     template<typename T, typename C>
     inline T max(InitializerList<T> il, C compare) {
-        return max_element(il.each(), compare).first();
+        return max_element(each(il), compare).first();
     }
 
     /* clamp */
