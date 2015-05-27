@@ -131,7 +131,7 @@ namespace octa {
     typedef StringBase<char> String;
 
     template<typename R, typename F>
-    String concat(R range, F func, String sep) {
+    String concat(R range, String sep, F func) {
         String ret;
         if (range.empty()) return move(ret);
         for (;;) {
