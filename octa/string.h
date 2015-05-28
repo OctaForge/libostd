@@ -166,18 +166,21 @@ namespace octa {
         String operator()(const T &) { return ""; }
     };
 
-    template<typename S, typename T, typename U>
-    void __octa_str_printf(S *s, const T *fmt, U v) {
+    template<typename T>
+    void __octa_str_printf(Vector<char> *s, const char *fmt, T v) {
         char buf[256];
-        auto p_buf = (Vector<typename S::ValType> *)s;
-        size_t n = snprintf(buf, sizeof(buf), fmt, v);
-        p_buf->clear();
-        p_buf->reserve(n + 1);
-        if (n >= sizeof(buf))
-            snprintf(p_buf->data(), n + 1, fmt, v);
-        else
-            memcpy(p_buf->data(), buf, n + 1);
-        *(((size_t *)p_buf) + 1) = n + 1;
+        int n = snprintf(buf, sizeof(buf), fmt, v);
+        s->clear();
+        s->reserve(n + 1);
+        if (n >= (int)sizeof(buf))
+            snprintf(s->data(), n + 1, fmt, v);
+        else if (n > 0)
+            memcpy(s->data(), buf, n + 1);
+        else {
+            n = 0;
+            *(s->data()) = '\0';
+        }
+        *(((size_t *)s) + 1) = n + 1;
     }
 
     template<> struct ToString<char> {
@@ -196,7 +199,7 @@ namespace octa {
         typedef String ResultType; \
         String operator()(T v) { \
             String ret; \
-            __octa_str_printf(&ret, fmt, v); \
+            __octa_str_printf((Vector<char> *)&ret, fmt, v); \
             return move(ret); \
         } \
     };
