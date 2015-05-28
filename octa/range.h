@@ -433,11 +433,11 @@ namespace octa {
             T *obeg = p_beg;
             size_t olen = p_end - p_beg;
             p_beg += n;
-            if (p_beg >= p_end) {
+            if (p_beg > p_end) {
                 p_beg = p_end;
                 return olen;
             }
-            return p_beg - obeg;
+            return n;
         }
 
               T &first()       { return *p_beg; }
@@ -453,11 +453,11 @@ namespace octa {
             T *oend = p_end;
             size_t olen = p_end - p_beg;
             p_end -= n;
-            if (p_end <= (p_beg + 1)) {
+            if (p_end < p_beg) {
                 p_end = p_beg;
                 return olen;
             }
-            return oend - p_end;
+            return n;
         }
 
               T &last()       { return *(p_end - 1); }
