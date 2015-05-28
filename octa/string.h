@@ -14,6 +14,8 @@
 #include "octa/vector.h"
 
 namespace octa {
+    using std::initializer_list;
+
     static constexpr size_t npos = -1;
 
     template<typename T>
@@ -160,6 +162,16 @@ namespace octa {
         return move(ret);
     }
 
+    template<typename T, typename F>
+    String concat(initializer_list<T> il, String sep, F func) {
+        return concat(each(il), sep, func);
+    }
+
+    template<typename T>
+    String concat(initializer_list<T> il, String sep = " ") {
+        return concat(each(il), sep);
+    }
+
     template<typename T>
     struct __OctaToStringTest {
         template<typename U, String (U::*)() const> struct __OctaTest {};
@@ -181,13 +193,27 @@ namespace octa {
 
         template<typename U>
         static String __octa_to_str(const U &v,
-            EnableIf<!__OctaToStringTest<U>::value, bool> = true
+            EnableIf<!__OctaToStringTest<U>::value && !IsScalar<U>::value,
+                bool> = true
         ) {
-            return concat(each(v), ", ", ToString<RangeReference<U>>());
+            String ret("{");
+            ret += concat(each(v), ", ", ToString<RangeReference<
+                decltype(each(v))
+            >>());
+            ret += "}";
+            return move(ret);
+        }
+
+        template<typename U>
+        static String __octa_to_str(const U &v,
+            EnableIf<!__OctaToStringTest<U>::value && IsScalar<U>::value,
+                bool> = true
+        ) {
+            return ToString<U>()(v);
         }
 
         String operator()(const T &v) {
-            return move(__octa_to_str(v));
+            return move(__octa_to_str<RemoveCv<RemoveReference<T>>>(v));
         }
     };
 
@@ -238,6 +264,7 @@ namespace octa {
     };
 
     __OCTA_TOSTR_NUM(int, "%d")
+    __OCTA_TOSTR_NUM(int &, "%d")
     __OCTA_TOSTR_NUM(uint, "%u")
     __OCTA_TOSTR_NUM(long, "%ld")
     __OCTA_TOSTR_NUM(ulong, "%lu")
@@ -249,11 +276,21 @@ namespace octa {
 
 #undef __OCTA_TOSTR_NUM
 
+    template<typename T> struct ToString<T *> {
+        typedef T *ArgType;
+        typedef String ResultType;
+        String operator()(ArgType v) {
+            String ret;
+            __octa_str_printf((Vector<char> *)&ret, "%p", v);
+            return move(ret);
+        }
+    };
+
     template<> struct ToString<String> {
         typedef const String &ArgType;
         typedef String ResultType;
         String operator()(ArgType s) {
-            return String(s);
+            return s;
         }
     };
 
@@ -262,7 +299,7 @@ namespace octa {
         typedef String ResultType;
         String operator()(ArgType v) {
             String ret("{");
-            ret += concat(v.each(), ", ", ToString<T>());
+            ret += concat(v.each(), ", ", ToString<RemoveCv<RemoveReference<T>>>());
             ret += "}";
             return move(ret);
         }
@@ -273,17 +310,30 @@ namespace octa {
         typedef String ResultType;
         String operator()(ArgType v) {
             String ret("{");
-            ret += ToString<T>()(v.first);
+            ret += ToString<RemoveCv<RemoveReference<T>>>()(v.first);
             ret += ", ";
-            ret += ToString<U>()(v.second);
+            ret += ToString<RemoveCv<RemoveReference<U>>>()(v.second);
             ret += "}";
             return move(ret);
         }
     };
 
+    template<typename T> struct ToString<initializer_list<T>> {
+        typedef initializer_list<T> ArgType;
+        typedef String ResultType;
+        String operator()(ArgType il) {
+            return move(ToString<decltype(each(il))>()(each(il)));
+        }
+    };
+
     template<typename T>
     String to_string(const T &v) {
-        return move(ToString<T>()(v));
+        return move(ToString<RemoveCv<RemoveReference<T>>>()(v));
+    }
+
+    template<typename T>
+    String to_string(initializer_list<T> init) {
+        return move(ToString<initializer_list<T>>()(init));
     }
 }
 

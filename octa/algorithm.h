@@ -183,22 +183,24 @@ namespace octa {
         return r;
     }
 
+    using std::initializer_list;
+
     template<typename T>
-    inline T min(InitializerList<T> il) {
+    inline T min(initializer_list<T> il) {
         return min_element(each(il)).first();
     }
     template<typename T, typename C>
-    inline T min(InitializerList<T> il, C compare) {
+    inline T min(initializer_list<T> il, C compare) {
         return min_element(each(il), compare).first();
     }
 
     template<typename T>
-    inline T max(InitializerList<T> il) {
+    inline T max(initializer_list<T> il) {
         return max_element(each(il)).first();
     }
 
     template<typename T, typename C>
-    inline T max(InitializerList<T> il, C compare) {
+    inline T max(initializer_list<T> il, C compare) {
         return max_element(each(il), compare).first();
     }
 

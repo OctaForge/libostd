@@ -20,16 +20,6 @@ namespace std {
 
         initializer_list(const T *v, size_t n): p_buf(v), p_len(n) {}
     public:
-        typedef size_t     SizeType;
-        typedef ptrdiff_t  DiffType;
-        typedef       T    ValType;
-        typedef const T   &RefType;
-        typedef const T   &ConstRefType;
-        typedef const T   *PtrType;
-        typedef const T   *ConstPtrType;
-        typedef octa::PointerRange<const T> RangeType;
-        typedef octa::PointerRange<const T> ConstRangeType;
-
         initializer_list(): p_buf(nullptr), p_len(0) {}
 
         size_t size() const { return p_len; }
@@ -42,16 +32,15 @@ namespace std {
 #include <initializer_list>
 #endif
 
-namespace std {
+namespace octa {
+    using std::initializer_list;
+
+    template<typename T> using InitializerList = std::initializer_list<T>;
+
     template<typename T>
     octa::PointerRange<const T> each(initializer_list<T> init) {
         return octa::PointerRange<const T>(init.begin(), init.end());
     }
-}
-
-namespace octa {
-    template<typename T> using InitializerList = std::initializer_list<T>;
-    using std::each;
 }
 
 #endif
