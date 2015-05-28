@@ -42,13 +42,16 @@ namespace std {
 #include <initializer_list>
 #endif
 
+namespace std {
+    template<typename T>
+    octa::PointerRange<const T> each(initializer_list<T> init) {
+        return octa::PointerRange<const T>(init.begin(), init.end());
+    }
+}
+
 namespace octa {
     template<typename T> using InitializerList = std::initializer_list<T>;
-
-    template<typename T>
-    PointerRange<const T> each(InitializerList<T> init) {
-        return PointerRange<const T>(init.begin(), init.end());
-    }
+    using std::each;
 }
 
 #endif

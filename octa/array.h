@@ -10,6 +10,7 @@
 
 #include "octa/algorithm.h"
 #include "octa/range.h"
+#include "octa/string.h"
 
 namespace octa {
     template<typename T, size_t N>
@@ -58,6 +59,13 @@ namespace octa {
 
         void swap(Array &v) {
             swap_ranges(each(), v.each());
+        }
+
+        String to_string() const {
+            String ret("{");
+            ret += concat(each(), ", ", ToString<T>());
+            ret += "}";
+            return move(ret);
         }
 
         T p_buf[(N > 0) ? N : 1];

@@ -160,10 +160,35 @@ namespace octa {
         return move(ret);
     }
 
+    template<typename T>
+    struct __OctaToStringTest {
+        template<typename U, String (U::*)() const> struct __OctaTest {};
+        template<typename U> static char __octa_test(__OctaTest<U, &U::to_string> *);
+        template<typename U> static  int __octa_test(...);
+        static constexpr bool value = (sizeof(__octa_test<T>(0)) == sizeof(char));
+    };
+
     template<typename T> struct ToString {
         typedef T ArgType;
         typedef String ResultType;
-        String operator()(const T &) { return ""; }
+
+        template<typename U>
+        static String __octa_to_str(const U &v,
+            EnableIf<__OctaToStringTest<U>::value, bool> = true
+        ) {
+            return v.to_string();
+        }
+
+        template<typename U>
+        static String __octa_to_str(const U &v,
+            EnableIf<!__OctaToStringTest<U>::value, bool> = true
+        ) {
+            return concat(each(v), ", ", ToString<RangeReference<U>>());
+        }
+
+        String operator()(const T &v) {
+            return move(__octa_to_str(v));
+        }
     };
 
     template<typename T>
@@ -182,6 +207,14 @@ namespace octa {
         }
         *(((size_t *)s) + 1) = n + 1;
     }
+
+    template<> struct ToString<bool> {
+        typedef bool ArgType;
+        typedef String ResultType;
+        String operator()(bool b) {
+            return b ? "true" : "false";
+        }
+    };
 
     template<> struct ToString<char> {
         typedef char ArgType;
@@ -215,6 +248,38 @@ namespace octa {
     __OCTA_TOSTR_NUM(ldouble, "%Lf")
 
 #undef __OCTA_TOSTR_NUM
+
+    template<> struct ToString<String> {
+        typedef const String &ArgType;
+        typedef String ResultType;
+        String operator()(ArgType s) {
+            return String(s);
+        }
+    };
+
+    template<typename T> struct ToString<Vector<T>> {
+        typedef const Vector<T> &ArgType;
+        typedef String ResultType;
+        String operator()(ArgType v) {
+            String ret("{");
+            ret += concat(v.each(), ", ", ToString<T>());
+            ret += "}";
+            return move(ret);
+        }
+    };
+
+    template<typename T, typename U> struct ToString<Pair<T, U>> {
+        typedef const Pair<T, U> &ArgType;
+        typedef String ResultType;
+        String operator()(ArgType v) {
+            String ret("{");
+            ret += ToString<T>()(v.first);
+            ret += ", ";
+            ret += ToString<U>()(v.second);
+            ret += "}";
+            return move(ret);
+        }
+    };
 
     template<typename T>
     String to_string(const T &v) {

@@ -158,6 +158,14 @@ namespace octa {
         SizeType pop_last_n(SizeType n) {
             return __octa_pop_last_n<B>(*((B *)this), n);
         }
+
+        B each() {
+            return B(*((B *)this));
+        }
+
+        B each() const {
+            return B(*((B *)this));
+        }
     };
 
     template<typename V, typename R = V &, typename S = size_t>
