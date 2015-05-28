@@ -68,6 +68,10 @@ namespace octa {
             return *this;
         }
 
+        void reserve(size_t n) {
+            p_buf.reserve(n + 1);
+        }
+
         T &operator[](size_t i) { return p_buf[i]; }
         const T &operator[](size_t i) const { return p_buf[i]; }
 
@@ -162,6 +166,20 @@ namespace octa {
         String operator()(const T &) { return ""; }
     };
 
+    template<typename S, typename T, typename U>
+    void __octa_str_printf(S *s, const T *fmt, U v) {
+        char buf[256];
+        auto p_buf = (Vector<typename S::ValType> *)s;
+        size_t n = snprintf(buf, sizeof(buf), fmt, v);
+        p_buf->clear();
+        p_buf->reserve(n + 1);
+        if (n >= sizeof(buf))
+            snprintf(p_buf->data(), n + 1, fmt, v);
+        else
+            memcpy(p_buf->data(), buf, n + 1);
+        *(((size_t *)p_buf) + 1) = n + 1;
+    }
+
     template<> struct ToString<char> {
         typedef char ArgType;
         typedef String ResultType;
@@ -172,15 +190,33 @@ namespace octa {
         }
     };
 
-    template<> struct ToString<int> {
-        typedef int ArgType;
-        typedef String ResultType;
-        String operator()(int v) {
-            char buf[128];
-            sprintf(buf, "%d", v);
-            return String((const char *)buf);
-        }
+#define __OCTA_TOSTR_NUM(T, fmt) \
+    template<> struct ToString<T> { \
+        typedef T ArgType; \
+        typedef String ResultType; \
+        String operator()(T v) { \
+            String ret; \
+            __octa_str_printf(&ret, fmt, v); \
+            return move(ret); \
+        } \
     };
+
+    __OCTA_TOSTR_NUM(int, "%d")
+    __OCTA_TOSTR_NUM(uint, "%u")
+    __OCTA_TOSTR_NUM(long, "%ld")
+    __OCTA_TOSTR_NUM(ulong, "%lu")
+    __OCTA_TOSTR_NUM(llong, "%lld")
+    __OCTA_TOSTR_NUM(ullong, "%llu")
+    __OCTA_TOSTR_NUM(float, "%f")
+    __OCTA_TOSTR_NUM(double, "%f")
+    __OCTA_TOSTR_NUM(ldouble, "%Lf")
+
+#undef __OCTA_TOSTR_NUM
+
+    template<typename T>
+    String to_string(const T &v) {
+        return move(ToString<T>()(v));
+    }
 }
 
 #endif
