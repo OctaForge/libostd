@@ -422,11 +422,11 @@ namespace octa {
         }
 
         /* satisfy InputRange / ForwardRange */
-        bool empty() const { return p_beg == nullptr; }
+        bool empty() const { return p_beg == p_end; }
 
         void pop_first() {
-            if (p_beg == nullptr) return;
-            if (++p_beg == p_end) p_beg = p_end = nullptr;
+            if (p_beg == p_end) return;
+            ++p_beg;
         }
 
         size_t pop_first_n(size_t n) {
@@ -434,7 +434,7 @@ namespace octa {
             size_t olen = p_end - p_beg;
             p_beg += n;
             if (p_beg >= p_end) {
-                p_beg = p_end = nullptr;
+                p_beg = p_end;
                 return olen;
             }
             return p_beg - obeg;
@@ -445,8 +445,8 @@ namespace octa {
 
         /* satisfy BidirectionalRange */
         void pop_last() {
-            if (p_end-- == p_beg) { p_end = nullptr; return; }
-            if (p_end   == p_beg) p_beg = p_end = nullptr;
+            if (p_end == p_beg) return;
+            --p_end;
         }
 
         size_t pop_last_n(size_t n) {
@@ -454,7 +454,7 @@ namespace octa {
             size_t olen = p_end - p_beg;
             p_end -= n;
             if (p_end <= (p_beg + 1)) {
-                p_beg = p_end = nullptr;
+                p_end = p_beg;
                 return olen;
             }
             return oend - p_end;
