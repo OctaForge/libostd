@@ -462,13 +462,6 @@ namespace octa {
         MapRange<T, R> slice(RangeSize<T> start, RangeSize<T> end) {
             return MapRange<T, R>(p_range.slice(start, end), p_func);
         }
-
-        bool operator==(const MapRange &v) const {
-            return (p_range == v.p_range) && (p_func == v.p_func);
-        }
-        bool operator!=(const MapRange &v) const {
-            return (p_range != v.p_range) || (p_func != v.p_func);
-        }
     };
 
     template<typename R, typename F>
@@ -540,13 +533,6 @@ namespace octa {
         }
 
         RangeReference<T> first() const { return p_range.first(); }
-
-        bool operator==(const FilterRange &v) const {
-            return (p_range == v.p_range) && (p_pred == v.p_pred);
-        }
-        bool operator!=(const FilterRange &v) const {
-            return (p_range != v.p_range) || (p_pred != v.p_pred);
-        }
     };
 
     template<typename R, typename P>

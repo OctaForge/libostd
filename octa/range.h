@@ -242,13 +242,6 @@ namespace octa {
         r_size push_first_n(r_size n) { return p_range.push_first_n(n); }
         r_size push_last_n(r_size n) { return p_range.push_last_n(n); }
 
-        bool operator==(const ReverseRange &v) const {
-            return p_range == v.p_range;
-        }
-        bool operator!=(const ReverseRange &v) const {
-            return p_range != v.p_range;
-        }
-
         r_ref first() const { return p_range.last(); }
         r_ref last() const { return p_range.first(); }
 
@@ -317,13 +310,6 @@ namespace octa {
         r_size push_first_n(r_size n) { return p_range.push_first_n(n); }
         r_size push_last_n(r_size n) { return p_range.push_last_n(n); }
 
-        bool operator==(const MoveRange &v) const {
-            return p_range == v.p_range;
-        }
-        bool operator!=(const MoveRange &v) const {
-            return p_range != v.p_range;
-        }
-
         r_ref first() const { return move(p_range.first()); }
         r_ref last() const { return move(p_range.last()); }
 
@@ -350,13 +336,6 @@ namespace octa {
         NumberRange(T a, T b, T step = T(1)): p_a(a), p_b(b),
             p_step(step) {}
         NumberRange(T v): p_a(0), p_b(v), p_step(1) {}
-
-        bool operator==(const NumberRange &v) const {
-            return p_a == v.p_a && p_b == v.p_b && p_step == v.p_step;
-        }
-        bool operator!=(const NumberRange &v) const {
-            return p_a != v.p_a || p_b != v.p_b || p_step != v.p_step;
-        }
 
         bool empty() const { return p_a * p_step >= p_b * p_step; }
         bool pop_first() { p_a += p_step; return true; }
@@ -389,13 +368,6 @@ namespace octa {
             p_beg = v.p_beg;
             p_end = v.p_end;
             return *this;
-        }
-
-        bool operator==(const PointerRange &v) const {
-            return p_beg == v.p_beg && p_end == v.p_end;
-        }
-        bool operator!=(const PointerRange &v) const {
-            return p_beg != v.p_beg || p_end != v.p_end;
         }
 
         /* satisfy InputRange / ForwardRange */
@@ -545,13 +517,6 @@ namespace octa {
         EnumeratedValue<r_ref, r_size> first() const {
             return EnumeratedValue<r_ref, r_size> { p_index, p_range.first() };
         }
-
-        bool operator==(const EnumeratedRange &v) const {
-            return p_index == v.p_index && p_range == v.p_range;
-        }
-        bool operator!=(const EnumeratedRange &v) const {
-            return p_index != v.p_index || p_range != v.p_range;
-        }
     };
 
     template<typename T>
@@ -657,13 +622,6 @@ namespace octa {
                 "operator[] only available for random access ranges");
             return p_range[idx];
         }
-
-        bool operator==(const TakeRange &v) const {
-            return p_remaining == v.p_remaining && p_range == v.p_range;
-        }
-        bool operator!=(const TakeRange &v) const {
-            return p_remaining != v.p_remaining || p_range != v.p_range;
-        }
     };
 
     template<typename T>
@@ -720,13 +678,6 @@ namespace octa {
         }
 
         TakeRange<T> first() const { return take(p_range, p_chunksize); }
-
-        bool operator==(const ChunksRange &v) const {
-            return p_chunksize == v.p_chunksize && p_range == v.p_range;
-        }
-        bool operator!=(const ChunksRange &v) const {
-            return p_chunksize != v.p_chunksize || p_range != v.p_range;
-        }
     };
 
     template<typename T>
