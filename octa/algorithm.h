@@ -440,8 +440,8 @@ namespace octa {
         bool empty() const { return p_range.empty(); }
         RangeSize<T> size() const { return p_range.size(); }
 
-        void pop_first() { p_range.pop_first(); }
-        void pop_last() { p_range.pop_last(); }
+        bool pop_first() { return p_range.pop_first(); }
+        bool pop_last() { return p_range.pop_last(); }
 
         bool push_first() { return p_range.pop_first(); }
         bool push_last() { return p_range.push_last(); }
@@ -530,9 +530,10 @@ namespace octa {
 
         bool empty() const { return p_range.empty(); }
 
-        void pop_first() {
-            p_range.pop_first();
+        bool pop_first() {
+            bool ret = p_range.pop_first();
             advance_valid();
+            return ret;
         }
         bool push_first() {
             T tmp = p_range;
