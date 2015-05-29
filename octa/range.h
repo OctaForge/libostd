@@ -20,11 +20,27 @@ namespace octa {
     struct RandomAccessRangeTag: BidirectionalRangeTag {};
     struct FiniteRandomAccessRangeTag: RandomAccessRangeTag {};
 
-    template<typename T> using RangeCategory   = typename T::Category;
-    template<typename T> using RangeSize       = typename T::SizeType;
-    template<typename T> using RangeValue      = typename T::ValType;
-    template<typename T> using RangeReference  = typename T::RefType;
-    template<typename T> using RangeDifference = typename T::DiffType;
+    template<typename T> struct RangeHalf;
+
+#define __OCTA_RANGE_TRAIT(Name, TypeName) \
+    template<typename T> \
+    struct __OctaRange##Name { \
+        typedef typename T::TypeName Type; \
+    }; \
+    template<typename T> \
+    struct __OctaRange##Name<RangeHalf<T>> { \
+        typedef typename T::TypeName Type; \
+    }; \
+    template<typename T> \
+    using Range##Name = typename __OctaRange##Name<T>::Type;
+
+    __OCTA_RANGE_TRAIT(Category, Category)
+    __OCTA_RANGE_TRAIT(Size, SizeType)
+    __OCTA_RANGE_TRAIT(Value, ValType)
+    __OCTA_RANGE_TRAIT(Reference, RefType)
+    __OCTA_RANGE_TRAIT(Difference, DiffType)
+
+#undef __OCTA_RANGE_TRAIT
 
     // is input range
 
@@ -847,11 +863,8 @@ namespace octa {
 
     template<typename T>
     struct HalfRange: InputRange<HalfRange<T>,
-        RangeCategory  <typename T::RangeType>,
-        RangeValue     <typename T::RangeType>,
-        RangeReference <typename T::RangeType>,
-        RangeSize      <typename T::RangeType>,
-        RangeDifference<typename T::RangeType>
+        RangeCategory<T>, RangeValue<T>, RangeReference<T>, RangeSize<T>,
+        RangeDifference<T>
     > {
     private:
         T p_beg;
@@ -894,10 +907,10 @@ namespace octa {
             return p_end.next();
         }
 
-        RangeReference<typename T::RangeType> first() const {
+        RangeReference<T> first() const {
             return p_beg.get();
         }
-        RangeReference<typename T::RangeType> last() const {
+        RangeReference<T> last() const {
             auto copy = p_end;
             copy.prev();
             return copy.get();
@@ -910,33 +923,29 @@ namespace octa {
             return p_end == range.p_end;
         }
 
-        RangeDifference<typename T::RangeType>
-        distance_first(const HalfRange &range) const {
+        RangeDifference<T> distance_first(const HalfRange &range) const {
             return p_beg.distance(range.p_beg);
         }
-        RangeDifference<typename T::RangeType>
-        distance_last(const HalfRange &range) const {
+        RangeDifference<T> distance_last(const HalfRange &range) const {
             return p_end.distance(range.p_end);
         }
 
-        RangeSize<typename T::RangeType> size() {
+        RangeSize<T> size() const {
             return p_end - p_beg;
         }
 
-        HalfRange<T> slice(RangeSize<typename T::RangeType> start,
-                           RangeSize<typename T::RangeType> end) {
+        HalfRange<T> slice(RangeSize<T> start, RangeSize<T> end) const {
             return HalfRange<T>(p_beg + start, p_beg + end);
         }
 
-        RangeReference<typename T::RangeType>
-        operator[](RangeSize<typename T::RangeType> idx) {
+        RangeReference<T> operator[](RangeSize<T> idx) const {
             return p_beg[idx];
         }
 
-        void put(const RangeValue<typename T::RangeType> &v) {
+        void put(const RangeValue<T> &v) {
             p_beg.range().put(v);
         }
-        void put(RangeValue<typename T::RangeType> &&v) {
+        void put(RangeValue<T> &&v) {
             p_beg.range().put(move(v));
         }
     };
