@@ -107,9 +107,6 @@ namespace octa {
             p_range.pop_first();
             return *this;
         }
-        RangeReference<T> operator*() {
-            return p_range.first();
-        }
         RangeReference<T> operator*() const {
             return p_range.first();
         }
@@ -252,16 +249,12 @@ namespace octa {
             return p_range != v.p_range;
         }
 
-        r_ref first() { return p_range.last(); }
         r_ref first() const { return p_range.last(); }
-
-        r_ref last() { return p_range.first(); }
         r_ref last() const { return p_range.first(); }
 
-        r_ref operator[](r_size i) { return p_range[size() - i - 1]; }
         r_ref operator[](r_size i) const { return p_range[size() - i - 1]; }
 
-        ReverseRange<T> slice(r_size start, r_size end) {
+        ReverseRange<T> slice(r_size start, r_size end) const {
             r_size len = p_range.size();
             return ReverseRange<T>(p_range.slice(len - end, len - start));
         }
@@ -331,12 +324,12 @@ namespace octa {
             return p_range != v.p_range;
         }
 
-        r_ref first() { return move(p_range.first()); }
-        r_ref last() { return move(p_range.last()); }
+        r_ref first() const { return move(p_range.first()); }
+        r_ref last() const { return move(p_range.last()); }
 
-        r_ref operator[](r_size i) { return move(p_range[i]); }
+        r_ref operator[](r_size i) const { return move(p_range[i]); }
 
-        MoveRange<T> slice(r_size start, r_size end) {
+        MoveRange<T> slice(r_size start, r_size end) const {
             return MoveRange<T>(p_range.slice(start, end));
         }
 
@@ -350,7 +343,7 @@ namespace octa {
     }
 
     template<typename T>
-    struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T> {
+    struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T, T> {
         NumberRange(): p_a(0), p_b(0), p_step(0) {}
         NumberRange(const NumberRange &it): p_a(it.p_a), p_b(it.p_b),
             p_step(it.p_step) {}
@@ -368,7 +361,7 @@ namespace octa {
         bool empty() const { return p_a * p_step >= p_b * p_step; }
         bool pop_first() { p_a += p_step; return true; }
         bool push_first() { p_a -= p_step; return true; }
-        T &first() { return p_a; }
+        T first() const { return p_a; }
 
     private:
         T p_a, p_b, p_step;
@@ -432,8 +425,7 @@ namespace octa {
             p_beg -= n; return true;
         }
 
-              T &first()       { return *p_beg; }
-        const T &first() const { return *p_beg; }
+        T &first() const { return *p_beg; }
 
         /* satisfy BidirectionalRange */
         bool pop_last() {
@@ -460,18 +452,16 @@ namespace octa {
             p_end += n; return true;
         }
 
-              T &last()       { return *(p_end - 1); }
-        const T &last() const { return *(p_end - 1); }
+        T &last() const { return *(p_end - 1); }
 
         /* satisfy FiniteRandomAccessRange */
         size_t size() const { return p_end - p_beg; }
 
-        PointerRange slice(size_t start, size_t end) {
+        PointerRange slice(size_t start, size_t end) const {
             return PointerRange(p_beg + start, p_beg + end);
         }
 
-              T &operator[](size_t i)       { return p_beg[i]; }
-        const T &operator[](size_t i) const { return p_beg[i]; }
+        T &operator[](size_t i) const { return p_beg[i]; }
 
         /* satisfy OutputRange */
         void put(const T &v) {
@@ -552,9 +542,6 @@ namespace octa {
             return ret;
         }
 
-        EnumeratedValue<r_ref, r_size> first() {
-            return EnumeratedValue<r_ref, r_size> { p_index, p_range.first() };
-        }
         EnumeratedValue<r_ref, r_size> first() const {
             return EnumeratedValue<r_ref, r_size> { p_index, p_range.first() };
         }
@@ -627,7 +614,6 @@ namespace octa {
             return ret;
         }
 
-        RangeReference<T> first() { return p_range.first(); }
         RangeReference<T> first() const { return p_range.first(); }
 
         RangeSize<T> size() const {
@@ -660,21 +646,15 @@ namespace octa {
             return psize;
         }
 
-        RangeReference<T> last() {
-            static_assert(IsRandomAccessRange<T>::value,
-                "last() only available for random access ranges");
-            return p_range[size() - 1];
-        }
         RangeReference<T> last() const {
             static_assert(IsRandomAccessRange<T>::value,
                 "last() only available for random access ranges");
             return p_range[size() - 1];
         }
 
-        RangeReference<T> operator[](RangeSize<T> idx) {
-            return p_range[idx];
-        }
         RangeReference<T> operator[](RangeSize<T> idx) const {
+            static_assert(IsRandomAccessRange<T>::value,
+                "operator[] only available for random access ranges");
             return p_range[idx];
         }
 
@@ -739,7 +719,7 @@ namespace octa {
             return p_range.push_first_n(p_chunksize * an) / p_chunksize;
         }
 
-        TakeRange<T> first() { return take(p_range, p_chunksize); }
+        TakeRange<T> first() const { return take(p_range, p_chunksize); }
 
         bool operator==(const ChunksRange &v) const {
             return p_chunksize == v.p_chunksize && p_range == v.p_range;

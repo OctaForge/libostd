@@ -455,13 +455,7 @@ namespace octa {
         R first() const { return p_func(p_range.first()); }
         R last() const { return p_func(p_range.last()); }
 
-        R first() { return p_func(p_range.first()); }
-        R last() { return p_func(p_range.last()); }
-
         R operator[](RangeSize<T> idx) const {
-            return p_func(p_range[idx]);
-        }
-        R operator[](RangeSize<T> idx) {
             return p_func(p_range[idx]);
         }
 
@@ -546,7 +540,6 @@ namespace octa {
         }
 
         RangeReference<T> first() const { return p_range.first(); }
-        RangeReference<T> first() { return p_range.first(); }
 
         bool operator==(const FilterRange &v) const {
             return (p_range == v.p_range) && (p_pred == v.p_pred);
