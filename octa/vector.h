@@ -52,8 +52,8 @@ namespace octa {
                 reserve(i + 1);
                 new (&p_buf[i]) T(range.first());
                 ++i;
+                p_len = i;
             }
-            p_len = i;
         }
 
     public:

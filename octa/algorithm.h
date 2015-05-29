@@ -440,6 +440,20 @@ namespace octa {
         bool empty() const { return p_range.empty(); }
         RangeSize<T> size() const { return p_range.size(); }
 
+        bool equals_first(const MapRange &range) const {
+            return p_range.equals_first(range.p_range);
+        }
+        bool equals_last(const MapRange &range) const {
+            return p_range.equals_first(range.p_range);
+        }
+
+        RangeDifference<T> distance_first(const MapRange &range) const {
+            return p_range.distance_first(range.p_range);
+        }
+        RangeDifference<T> distance_last(const MapRange &range) const {
+            return p_range.distance_last(range.p_range);
+        }
+
         bool pop_first() { return p_range.pop_first(); }
         bool pop_last() { return p_range.pop_last(); }
 
@@ -516,6 +530,10 @@ namespace octa {
         }
 
         bool empty() const { return p_range.empty(); }
+
+        bool equals_first(const FilterRange &range) const {
+            return p_range.equals_first(range.p_range);
+        }
 
         bool pop_first() {
             bool ret = p_range.pop_first();
