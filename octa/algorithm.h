@@ -443,8 +443,14 @@ namespace octa {
         void pop_first() { p_range.pop_first(); }
         void pop_last() { p_range.pop_last(); }
 
+        bool push_first() { return p_range.pop_first(); }
+        bool push_last() { return p_range.push_last(); }
+
         RangeSize<T> pop_first_n(RangeSize<T> n) { p_range.pop_first_n(n); }
         RangeSize<T> pop_last_n(RangeSize<T> n) { p_range.pop_last_n(n); }
+
+        RangeSize<T> push_first_n(RangeSize<T> n) { return p_range.push_first_n(n); }
+        RangeSize<T> push_last_n(RangeSize<T> n) { return p_range.push_last_n(n); }
 
         R first() const { return p_func(p_range.first()); }
         R last() const { return p_func(p_range.last()); }
@@ -527,6 +533,15 @@ namespace octa {
         void pop_first() {
             p_range.pop_first();
             advance_valid();
+        }
+        bool push_first() {
+            T tmp = p_range;
+            if (!tmp.push_first()) return false;
+            while (!pred(tmp.first()))
+                if (!tmp.push_first())
+                    return false;
+            p_range = tmp;
+            return true;
         }
 
         RangeReference<T> first() const { return p_range.first(); }

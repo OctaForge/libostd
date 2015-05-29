@@ -136,6 +136,20 @@ namespace octa {
         return n;
     }
 
+    template<typename R>
+    RangeSize<R> __octa_push_first_n(R &range, RangeSize<R> n) {
+        for (RangeSize<R> i = 0; i < n; ++i)
+            if (!range.push_first()) return i;
+        return n;
+    }
+
+    template<typename R>
+    RangeSize<R> __octa_push_last_n(R &range, RangeSize<R> n) {
+        for (RangeSize<R> i = 0; i < n; ++i)
+            if (!range.push_last()) return i;
+        return n;
+    }
+
     template<typename B, typename C, typename V, typename R = V &,
              typename S = size_t
     > struct InputRange {
@@ -157,6 +171,14 @@ namespace octa {
 
         SizeType pop_last_n(SizeType n) {
             return __octa_pop_last_n<B>(*((B *)this), n);
+        }
+
+        SizeType push_first_n(SizeType n) {
+            return __octa_push_first_n<B>(*((B *)this), n);
+        }
+
+        SizeType push_last_n(SizeType n) {
+            return __octa_push_last_n<B>(*((B *)this), n);
         }
 
         B each() {
@@ -212,27 +234,20 @@ namespace octa {
             return *this;
         }
 
-        bool empty() const {
-            return p_range.empty();
-        }
+        bool empty() const { return p_range.empty(); }
+        r_size size() const { return p_range.size(); }
 
-        r_size size() const {
-            return p_range.size();
-        }
+        void pop_first() { p_range.pop_last(); }
+        void pop_last() { p_range.pop_first(); }
 
-        void pop_first() {
-            p_range.pop_last();
-        }
-        void pop_last() {
-            p_range.pop_first();
-        }
+        bool push_first() { return p_range.push_last(); }
+        bool push_last() { return p_range.push_first(); }
 
-        r_size pop_first_n(r_size n) {
-            return p_range.pop_first_n(n);
-        }
-        r_size pop_last_n(r_size n) {
-            return p_range.pop_last_n(n);
-        }
+        r_size pop_first_n(r_size n) { return p_range.pop_first_n(n); }
+        r_size pop_last_n(r_size n) { return p_range.pop_last_n(n); }
+
+        r_size push_first_n(r_size n) { return p_range.push_first_n(n); }
+        r_size push_last_n(r_size n) { return p_range.push_last_n(n); }
 
         bool operator==(const ReverseRange &v) const {
             return p_range == v.p_range;
@@ -241,26 +256,14 @@ namespace octa {
             return p_range != v.p_range;
         }
 
-        r_ref first() {
-            return p_range.last();
-        }
-        r_ref first() const {
-            return p_range.last();
-        }
+        r_ref first() { return p_range.last(); }
+        r_ref first() const { return p_range.last(); }
 
-        r_ref last() {
-            return p_range.first();
-        }
-        r_ref last() const {
-            return p_range.first();
-        }
+        r_ref last() { return p_range.first(); }
+        r_ref last() const { return p_range.first(); }
 
-        r_ref operator[](r_size i) {
-            return p_range[size() - i - 1];
-        }
-        r_ref operator[](r_size i) const {
-            return p_range[size() - i - 1];
-        }
+        r_ref operator[](r_size i) { return p_range[size() - i - 1]; }
+        r_ref operator[](r_size i) const { return p_range[size() - i - 1]; }
 
         ReverseRange<T> slice(r_size start, r_size end) {
             r_size len = p_range.size();
@@ -310,26 +313,20 @@ namespace octa {
             return *this;
         }
 
-        bool empty() const {
-            return p_range.empty();
-        }
-        r_size size() const {
-            return p_range.size();
-        }
+        bool empty() const { return p_range.empty(); }
+        r_size size() const { return p_range.size(); }
 
-        void pop_first() {
-            p_range.pop_first();
-        }
-        void pop_last() {
-            p_range.pop_last();
-        }
+        void pop_first() { p_range.pop_first(); }
+        void pop_last() { p_range.pop_last(); }
 
-        r_size pop_first_n(r_size n) {
-            return p_range.pop_first_n(n);
-        }
-        r_size pop_last_n(r_size n) {
-            return p_range.pop_last_n(n);
-        }
+        bool push_first() { return p_range.push_first(); }
+        bool push_last() { return p_range.push_last(); }
+
+        r_size pop_first_n(r_size n) { return p_range.pop_first_n(n); }
+        r_size pop_last_n(r_size n) { return p_range.pop_last_n(n); }
+
+        r_size push_first_n(r_size n) { return p_range.push_first_n(n); }
+        r_size push_last_n(r_size n) { return p_range.push_last_n(n); }
 
         bool operator==(const MoveRange &v) const {
             return p_range == v.p_range;
@@ -338,27 +335,17 @@ namespace octa {
             return p_range != v.p_range;
         }
 
-        r_ref first() {
-            return move(p_range.first());
-        }
-        r_ref last() {
-            return move(p_range.last());
-        }
+        r_ref first() { return move(p_range.first()); }
+        r_ref last() { return move(p_range.last()); }
 
-        r_ref operator[](r_size i) {
-            return move(p_range[i]);
-        }
+        r_ref operator[](r_size i) { return move(p_range[i]); }
 
         MoveRange<T> slice(r_size start, r_size end) {
             return MoveRange<T>(p_range.slice(start, end));
         }
 
-        void put(const r_val &v) {
-            p_range.put(v);
-        }
-        void put(r_val &&v) {
-            p_range.put(move(v));
-        }
+        void put(const r_val &v) { p_range.put(v); }
+        void put(r_val &&v) { p_range.put(move(v)); }
     };
 
     template<typename T>
@@ -384,6 +371,7 @@ namespace octa {
 
         bool empty() const { return p_a * p_step >= p_b * p_step; }
         void pop_first() { p_a += p_step; }
+        bool push_first() { p_a -= p_step; return true; }
         T &first() { return p_a; }
 
     private:
@@ -428,6 +416,9 @@ namespace octa {
             if (p_beg == p_end) return;
             ++p_beg;
         }
+        bool push_first() {
+            --p_beg; return true;
+        }
 
         size_t pop_first_n(size_t n) {
             T *obeg = p_beg;
@@ -440,6 +431,10 @@ namespace octa {
             return n;
         }
 
+        size_t push_first_n(size_t n) {
+            p_beg -= n; return true;
+        }
+
               T &first()       { return *p_beg; }
         const T &first() const { return *p_beg; }
 
@@ -447,6 +442,9 @@ namespace octa {
         void pop_last() {
             if (p_end == p_beg) return;
             --p_end;
+        }
+        bool push_last() {
+            ++p_end; return true;
         }
 
         size_t pop_last_n(size_t n) {
@@ -458,6 +456,10 @@ namespace octa {
                 return olen;
             }
             return n;
+        }
+
+        size_t push_last_n(size_t n) {
+            p_end += n; return true;
         }
 
               T &last()       { return *(p_end - 1); }
@@ -536,16 +538,14 @@ namespace octa {
             return *this;
         }
 
-        bool empty() const {
-            return p_range.empty();
-        }
+        bool empty() const { return p_range.empty(); }
 
-        void pop_first() {
-            ++p_index; p_range.pop_first();
-        }
+        void pop_first() { ++p_index; p_range.pop_first(); }
 
         r_size pop_first_n(r_size n) {
-            return p_range.pop_first_n(n);
+            r_size ret = p_range.pop_first_n(n);
+            p_index += ret;
+            return ret;
         }
 
         EnumeratedValue<r_ref, r_size> first() {
@@ -598,9 +598,23 @@ namespace octa {
         bool empty() const { return (p_remaining <= 0) || p_range.empty(); }
 
         void pop_first() { --p_remaining; p_range.pop_first(); }
+        bool push_first() {
+            if (p_range.push_first()) {
+                ++p_remaining;
+                return true;
+            }
+            return false;
+        }
+
         RangeSize<T> pop_first_n(RangeSize<T> n) {
-            p_remaining -= n;
-            return p_range.pop_first_n((n > p_remaining) ? p_remaining : n);
+            RangeSize<T> ret = p_range.pop_first_n(n);
+            p_remaining -= ret;
+            return ret;
+        }
+        RangeSize<T> push_first_n(RangeSize<T> n) {
+            RangeSize<T> ret = p_range.push_first_n(n);
+            p_remaining += ret;
+            return ret;
         }
 
         RangeReference<T> first() { return p_range.first(); }
@@ -626,6 +640,14 @@ namespace octa {
             RangeSize<T> ol = size();
             p_remaining -= n;
             return (ol < n) ? ol : n;
+        }
+        RangeSize<T> push_last_n(RangeSize<T> n) {
+            static_assert(IsRandomAccessRange<T>::value,
+                "pop_last_n() only available for random access ranges");
+            RangeSize<T> rsize = p_range.length();
+            RangeSize<T> psize = (rsize < n) ? rsize : n;
+            p_remaining += psize;
+            return psize;
         }
 
         RangeReference<T> last() {
@@ -685,8 +707,26 @@ namespace octa {
 
         bool empty() const { return p_range.empty(); }
         void pop_first() { p_range.pop_first_n(p_chunksize); }
+        bool push_first() {
+            T tmp = p_range;
+            RangeSize<T> an = tmp.push_first_n(p_chunksize);
+            if (an != p_chunksize) return false;
+            p_range = tmp;
+            return true;
+        }
         RangeSize<T> pop_first_n(RangeSize<T> n) {
-            return p_range.pop_first_n(p_chunksize * n);
+            return p_range.pop_first_n(p_chunksize * n) / p_chunksize;
+        }
+        RangeSize<T> push_first_n(RangeSize<T> n) {
+            T tmp = p_range;
+            RangeSize<T> an = tmp.push_first_n(p_chunksize * n);
+            RangeSize<T> pn = an / p_chunksize;
+            if (!pn) return 0;
+            if (pn == n) {
+                p_range = tmp;
+                return pn;
+            }
+            return p_range.push_first_n(p_chunksize * an) / p_chunksize;
         }
 
         TakeRange<T> first() { return take(p_range, p_chunksize); }
