@@ -70,6 +70,12 @@ namespace octa {
             return *this;
         }
 
+        void resize(size_t n, T v = T()) {
+            p_buf.pop();
+            p_buf.resize(n, v);
+            terminate();
+        }
+
         void reserve(size_t n) {
             p_buf.reserve(n + 1);
         }
@@ -104,16 +110,47 @@ namespace octa {
             p_buf.push('\0');
         }
 
-        StringBase<T> &operator+=(const StringBase &s) {
+        StringBase<T> &append(const StringBase &s) {
             p_buf.pop();
             p_buf.insert_range(p_buf.size(), s.p_buf.each());
             return *this;
         }
-        StringBase<T> &operator+=(const T *s) {
+
+        StringBase<T> &append(const StringBase &s, size_t idx, size_t len) {
+            p_buf.pop();
+            p_buf.insert_range(p_buf.size(), PointerRange<T>(&s[idx],
+                (len == npos) ? (s.size() - idx) : len));
+            terminate();
+            return *this;
+        }
+
+        StringBase<T> &append(const T *s) {
             p_buf.pop();
             p_buf.insert_range(p_buf.size(), PointerRange<const T>(s,
                 strlen(s) + 1));
             return *this;
+        }
+
+        StringBase<T> &append(size_t n, T c) {
+            p_buf.pop();
+            for (size_t i = 0; i < n; ++i) p_buf.push(c);
+            p_buf.push('\0');
+            return *this;
+        }
+
+        template<typename R>
+        StringBase<T> &append_range(R range) {
+            p_buf.pop();
+            p_buf.insert_range(p_buf.size(), range);
+            terminate();
+            return *this;
+        }
+
+        StringBase<T> &operator+=(const StringBase &s) {
+            return append(s);
+        }
+        StringBase<T> &operator+=(const T *s) {
+            return append(s);
         }
         StringBase<T> &operator+=(T c) {
             p_buf.pop();
