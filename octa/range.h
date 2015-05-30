@@ -279,10 +279,10 @@ namespace octa {
         typedef V ValType;
         typedef R RefType;
 
-        __OctaRangeIterator<B> begin() {
+        __OctaRangeIterator<B> begin() const {
             return __OctaRangeIterator<B>((const B &)*this);
         }
-        __OctaRangeIterator<B> end() {
+        __OctaRangeIterator<B> end() const {
             return __OctaRangeIterator<B>();
         }
 
@@ -302,16 +302,8 @@ namespace octa {
             return __octa_push_last_n<B>(*((B *)this), n);
         }
 
-        B each() {
-            return B(*((B *)this));
-        }
-
         B each() const {
             return B(*((B *)this));
-        }
-
-        RangeHalf<B> half() {
-            return RangeHalf<B>(*((B *)this));
         }
 
         RangeHalf<B> half() const {
