@@ -243,6 +243,11 @@ namespace octa {
     };
 
     template<typename R>
+    RangeDifference<R> operator-(const R &lhs, const R &rhs) {
+        return rhs.distance(lhs);
+    }
+
+    template<typename R>
     RangeSize<R> __octa_pop_first_n(R &range, RangeSize<R> n) {
         for (RangeSize<R> i = 0; i < n; ++i)
             if (!range.pop_first()) return i;
@@ -899,14 +904,8 @@ namespace octa {
             return p_end.next();
         }
 
-        RangeReference<T> first() const {
-            return p_beg.get();
-        }
-        RangeReference<T> last() const {
-            auto copy = p_end;
-            copy.prev();
-            return copy.get();
-        }
+        RangeReference<T> first() const { return *p_beg; }
+        RangeReference<T> last() const { return *(p_end - 1); }
 
         bool equals_first(const HalfRange &range) const {
             return p_beg == range.p_beg;
@@ -916,15 +915,13 @@ namespace octa {
         }
 
         RangeDifference<T> distance_first(const HalfRange &range) const {
-            return p_beg.distance(range.p_beg);
+            return range.p_beg - p_beg;
         }
         RangeDifference<T> distance_last(const HalfRange &range) const {
-            return p_end.distance(range.p_end);
+            return range.p_end - p_end;
         }
 
-        RangeSize<T> size() const {
-            return p_end - p_beg;
-        }
+        RangeSize<T> size() const { return p_end - p_beg; }
 
         HalfRange<T> slice(RangeSize<T> start, RangeSize<T> end) const {
             return HalfRange<T>(p_beg + start, p_beg + end);
