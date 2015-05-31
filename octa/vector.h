@@ -251,7 +251,7 @@ namespace octa {
         bool empty() const { return (p_len == 0); }
 
         bool in_range(size_t idx) { return idx < p_len; }
-        bool in_range(int idx) { return idx >= 0 && idx < p_len; }
+        bool in_range(int idx) { return idx >= 0 && size_t(idx) < p_len; }
         bool in_range(const T *ptr) {
             return ptr >= p_buf && ptr < &p_buf[p_len];
         }

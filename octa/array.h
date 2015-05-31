@@ -42,7 +42,7 @@ namespace octa {
         bool empty() const { return N == 0; }
 
         bool in_range(size_t idx) { return idx < N; }
-        bool in_range(int idx) { return idx >= 0 && idx < N; }
+        bool in_range(int idx) { return idx >= 0 && size_t(idx) < N; }
         bool in_range(const T *ptr) {
             return ptr >= &p_buf[0] && ptr < &p_buf[N];
         }

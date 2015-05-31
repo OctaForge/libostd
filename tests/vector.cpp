@@ -1,5 +1,7 @@
 #include <assert.h>
+#include <string.h>
 #include "octa/vector.h"
+#include "octa/string.h"
 
 using namespace octa;
 
@@ -11,6 +13,11 @@ int main() {
 
     assert(x[0] == 5);
     assert(x[2] == 15);
+
+    assert(x.at(0) == x[0]);
+    assert(x.at(3) == x[3]);
+
+    assert(x.data()[0] == x[0]);
 
     assert(x.size() == 4);
 
@@ -77,6 +84,8 @@ int main() {
     assert(w.size() != 0);
     assert(w.first() == 5);
     assert(w.last() == 5);
+
+    assert(!strcmp(to_string(w).data(), "{5, 5, 4, 5, 5, 5, 5, 5, 5, 5, 5}"));
 
     return 0;
 }
