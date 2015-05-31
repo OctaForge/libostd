@@ -16,16 +16,19 @@ nsuccess = 0
 nfailed  = 0
 
 def print_result(modname, fmsg = None):
+    global nsuccess, nfailed
     if fmsg:
         if COLORS:
             print "%s...\t\033[91m\033[1m(%s)\033[0m" % (modname, fmsg)
         else:
             print "%s...\t(%s)" % (modname, fmsg)
+        nfailed += 1
     else:
         if COLORS:
             print "%s...\t\033[92m\033[1m(success)\033[0m" % modname
         else:
             print "%s...\t(success)" % modname
+        nsuccess += 1
 
 for fname in listdir("tests"):
     (modname, modext) = splitext(fname)
@@ -42,7 +45,6 @@ for fname in listdir("tests"):
 
     if pc.returncode != 0:
         print_result(modname, "compile error")
-        nfailed += 1
         continue
 
     pc = sp.Popen(exepath, stdout = sp.PIPE, stderr = sp.STDOUT)
@@ -51,12 +53,10 @@ for fname in listdir("tests"):
     if pc.returncode != 0:
         remove(exepath)
         print_result(modname, "runtime error")
-        nfailed += 1
         continue
 
     remove(exepath)
     print_result(modname)
-    nsuccess += 1
 
 if COLORS:
     print "\n\033[94m\033[1mtesting done:\033[0m"
