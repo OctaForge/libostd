@@ -13,6 +13,8 @@ CXXFLAGS = [
     "-I."
 ]
 COLORS = (osname != "nt")
+TESTDIR = "tests"
+SRCEXT = ".cpp"
 
 # don't modify past these lines
 
@@ -39,14 +41,14 @@ def print_result(modname, fmsg = None):
         print modname + "...\t%(green)s%(bold)s(success)%(end)s" % colors
         nsuccess += 1
 
-for fname in listdir("tests"):
+for fname in listdir(TESTDIR):
     (modname, modext) = splitext(fname)
 
-    if modext != ".cpp":
+    if modext != SRCEXT:
         continue
 
-    srcpath = joinp("tests", fname)
-    exepath = joinp("tests", modname)
+    srcpath = joinp(TESTDIR, fname)
+    exepath = joinp(TESTDIR, modname)
 
     pc = sp.Popen([ COMPILER, srcpath, "-o", exepath ] + CXXFLAGS,
         stdout = sp.PIPE, stderr = sp.STDOUT)
