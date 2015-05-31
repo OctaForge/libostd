@@ -331,17 +331,6 @@ namespace octa {
         }
     };
 
-    template<typename T> struct ToString<Vector<T>> {
-        typedef const Vector<T> &ArgType;
-        typedef String ResultType;
-        String operator()(ArgType v) {
-            String ret("{");
-            ret += concat(v.each(), ", ", ToString<RemoveCv<RemoveReference<T>>>());
-            ret += "}";
-            return move(ret);
-        }
-    };
-
     template<typename T, typename U> struct ToString<Pair<T, U>> {
         typedef const Pair<T, U> &ArgType;
         typedef String ResultType;
@@ -352,14 +341,6 @@ namespace octa {
             ret += ToString<RemoveCv<RemoveReference<U>>>()(v.second);
             ret += "}";
             return move(ret);
-        }
-    };
-
-    template<typename T> struct ToString<initializer_list<T>> {
-        typedef initializer_list<T> ArgType;
-        typedef String ResultType;
-        String operator()(ArgType il) {
-            return move(ToString<decltype(each(il))>()(each(il)));
         }
     };
 

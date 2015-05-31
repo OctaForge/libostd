@@ -61,13 +61,6 @@ namespace octa {
             swap_ranges(each(), v.each());
         }
 
-        String to_string() const {
-            String ret("{");
-            ret += concat(each(), ", ", ToString<T>());
-            ret += "}";
-            return move(ret);
-        }
-
         T p_buf[(N > 0) ? N : 1];
     };
 }
