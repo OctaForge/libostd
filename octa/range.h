@@ -858,6 +858,9 @@ namespace octa {
         return PointerRange<T>(array, N);
     }
 
+    // range of
+    template<typename T> using RangeOf = decltype(each(declval<T>()));
+
     template<typename T>
     struct HalfRange: InputRange<HalfRange<T>,
         RangeCategory<T>, RangeValue<T>, RangeReference<T>, RangeSize<T>,
