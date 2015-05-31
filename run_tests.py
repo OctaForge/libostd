@@ -7,6 +7,9 @@ COMPILER = "c++"
 # -Wno-missing-braces because clang false positive
 CXXFLAGS="-std=c++11 -Wall -Wextra -Wno-missing-braces -I."
 
+nsuccess = 0
+nfailed  = 0
+
 for fname in listdir("./tests"):
     (modname, modext) = splitext(fname)
 
@@ -20,7 +23,8 @@ for fname in listdir("./tests"):
 
     if pc.returncode != 0:
         print "%s...\t\033[91m\033[1m(compile error)\033[0m" % modname
-        exit(1)
+        nfailed += 1
+        continue
 
     pc = sp.Popen("./tests/%s" % modname, shell = True,
         stdout = sp.PIPE, stderr = sp.STDOUT)
@@ -29,9 +33,13 @@ for fname in listdir("./tests"):
     if pc.returncode != 0:
         remove("./tests/%s" % modname)
         print "%s...\t\033[91m\033[1m(runtime error)\033[0m" % modname
-        exit(1)
+        nfailed += 1
+        continue
 
     remove("./tests/%s" % modname)
     print "%s...\t\033[92m\033[1m(success)\033[0m" % modname
+    nsuccess += 1
 
-print "\033[94m\033[1mtesting successful\033[0m"
+print "\n\033[94m\033[1mtesting done:\033[0m"
+print "\033[92mSUCCESS\033[0m: %d" % nsuccess
+print "\033[91mFAILURE\033[0m: %d" % nfailed
