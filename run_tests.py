@@ -3,6 +3,8 @@ from os import listdir, remove, name as osname
 from os.path import splitext, join as joinp
 import subprocess as sp
 
+# configuration - you can modify this
+
 COMPILER = "c++"
 CXXFLAGS = [
     "-std=c++11",
@@ -12,22 +14,29 @@ CXXFLAGS = [
 ]
 COLORS = (osname != "nt")
 
+# don't modify past these lines
+
 nsuccess = 0
 nfailed  = 0
+
+if COLORS:
+    colors = {
+        "red": "\033[91m",
+        "green": "\033[92m",
+        "blue": "\033[94m",
+        "bold": "\033[1m",
+        "end": "\033[0m"
+    }
+else:
+    colors = { "red": "", "green": "", "blue": "", "bold": "", "end": "" }
 
 def print_result(modname, fmsg = None):
     global nsuccess, nfailed
     if fmsg:
-        if COLORS:
-            print "%s...\t\033[91m\033[1m(%s)\033[0m" % (modname, fmsg)
-        else:
-            print "%s...\t(%s)" % (modname, fmsg)
+        print modname + ("...\t%(red)s%(bold)s(" + fmsg + ")%(end)s") % colors
         nfailed += 1
     else:
-        if COLORS:
-            print "%s...\t\033[92m\033[1m(success)\033[0m" % modname
-        else:
-            print "%s...\t(success)" % modname
+        print modname + "...\t%(green)s%(bold)s(success)%(end)s" % colors
         nsuccess += 1
 
 for fname in listdir("tests"):
@@ -58,11 +67,6 @@ for fname in listdir("tests"):
     remove(exepath)
     print_result(modname)
 
-if COLORS:
-    print "\n\033[94m\033[1mtesting done:\033[0m"
-    print "\033[92mSUCCESS\033[0m: \033[1m%d\033[0m" % nsuccess
-    print "\033[91mFAILURE\033[0m: \033[1m%d\033[0m" % nfailed
-else:
-    print "\ntesting done:"
-    print "SUCCESS: %d" % nsuccess
-    print "FAILURE: %d" % nfailed
+print "\n%(blue)s%(bold)stesting done:%(end)s" % colors
+print "%(green)sSUCCESS: " % colors + str(nsuccess) + colors["end"]
+print "%(red)sFAILURE: " % colors + str(nfailed) + colors["end"]
