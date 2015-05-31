@@ -1,6 +1,6 @@
 from sys import stdout, exit
-from os import listdir, remove
-from os.path import splitext
+from os import listdir, remove, name as osname
+from os.path import splitext, join as joinp
 import subprocess as sp
 
 COMPILER = "c++"
@@ -10,9 +10,22 @@ CXXFLAGS = [
     "-Wno-missing-braces", # clang false positive
     "-I."
 ]
+COLORS = (osname != "nt")
 
 nsuccess = 0
 nfailed  = 0
+
+def print_result(modname, fmsg = None):
+    if fmsg:
+        if COLORS:
+            print "%s...\t\033[91m\033[1m(%s)\033[0m" % (modname, fmsg)
+        else:
+            print "%s...\t(%s)" % (modname, fmsg)
+    else:
+        if COLORS:
+            print "%s...\t\033[92m\033[1m(success)\033[0m" % modname
+        else:
+            print "%s...\t(success)" % modname
 
 for fname in listdir("tests"):
     (modname, modext) = splitext(fname)
@@ -20,28 +33,36 @@ for fname in listdir("tests"):
     if modext != ".cpp":
         continue
 
-    pc = sp.Popen([ COMPILER, "tests/%s" % fname, "-o", "tests/%s" % modname ]
-        + CXXFLAGS, stdout = sp.PIPE, stderr = sp.STDOUT)
+    srcpath = joinp("tests", fname)
+    exepath = joinp("tests", modname)
+
+    pc = sp.Popen([ COMPILER, srcpath, "-o", exepath ] + CXXFLAGS,
+        stdout = sp.PIPE, stderr = sp.STDOUT)
     stdout.write(pc.communicate()[0])
 
     if pc.returncode != 0:
-        print "%s...\t\033[91m\033[1m(compile error)\033[0m" % modname
+        print_result(modname, "compile error")
         nfailed += 1
         continue
 
-    pc = sp.Popen("tests/%s" % modname, stdout = sp.PIPE, stderr = sp.STDOUT)
+    pc = sp.Popen(exepath, stdout = sp.PIPE, stderr = sp.STDOUT)
     stdout.write(pc.communicate()[0])
 
     if pc.returncode != 0:
-        remove("tests/%s" % modname)
-        print "%s...\t\033[91m\033[1m(runtime error)\033[0m" % modname
+        remove(exepath)
+        print_result(modname, "runtime error")
         nfailed += 1
         continue
 
-    remove("tests/%s" % modname)
-    print "%s...\t\033[92m\033[1m(success)\033[0m" % modname
+    remove(exepath)
+    print_result(modname)
     nsuccess += 1
 
-print "\n\033[94m\033[1mtesting done:\033[0m"
-print "\033[92mSUCCESS\033[0m: \033[1m%d\033[0m" % nsuccess
-print "\033[91mFAILURE\033[0m: \033[1m%d\033[0m" % nfailed
+if COLORS:
+    print "\n\033[94m\033[1mtesting done:\033[0m"
+    print "\033[92mSUCCESS\033[0m: \033[1m%d\033[0m" % nsuccess
+    print "\033[91mFAILURE\033[0m: \033[1m%d\033[0m" % nfailed
+else:
+    print "\ntesting done:"
+    print "SUCCESS: %d" % nsuccess
+    print "FAILURE: %d" % nfailed
