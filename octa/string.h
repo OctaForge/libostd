@@ -173,8 +173,16 @@ namespace octa {
 
     typedef StringBase<char> String;
 
+    template<typename T>
+    struct __OctaIsRangeTest {
+        template<typename U> static char __octa_test(typename U::Category *);
+        template<typename U> static  int __octa_test(...);
+        static constexpr bool value = (sizeof(__octa_test<T>(0)) == sizeof(char));
+    };
+
     template<typename R, typename F>
-    String concat(R range, String sep, F func) {
+    String __octa_concat(R range, const String &sep, F func,
+                         EnableIf<__OctaIsRangeTest<R>::value, bool> = true) {
         String ret;
         if (range.empty()) return move(ret);
         for (;;) {
@@ -186,8 +194,15 @@ namespace octa {
         return move(ret);
     }
 
+    template<typename T, typename F>
+    String __octa_concat(const T &v, const String &sep, F func,
+                         EnableIf<!__OctaIsRangeTest<T>::value, bool> = true) {
+        return __octa_concat(each(v), sep, func);
+    }
+
     template<typename R>
-    String concat(R range, String sep = " ") {
+    String __octa_concat(R range, const String &sep,
+                         EnableIf<__OctaIsRangeTest<R>::value, bool> = true) {
         String ret;
         if (range.empty()) return move(ret);
         for (;;) {
@@ -199,14 +214,30 @@ namespace octa {
         return move(ret);
     }
 
+    template<typename T>
+    String __octa_concat(const T &v, const String &sep,
+                         EnableIf<!__OctaIsRangeTest<T>::value, bool> = true) {
+        return __octa_concat(each(v), sep);
+    }
+
     template<typename T, typename F>
-    String concat(initializer_list<T> il, String sep, F func) {
-        return concat(each(il), sep, func);
+    String concat(const T &v, const String &sep, F func) {
+        return __octa_concat(v, sep, func);
     }
 
     template<typename T>
-    String concat(initializer_list<T> il, String sep = " ") {
-        return concat(each(il), sep);
+    String concat(const T &v, const String &sep = " ") {
+        return __octa_concat(v, sep);
+    }
+
+    template<typename T, typename F>
+    String concat(initializer_list<T> v, const String &sep, F func) {
+        return __octa_concat(each(v), sep, func);
+    }
+
+    template<typename T>
+    String concat(initializer_list<T> v, const String &sep = " ") {
+        return __octa_concat(each(v), sep);
     }
 
     template<typename T>
