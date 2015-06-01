@@ -553,7 +553,6 @@ namespace octa {
         }
 
         size_t pop_front_n(size_t n) {
-            T *obeg = p_beg;
             size_t olen = p_end - p_beg;
             p_beg += n;
             if (p_beg > p_end) {
@@ -588,7 +587,6 @@ namespace octa {
         }
 
         size_t pop_back_n(size_t n) {
-            T *oend = p_end;
             size_t olen = p_end - p_beg;
             p_end -= n;
             if (p_end < p_beg) {
