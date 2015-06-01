@@ -20,10 +20,10 @@ namespace octa {
     template<typename R, typename U>
     R partition(R range, U pred) {
         R ret = range;
-        for (; !range.empty(); range.pop_first()) {
-            if (pred(range.first())) {
-                swap(range.first(), ret.first());
-                ret.pop_first();
+        for (; !range.empty(); range.pop_front()) {
+            if (pred(range.front())) {
+                swap(range.front(), ret.front());
+                ret.pop_front();
             }
         }
         return ret;
@@ -31,9 +31,9 @@ namespace octa {
 
     template<typename R, typename P>
     bool is_partitioned(R range, P pred) {
-        for (; !range.empty() && pred(range.first()); range.pop_first());
-        for (; !range.empty(); range.pop_first())
-            if (pred(range.first())) return false;
+        for (; !range.empty() && pred(range.front()); range.pop_front());
+        for (; !range.empty(); range.pop_front())
+            if (pred(range.front())) return false;
         return true;
     }
 
@@ -105,10 +105,10 @@ namespace octa {
             return;
         }
         RangeReference<R> p = range[range.size() / 2];
-        swap(p, range.last());
+        swap(p, range.back());
         R r = partition(range, __OctaUnaryCompare<decltype(p), C>{ p, compare });
         R l = range.slice(0, range.size() - r.size());
-        swap(r.first(), r.last());
+        swap(r.front(), r.back());
         __octa_introloop(l, compare, depth - 1);
         __octa_introloop(r, compare, depth - 1);
     }
@@ -152,16 +152,16 @@ namespace octa {
     template<typename R>
     inline R min_element(R range) {
         R r = range;
-        for (; !range.empty(); range.pop_first())
-            if (min(r.first(), range.first()) == range.first())
+        for (; !range.empty(); range.pop_front())
+            if (min(r.front(), range.front()) == range.front())
                 r = range;
         return r;
     }
     template<typename R, typename C>
     inline R min_element(R range, C compare) {
         R r = range;
-        for (; !range.empty(); range.pop_first())
-            if (min(r.first(), range.first(), compare) == range.first())
+        for (; !range.empty(); range.pop_front())
+            if (min(r.front(), range.front(), compare) == range.front())
                 r = range;
         return r;
     }
@@ -169,16 +169,16 @@ namespace octa {
     template<typename R>
     inline R max_element(R range) {
         R r = range;
-        for (; !range.empty(); range.pop_first())
-            if (max(r.first(), range.first()) == range.first())
+        for (; !range.empty(); range.pop_front())
+            if (max(r.front(), range.front()) == range.front())
                 r = range;
         return r;
     }
     template<typename R, typename C>
     inline R max_element(R range, C compare) {
         R r = range;
-        for (; !range.empty(); range.pop_first())
-            if (max(r.first(), range.first(), compare) == range.first())
+        for (; !range.empty(); range.pop_front())
+            if (max(r.front(), range.front(), compare) == range.front())
                 r = range;
         return r;
     }
@@ -187,21 +187,21 @@ namespace octa {
 
     template<typename T>
     inline T min(initializer_list<T> il) {
-        return min_element(each(il)).first();
+        return min_element(each(il)).front();
     }
     template<typename T, typename C>
     inline T min(initializer_list<T> il, C compare) {
-        return min_element(each(il), compare).first();
+        return min_element(each(il), compare).front();
     }
 
     template<typename T>
     inline T max(initializer_list<T> il) {
-        return max_element(each(il)).first();
+        return max_element(each(il)).front();
     }
 
     template<typename T, typename C>
     inline T max(initializer_list<T> il, C compare) {
-        return max_element(each(il), compare).first();
+        return max_element(each(il), compare).front();
     }
 
     /* clamp */
@@ -220,52 +220,52 @@ namespace octa {
 
     template<typename R, typename F>
     F for_each(R range, F func) {
-        for (; !range.empty(); range.pop_first())
-            func(range.first());
+        for (; !range.empty(); range.pop_front())
+            func(range.front());
         return move(func);
     }
 
     template<typename R, typename P>
     bool all_of(R range, P pred) {
-        for (; !range.empty(); range.pop_first())
-            if (!pred(range.first())) return false;
+        for (; !range.empty(); range.pop_front())
+            if (!pred(range.front())) return false;
         return true;
     }
 
     template<typename R, typename P>
     bool any_of(R range, P pred) {
-        for (; !range.empty(); range.pop_first())
-            if (pred(range.first())) return true;
+        for (; !range.empty(); range.pop_front())
+            if (pred(range.front())) return true;
         return false;
     }
 
     template<typename R, typename P>
     bool none_of(R range, P pred) {
-        for (; !range.empty(); range.pop_first())
-            if (pred(range.first())) return false;
+        for (; !range.empty(); range.pop_front())
+            if (pred(range.front())) return false;
         return true;
     }
 
     template<typename R, typename T>
     R find(R range, const T &v) {
-        for (; !range.empty(); range.pop_first())
-            if (range.first() == v)
+        for (; !range.empty(); range.pop_front())
+            if (range.front() == v)
                 break;
         return range;
     }
 
     template<typename R, typename P>
     R find_if(R range, P pred) {
-        for (; !range.empty(); range.pop_first())
-            if (pred(range.first()))
+        for (; !range.empty(); range.pop_front())
+            if (pred(range.front()))
                 break;
         return range;
     }
 
     template<typename R, typename P>
     R find_if_not(R range, P pred) {
-        for (; !range.empty(); range.pop_first())
-            if (!pred(range.first()))
+        for (; !range.empty(); range.pop_front())
+            if (!pred(range.front()))
                 break;
         return range;
     }
@@ -273,8 +273,8 @@ namespace octa {
     template<typename R, typename T>
     RangeSize<R> count(R range, const T &v) {
         RangeSize<R> ret = 0;
-        for (; !range.empty(); range.pop_first())
-            if (range.first() == v)
+        for (; !range.empty(); range.pop_front())
+            if (range.front() == v)
                 ++ret;
         return ret;
     }
@@ -282,8 +282,8 @@ namespace octa {
     template<typename R, typename P>
     RangeSize<R> count_if(R range, P pred) {
         RangeSize<R> ret = 0;
-        for (; !range.empty(); range.pop_first())
-            if (pred(range.first()))
+        for (; !range.empty(); range.pop_front())
+            if (pred(range.front()))
                 ++ret;
         return ret;
     }
@@ -291,18 +291,18 @@ namespace octa {
     template<typename R, typename P>
     RangeSize<R> count_if_not(R range, P pred) {
         RangeSize<R> ret = 0;
-        for (; !range.empty(); range.pop_first())
-            if (!pred(range.first()))
+        for (; !range.empty(); range.pop_front())
+            if (!pred(range.front()))
                 ++ret;
         return ret;
     }
 
     template<typename R>
     bool equal(R range1, R range2) {
-        for (; !range1.empty(); range1.pop_first()) {
-            if (range2.empty() || (range1.first() != range2.first()))
+        for (; !range1.empty(); range1.pop_front()) {
+            if (range2.empty() || (range1.front() != range2.front()))
                 return false;
-            range2.pop_first();
+            range2.pop_front();
         }
         return range2.empty();
     }
@@ -311,103 +311,103 @@ namespace octa {
 
     template<typename R1, typename R2>
     R2 copy(R1 irange, R2 orange) {
-        for (; !irange.empty(); irange.pop_first())
-            orange.put(irange.first());
+        for (; !irange.empty(); irange.pop_front())
+            orange.put(irange.front());
         return orange;
     }
 
     template<typename R1, typename R2, typename P>
     R2 copy_if(R1 irange, R2 orange, P pred) {
-        for (; !irange.empty(); irange.pop_first())
-            if (pred(irange.first()))
-                orange.put(irange.first());
+        for (; !irange.empty(); irange.pop_front())
+            if (pred(irange.front()))
+                orange.put(irange.front());
         return orange;
     }
 
     template<typename R1, typename R2, typename P>
     R2 copy_if_not(R1 irange, R2 orange, P pred) {
-        for (; !irange.empty(); irange.pop_first())
-            if (!pred(irange.first()))
-                orange.put(irange.first());
+        for (; !irange.empty(); irange.pop_front())
+            if (!pred(irange.front()))
+                orange.put(irange.front());
         return orange;
     }
 
     template<typename R1, typename R2>
     R2 move(R1 irange, R2 orange) {
-        for (; !irange.empty(); irange.pop_first())
-            orange.put(move(irange.first()));
+        for (; !irange.empty(); irange.pop_front())
+            orange.put(move(irange.front()));
         return orange;
     }
 
     template<typename R>
     void reverse(R range) {
         while (!range.empty()) {
-            swap(range.first(), range.last());
-            range.pop_first();
-            range.pop_last();
+            swap(range.front(), range.back());
+            range.pop_front();
+            range.pop_back();
         }
     }
 
     template<typename R1, typename R2>
     R2 reverse_copy(R1 irange, R2 orange) {
-        for (; !irange.empty(); irange.pop_last())
-            orange.put(irange.last());
+        for (; !irange.empty(); irange.pop_back())
+            orange.put(irange.back());
         return orange;
     }
 
     template<typename R, typename T>
     void fill(R range, const T &v) {
-        for (; !range.empty(); range.pop_first())
-            range.first() = v;
+        for (; !range.empty(); range.pop_front())
+            range.front() = v;
     }
 
     template<typename R, typename F>
     void generate(R range, F gen) {
-        for (; !range.empty(); range.pop_first())
-            range.first() = gen();
+        for (; !range.empty(); range.pop_front())
+            range.front() = gen();
     }
 
     template<typename R1, typename R2>
     Pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
         while (!range1.empty() && !range2.empty()) {
-            swap(range1.first(), range2.first());
-            range1.pop_first();
-            range2.pop_first();
+            swap(range1.front(), range2.front());
+            range1.pop_front();
+            range2.pop_front();
         }
         return Pair<R1, R2>(range1, range2);
     }
 
     template<typename R, typename T>
     void iota(R range, T value) {
-        for (; !range.empty(); range.pop_first())
-            range.first() = value++;
+        for (; !range.empty(); range.pop_front())
+            range.front() = value++;
     }
 
     template<typename R, typename T>
     T foldl(R range, T init) {
-        for (; !range.empty(); range.pop_first())
-            init = init + range.first();
+        for (; !range.empty(); range.pop_front())
+            init = init + range.front();
         return init;
     }
 
     template<typename R, typename T, typename F>
     T foldl(R range, T init, F func) {
-        for (; !range.empty(); range.pop_first())
-            init = func(init, range.first());
+        for (; !range.empty(); range.pop_front())
+            init = func(init, range.front());
         return init;
     }
 
     template<typename R, typename T>
     T foldr(R range, T init) {
-        for (; !range.empty(); range.pop_last())
-            init = init + range.last();
+        for (; !range.empty(); range.pop_back())
+            init = init + range.back();
         return init;
     }
 
     template<typename R, typename T, typename F>
     T foldr(R range, T init, F func) {
-        for (; !range.empty(); range.pop_last())
-            init = func(init, range.last());
+        for (; !range.empty(); range.pop_back())
+            init = func(init, range.back());
         return init;
     }
 
@@ -440,34 +440,34 @@ namespace octa {
         bool empty() const { return p_range.empty(); }
         RangeSize<T> size() const { return p_range.size(); }
 
-        bool equals_first(const MapRange &range) const {
-            return p_range.equals_first(range.p_range);
+        bool equals_front(const MapRange &range) const {
+            return p_range.equals_front(range.p_range);
         }
-        bool equals_last(const MapRange &range) const {
-            return p_range.equals_first(range.p_range);
-        }
-
-        RangeDifference<T> distance_first(const MapRange &range) const {
-            return p_range.distance_first(range.p_range);
-        }
-        RangeDifference<T> distance_last(const MapRange &range) const {
-            return p_range.distance_last(range.p_range);
+        bool equals_back(const MapRange &range) const {
+            return p_range.equals_front(range.p_range);
         }
 
-        bool pop_first() { return p_range.pop_first(); }
-        bool pop_last() { return p_range.pop_last(); }
+        RangeDifference<T> distance_front(const MapRange &range) const {
+            return p_range.distance_front(range.p_range);
+        }
+        RangeDifference<T> distance_back(const MapRange &range) const {
+            return p_range.distance_back(range.p_range);
+        }
 
-        bool push_first() { return p_range.pop_first(); }
-        bool push_last() { return p_range.push_last(); }
+        bool pop_front() { return p_range.pop_front(); }
+        bool pop_back() { return p_range.pop_back(); }
 
-        RangeSize<T> pop_first_n(RangeSize<T> n) { p_range.pop_first_n(n); }
-        RangeSize<T> pop_last_n(RangeSize<T> n) { p_range.pop_last_n(n); }
+        bool push_front() { return p_range.pop_front(); }
+        bool push_back() { return p_range.push_back(); }
 
-        RangeSize<T> push_first_n(RangeSize<T> n) { return p_range.push_first_n(n); }
-        RangeSize<T> push_last_n(RangeSize<T> n) { return p_range.push_last_n(n); }
+        RangeSize<T> pop_front_n(RangeSize<T> n) { p_range.pop_front_n(n); }
+        RangeSize<T> pop_back_n(RangeSize<T> n) { p_range.pop_back_n(n); }
 
-        R first() const { return p_func(p_range.first()); }
-        R last() const { return p_func(p_range.last()); }
+        RangeSize<T> push_front_n(RangeSize<T> n) { return p_range.push_front_n(n); }
+        RangeSize<T> push_back_n(RangeSize<T> n) { return p_range.push_back_n(n); }
+
+        R front() const { return p_func(p_range.front()); }
+        R back() const { return p_func(p_range.back()); }
 
         R operator[](RangeSize<T> idx) const {
             return p_func(p_range[idx]);
@@ -496,7 +496,7 @@ namespace octa {
         Function<bool(RangeReference<T>)> p_pred;
 
         void advance_valid() {
-            while (!p_range.empty() && !p_pred(first())) p_range.pop_first();
+            while (!p_range.empty() && !p_pred(front())) p_range.pop_front();
         }
 
     public:
@@ -531,26 +531,26 @@ namespace octa {
 
         bool empty() const { return p_range.empty(); }
 
-        bool equals_first(const FilterRange &range) const {
-            return p_range.equals_first(range.p_range);
+        bool equals_front(const FilterRange &range) const {
+            return p_range.equals_front(range.p_range);
         }
 
-        bool pop_first() {
-            bool ret = p_range.pop_first();
+        bool pop_front() {
+            bool ret = p_range.pop_front();
             advance_valid();
             return ret;
         }
-        bool push_first() {
+        bool push_front() {
             T tmp = p_range;
-            if (!tmp.push_first()) return false;
-            while (!pred(tmp.first()))
-                if (!tmp.push_first())
+            if (!tmp.push_front()) return false;
+            while (!pred(tmp.front()))
+                if (!tmp.push_front())
                     return false;
             p_range = tmp;
             return true;
         }
 
-        RangeReference<T> first() const { return p_range.first(); }
+        RangeReference<T> front() const { return p_range.front(); }
     };
 
     template<typename R, typename P>

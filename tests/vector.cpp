@@ -8,8 +8,8 @@ using namespace octa;
 int main() {
     Vector<int> x = { 5, 10, 15, 20 };
 
-    assert(x.first() == 5);
-    assert(x.last() == 20);
+    assert(x.front() == 5);
+    assert(x.back() == 20);
 
     assert(x[0] == 5);
     assert(x[2] == 15);
@@ -24,13 +24,13 @@ int main() {
     Vector<int> y(5, 10);
 
     assert(y.size() == 5);
-    assert(y.first() == 10);
-    assert(y.last() == 10);
+    assert(y.front() == 10);
+    assert(y.back() == 10);
 
     Vector<int> z(x);
 
-    assert(x.first() == z.first());
-    assert(x.last() == z.last());
+    assert(x.front() == z.front());
+    assert(x.back() == z.back());
 
     z.clear();
 
@@ -42,19 +42,19 @@ int main() {
 
     assert(z.size() == 5);
     assert(y.size() == 0);
-    assert(z.first() == 10);
-    assert(z.last() == 10);
+    assert(z.front() == 10);
+    assert(z.back() == 10);
 
     z.resize(150, 5);
     assert(z.size() == 150);
-    assert(z.first() == 10);
-    assert(z.last() == 5);
+    assert(z.front() == 10);
+    assert(z.back() == 5);
 
     assert(z.push(30) == 30);
-    assert(z.last() == 30);
+    assert(z.back() == 30);
 
     assert(z.emplace_back(20) == 20);
-    assert(z.last() == 20);
+    assert(z.back() == 20);
 
     z.clear();
     z.resize(10, 5);
@@ -70,20 +70,20 @@ int main() {
     assert(z.size() == 11);
 
     auto r = z.each();
-    assert(r.first() == 5);
-    assert(r.last() == 5);
+    assert(r.front() == 5);
+    assert(r.back() == 5);
     assert(r[2] == 4);
 
     auto r2 = each(z);
-    assert(r.first() == r2.first());
+    assert(r.front() == r2.front());
 
     Vector<int> w;
     w.swap(z);
 
     assert(z.size() == 0);
     assert(w.size() != 0);
-    assert(w.first() == 5);
-    assert(w.last() == 5);
+    assert(w.front() == 5);
+    assert(w.back() == 5);
 
     assert(!strcmp(to_string(w).data(), "{5, 5, 4, 5, 5, 5, 5, 5, 5, 5, 5}"));
 

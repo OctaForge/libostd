@@ -31,11 +31,11 @@ namespace octa {
         T &at(size_t i) { return p_buf[i]; }
         const T &at(size_t i) const { return p_buf[i]; }
 
-        T &first() { return p_buf[0]; }
-        const T &first() const { return p_buf[0]; }
+        T &front() { return p_buf[0]; }
+        const T &front() const { return p_buf[0]; }
 
-        T &last() { return p_buf[(N > 0) ? (N - 1) : 0]; }
-        const T &last() const { return p_buf[(N > 0) ? (N - 1) : 0]; }
+        T &back() { return p_buf[(N > 0) ? (N - 1) : 0]; }
+        const T &back() const { return p_buf[(N > 0) ? (N - 1) : 0]; }
 
         size_t size() const { return N; }
 

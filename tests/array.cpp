@@ -8,8 +8,8 @@ using namespace octa;
 int main() {
     Array<int, 5> x = { 2, 4, 8, 16, 32 };
 
-    assert(x.first() == 2);
-    assert(x.last() == 32);
+    assert(x.front() == 2);
+    assert(x.back() == 32);
 
     assert(x[0] == 2);
     assert(x[2] == 8);
@@ -28,14 +28,14 @@ int main() {
     assert(x.data()[0] == x[0]);
 
     auto r = x.each();
-    assert(r.first() == 2);
-    assert(r.last() == 32);
+    assert(r.front() == 2);
+    assert(r.back() == 32);
 
     Array<int, 5> z;
     x.swap(z);
 
-    assert(z.first() == 2);
-    assert(z.last() == 32);
+    assert(z.front() == 2);
+    assert(z.back() == 32);
 
     assert(z.size() == 5);
 

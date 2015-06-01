@@ -37,8 +37,8 @@ namespace octa {
             RangeSize<R> len = range.size();
             reserve(len);
             p_len = len;
-            for (size_t i = 0; !range.empty(); range.pop_first()) {
-                new (&p_buf[i]) T(range.first());
+            for (size_t i = 0; !range.empty(); range.pop_front()) {
+                new (&p_buf[i]) T(range.front());
                 ++i;
             }
         }
@@ -48,9 +48,9 @@ namespace octa {
             ::value, bool
         > = true) {
             size_t i = 0;
-            for (; !range.empty(); range.pop_first()) {
+            for (; !range.empty(); range.pop_front()) {
                 reserve(i + 1);
-                new (&p_buf[i]) T(range.first());
+                new (&p_buf[i]) T(range.front());
                 ++i;
                 p_len = i;
             }
@@ -236,11 +236,11 @@ namespace octa {
             }
         }
 
-        T &first() { return p_buf[0]; }
-        const T &first() const { return p_buf[0]; };
+        T &front() { return p_buf[0]; }
+        const T &front() const { return p_buf[0]; };
 
-        T &last() { return p_buf[p_len - 1]; }
-        const T &last() const { return p_buf[p_len - 1]; }
+        T &back() { return p_buf[p_len - 1]; }
+        const T &back() const { return p_buf[p_len - 1]; }
 
         T *data() { return p_buf; }
         const T *data() const { return p_buf; }
@@ -288,8 +288,8 @@ namespace octa {
             size_t len = range.size();
             insert_base(idx, len);
             for (size_t i = 0; i < len; ++i) {
-                p_buf[idx + i] = range.first();
-                range.pop_first();
+                p_buf[idx + i] = range.front();
+                range.pop_front();
             }
             return &p_buf[idx];
         }

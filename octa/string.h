@@ -23,7 +23,7 @@ namespace octa {
         Vector<T> p_buf;
 
         void terminate() {
-            if (p_buf.empty() || (p_buf.last() != '\0')) p_buf.push('\0');
+            if (p_buf.empty() || (p_buf.back() != '\0')) p_buf.push('\0');
         }
 
     public:
@@ -86,11 +86,11 @@ namespace octa {
         T &at(size_t i) { return p_buf[i]; }
         const T &at(size_t i) const { return p_buf[i]; }
 
-        T &first() { return p_buf[0]; }
-        const T &first() const { return p_buf[0]; };
+        T &front() { return p_buf[0]; }
+        const T &front() const { return p_buf[0]; };
 
-        T &last() { return p_buf[size() - 1]; }
-        const T &last() const { return p_buf[size() - 1]; }
+        T &back() { return p_buf[size() - 1]; }
+        const T &back() const { return p_buf[size() - 1]; }
 
         T *data() { return p_buf.data(); }
         const T *data() const { return p_buf.data(); }
@@ -106,7 +106,7 @@ namespace octa {
         bool empty() const { return (size() == 0); }
 
         void push(T v) {
-            p_buf.last() = v;
+            p_buf.back() = v;
             p_buf.push('\0');
         }
 
@@ -186,8 +186,8 @@ namespace octa {
         auto range = each(v);
         if (range.empty()) return move(ret);
         for (;;) {
-            ret += func(range.first());
-            range.pop_first();
+            ret += func(range.front());
+            range.pop_front();
             if (range.empty()) break;
             ret += sep;
         }
@@ -200,8 +200,8 @@ namespace octa {
         auto range = each(v);
         if (range.empty()) return move(ret);
         for (;;) {
-            ret += range.first();
-            range.pop_first();
+            ret += range.front();
+            range.pop_front();
             if (range.empty()) break;
             ret += sep;
         }

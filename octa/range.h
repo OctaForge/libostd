@@ -121,11 +121,11 @@ namespace octa {
         __OctaRangeIterator(): p_range() {}
         explicit __OctaRangeIterator(const T &range): p_range(range) {}
         __OctaRangeIterator &operator++() {
-            p_range.pop_first();
+            p_range.pop_front();
             return *this;
         }
         RangeReference<T> operator*() const {
-            return p_range.first();
+            return p_range.front();
         }
         bool operator!=(__OctaRangeIterator) const { return !p_range.empty(); }
     private:
@@ -158,26 +158,26 @@ namespace octa {
 
         T range() const { return p_range; }
 
-        bool next() { return p_range.pop_first(); }
-        bool prev() { return p_range.push_first(); }
+        bool next() { return p_range.pop_front(); }
+        bool prev() { return p_range.push_front(); }
 
         RangeSize<T> next_n(RangeSize<T> n) {
-            return p_range.pop_first_n(n);
+            return p_range.pop_front_n(n);
         }
         RangeSize<T> prev_n(RangeSize<T> n) {
-            return p_range.push_first_n(n);
+            return p_range.push_front_n(n);
         }
 
         RangeReference<T> get() const {
-            return p_range.first();
+            return p_range.front();
         }
 
         RangeDifference<T> distance(const RangeHalf &half) const {
-            return p_range.distance_first(half.p_range);
+            return p_range.distance_front(half.p_range);
         }
 
         bool equals(const RangeHalf &half) const {
-            return p_range.equals_first(half.p_range);
+            return p_range.equals_front(half.p_range);
         }
 
         bool operator==(const RangeHalf &half) const {
@@ -248,30 +248,30 @@ namespace octa {
     }
 
     template<typename R>
-    RangeSize<R> __octa_pop_first_n(R &range, RangeSize<R> n) {
+    RangeSize<R> __octa_pop_front_n(R &range, RangeSize<R> n) {
         for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.pop_first()) return i;
+            if (!range.pop_front()) return i;
         return n;
     }
 
     template<typename R>
-    RangeSize<R> __octa_pop_last_n(R &range, RangeSize<R> n) {
+    RangeSize<R> __octa_pop_back_n(R &range, RangeSize<R> n) {
         for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.pop_last()) return i;
+            if (!range.pop_back()) return i;
         return n;
     }
 
     template<typename R>
-    RangeSize<R> __octa_push_first_n(R &range, RangeSize<R> n) {
+    RangeSize<R> __octa_push_front_n(R &range, RangeSize<R> n) {
         for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.push_first()) return i;
+            if (!range.push_front()) return i;
         return n;
     }
 
     template<typename R>
-    RangeSize<R> __octa_push_last_n(R &range, RangeSize<R> n) {
+    RangeSize<R> __octa_push_back_n(R &range, RangeSize<R> n) {
         for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.push_last()) return i;
+            if (!range.push_back()) return i;
         return n;
     }
 
@@ -291,20 +291,20 @@ namespace octa {
             return __OctaRangeIterator<B>();
         }
 
-        SizeType pop_first_n(SizeType n) {
-            return __octa_pop_first_n<B>(*((B *)this), n);
+        SizeType pop_front_n(SizeType n) {
+            return __octa_pop_front_n<B>(*((B *)this), n);
         }
 
-        SizeType pop_last_n(SizeType n) {
-            return __octa_pop_last_n<B>(*((B *)this), n);
+        SizeType pop_back_n(SizeType n) {
+            return __octa_pop_back_n<B>(*((B *)this), n);
         }
 
-        SizeType push_first_n(SizeType n) {
-            return __octa_push_first_n<B>(*((B *)this), n);
+        SizeType push_front_n(SizeType n) {
+            return __octa_push_front_n<B>(*((B *)this), n);
         }
 
-        SizeType push_last_n(SizeType n) {
-            return __octa_push_last_n<B>(*((B *)this), n);
+        SizeType push_back_n(SizeType n) {
+            return __octa_push_back_n<B>(*((B *)this), n);
         }
 
         B each() const {
@@ -366,34 +366,34 @@ namespace octa {
         bool empty() const { return p_range.empty(); }
         r_size size() const { return p_range.size(); }
 
-        bool equals_first(const ReverseRange &range) const {
-        return p_range.equals_last(range.p_range);
+        bool equals_front(const ReverseRange &range) const {
+        return p_range.equals_back(range.p_range);
         }
-        bool equals_last(const ReverseRange &range) const {
-            return p_range.equals_first(range.p_range);
-        }
-
-        RangeDifference<T> distance_first(const ReverseRange &range) const {
-            return -p_range.distance_last(range.p_range);
-        }
-        RangeDifference<T> distance_last(const ReverseRange &range) const {
-            return -p_range.distance_first(range.p_range);
+        bool equals_back(const ReverseRange &range) const {
+            return p_range.equals_front(range.p_range);
         }
 
-        bool pop_first() { return p_range.pop_last(); }
-        bool pop_last() { return p_range.pop_first(); }
+        RangeDifference<T> distance_front(const ReverseRange &range) const {
+            return -p_range.distance_back(range.p_range);
+        }
+        RangeDifference<T> distance_back(const ReverseRange &range) const {
+            return -p_range.distance_front(range.p_range);
+        }
 
-        bool push_first() { return p_range.push_last(); }
-        bool push_last() { return p_range.push_first(); }
+        bool pop_front() { return p_range.pop_back(); }
+        bool pop_back() { return p_range.pop_front(); }
 
-        r_size pop_first_n(r_size n) { return p_range.pop_first_n(n); }
-        r_size pop_last_n(r_size n) { return p_range.pop_last_n(n); }
+        bool push_front() { return p_range.push_back(); }
+        bool push_back() { return p_range.push_front(); }
 
-        r_size push_first_n(r_size n) { return p_range.push_first_n(n); }
-        r_size push_last_n(r_size n) { return p_range.push_last_n(n); }
+        r_size pop_front_n(r_size n) { return p_range.pop_front_n(n); }
+        r_size pop_back_n(r_size n) { return p_range.pop_back_n(n); }
 
-        r_ref first() const { return p_range.last(); }
-        r_ref last() const { return p_range.first(); }
+        r_size push_front_n(r_size n) { return p_range.push_front_n(n); }
+        r_size push_back_n(r_size n) { return p_range.push_back_n(n); }
+
+        r_ref front() const { return p_range.back(); }
+        r_ref back() const { return p_range.front(); }
 
         r_ref operator[](r_size i) const { return p_range[size() - i - 1]; }
 
@@ -449,34 +449,34 @@ namespace octa {
         bool empty() const { return p_range.empty(); }
         r_size size() const { return p_range.size(); }
 
-        bool equals_first(const MoveRange &range)  const {
-            return p_range.equals_first(range.p_range);
+        bool equals_front(const MoveRange &range)  const {
+            return p_range.equals_front(range.p_range);
         }
-        bool equals_last(const MoveRange &range) const {
-            return p_range.equals_last(range.p_range);
-        }
-
-        RangeDifference<T> distance_first(const MoveRange &range) const {
-            return p_range.distance_first(range.p_range);
-        }
-        RangeDifference<T> distance_last(const MoveRange &range) const {
-            return p_range.distance_last(range.p_range);
+        bool equals_back(const MoveRange &range) const {
+            return p_range.equals_back(range.p_range);
         }
 
-        bool pop_first() { return p_range.pop_first(); }
-        bool pop_last() { return p_range.pop_last(); }
+        RangeDifference<T> distance_front(const MoveRange &range) const {
+            return p_range.distance_front(range.p_range);
+        }
+        RangeDifference<T> distance_back(const MoveRange &range) const {
+            return p_range.distance_back(range.p_range);
+        }
 
-        bool push_first() { return p_range.push_first(); }
-        bool push_last() { return p_range.push_last(); }
+        bool pop_front() { return p_range.pop_front(); }
+        bool pop_back() { return p_range.pop_back(); }
 
-        r_size pop_first_n(r_size n) { return p_range.pop_first_n(n); }
-        r_size pop_last_n(r_size n) { return p_range.pop_last_n(n); }
+        bool push_front() { return p_range.push_front(); }
+        bool push_back() { return p_range.push_back(); }
 
-        r_size push_first_n(r_size n) { return p_range.push_first_n(n); }
-        r_size push_last_n(r_size n) { return p_range.push_last_n(n); }
+        r_size pop_front_n(r_size n) { return p_range.pop_front_n(n); }
+        r_size pop_back_n(r_size n) { return p_range.pop_back_n(n); }
 
-        r_ref first() const { return move(p_range.first()); }
-        r_ref last() const { return move(p_range.last()); }
+        r_size push_front_n(r_size n) { return p_range.push_front_n(n); }
+        r_size push_back_n(r_size n) { return p_range.push_back_n(n); }
+
+        r_ref front() const { return move(p_range.front()); }
+        r_ref back() const { return move(p_range.back()); }
 
         r_ref operator[](r_size i) const { return move(p_range[i]); }
 
@@ -504,13 +504,13 @@ namespace octa {
 
         bool empty() const { return p_a * p_step >= p_b * p_step; }
 
-        bool equals_first(const NumberRange &range) const {
+        bool equals_front(const NumberRange &range) const {
             return p_a == range.p_a;
         }
 
-        bool pop_first() { p_a += p_step; return true; }
-        bool push_first() { p_a -= p_step; return true; }
-        T first() const { return p_a; }
+        bool pop_front() { p_a += p_step; return true; }
+        bool push_front() { p_a -= p_step; return true; }
+        T front() const { return p_a; }
 
     private:
         T p_a, p_b, p_step;
@@ -543,16 +543,16 @@ namespace octa {
         /* satisfy InputRange / ForwardRange */
         bool empty() const { return p_beg == p_end; }
 
-        bool pop_first() {
+        bool pop_front() {
             if (p_beg == p_end) return false;
             ++p_beg;
             return true;
         }
-        bool push_first() {
+        bool push_front() {
             --p_beg; return true;
         }
 
-        size_t pop_first_n(size_t n) {
+        size_t pop_front_n(size_t n) {
             T *obeg = p_beg;
             size_t olen = p_end - p_beg;
             p_beg += n;
@@ -563,31 +563,31 @@ namespace octa {
             return n;
         }
 
-        size_t push_first_n(size_t n) {
+        size_t push_front_n(size_t n) {
             p_beg -= n; return true;
         }
 
-        T &first() const { return *p_beg; }
+        T &front() const { return *p_beg; }
 
-        bool equals_first(const PointerRange &range)  const {
+        bool equals_front(const PointerRange &range)  const {
             return p_beg == range.p_beg;
         }
 
-        ptrdiff_t distance_first(const PointerRange &range) const {
+        ptrdiff_t distance_front(const PointerRange &range) const {
             return range.p_beg;
         }
 
         /* satisfy BidirectionalRange */
-        bool pop_last() {
+        bool pop_back() {
             if (p_end == p_beg) return false;
             --p_end;
             return true;
         }
-        bool push_last() {
+        bool push_back() {
             ++p_end; return true;
         }
 
-        size_t pop_last_n(size_t n) {
+        size_t pop_back_n(size_t n) {
             T *oend = p_end;
             size_t olen = p_end - p_beg;
             p_end -= n;
@@ -598,17 +598,17 @@ namespace octa {
             return n;
         }
 
-        size_t push_last_n(size_t n) {
+        size_t push_back_n(size_t n) {
             p_end += n; return true;
         }
 
-        T &last() const { return *(p_end - 1); }
+        T &back() const { return *(p_end - 1); }
 
-        bool equals_last(const PointerRange &range) const {
+        bool equals_back(const PointerRange &range) const {
             return p_end == range.p_end;
         }
 
-        ptrdiff_t distance_last(const PointerRange &range) const {
+        ptrdiff_t distance_back(const PointerRange &range) const {
             return range.p_end;
         }
 
@@ -686,26 +686,26 @@ namespace octa {
 
         bool empty() const { return p_range.empty(); }
 
-        bool equals_first(const EnumeratedRange &range) const {
-            return p_range.equals_first(range.p_range);
+        bool equals_front(const EnumeratedRange &range) const {
+            return p_range.equals_front(range.p_range);
         }
 
-        bool pop_first() {
-            if (p_range.pop_first()) {
+        bool pop_front() {
+            if (p_range.pop_front()) {
                 ++p_index;
                 return true;
             }
             return false;
         }
 
-        r_size pop_first_n(r_size n) {
-            r_size ret = p_range.pop_first_n(n);
+        r_size pop_front_n(r_size n) {
+            r_size ret = p_range.pop_front_n(n);
             p_index += ret;
             return ret;
         }
 
-        EnumeratedValue<r_ref, r_size> first() const {
-            return EnumeratedValue<r_ref, r_size> { p_index, p_range.first() };
+        EnumeratedValue<r_ref, r_size> front() const {
+            return EnumeratedValue<r_ref, r_size> { p_index, p_range.front() };
         }
     };
 
@@ -740,40 +740,40 @@ namespace octa {
 
         bool empty() const { return (p_remaining <= 0) || p_range.empty(); }
 
-        bool pop_first() {
-            if (p_range.pop_first()) {
+        bool pop_front() {
+            if (p_range.pop_front()) {
                 --p_remaining;
                 return true;
             }
             return false;
         }
-        bool push_first() {
-            if (p_range.push_first()) {
+        bool push_front() {
+            if (p_range.push_front()) {
                 ++p_remaining;
                 return true;
             }
             return false;
         }
 
-        RangeSize<T> pop_first_n(RangeSize<T> n) {
-            RangeSize<T> ret = p_range.pop_first_n(n);
+        RangeSize<T> pop_front_n(RangeSize<T> n) {
+            RangeSize<T> ret = p_range.pop_front_n(n);
             p_remaining -= ret;
             return ret;
         }
-        RangeSize<T> push_first_n(RangeSize<T> n) {
-            RangeSize<T> ret = p_range.push_first_n(n);
+        RangeSize<T> push_front_n(RangeSize<T> n) {
+            RangeSize<T> ret = p_range.push_front_n(n);
             p_remaining += ret;
             return ret;
         }
 
-        RangeReference<T> first() const { return p_range.first(); }
+        RangeReference<T> front() const { return p_range.front(); }
 
-        bool equals_first(const TakeRange &range) const {
-            return p_range.equals_first(range.p_range);
+        bool equals_front(const TakeRange &range) const {
+            return p_range.equals_front(range.p_range);
         }
 
-        RangeDifference<T> distance_first(const TakeRange &range) const {
-            return p_range.distance_first(range.p_range);
+        RangeDifference<T> distance_front(const TakeRange &range) const {
+            return p_range.distance_front(range.p_range);
         }
     };
 
@@ -808,34 +808,34 @@ namespace octa {
 
         bool empty() const { return p_range.empty(); }
 
-        bool equals_first(const ChunksRange &range) const {
-            return p_range.equals_first(range.p_range);
+        bool equals_front(const ChunksRange &range) const {
+            return p_range.equals_front(range.p_range);
         }
 
-        bool pop_first() { return p_range.pop_first_n(p_chunksize) > 0; }
-        bool push_first() {
+        bool pop_front() { return p_range.pop_front_n(p_chunksize) > 0; }
+        bool push_front() {
             T tmp = p_range;
-            RangeSize<T> an = tmp.push_first_n(p_chunksize);
+            RangeSize<T> an = tmp.push_front_n(p_chunksize);
             if (an != p_chunksize) return false;
             p_range = tmp;
             return true;
         }
-        RangeSize<T> pop_first_n(RangeSize<T> n) {
-            return p_range.pop_first_n(p_chunksize * n) / p_chunksize;
+        RangeSize<T> pop_front_n(RangeSize<T> n) {
+            return p_range.pop_front_n(p_chunksize * n) / p_chunksize;
         }
-        RangeSize<T> push_first_n(RangeSize<T> n) {
+        RangeSize<T> push_front_n(RangeSize<T> n) {
             T tmp = p_range;
-            RangeSize<T> an = tmp.push_first_n(p_chunksize * n);
+            RangeSize<T> an = tmp.push_front_n(p_chunksize * n);
             RangeSize<T> pn = an / p_chunksize;
             if (!pn) return 0;
             if (pn == n) {
                 p_range = tmp;
                 return pn;
             }
-            return p_range.push_first_n(p_chunksize * an) / p_chunksize;
+            return p_range.push_front_n(p_chunksize * an) / p_chunksize;
         }
 
-        TakeRange<T> first() const { return take(p_range, p_chunksize); }
+        TakeRange<T> front() const { return take(p_range, p_chunksize); }
     };
 
     template<typename T>
@@ -892,35 +892,35 @@ namespace octa {
 
         bool empty() const { return p_beg == p_end; }
 
-        bool pop_first() {
+        bool pop_front() {
             if (empty()) return false;
             return p_beg.next();
         }
-        bool push_first() {
+        bool push_front() {
             return p_beg.prev();
         }
-        bool pop_last() {
+        bool pop_back() {
             if (empty()) return false;
             return p_end.prev();
         }
-        bool push_last() {
+        bool push_back() {
             return p_end.next();
         }
 
-        RangeReference<T> first() const { return *p_beg; }
-        RangeReference<T> last() const { return *(p_end - 1); }
+        RangeReference<T> front() const { return *p_beg; }
+        RangeReference<T> back() const { return *(p_end - 1); }
 
-        bool equals_first(const HalfRange &range) const {
+        bool equals_front(const HalfRange &range) const {
             return p_beg == range.p_beg;
         }
-        bool equals_last(const HalfRange &range) const {
+        bool equals_back(const HalfRange &range) const {
             return p_end == range.p_end;
         }
 
-        RangeDifference<T> distance_first(const HalfRange &range) const {
+        RangeDifference<T> distance_front(const HalfRange &range) const {
             return range.p_beg - p_beg;
         }
-        RangeDifference<T> distance_last(const HalfRange &range) const {
+        RangeDifference<T> distance_back(const HalfRange &range) const {
             return range.p_end - p_end;
         }
 
