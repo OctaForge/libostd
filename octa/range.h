@@ -20,19 +20,19 @@ namespace octa {
     struct RandomAccessRangeTag: BidirectionalRangeTag {};
     struct FiniteRandomAccessRangeTag: RandomAccessRangeTag {};
 
-    template<typename T> struct RangeHalf;
+    template<typename _T> struct RangeHalf;
 
-#define __OCTA_RANGE_TRAIT(Name, TypeName) \
-    template<typename T> \
-    struct __OctaRange##Name { \
-        typedef typename T::TypeName Type; \
+#define __OCTA_RANGE_TRAIT(_Name, _TypeName) \
+    template<typename _T> \
+    struct __OctaRange##_Name { \
+        typedef typename _T::_TypeName Type; \
     }; \
-    template<typename T> \
-    struct __OctaRange##Name<RangeHalf<T>> { \
-        typedef typename T::TypeName Type; \
+    template<typename _T> \
+    struct __OctaRange##_Name<RangeHalf<_T>> { \
+        typedef typename _T::_TypeName Type; \
     }; \
-    template<typename T> \
-    using Range##Name = typename __OctaRange##Name<T>::Type;
+    template<typename _T> \
+    using Range##_Name = typename __OctaRange##_Name<_T>::Type;
 
     __OCTA_RANGE_TRAIT(Category, Category)
     __OCTA_RANGE_TRAIT(Size, SizeType)
@@ -44,157 +44,157 @@ namespace octa {
 
     // is input range
 
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, InputRangeTag
+    template<typename _T, bool = octa::IsConvertible<
+        RangeCategory<_T>, InputRangeTag
     >::value> struct IsInputRange: False {};
 
-    template<typename T>
-    struct IsInputRange<T, true>: True {};
+    template<typename _T>
+    struct IsInputRange<_T, true>: True {};
 
     // is forward range
 
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, ForwardRangeTag
+    template<typename _T, bool = octa::IsConvertible<
+        RangeCategory<_T>, ForwardRangeTag
     >::value> struct IsForwardRange: False {};
 
-    template<typename T>
-    struct IsForwardRange<T, true>: True {};
+    template<typename _T>
+    struct IsForwardRange<_T, true>: True {};
 
     // is bidirectional range
 
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, BidirectionalRangeTag
+    template<typename _T, bool = octa::IsConvertible<
+        RangeCategory<_T>, BidirectionalRangeTag
     >::value> struct IsBidirectionalRange: False {};
 
-    template<typename T>
-    struct IsBidirectionalRange<T, true>: True {};
+    template<typename _T>
+    struct IsBidirectionalRange<_T, true>: True {};
 
     // is random access range
 
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, RandomAccessRangeTag
+    template<typename _T, bool = octa::IsConvertible<
+        RangeCategory<_T>, RandomAccessRangeTag
     >::value> struct IsRandomAccessRange: False {};
 
-    template<typename T>
-    struct IsRandomAccessRange<T, true>: True {};
+    template<typename _T>
+    struct IsRandomAccessRange<_T, true>: True {};
 
     // is finite random access range
 
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, FiniteRandomAccessRangeTag
+    template<typename _T, bool = octa::IsConvertible<
+        RangeCategory<_T>, FiniteRandomAccessRangeTag
     >::value> struct IsFiniteRandomAccessRange: False {};
 
-    template<typename T>
-    struct IsFiniteRandomAccessRange<T, true>: True {};
+    template<typename _T>
+    struct IsFiniteRandomAccessRange<_T, true>: True {};
 
     // is infinite random access range
 
-    template<typename T>
+    template<typename _T>
     struct IsInfiniteRandomAccessRange: IntegralConstant<bool,
-        (IsRandomAccessRange<T>::value && !IsFiniteRandomAccessRange<T>::value)
+        (IsRandomAccessRange<_T>::value && !IsFiniteRandomAccessRange<_T>::value)
     > {};
 
     // is output range
 
-    template<typename T, typename P>
+    template<typename _T, typename _P>
     struct __OctaOutputRangeTest {
-        template<typename U, void (U::*)(P)> struct __OctaTest {};
-        template<typename U> static char __octa_test(__OctaTest<U, &U::put> *);
-        template<typename U> static  int __octa_test(...);
-        static constexpr bool value = (sizeof(__octa_test<T>(0)) == sizeof(char));
+        template<typename _U, void (_U::*)(_P)> struct __Test {};
+        template<typename _U> static char __test(__Test<_U, &_U::put> *);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == sizeof(char));
     };
 
-    template<typename T, bool = (IsConvertible<
-        RangeCategory<T>, OutputRangeTag
-    >::value || (IsInputRange<T>::value &&
-        (__OctaOutputRangeTest<T, const RangeValue<T>  &>::value ||
-         __OctaOutputRangeTest<T,       RangeValue<T> &&>::value)
+    template<typename _T, bool = (octa::IsConvertible<
+        RangeCategory<_T>, OutputRangeTag
+    >::value || (IsInputRange<_T>::value &&
+        (__OctaOutputRangeTest<_T, const RangeValue<_T>  &>::value ||
+         __OctaOutputRangeTest<_T,       RangeValue<_T> &&>::value)
     ))> struct IsOutputRange: False {};
 
-    template<typename T>
-    struct IsOutputRange<T, true>: True {};
+    template<typename _T>
+    struct IsOutputRange<_T, true>: True {};
 
     // range iterator
 
-    template<typename T>
+    template<typename _T>
     struct __OctaRangeIterator {
-        __OctaRangeIterator(): p_range() {}
-        explicit __OctaRangeIterator(const T &range): p_range(range) {}
+        __OctaRangeIterator(): __range() {}
+        explicit __OctaRangeIterator(const _T &__range): __range(__range) {}
         __OctaRangeIterator &operator++() {
-            p_range.pop_front();
+            __range.pop_front();
             return *this;
         }
-        RangeReference<T> operator*() const {
-            return p_range.front();
+        RangeReference<_T> operator*() const {
+            return __range.front();
         }
-        bool operator!=(__OctaRangeIterator) const { return !p_range.empty(); }
+        bool operator!=(__OctaRangeIterator) const { return !__range.empty(); }
     private:
-        T p_range;
+        _T __range;
     };
 
     // range half
 
-    template<typename T>
+    template<typename _T>
     struct RangeHalf {
     private:
-        T p_range;
+        _T __range;
     public:
-        typedef T RangeType;
+        typedef _T RangeType;
 
-        RangeHalf(): p_range() {}
-        RangeHalf(const T &range): p_range(range) {}
-        RangeHalf(const RangeHalf &half): p_range(half.p_range) {}
-        RangeHalf(RangeHalf &&half): p_range(move(half.p_range)) {}
+        RangeHalf(): __range() {}
+        RangeHalf(const _T &__range): __range(__range) {}
+        RangeHalf(const RangeHalf &__half): __range(__half.__range) {}
+        RangeHalf(RangeHalf &&__half): __range(octa::move(__half.__range)) {}
 
-        RangeHalf &operator=(const RangeHalf &half) {
-            p_range = half.p_range;
+        RangeHalf &operator=(const RangeHalf &__half) {
+            __range = __half.__range;
             return *this;
         }
 
-        RangeHalf &operator=(RangeHalf &&half) {
-            p_range = move(half.p_range);
+        RangeHalf &operator=(RangeHalf &&__half) {
+            __range = octa::move(__half.__range);
             return *this;
         }
 
-        T range() const { return p_range; }
+        _T range() const { return __range; }
 
-        bool next() { return p_range.pop_front(); }
-        bool prev() { return p_range.push_front(); }
+        bool next() { return __range.pop_front(); }
+        bool prev() { return __range.push_front(); }
 
-        RangeSize<T> next_n(RangeSize<T> n) {
-            return p_range.pop_front_n(n);
+        RangeSize<_T> next_n(RangeSize<_T> __n) {
+            return __range.pop_front_n(__n);
         }
-        RangeSize<T> prev_n(RangeSize<T> n) {
-            return p_range.push_front_n(n);
-        }
-
-        RangeReference<T> get() const {
-            return p_range.front();
+        RangeSize<_T> prev_n(RangeSize<_T> __n) {
+            return __range.push_front_n(__n);
         }
 
-        RangeDifference<T> distance(const RangeHalf &half) const {
-            return p_range.distance_front(half.p_range);
+        RangeReference<_T> get() const {
+            return __range.front();
         }
 
-        bool equals(const RangeHalf &half) const {
-            return p_range.equals_front(half.p_range);
+        RangeDifference<_T> distance(const RangeHalf &__half) const {
+            return __range.distance_front(__half.__range);
         }
 
-        bool operator==(const RangeHalf &half) const {
-            return equals(half);
+        bool equals(const RangeHalf &__half) const {
+            return __range.equals_front(__half.__range);
         }
-        bool operator!=(const RangeHalf &half) const {
-            return !equals(half);
+
+        bool operator==(const RangeHalf &__half) const {
+            return equals(__half);
+        }
+        bool operator!=(const RangeHalf &__half) const {
+            return !equals(__half);
         }
 
         /* iterator like interface */
 
-        RangeReference<T> operator*() const {
+        RangeReference<_T> operator*() const {
             return get();
         }
 
-        RangeReference<T> operator[](RangeSize<T> idx) const {
-            return p_range[idx];
+        RangeReference<_T> operator[](RangeSize<_T> __idx) const {
+            return __range[__idx];
         }
 
         RangeHalf &operator++() {
@@ -202,9 +202,9 @@ namespace octa {
             return *this;
         }
         RangeHalf operator++(int) {
-            RangeHalf tmp(*this);
+            RangeHalf __tmp(*this);
             next();
-            return move(tmp);
+            return octa::move(__tmp);
         }
 
         RangeHalf &operator--() {
@@ -212,738 +212,744 @@ namespace octa {
             return *this;
         }
         RangeHalf operator--(int) {
-            RangeHalf tmp(*this);
+            RangeHalf __tmp(*this);
             prev();
-            return move(tmp);
+            return octa::move(__tmp);
         }
 
-        RangeHalf operator+(RangeDifference<T> n) {
-            RangeHalf tmp(*this);
-            if (n < 0) tmp.prev_n(-n);
-            else tmp.next_n(n);
-            return move(tmp);
+        RangeHalf operator+(RangeDifference<_T> __n) {
+            RangeHalf __tmp(*this);
+            if (__n < 0) __tmp.prev_n(-__n);
+            else __tmp.next_n(__n);
+            return octa::move(__tmp);
         }
-        RangeHalf operator-(RangeDifference<T> n) {
-            RangeHalf tmp(*this);
-            if (n < 0) tmp.next_n(-n);
-            else tmp.prev_n(n);
-            return move(tmp);
+        RangeHalf operator-(RangeDifference<_T> __n) {
+            RangeHalf __tmp(*this);
+            if (__n < 0) __tmp.next_n(-__n);
+            else __tmp.prev_n(__n);
+            return octa::move(__tmp);
         }
 
-        RangeHalf &operator+=(RangeDifference<T> n) {
-            if (n < 0) prev_n(-n);
-            else next_n(n);
+        RangeHalf &operator+=(RangeDifference<_T> __n) {
+            if (__n < 0) prev_n(-__n);
+            else next_n(__n);
             return *this;
         }
-        RangeHalf &operator-=(RangeDifference<T> n) {
-            if (n < 0) next_n(-n);
-            else prev_n(n);
+        RangeHalf &operator-=(RangeDifference<_T> __n) {
+            if (__n < 0) next_n(-__n);
+            else prev_n(__n);
             return *this;
         }
     };
 
-    template<typename R>
-    RangeDifference<R> operator-(const R &lhs, const R &rhs) {
-        return rhs.distance(lhs);
+    template<typename _R>
+    RangeDifference<_R> operator-(const _R &__lhs, const _R &__rhs) {
+        return __rhs.distance(__lhs);
     }
 
-    template<typename R>
-    RangeSize<R> __octa_pop_front_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.pop_front()) return i;
-        return n;
+    template<typename _R>
+    RangeSize<_R> __octa_pop_front_n(_R &__range, RangeSize<_R> __n) {
+        for (RangeSize<_R> __i = 0; __i < __n; ++__i)
+            if (!__range.pop_front()) return __i;
+        return __n;
     }
 
-    template<typename R>
-    RangeSize<R> __octa_pop_back_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.pop_back()) return i;
-        return n;
+    template<typename _R>
+    RangeSize<_R> __octa_pop_back_n(_R &__range, RangeSize<_R> __n) {
+        for (RangeSize<_R> __i = 0; __i < __n; ++__i)
+            if (!__range.pop_back()) return __i;
+        return __n;
     }
 
-    template<typename R>
-    RangeSize<R> __octa_push_front_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.push_front()) return i;
-        return n;
+    template<typename _R>
+    RangeSize<_R> __octa_push_front_n(_R &__range, RangeSize<_R> __n) {
+        for (RangeSize<_R> __i = 0; __i < __n; ++__i)
+            if (!__range.push_front()) return __i;
+        return __n;
     }
 
-    template<typename R>
-    RangeSize<R> __octa_push_back_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.push_back()) return i;
-        return n;
+    template<typename _R>
+    RangeSize<_R> __octa_push_back_n(_R &__range, RangeSize<_R> __n) {
+        for (RangeSize<_R> __i = 0; __i < __n; ++__i)
+            if (!__range.push_back()) return __i;
+        return __n;
     }
 
-    template<typename B, typename C, typename V, typename R = V &,
-             typename S = size_t, typename D = ptrdiff_t
+    template<typename _B, typename _C, typename _V, typename _R = _V &,
+             typename _S = size_t, typename _D = ptrdiff_t
     > struct InputRange {
-        typedef C Category;
-        typedef S SizeType;
-        typedef D DiffType;
-        typedef V ValType;
-        typedef R RefType;
+        typedef _C Category;
+        typedef _S SizeType;
+        typedef _D DiffType;
+        typedef _V ValType;
+        typedef _R RefType;
 
-        __OctaRangeIterator<B> begin() const {
-            return __OctaRangeIterator<B>((const B &)*this);
+        __OctaRangeIterator<_B> begin() const {
+            return __OctaRangeIterator<_B>((const _B &)*this);
         }
-        __OctaRangeIterator<B> end() const {
-            return __OctaRangeIterator<B>();
-        }
-
-        SizeType pop_front_n(SizeType n) {
-            return __octa_pop_front_n<B>(*((B *)this), n);
+        __OctaRangeIterator<_B> end() const {
+            return __OctaRangeIterator<_B>();
         }
 
-        SizeType pop_back_n(SizeType n) {
-            return __octa_pop_back_n<B>(*((B *)this), n);
+        SizeType pop_front_n(SizeType __n) {
+            return __octa_pop_front_n<_B>(*((_B *)this), __n);
         }
 
-        SizeType push_front_n(SizeType n) {
-            return __octa_push_front_n<B>(*((B *)this), n);
+        SizeType pop_back_n(SizeType __n) {
+            return __octa_pop_back_n<_B>(*((_B *)this), __n);
         }
 
-        SizeType push_back_n(SizeType n) {
-            return __octa_push_back_n<B>(*((B *)this), n);
+        SizeType push_front_n(SizeType __n) {
+            return __octa_push_front_n<_B>(*((_B *)this), __n);
         }
 
-        B each() const {
-            return B(*((B *)this));
+        SizeType push_back_n(SizeType __n) {
+            return __octa_push_back_n<_B>(*((_B *)this), __n);
         }
 
-        RangeHalf<B> half() const {
-            return RangeHalf<B>(*((B *)this));
+        _B each() const {
+            return _B(*((_B *)this));
+        }
+
+        RangeHalf<_B> half() const {
+            return RangeHalf<_B>(*((_B *)this));
         }
     };
 
-    template<typename V, typename R = V &, typename S = size_t,
-             typename D = ptrdiff_t
+    template<typename _V, typename _R = _V &, typename _S = size_t,
+             typename _D = ptrdiff_t
     > struct OutputRange {
         typedef OutputRangeTag Category;
-        typedef S SizeType;
-        typedef D DiffType;
-        typedef V ValType;
-        typedef R RefType;
+        typedef _S SizeType;
+        typedef _D DiffType;
+        typedef _V ValType;
+        typedef _R RefType;
     };
 
-    template<typename T>
-    struct ReverseRange: InputRange<ReverseRange<T>,
-        RangeCategory<T>, RangeValue<T>, RangeReference<T>, RangeSize<T>,
-        RangeDifference<T>
+    template<typename _T>
+    struct ReverseRange: InputRange<ReverseRange<_T>,
+        RangeCategory<_T>, RangeValue<_T>, RangeReference<_T>, RangeSize<_T>,
+        RangeDifference<_T>
     > {
     private:
-        typedef RangeReference<T> r_ref;
-        typedef RangeSize<T> r_size;
+        typedef RangeReference<_T> _r_ref;
+        typedef RangeSize<_T> _r_size;
 
-        T p_range;
+        _T __range;
 
     public:
-        ReverseRange(): p_range() {}
+        ReverseRange(): __range() {}
 
-        ReverseRange(const T &range): p_range(range) {}
+        ReverseRange(const _T &__range): __range(__range) {}
 
-        ReverseRange(const ReverseRange &it): p_range(it.p_range) {}
+        ReverseRange(const ReverseRange &__it): __range(__it.__range) {}
 
-        ReverseRange(ReverseRange &&it): p_range(move(it.p_range)) {}
+        ReverseRange(ReverseRange &&__it): __range(octa::move(__it.__range)) {}
 
-        ReverseRange &operator=(const ReverseRange &v) {
-            p_range = v.p_range;
+        ReverseRange &operator=(const ReverseRange &__v) {
+            __range = __v.__range;
             return *this;
         }
-        ReverseRange &operator=(ReverseRange &&v) {
-            p_range = move(v.p_range);
+        ReverseRange &operator=(ReverseRange &&__v) {
+            __range = octa::move(__v.__range);
             return *this;
         }
-        ReverseRange &operator=(const T &v) {
-            p_range = v;
+        ReverseRange &operator=(const _T &__v) {
+            __range = __v;
             return *this;
         }
-        ReverseRange &operator=(T &&v) {
-            p_range = move(v);
+        ReverseRange &operator=(_T &&__v) {
+            __range = octa::move(__v);
             return *this;
         }
 
-        bool empty() const { return p_range.empty(); }
-        r_size size() const { return p_range.size(); }
+        bool empty() const { return __range.empty(); }
+        _r_size size() const { return __range.size(); }
 
-        bool equals_front(const ReverseRange &range) const {
-        return p_range.equals_back(range.p_range);
+        bool equals_front(const ReverseRange &__r) const {
+        return __range.equals_back(__r.__range);
         }
-        bool equals_back(const ReverseRange &range) const {
-            return p_range.equals_front(range.p_range);
-        }
-
-        RangeDifference<T> distance_front(const ReverseRange &range) const {
-            return -p_range.distance_back(range.p_range);
-        }
-        RangeDifference<T> distance_back(const ReverseRange &range) const {
-            return -p_range.distance_front(range.p_range);
+        bool equals_back(const ReverseRange &__r) const {
+            return __range.equals_front(__r.__range);
         }
 
-        bool pop_front() { return p_range.pop_back(); }
-        bool pop_back() { return p_range.pop_front(); }
+        RangeDifference<_T> distance_front(const ReverseRange &__r) const {
+            return -__range.distance_back(__r.__range);
+        }
+        RangeDifference<_T> distance_back(const ReverseRange &__r) const {
+            return -__range.distance_front(__r.__range);
+        }
 
-        bool push_front() { return p_range.push_back(); }
-        bool push_back() { return p_range.push_front(); }
+        bool pop_front() { return __range.pop_back(); }
+        bool pop_back() { return __range.pop_front(); }
 
-        r_size pop_front_n(r_size n) { return p_range.pop_front_n(n); }
-        r_size pop_back_n(r_size n) { return p_range.pop_back_n(n); }
+        bool push_front() { return __range.push_back(); }
+        bool push_back() { return __range.push_front(); }
 
-        r_size push_front_n(r_size n) { return p_range.push_front_n(n); }
-        r_size push_back_n(r_size n) { return p_range.push_back_n(n); }
+        _r_size pop_front_n(_r_size __n) { return __range.pop_front_n(__n); }
+        _r_size pop_back_n(_r_size __n) { return __range.pop_back_n(__n); }
 
-        r_ref front() const { return p_range.back(); }
-        r_ref back() const { return p_range.front(); }
+        _r_size push_front_n(_r_size __n) { return __range.push_front_n(__n); }
+        _r_size push_back_n(_r_size __n) { return __range.push_back_n(__n); }
 
-        r_ref operator[](r_size i) const { return p_range[size() - i - 1]; }
+        _r_ref front() const { return __range.back(); }
+        _r_ref back() const { return __range.front(); }
 
-        ReverseRange<T> slice(r_size start, r_size end) const {
-            r_size len = p_range.size();
-            return ReverseRange<T>(p_range.slice(len - end, len - start));
+        _r_ref operator[](_r_size __i) const { return __range[size() - __i - 1]; }
+
+        ReverseRange<_T> slice(_r_size __start, _r_size __end) const {
+            _r_size __len = __range.size();
+            return ReverseRange<_T>(__range.slice(__len - __end, __len - __start));
         }
     };
 
-    template<typename T>
-    ReverseRange<T> make_reverse_range(const T &it) {
-        return ReverseRange<T>(it);
+    template<typename _T>
+    ReverseRange<_T> make_reverse_range(const _T &__it) {
+        return ReverseRange<_T>(__it);
     }
 
-    template<typename T>
-    struct MoveRange: InputRange<MoveRange<T>,
-        RangeCategory<T>, RangeValue<T>, RangeValue<T> &&, RangeSize<T>,
-        RangeDifference<T>
+    template<typename _T>
+    struct MoveRange: InputRange<MoveRange<_T>,
+        RangeCategory<_T>, RangeValue<_T>, RangeValue<_T> &&, RangeSize<_T>,
+        RangeDifference<_T>
     > {
     private:
-        typedef RangeValue<T>   r_val;
-        typedef RangeValue<T> &&r_ref;
-        typedef RangeSize<T>    r_size;
+        typedef RangeValue<_T>   _r_val;
+        typedef RangeValue<_T> &&_r_ref;
+        typedef RangeSize<_T>    _r_size;
 
-        T p_range;
+        _T __range;
 
     public:
-        MoveRange(): p_range() {}
+        MoveRange(): __range() {}
 
-        MoveRange(const T &range): p_range(range) {}
+        MoveRange(const _T &__range): __range(__range) {}
 
-        MoveRange(const MoveRange &it): p_range(it.p_range) {}
+        MoveRange(const MoveRange &__it): __range(__it.__range) {}
 
-        MoveRange(MoveRange &&it): p_range(move(it.p_range)) {}
+        MoveRange(MoveRange &&__it): __range(octa::move(__it.__range)) {}
 
-        MoveRange &operator=(const MoveRange &v) {
-            p_range = v.p_range;
+        MoveRange &operator=(const MoveRange &__v) {
+            __range = __v.__range;
             return *this;
         }
-        MoveRange &operator=(MoveRange &&v) {
-            p_range = move(v.p_range);
+        MoveRange &operator=(MoveRange &&__v) {
+            __range = octa::move(__v.__range);
             return *this;
         }
-        MoveRange &operator=(const T &v) {
-            p_range = v;
+        MoveRange &operator=(const _T &__v) {
+            __range = __v;
             return *this;
         }
-        MoveRange &operator=(T &&v) {
-            p_range = move(v);
+        MoveRange &operator=(_T &&__v) {
+            __range = octa::move(__v);
             return *this;
         }
 
-        bool empty() const { return p_range.empty(); }
-        r_size size() const { return p_range.size(); }
+        bool empty() const { return __range.empty(); }
+        _r_size size() const { return __range.size(); }
 
-        bool equals_front(const MoveRange &range)  const {
-            return p_range.equals_front(range.p_range);
+        bool equals_front(const MoveRange &__r) const {
+            return __range.equals_front(__r.__range);
         }
-        bool equals_back(const MoveRange &range) const {
-            return p_range.equals_back(range.p_range);
-        }
-
-        RangeDifference<T> distance_front(const MoveRange &range) const {
-            return p_range.distance_front(range.p_range);
-        }
-        RangeDifference<T> distance_back(const MoveRange &range) const {
-            return p_range.distance_back(range.p_range);
+        bool equals_back(const MoveRange &__r) const {
+            return __range.equals_back(__r.__range);
         }
 
-        bool pop_front() { return p_range.pop_front(); }
-        bool pop_back() { return p_range.pop_back(); }
-
-        bool push_front() { return p_range.push_front(); }
-        bool push_back() { return p_range.push_back(); }
-
-        r_size pop_front_n(r_size n) { return p_range.pop_front_n(n); }
-        r_size pop_back_n(r_size n) { return p_range.pop_back_n(n); }
-
-        r_size push_front_n(r_size n) { return p_range.push_front_n(n); }
-        r_size push_back_n(r_size n) { return p_range.push_back_n(n); }
-
-        r_ref front() const { return move(p_range.front()); }
-        r_ref back() const { return move(p_range.back()); }
-
-        r_ref operator[](r_size i) const { return move(p_range[i]); }
-
-        MoveRange<T> slice(r_size start, r_size end) const {
-            return MoveRange<T>(p_range.slice(start, end));
+        RangeDifference<_T> distance_front(const MoveRange &__r) const {
+            return __range.distance_front(__r.__range);
+        }
+        RangeDifference<_T> distance_back(const MoveRange &__r) const {
+            return __range.distance_back(__r.__range);
         }
 
-        void put(const r_val &v) { p_range.put(v); }
-        void put(r_val &&v) { p_range.put(move(v)); }
+        bool pop_front() { return __range.pop_front(); }
+        bool pop_back() { return __range.pop_back(); }
+
+        bool push_front() { return __range.push_front(); }
+        bool push_back() { return __range.push_back(); }
+
+        _r_size pop_front_n(_r_size __n) { return __range.pop_front_n(__n); }
+        _r_size pop_back_n(_r_size __n) { return __range.pop_back_n(__n); }
+
+        _r_size push_front_n(_r_size __n) { return __range.push_front_n(__n); }
+        _r_size push_back_n(_r_size __n) { return __range.push_back_n(__n); }
+
+        _r_ref front() const { return octa::move(__range.front()); }
+        _r_ref back() const { return octa::move(__range.back()); }
+
+        _r_ref operator[](_r_size __i) const { return octa::move(__range[__i]); }
+
+        MoveRange<_T> slice(_r_size __start, _r_size __end) const {
+            return MoveRange<_T>(__range.slice(__start, __end));
+        }
+
+        void put(const _r_val &__v) { __range.put(__v); }
+        void put(_r_val &&__v) { __range.put(octa::move(__v)); }
     };
 
-    template<typename T>
-    MoveRange<T> make_move_range(const T &it) {
-        return MoveRange<T>(it);
+    template<typename _T>
+    MoveRange<_T> make_move_range(const _T &__it) {
+        return MoveRange<_T>(__it);
     }
 
-    template<typename T>
-    struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T, T> {
-        NumberRange(): p_a(0), p_b(0), p_step(0) {}
-        NumberRange(const NumberRange &it): p_a(it.p_a), p_b(it.p_b),
-            p_step(it.p_step) {}
-        NumberRange(T a, T b, T step = T(1)): p_a(a), p_b(b),
-            p_step(step) {}
-        NumberRange(T v): p_a(0), p_b(v), p_step(1) {}
+    template<typename _T>
+    struct NumberRange: InputRange<NumberRange<_T>, ForwardRangeTag, _T, _T> {
+        NumberRange(): __a(0), __b(0), __step(0) {}
+        NumberRange(const NumberRange &__it): __a(__it.__a), __b(__it.__b),
+            __step(__it.__step) {}
+        NumberRange(_T __a, _T __b, _T __step = _T(1)): __a(__a), __b(__b),
+            __step(__step) {}
+        NumberRange(_T __v): __a(0), __b(__v), __step(1) {}
 
-        bool empty() const { return p_a * p_step >= p_b * p_step; }
+        bool empty() const { return __a * __step >= __b * __step; }
 
-        bool equals_front(const NumberRange &range) const {
-            return p_a == range.p_a;
+        bool equals_front(const NumberRange &__range) const {
+            return __a == __range.__a;
         }
 
-        bool pop_front() { p_a += p_step; return true; }
-        bool push_front() { p_a -= p_step; return true; }
-        T front() const { return p_a; }
+        bool pop_front() { __a += __step; return true; }
+        bool push_front() { __a -= __step; return true; }
+        _T front() const { return __a; }
 
     private:
-        T p_a, p_b, p_step;
+        _T __a, __b, __step;
     };
 
-    template<typename T>
-    NumberRange<T> range(T a, T b, T step = T(1)) {
-        return NumberRange<T>(a, b, step);
+    template<typename _T>
+    NumberRange<_T> range(_T __a, _T __b, _T __step = _T(1)) {
+        return NumberRange<_T>(__a, __b, __step);
     }
 
-    template<typename T>
-    NumberRange<T> range(T v) {
-        return NumberRange<T>(v);
+    template<typename _T>
+    NumberRange<_T> range(_T __v) {
+        return NumberRange<_T>(__v);
     }
 
-    template<typename T>
-    struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> {
-        PointerRange(): p_beg(nullptr), p_end(nullptr) {}
-        PointerRange(const PointerRange &v): p_beg(v.p_beg),
-            p_end(v.p_end) {}
-        PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
-        PointerRange(T *beg, size_t n): p_beg(beg), p_end(beg + n) {}
+    template<typename _T>
+    struct PointerRange: InputRange<PointerRange<_T>, FiniteRandomAccessRangeTag, _T> {
+        PointerRange(): __beg(nullptr), __end(nullptr) {}
+        PointerRange(const PointerRange &__v): __beg(__v.__beg),
+            __end(__v.__end) {}
+        PointerRange(_T *__beg, _T *__end): __beg(__beg), __end(__end) {}
+        PointerRange(_T *__beg, size_t __n): __beg(__beg), __end(__beg + __n) {}
 
-        PointerRange &operator=(const PointerRange &v) {
-            p_beg = v.p_beg;
-            p_end = v.p_end;
+        PointerRange &operator=(const PointerRange &__v) {
+            __beg = __v.__beg;
+            __end = __v.__end;
             return *this;
         }
 
         /* satisfy InputRange / ForwardRange */
-        bool empty() const { return p_beg == p_end; }
+        bool empty() const { return __beg == __end; }
 
         bool pop_front() {
-            if (p_beg == p_end) return false;
-            ++p_beg;
+            if (__beg == __end) return false;
+            ++__beg;
             return true;
         }
         bool push_front() {
-            --p_beg; return true;
+            --__beg; return true;
         }
 
-        size_t pop_front_n(size_t n) {
-            size_t olen = p_end - p_beg;
-            p_beg += n;
-            if (p_beg > p_end) {
-                p_beg = p_end;
-                return olen;
+        size_t pop_front_n(size_t __n) {
+            size_t __olen = __end - __beg;
+            __beg += __n;
+            if (__beg > __end) {
+                __beg = __end;
+                return __olen;
             }
-            return n;
+            return __n;
         }
 
-        size_t push_front_n(size_t n) {
-            p_beg -= n; return true;
+        size_t push_front_n(size_t __n) {
+            __beg -= __n; return true;
         }
 
-        T &front() const { return *p_beg; }
+        _T &front() const { return *__beg; }
 
-        bool equals_front(const PointerRange &range)  const {
-            return p_beg == range.p_beg;
+        bool equals_front(const PointerRange &__range) const {
+            return __beg == __range.__beg;
         }
 
-        ptrdiff_t distance_front(const PointerRange &range) const {
-            return range.p_beg;
+        ptrdiff_t distance_front(const PointerRange &__range) const {
+            return __range.__beg - __beg;
         }
 
         /* satisfy BidirectionalRange */
         bool pop_back() {
-            if (p_end == p_beg) return false;
-            --p_end;
+            if (__end == __beg) return false;
+            --__end;
             return true;
         }
         bool push_back() {
-            ++p_end; return true;
+            ++__end; return true;
         }
 
-        size_t pop_back_n(size_t n) {
-            size_t olen = p_end - p_beg;
-            p_end -= n;
-            if (p_end < p_beg) {
-                p_end = p_beg;
-                return olen;
+        size_t pop_back_n(size_t __n) {
+            size_t __olen = __end - __beg;
+            __end -= __n;
+            if (__end < __beg) {
+                __end = __beg;
+                return __olen;
             }
-            return n;
+            return __n;
         }
 
-        size_t push_back_n(size_t n) {
-            p_end += n; return true;
+        size_t push_back_n(size_t __n) {
+            __end += __n; return true;
         }
 
-        T &back() const { return *(p_end - 1); }
+        _T &back() const { return *(__end - 1); }
 
-        bool equals_back(const PointerRange &range) const {
-            return p_end == range.p_end;
+        bool equals_back(const PointerRange &__range) const {
+            return __end == __range.__end;
         }
 
-        ptrdiff_t distance_back(const PointerRange &range) const {
-            return range.p_end;
+        ptrdiff_t distance_back(const PointerRange &__range) const {
+            return __range.__end - __end;
         }
 
         /* satisfy FiniteRandomAccessRange */
-        size_t size() const { return p_end - p_beg; }
+        size_t size() const { return __end - __beg; }
 
-        PointerRange slice(size_t start, size_t end) const {
-            return PointerRange(p_beg + start, p_beg + end);
+        PointerRange slice(size_t __start, size_t __end) const {
+            return PointerRange(__beg + __start, __beg + __end);
         }
 
-        T &operator[](size_t i) const { return p_beg[i]; }
+        _T &operator[](size_t __i) const { return __beg[__i]; }
 
         /* satisfy OutputRange */
-        void put(const T &v) {
-            *(p_beg++) = v;
+        void put(const _T &__v) {
+            *(__beg++) = __v;
         }
-        void put(T &&v) {
-            *(p_beg++) = move(v);
+        void put(_T &&__v) {
+            *(__beg++) = octa::move(__v);
         }
 
     private:
-        T *p_beg, *p_end;
+        _T *__beg, *__end;
     };
 
-    template<typename T, typename S>
+    template<typename _T, typename _S>
     struct EnumeratedValue {
-        S index;
-        T value;
+        _S index;
+        _T value;
     };
 
-    template<typename T>
-    struct EnumeratedRange: InputRange<EnumeratedRange<T>,
-        CommonType<RangeCategory<T>, ForwardRangeTag>, RangeValue<T>,
-        EnumeratedValue<RangeReference<T>, RangeSize<T>>,
-        RangeSize<T>
+    template<typename _T>
+    struct EnumeratedRange: InputRange<EnumeratedRange<_T>,
+        CommonType<RangeCategory<_T>, ForwardRangeTag>, RangeValue<_T>,
+        EnumeratedValue<RangeReference<_T>, RangeSize<_T>>,
+        RangeSize<_T>
     > {
     private:
-        typedef RangeReference<T> r_ref;
-        typedef RangeSize<T> r_size;
+        typedef RangeReference<_T> _r_ref;
+        typedef RangeSize<_T> _r_size;
 
-        T p_range;
-        r_size p_index;
+        _T __range;
+        _r_size __index;
 
     public:
-        EnumeratedRange(): p_range(), p_index(0) {}
+        EnumeratedRange(): __range(), __index(0) {}
 
-        EnumeratedRange(const T &range): p_range(range), p_index(0) {}
+        EnumeratedRange(const _T &__range): __range(__range), __index(0) {}
 
-        EnumeratedRange(const EnumeratedRange &it):
-            p_range(it.p_range), p_index(it.p_index) {}
+        EnumeratedRange(const EnumeratedRange &__it):
+            __range(__it.__range), __index(__it.__index) {}
 
-        EnumeratedRange(EnumeratedRange &&it):
-            p_range(move(it.p_range)), p_index(it.p_index) {}
+        EnumeratedRange(EnumeratedRange &&__it):
+            __range(octa::move(__it.__range)), __index(__it.__index) {}
 
-        EnumeratedRange &operator=(const EnumeratedRange &v) {
-            p_range = v.p_range;
-            p_index = v.p_index;
+        EnumeratedRange &operator=(const EnumeratedRange &__v) {
+            __range = __v.__range;
+            __index = __v.__index;
             return *this;
         }
-        EnumeratedRange &operator=(EnumeratedRange &&v) {
-            p_range = move(v.p_range);
-            p_index = v.p_index;
+        EnumeratedRange &operator=(EnumeratedRange &&__v) {
+            __range = octa::move(__v.__range);
+            __index = __v.__index;
             return *this;
         }
-        EnumeratedRange &operator=(const T &v) {
-            p_range = v;
-            p_index = 0;
+        EnumeratedRange &operator=(const _T &__v) {
+            __range = __v;
+            __index = 0;
             return *this;
         }
-        EnumeratedRange &operator=(T &&v) {
-            p_range = move(v);
-            p_index = 0;
+        EnumeratedRange &operator=(_T &&__v) {
+            __range = octa::move(__v);
+            __index = 0;
             return *this;
         }
 
-        bool empty() const { return p_range.empty(); }
+        bool empty() const { return __range.empty(); }
 
-        bool equals_front(const EnumeratedRange &range) const {
-            return p_range.equals_front(range.p_range);
+        bool equals_front(const EnumeratedRange &__r) const {
+            return __range.equals_front(__r.__range);
         }
 
         bool pop_front() {
-            if (p_range.pop_front()) {
-                ++p_index;
+            if (__range.pop_front()) {
+                ++__index;
                 return true;
             }
             return false;
         }
 
-        r_size pop_front_n(r_size n) {
-            r_size ret = p_range.pop_front_n(n);
-            p_index += ret;
-            return ret;
+        _r_size pop_front_n(_r_size __n) {
+            _r_size __ret = __range.pop_front_n(__n);
+            __index += __ret;
+            return __ret;
         }
 
-        EnumeratedValue<r_ref, r_size> front() const {
-            return EnumeratedValue<r_ref, r_size> { p_index, p_range.front() };
+        EnumeratedValue<_r_ref, _r_size> front() const {
+            return EnumeratedValue<_r_ref, _r_size> { __index, __range.front() };
         }
     };
 
-    template<typename T>
-    EnumeratedRange<T> enumerate(const T &it) {
-        return EnumeratedRange<T>(it);
+    template<typename _T>
+    EnumeratedRange<_T> enumerate(const _T &__it) {
+        return EnumeratedRange<_T>(__it);
     }
 
-    template<typename T>
-    struct TakeRange: InputRange<TakeRange<T>,
-        CommonType<RangeCategory<T>, ForwardRangeTag>,
-        RangeValue<T>, RangeReference<T>, RangeSize<T>
+    template<typename _T>
+    struct TakeRange: InputRange<TakeRange<_T>,
+        CommonType<RangeCategory<_T>, ForwardRangeTag>,
+        RangeValue<_T>, RangeReference<_T>, RangeSize<_T>
     > {
     private:
-        T p_range;
-        RangeSize<T> p_remaining;
+        _T __range;
+        RangeSize<_T> __remaining;
     public:
-        TakeRange(): p_range(), p_remaining(0) {}
-        TakeRange(const T &range, RangeSize<T> rem): p_range(range),
-            p_remaining(rem) {}
-        TakeRange(const TakeRange &it): p_range(it.p_range),
-            p_remaining(it.p_remaining) {}
-        TakeRange(TakeRange &&it): p_range(move(it.p_range)),
-            p_remaining(it.p_remaining) {}
+        TakeRange(): __range(), __remaining(0) {}
+        TakeRange(const _T &__range, RangeSize<_T> __rem): __range(__range),
+            __remaining(__rem) {}
+        TakeRange(const TakeRange &__it): __range(__it.__range),
+            __remaining(__it.__remaining) {}
+        TakeRange(TakeRange &&__it): __range(octa::move(__it.__range)),
+            __remaining(__it.__remaining) {}
 
-        TakeRange &operator=(const TakeRange &v) {
-            p_range = v.p_range; p_remaining = v.p_remaining; return *this;
+        TakeRange &operator=(const TakeRange &__v) {
+            __range = __v.__range; __remaining = __v.__remaining; return *this;
         }
-        TakeRange &operator=(TakeRange &&v) {
-            p_range = move(v.p_range); p_remaining = v.p_remaining; return *this;
+        TakeRange &operator=(TakeRange &&__v) {
+            __range = octa::move(__v.__range);
+            __remaining = __v.__remaining;
+            return *this;
         }
 
-        bool empty() const { return (p_remaining <= 0) || p_range.empty(); }
+        bool empty() const { return (__remaining <= 0) || __range.empty(); }
 
         bool pop_front() {
-            if (p_range.pop_front()) {
-                --p_remaining;
+            if (__range.pop_front()) {
+                --__remaining;
                 return true;
             }
             return false;
         }
         bool push_front() {
-            if (p_range.push_front()) {
-                ++p_remaining;
+            if (__range.push_front()) {
+                ++__remaining;
                 return true;
             }
             return false;
         }
 
-        RangeSize<T> pop_front_n(RangeSize<T> n) {
-            RangeSize<T> ret = p_range.pop_front_n(n);
-            p_remaining -= ret;
-            return ret;
+        RangeSize<_T> pop_front_n(RangeSize<_T> __n) {
+            RangeSize<_T> __ret = __range.pop_front_n(__n);
+            __remaining -= __ret;
+            return __ret;
         }
-        RangeSize<T> push_front_n(RangeSize<T> n) {
-            RangeSize<T> ret = p_range.push_front_n(n);
-            p_remaining += ret;
-            return ret;
-        }
-
-        RangeReference<T> front() const { return p_range.front(); }
-
-        bool equals_front(const TakeRange &range) const {
-            return p_range.equals_front(range.p_range);
+        RangeSize<_T> push_front_n(RangeSize<_T> __n) {
+            RangeSize<_T> __ret = __range.push_front_n(__n);
+            __remaining += __ret;
+            return __ret;
         }
 
-        RangeDifference<T> distance_front(const TakeRange &range) const {
-            return p_range.distance_front(range.p_range);
+        RangeReference<_T> front() const { return __range.front(); }
+
+        bool equals_front(const TakeRange &__r) const {
+            return __range.equals_front(__r.__range);
+        }
+
+        RangeDifference<_T> distance_front(const TakeRange &__r) const {
+            return __range.distance_front(__r.__range);
         }
     };
 
-    template<typename T>
-    TakeRange<T> take(const T &it, RangeSize<T> n) {
-        return TakeRange<T>(it, n);
+    template<typename _T>
+    TakeRange<_T> take(const _T &__it, RangeSize<_T> __n) {
+        return TakeRange<_T>(__it, __n);
     }
 
-    template<typename T>
-    struct ChunksRange: InputRange<ChunksRange<T>,
-        CommonType<RangeCategory<T>, ForwardRangeTag>,
-        TakeRange<T>, TakeRange<T>, RangeSize<T>
+    template<typename _T>
+    struct ChunksRange: InputRange<ChunksRange<_T>,
+        CommonType<RangeCategory<_T>, ForwardRangeTag>,
+        TakeRange<_T>, TakeRange<_T>, RangeSize<_T>
     > {
     private:
-        T p_range;
-        RangeSize<T> p_chunksize;
+        _T __range;
+        RangeSize<_T> __chunksize;
     public:
-        ChunksRange(): p_range(), p_chunksize(0) {}
-        ChunksRange(const T &range, RangeSize<T> chs): p_range(range),
-            p_chunksize(chs) {}
-        ChunksRange(const ChunksRange &it): p_range(it.p_range),
-            p_chunksize(it.p_chunksize) {}
-        ChunksRange(ChunksRange &&it): p_range(move(it.p_range)),
-            p_chunksize(it.p_chunksize) {}
+        ChunksRange(): __range(), __chunksize(0) {}
+        ChunksRange(const _T &__range, RangeSize<_T> __chs): __range(__range),
+            __chunksize(__chs) {}
+        ChunksRange(const ChunksRange &__it): __range(__it.__range),
+            __chunksize(__it.__chunksize) {}
+        ChunksRange(ChunksRange &&__it): __range(octa::move(__it.__range)),
+            __chunksize(__it.__chunksize) {}
 
-        ChunksRange &operator=(const ChunksRange &v) {
-            p_range = v.p_range; p_chunksize = v.p_chunksize; return *this;
+        ChunksRange &operator=(const ChunksRange &__v) {
+            __range = __v.__range; __chunksize = __v.p_chunksize; return *this;
         }
-        ChunksRange &operator=(ChunksRange &&v) {
-            p_range = move(v.p_range); p_chunksize = v.p_chunksize; return *this;
-        }
-
-        bool empty() const { return p_range.empty(); }
-
-        bool equals_front(const ChunksRange &range) const {
-            return p_range.equals_front(range.p_range);
+        ChunksRange &operator=(ChunksRange &&__v) {
+            __range = octa::move(__v.__range);
+            __chunksize = __v.__chunksize;
+            return *this;
         }
 
-        bool pop_front() { return p_range.pop_front_n(p_chunksize) > 0; }
+        bool empty() const { return __range.empty(); }
+
+        bool equals_front(const ChunksRange &__r) const {
+            return __range.equals_front(__r.__range);
+        }
+
+        bool pop_front() { return __range.pop_front_n(__chunksize) > 0; }
         bool push_front() {
-            T tmp = p_range;
-            RangeSize<T> an = tmp.push_front_n(p_chunksize);
-            if (an != p_chunksize) return false;
-            p_range = tmp;
+            _T __tmp = __range;
+            RangeSize<_T> __an = __tmp.push_front_n(__chunksize);
+            if (__an != __chunksize) return false;
+            __range = __tmp;
             return true;
         }
-        RangeSize<T> pop_front_n(RangeSize<T> n) {
-            return p_range.pop_front_n(p_chunksize * n) / p_chunksize;
+        RangeSize<_T> pop_front_n(RangeSize<_T> __n) {
+            return __range.pop_front_n(__chunksize * __n) / __chunksize;
         }
-        RangeSize<T> push_front_n(RangeSize<T> n) {
-            T tmp = p_range;
-            RangeSize<T> an = tmp.push_front_n(p_chunksize * n);
-            RangeSize<T> pn = an / p_chunksize;
-            if (!pn) return 0;
-            if (pn == n) {
-                p_range = tmp;
-                return pn;
+        RangeSize<_T> push_front_n(RangeSize<_T> __n) {
+            _T __tmp = __range;
+            RangeSize<_T> __an = __tmp.push_front_n(__chunksize * __n);
+            RangeSize<_T> __pn = __an / __chunksize;
+            if (!__pn) return 0;
+            if (__pn == __n) {
+                __range = __tmp;
+                return __pn;
             }
-            return p_range.push_front_n(p_chunksize * an) / p_chunksize;
+            return __range.push_front_n(__chunksize * __an) / __chunksize;
         }
 
-        TakeRange<T> front() const { return take(p_range, p_chunksize); }
+        TakeRange<_T> front() const { return take(__range, __chunksize); }
     };
 
-    template<typename T>
-    ChunksRange<T> chunks(const T &it, RangeSize<T> chs) {
-        return ChunksRange<T>(it, chs);
+    template<typename _T>
+    ChunksRange<_T> chunks(const _T &__it, RangeSize<_T> __chs) {
+        return ChunksRange<_T>(__it, __chs);
     }
 
-    template<typename T>
-    auto each(T &r) -> decltype(r.each()) {
-        return r.each();
+    template<typename _T>
+    auto each(_T &__r) -> decltype(__r.each()) {
+        return __r.each();
     }
 
-    template<typename T>
-    auto each(const T &r) -> decltype(r.each()) {
-        return r.each();
+    template<typename _T>
+    auto each(const _T &__r) -> decltype(__r.each()) {
+        return __r.each();
     }
 
-    template<typename T, size_t N>
-    PointerRange<T> each(T (&array)[N]) {
-        return PointerRange<T>(array, N);
+    template<typename _T, size_t _N>
+    PointerRange<_T> each(_T (&__array)[_N]) {
+        return PointerRange<_T>(__array, _N);
     }
 
     // range of
-    template<typename T> using RangeOf = decltype(each(declval<T>()));
+    template<typename _T> using RangeOf = decltype(octa::each(octa::declval<_T>()));
 
-    template<typename T>
-    struct HalfRange: InputRange<HalfRange<T>,
-        RangeCategory<T>, RangeValue<T>, RangeReference<T>, RangeSize<T>,
-        RangeDifference<T>
+    template<typename _T>
+    struct HalfRange: InputRange<HalfRange<_T>,
+        RangeCategory<_T>, RangeValue<_T>, RangeReference<_T>, RangeSize<_T>,
+        RangeDifference<_T>
     > {
     private:
-        T p_beg;
-        T p_end;
+        _T __beg;
+        _T __end;
     public:
-        HalfRange(): p_beg(), p_end() {}
-        HalfRange(const HalfRange &range): p_beg(range.p_beg),
-            p_end(range.p_end) {}
-        HalfRange(HalfRange &&range): p_beg(move(range.p_beg)),
-            p_end(move(range.p_end)) {}
-        HalfRange(const T &beg, const T &end): p_beg(beg), p_end(end) {}
-        HalfRange(T &&beg, T &&end): p_beg(move(beg)), p_end(move(end)) {}
+        HalfRange(): __beg(), __end() {}
+        HalfRange(const HalfRange &__range): __beg(__range.__beg),
+            __end(__range.__end) {}
+        HalfRange(HalfRange &&__range): __beg(octa::move(__range.__beg)),
+            __end(octa::move(__range.__end)) {}
+        HalfRange(const _T &__beg, const _T &__end): __beg(__beg),
+            __end(__end) {}
+        HalfRange(_T &&__beg, _T &&__end): __beg(octa::move(__beg)),
+            __end(octa::move(__end)) {}
 
-        HalfRange &operator=(const HalfRange &range) {
-            p_beg = range.p_beg;
-            p_end = range.p_end;
+        HalfRange &operator=(const HalfRange &__range) {
+            __beg = __range.p_beg;
+            __end = __range.p_end;
             return *this;
         }
 
-        HalfRange &operator=(HalfRange &&range) {
-            p_beg = move(range.p_beg);
-            p_end = move(range.p_end);
+        HalfRange &operator=(HalfRange &&__range) {
+            __beg = octa::move(__range.p_beg);
+            __end = octa::move(__range.p_end);
             return *this;
         }
 
-        bool empty() const { return p_beg == p_end; }
+        bool empty() const { return __beg == __end; }
 
         bool pop_front() {
             if (empty()) return false;
-            return p_beg.next();
+            return __beg.next();
         }
         bool push_front() {
-            return p_beg.prev();
+            return __beg.prev();
         }
         bool pop_back() {
             if (empty()) return false;
-            return p_end.prev();
+            return __end.prev();
         }
         bool push_back() {
-            return p_end.next();
+            return __end.next();
         }
 
-        RangeReference<T> front() const { return *p_beg; }
-        RangeReference<T> back() const { return *(p_end - 1); }
+        RangeReference<_T> front() const { return *__beg; }
+        RangeReference<_T> back() const { return *(__end - 1); }
 
-        bool equals_front(const HalfRange &range) const {
-            return p_beg == range.p_beg;
+        bool equals_front(const HalfRange &__range) const {
+            return __beg == __range.__beg;
         }
-        bool equals_back(const HalfRange &range) const {
-            return p_end == range.p_end;
-        }
-
-        RangeDifference<T> distance_front(const HalfRange &range) const {
-            return range.p_beg - p_beg;
-        }
-        RangeDifference<T> distance_back(const HalfRange &range) const {
-            return range.p_end - p_end;
+        bool equals_back(const HalfRange &__range) const {
+            return __end == __range.__end;
         }
 
-        RangeSize<T> size() const { return p_end - p_beg; }
-
-        HalfRange<T> slice(RangeSize<T> start, RangeSize<T> end) const {
-            return HalfRange<T>(p_beg + start, p_beg + end);
+        RangeDifference<_T> distance_front(const HalfRange &__range) const {
+            return __range.__beg - __beg;
+        }
+        RangeDifference<_T> distance_back(const HalfRange &__range) const {
+            return __range.__end - __end;
         }
 
-        RangeReference<T> operator[](RangeSize<T> idx) const {
-            return p_beg[idx];
+        RangeSize<_T> size() const { return __end - __beg; }
+
+        HalfRange<_T> slice(RangeSize<_T> __start, RangeSize<_T> __end) const {
+            return HalfRange<_T>(__beg + __start, __beg + __end);
         }
 
-        void put(const RangeValue<T> &v) {
-            p_beg.range().put(v);
+        RangeReference<_T> operator[](RangeSize<_T> __idx) const {
+            return __beg[__idx];
         }
-        void put(RangeValue<T> &&v) {
-            p_beg.range().put(move(v));
+
+        void put(const RangeValue<_T> &__v) {
+            __beg.range().put(__v);
+        }
+        void put(RangeValue<_T> &&__v) {
+            __beg.range().put(octa::move(__v));
         }
     };
 
-    template<typename T>
-    HalfRange<RangeHalf<T>>
-    make_half_range(const RangeHalf<T> &a, const RangeHalf<T> &b) {
-        return HalfRange<RangeHalf<T>>(a, b);
+    template<typename _T>
+    HalfRange<RangeHalf<_T>>
+    make_half_range(const RangeHalf<_T> &__a, const RangeHalf<_T> &__b) {
+        return HalfRange<RangeHalf<_T>>(__a, __b);
     }
 }
 

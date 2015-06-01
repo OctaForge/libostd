@@ -17,545 +17,557 @@ namespace octa {
 
     /* partitioning */
 
-    template<typename R, typename U>
-    R partition(R range, U pred) {
-        R ret = range;
-        for (; !range.empty(); range.pop_front()) {
-            if (pred(range.front())) {
-                swap(range.front(), ret.front());
-                ret.pop_front();
+    template<typename _R, typename _U>
+    _R partition(_R __range, _U __pred) {
+        _R __ret = __range;
+        for (; !__range.empty(); __range.pop_front()) {
+            if (__pred(__range.front())) {
+                octa::swap(__range.front(), __ret.front());
+                __ret.pop_front();
             }
         }
-        return ret;
+        return __ret;
     }
 
-    template<typename R, typename P>
-    bool is_partitioned(R range, P pred) {
-        for (; !range.empty() && pred(range.front()); range.pop_front());
-        for (; !range.empty(); range.pop_front())
-            if (pred(range.front())) return false;
+    template<typename _R, typename _P>
+    bool is_partitioned(_R __range, _P __pred) {
+        for (; !__range.empty() && __pred(__range.front()); __range.pop_front());
+        for (; !__range.empty(); __range.pop_front())
+            if (__pred(__range.front())) return false;
         return true;
     }
 
     /* sorting */
 
-    template<typename R, typename C>
-    void __octa_insort(R range, C compare) {
-        RangeSize<R> rlen = range.size();
-        for (RangeSize<R> i = 1; i < rlen; ++i) {
-            RangeSize<R> j = i;
-            RangeReference<R> v = range[i];
-            while (j > 0 && !compare(range[j - 1], v)) {
-                range[j] = range[j - 1];
-                --j;
+    template<typename _R, typename _C>
+    void __octa_insort(_R __range, _C __compare) {
+        octa::RangeSize<_R> __rlen = __range.size();
+        for (octa::RangeSize<_R> __i = 1; __i < __rlen; ++__i) {
+            octa::RangeSize<_R> __j = __i;
+            octa::RangeReference<_R> __v = __range[__i];
+            while (__j > 0 && !__compare(__range[__j - 1], __v)) {
+                __range[__j] = __range[__j - 1];
+                --__j;
             }
-            range[j] = v;
+            __range[__j] = __v;
         }
     }
 
-    template<typename T, typename U>
+    template<typename _T, typename _U>
     struct __OctaUnaryCompare {
-        const T &val;
-        U comp;
-        bool operator()(const T &v) const { return comp(v, val); }
+        const _T &__val;
+        _U __comp;
+        bool operator()(const _T &__v) const { return __comp(__v, __val); }
     };
 
-    template<typename R, typename C>
-    void __octa_hs_sift_down(R range, RangeSize<R> s,
-    RangeSize<R> e, C compare) {
-        RangeSize<R> r = s;
-        while ((r * 2 + 1) <= e) {
-            RangeSize<R> ch = r * 2 + 1;
-            RangeSize<R> sw = r;
-            if (compare(range[sw], range[ch]))
-                sw = ch;
-            if (((ch + 1) <= e) && compare(range[sw], range[ch + 1]))
-                sw = ch + 1;
-            if (sw != r) {
-                swap(range[r], range[sw]);
-                r = sw;
+    template<typename _R, typename _C>
+    void __octa_hs_sift_down(_R __range, octa::RangeSize<_R> __s,
+    octa::RangeSize<_R> __e, _C __compare) {
+        octa::RangeSize<_R> __r = __s;
+        while ((__r * 2 + 1) <= __e) {
+            octa::RangeSize<_R> __ch = __r * 2 + 1;
+            octa::RangeSize<_R> __sw = __r;
+            if (__compare(__range[__sw], __range[__ch]))
+                __sw = __ch;
+            if (((__ch + 1) <= __e) && __compare(__range[__sw], __range[__ch + 1]))
+                __sw = __ch + 1;
+            if (__sw != __r) {
+                octa::swap(__range[__r], __range[__sw]);
+                __r = __sw;
             } else return;
         }
     }
 
-    template<typename R, typename C>
-    void __octa_heapsort(R range, C compare) {
-        RangeSize<R> len = range.size();
-        RangeSize<R> st = (len - 2) / 2;
+    template<typename _R, typename _C>
+    void __octa_heapsort(_R __range, _C __compare) {
+        octa::RangeSize<_R> __len = __range.size();
+        octa::RangeSize<_R> __st = (__len - 2) / 2;
         for (;;) {
-            __octa_hs_sift_down(range, st, len - 1, compare);
-            if (st-- == 0) break;
+            __octa_hs_sift_down(__range, __st, __len - 1, __compare);
+            if (__st-- == 0) break;
         }
-        RangeSize<R> e = len - 1;
-        while (e > 0) {
-            swap(range[e], range[0]);
-            --e;
-            __octa_hs_sift_down(range, 0, e, compare);
+        octa::RangeSize<_R> __e = __len - 1;
+        while (__e > 0) {
+            octa::swap(__range[__e], __range[0]);
+            --__e;
+            __octa_hs_sift_down(__range, 0, __e, __compare);
         }
     }
 
-    template<typename R, typename C>
-    void __octa_introloop(R range, C compare, RangeSize<R> depth) {
-        if (range.size() <= 10) {
-            __octa_insort(range, compare);
+    template<typename _R, typename _C>
+    void __octa_introloop(_R __range, _C __compare, RangeSize<_R> __depth) {
+        if (__range.size() <= 10) {
+            __octa_insort(__range, __compare);
             return;
         }
-        if (depth == 0) {
-            __octa_heapsort(range, compare);
+        if (__depth == 0) {
+            __octa_heapsort(__range, __compare);
             return;
         }
-        RangeReference<R> p = range[range.size() / 2];
-        swap(p, range.back());
-        R r = partition(range, __OctaUnaryCompare<decltype(p), C>{ p, compare });
-        R l = range.slice(0, range.size() - r.size());
-        swap(r.front(), r.back());
-        __octa_introloop(l, compare, depth - 1);
-        __octa_introloop(r, compare, depth - 1);
+        octa::RangeReference<_R> __p = __range[__range.size() / 2];
+        octa::swap(__p, __range.back());
+        _R __r = octa::partition(__range,
+            __OctaUnaryCompare<decltype(__p), _C>{ __p, __compare });
+        _R __l = __range.slice(0, __range.size() - __r.size());
+        octa::swap(__r.front(), __r.back());
+        __octa_introloop(__l, __compare, __depth - 1);
+        __octa_introloop(__r, __compare, __depth - 1);
     }
 
-    template<typename R, typename C>
-    void __octa_introsort(R range, C compare) {
-        __octa_introloop(range, compare, RangeSize<R>(2
-            * (log(range.size()) / log(2))));
+    template<typename _R, typename _C>
+    void __octa_introsort(_R __range, _C __compare) {
+        __octa_introloop(__range, __compare, octa::RangeSize<_R>(2
+            * (log(__range.size()) / log(2))));
     }
 
-    template<typename R, typename C>
-    void sort(R range, C compare) {
-        __octa_introsort(range, compare);
+    template<typename _R, typename _C>
+    void sort(_R __range, _C __compare) {
+        __octa_introsort(__range, __compare);
     }
 
-    template<typename R>
-    void sort(R range) {
-        sort(range, Less<RangeValue<R>>());
+    template<typename _R>
+    void sort(_R __range) {
+        sort(__range, octa::Less<RangeValue<_R>>());
     }
 
     /* min/max(_element) */
 
-    template<typename T>
-    inline const T &min(const T &a, const T &b) {
-        return (a < b) ? a : b;
+    template<typename _T>
+    inline const _T &min(const _T &__a, const _T &__b) {
+        return (__a < __b) ? __a : __b;
     }
-    template<typename T, typename C>
-    inline const T &min(const T &a, const T &b, C compare) {
-        return compare(a, b) ? a : b;
-    }
-
-    template<typename T>
-    inline const T &max(const T &a, const T &b) {
-        return (a < b) ? b : a;
-    }
-    template<typename T, typename C>
-    inline const T &max(const T &a, const T &b, C compare) {
-        return compare(a, b) ? b : a;
+    template<typename _T, typename _C>
+    inline const _T &min(const _T &__a, const _T &__b, _C __compare) {
+        return __compare(__a, __b) ? __a : __b;
     }
 
-    template<typename R>
-    inline R min_element(R range) {
-        R r = range;
-        for (; !range.empty(); range.pop_front())
-            if (min(r.front(), range.front()) == range.front())
-                r = range;
-        return r;
+    template<typename _T>
+    inline const _T &max(const _T &__a, const _T &__b) {
+        return (__a < __b) ? __b : __a;
     }
-    template<typename R, typename C>
-    inline R min_element(R range, C compare) {
-        R r = range;
-        for (; !range.empty(); range.pop_front())
-            if (min(r.front(), range.front(), compare) == range.front())
-                r = range;
-        return r;
+    template<typename _T, typename _C>
+    inline const _T &max(const _T &__a, const _T &__b, _C __compare) {
+        return __compare(__a, __b) ? __b : __a;
     }
 
-    template<typename R>
-    inline R max_element(R range) {
-        R r = range;
-        for (; !range.empty(); range.pop_front())
-            if (max(r.front(), range.front()) == range.front())
-                r = range;
-        return r;
+    template<typename _R>
+    inline _R min_element(_R __range) {
+        _R __r = __range;
+        for (; !__range.empty(); __range.pop_front())
+            if (octa::min(__r.front(), __range.front()) == __range.front())
+                __r = __range;
+        return __r;
     }
-    template<typename R, typename C>
-    inline R max_element(R range, C compare) {
-        R r = range;
-        for (; !range.empty(); range.pop_front())
-            if (max(r.front(), range.front(), compare) == range.front())
-                r = range;
-        return r;
-    }
-
-    using std::initializer_list;
-
-    template<typename T>
-    inline T min(initializer_list<T> il) {
-        return min_element(each(il)).front();
-    }
-    template<typename T, typename C>
-    inline T min(initializer_list<T> il, C compare) {
-        return min_element(each(il), compare).front();
+    template<typename _R, typename _C>
+    inline _R min_element(_R __range, _C __compare) {
+        _R __r = __range;
+        for (; !__range.empty(); __range.pop_front())
+            if (octa::min(__r.front(), __range.front(), __compare) == __range.front())
+                __r = __range;
+        return __r;
     }
 
-    template<typename T>
-    inline T max(initializer_list<T> il) {
-        return max_element(each(il)).front();
+    template<typename _R>
+    inline _R max_element(_R __range) {
+        _R __r = __range;
+        for (; !__range.empty(); __range.pop_front())
+            if (octa::max(__r.front(), __range.front()) == __range.front())
+                __r = __range;
+        return __r;
+    }
+    template<typename _R, typename _C>
+    inline _R max_element(_R __range, _C __compare) {
+        _R __r = __range;
+        for (; !__range.empty(); __range.pop_front())
+            if (octa::max(__r.front(), __range.front(), __compare) == __range.front())
+                __r = __range;
+        return __r;
     }
 
-    template<typename T, typename C>
-    inline T max(initializer_list<T> il, C compare) {
-        return max_element(each(il), compare).front();
+    template<typename _T>
+    inline _T min(std::initializer_list<_T> __il) {
+        return octa::min_element(octa::each(__il)).front();
+    }
+    template<typename _T, typename _C>
+    inline _T min(std::initializer_list<_T> __il, _C __compare) {
+        return octa::min_element(octa::each(__il), __compare).front();
+    }
+
+    template<typename _T>
+    inline _T max(std::initializer_list<_T> __il) {
+        return octa::max_element(octa::each(__il)).front();
+    }
+
+    template<typename _T, typename _C>
+    inline _T max(std::initializer_list<_T> __il, _C __compare) {
+        return octa::max_element(octa::each(__il), __compare).front();
     }
 
     /* clamp */
 
-    template<typename T, typename U>
-    inline T clamp(const T &v, const U &lo, const U &hi) {
-        return max(T(lo), min(v, T(hi)));
+    template<typename _T, typename _U>
+    inline _T clamp(const _T &__v, const _U &__lo, const _U &__hi) {
+        return octa::max(_T(__lo), octa::min(__v, _T(__hi)));
     }
 
-    template<typename T, typename U, typename C>
-    inline T clamp(const T &v, const U &lo, const U &hi, C compare) {
-        return max(T(lo), min(v, T(hi), compare), compare);
+    template<typename _T, typename _U, typename _C>
+    inline _T clamp(const _T &__v, const _U &__lo, const _U &__hi, _C __compare) {
+        return octa::max(_T(__lo), octa::min(__v, _T(__hi), __compare), __compare);
     }
 
     /* algos that don't change the range */
 
-    template<typename R, typename F>
-    F for_each(R range, F func) {
-        for (; !range.empty(); range.pop_front())
-            func(range.front());
-        return move(func);
+    template<typename _R, typename _F>
+    _F for_each(_R __range, _F __func) {
+        for (; !__range.empty(); __range.pop_front())
+            __func(__range.front());
+        return octa::move(__func);
     }
 
-    template<typename R, typename P>
-    bool all_of(R range, P pred) {
-        for (; !range.empty(); range.pop_front())
-            if (!pred(range.front())) return false;
+    template<typename _R, typename _P>
+    bool all_of(_R __range, _P __pred) {
+        for (; !__range.empty(); __range.pop_front())
+            if (!__pred(__range.front())) return false;
         return true;
     }
 
-    template<typename R, typename P>
-    bool any_of(R range, P pred) {
-        for (; !range.empty(); range.pop_front())
-            if (pred(range.front())) return true;
+    template<typename _R, typename _P>
+    bool any_of(_R __range, _P __pred) {
+        for (; !__range.empty(); __range.pop_front())
+            if (__pred(__range.front())) return true;
         return false;
     }
 
-    template<typename R, typename P>
-    bool none_of(R range, P pred) {
-        for (; !range.empty(); range.pop_front())
-            if (pred(range.front())) return false;
+    template<typename _R, typename _P>
+    bool none_of(_R __range, _P __pred) {
+        for (; !__range.empty(); __range.pop_front())
+            if (__pred(__range.front())) return false;
         return true;
     }
 
-    template<typename R, typename T>
-    R find(R range, const T &v) {
-        for (; !range.empty(); range.pop_front())
-            if (range.front() == v)
+    template<typename _R, typename _T>
+    _R find(_R __range, const _T &__v) {
+        for (; !__range.empty(); __range.pop_front())
+            if (__range.front() == __v)
                 break;
-        return range;
+        return __range;
     }
 
-    template<typename R, typename P>
-    R find_if(R range, P pred) {
-        for (; !range.empty(); range.pop_front())
-            if (pred(range.front()))
+    template<typename _R, typename _P>
+    _R find_if(_R __range, _P __pred) {
+        for (; !__range.empty(); __range.pop_front())
+            if (__pred(__range.front()))
                 break;
-        return range;
+        return __range;
     }
 
-    template<typename R, typename P>
-    R find_if_not(R range, P pred) {
-        for (; !range.empty(); range.pop_front())
-            if (!pred(range.front()))
+    template<typename _R, typename _P>
+    _R find_if_not(_R __range, _P __pred) {
+        for (; !__range.empty(); __range.pop_front())
+            if (!__pred(__range.front()))
                 break;
-        return range;
+        return __range;
     }
 
-    template<typename R, typename T>
-    RangeSize<R> count(R range, const T &v) {
-        RangeSize<R> ret = 0;
-        for (; !range.empty(); range.pop_front())
-            if (range.front() == v)
-                ++ret;
-        return ret;
+    template<typename _R, typename _T>
+    RangeSize<_R> count(_R __range, const _T &__v) {
+        RangeSize<_R> __ret = 0;
+        for (; !__range.empty(); __range.pop_front())
+            if (__range.front() == __v)
+                ++__ret;
+        return __ret;
     }
 
-    template<typename R, typename P>
-    RangeSize<R> count_if(R range, P pred) {
-        RangeSize<R> ret = 0;
-        for (; !range.empty(); range.pop_front())
-            if (pred(range.front()))
-                ++ret;
-        return ret;
+    template<typename _R, typename _P>
+    RangeSize<_R> count_if(_R __range, _P __pred) {
+        RangeSize<_R> __ret = 0;
+        for (; !__range.empty(); __range.pop_front())
+            if (__pred(__range.front()))
+                ++__ret;
+        return __ret;
     }
 
-    template<typename R, typename P>
-    RangeSize<R> count_if_not(R range, P pred) {
-        RangeSize<R> ret = 0;
-        for (; !range.empty(); range.pop_front())
-            if (!pred(range.front()))
-                ++ret;
-        return ret;
+    template<typename _R, typename _P>
+    RangeSize<_R> count_if_not(_R __range, _P __pred) {
+        RangeSize<_R> __ret = 0;
+        for (; !__range.empty(); __range.pop_front())
+            if (!__pred(__range.front()))
+                ++__ret;
+        return __ret;
     }
 
-    template<typename R>
-    bool equal(R range1, R range2) {
-        for (; !range1.empty(); range1.pop_front()) {
-            if (range2.empty() || (range1.front() != range2.front()))
+    template<typename _R>
+    bool equal(_R __range1, _R __range2) {
+        for (; !__range1.empty(); __range1.pop_front()) {
+            if (__range2.empty() || (__range1.front() != __range2.front()))
                 return false;
-            range2.pop_front();
+            __range2.pop_front();
         }
-        return range2.empty();
+        return __range2.empty();
     }
 
     /* algos that modify ranges or work with output ranges */
 
-    template<typename R1, typename R2>
-    R2 copy(R1 irange, R2 orange) {
-        for (; !irange.empty(); irange.pop_front())
-            orange.put(irange.front());
-        return orange;
+    template<typename _R1, typename _R2>
+    _R2 copy(_R1 __irange, _R2 __orange) {
+        for (; !__irange.empty(); __irange.pop_front())
+            __orange.put(__irange.front());
+        return __orange;
     }
 
-    template<typename R1, typename R2, typename P>
-    R2 copy_if(R1 irange, R2 orange, P pred) {
-        for (; !irange.empty(); irange.pop_front())
-            if (pred(irange.front()))
-                orange.put(irange.front());
-        return orange;
+    template<typename _R1, typename _R2, typename _P>
+    _R2 copy_if(_R1 __irange, _R2 __orange, _P __pred) {
+        for (; !__irange.empty(); __irange.pop_front())
+            if (__pred(__irange.front()))
+                __orange.put(__irange.front());
+        return __orange;
     }
 
-    template<typename R1, typename R2, typename P>
-    R2 copy_if_not(R1 irange, R2 orange, P pred) {
-        for (; !irange.empty(); irange.pop_front())
-            if (!pred(irange.front()))
-                orange.put(irange.front());
-        return orange;
+    template<typename _R1, typename _R2, typename _P>
+    _R2 copy_if_not(_R1 __irange, _R2 __orange, _P __pred) {
+        for (; !__irange.empty(); __irange.pop_front())
+            if (!__pred(__irange.front()))
+                __orange.put(__irange.front());
+        return __orange;
     }
 
-    template<typename R1, typename R2>
-    R2 move(R1 irange, R2 orange) {
-        for (; !irange.empty(); irange.pop_front())
-            orange.put(move(irange.front()));
-        return orange;
+    template<typename _R1, typename _R2>
+    _R2 move(_R1 __irange, _R2 __orange) {
+        for (; !__irange.empty(); __irange.pop_front())
+            __orange.put(octa::move(__irange.front()));
+        return __orange;
     }
 
-    template<typename R>
-    void reverse(R range) {
-        while (!range.empty()) {
-            swap(range.front(), range.back());
-            range.pop_front();
-            range.pop_back();
+    template<typename _R>
+    void reverse(_R __range) {
+        while (!__range.empty()) {
+            octa::swap(__range.front(), __range.back());
+            __range.pop_front();
+            __range.pop_back();
         }
     }
 
-    template<typename R1, typename R2>
-    R2 reverse_copy(R1 irange, R2 orange) {
-        for (; !irange.empty(); irange.pop_back())
-            orange.put(irange.back());
-        return orange;
+    template<typename _R1, typename _R2>
+    _R2 reverse_copy(_R1 __irange, _R2 __orange) {
+        for (; !__irange.empty(); __irange.pop_back())
+            __orange.put(__irange.back());
+        return __orange;
     }
 
-    template<typename R, typename T>
-    void fill(R range, const T &v) {
-        for (; !range.empty(); range.pop_front())
-            range.front() = v;
+    template<typename _R, typename _T>
+    void fill(_R __range, const _T &__v) {
+        for (; !__range.empty(); __range.pop_front())
+            __range.front() = __v;
     }
 
-    template<typename R, typename F>
-    void generate(R range, F gen) {
-        for (; !range.empty(); range.pop_front())
-            range.front() = gen();
+    template<typename _R, typename _F>
+    void generate(_R __range, _F __gen) {
+        for (; !__range.empty(); __range.pop_front())
+            __range.front() = __gen();
     }
 
-    template<typename R1, typename R2>
-    Pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
-        while (!range1.empty() && !range2.empty()) {
-            swap(range1.front(), range2.front());
-            range1.pop_front();
-            range2.pop_front();
+    template<typename _R1, typename _R2>
+    octa::Pair<_R1, _R2> swap_ranges(_R1 __range1, _R2 __range2) {
+        while (!__range1.empty() && !__range2.empty()) {
+            octa::swap(__range1.front(), __range2.front());
+            __range1.pop_front();
+            __range2.pop_front();
         }
-        return Pair<R1, R2>(range1, range2);
+        return octa::Pair<_R1, _R2>(__range1, __range2);
     }
 
-    template<typename R, typename T>
-    void iota(R range, T value) {
-        for (; !range.empty(); range.pop_front())
-            range.front() = value++;
+    template<typename _R, typename _T>
+    void iota(_R __range, _T __value) {
+        for (; !__range.empty(); __range.pop_front())
+            __range.front() = __value++;
     }
 
-    template<typename R, typename T>
-    T foldl(R range, T init) {
-        for (; !range.empty(); range.pop_front())
-            init = init + range.front();
-        return init;
+    template<typename _R, typename _T>
+    _T foldl(_R __range, _T __init) {
+        for (; !__range.empty(); __range.pop_front())
+            __init = __init + __range.front();
+        return __init;
     }
 
-    template<typename R, typename T, typename F>
-    T foldl(R range, T init, F func) {
-        for (; !range.empty(); range.pop_front())
-            init = func(init, range.front());
-        return init;
+    template<typename _R, typename _T, typename _F>
+    _T foldl(_R __range, _T __init, _F __func) {
+        for (; !__range.empty(); __range.pop_front())
+            __init = __func(__init, __range.front());
+        return __init;
     }
 
-    template<typename R, typename T>
-    T foldr(R range, T init) {
-        for (; !range.empty(); range.pop_back())
-            init = init + range.back();
-        return init;
+    template<typename _R, typename _T>
+    _T foldr(_R __range, _T __init) {
+        for (; !__range.empty(); __range.pop_back())
+            __init = __init + __range.back();
+        return __init;
     }
 
-    template<typename R, typename T, typename F>
-    T foldr(R range, T init, F func) {
-        for (; !range.empty(); range.pop_back())
-            init = func(init, range.back());
-        return init;
+    template<typename _R, typename _T, typename _F>
+    _T foldr(_R __range, _T __init, _F __func) {
+        for (; !__range.empty(); __range.pop_back())
+            __init = __func(__init, __range.back());
+        return __init;
     }
 
-    template<typename T, typename R>
+    template<typename _T, typename _R>
     struct MapRange: InputRange<
-        MapRange<T, R>, RangeCategory<T>, R, R, RangeSize<T>
+        MapRange<_T, _R>, octa::RangeCategory<_T>, _R, _R, octa::RangeSize<_T>
     > {
     private:
-        T p_range;
-        Function<R(RangeReference<T>)> p_func;
+        _T __range;
+        octa::Function<_R(octa::RangeReference<_T>)> __func;
 
     public:
-        MapRange(): p_range(), p_func() {}
-        template<typename F>
-        MapRange(const T &range, const F &func): p_range(range), p_func(func) {}
-        MapRange(const MapRange &it): p_range(it.p_range), p_func(it.p_func) {}
-        MapRange(MapRange &&it): p_range(move(it.p_range)), p_func(move(it.p_func)) {}
+        MapRange(): __range(), __func() {}
+        template<typename _F>
+        MapRange(const _T &__range, const _F &__func):
+            __range(__range), __func(__func) {}
+        MapRange(const MapRange &__it):
+            __range(__it.__range), __func(__it.__func) {}
+        MapRange(MapRange &&__it):
+            __range(move(__it.__range)), __func(move(__it.__func)) {}
 
-        MapRange &operator=(const MapRange &v) {
-            p_range = v.p_range;
-            p_func  = v.p_func;
+        MapRange &operator=(const MapRange &__v) {
+            __range = __v.__range;
+            __func  = __v.__func;
             return *this;
         }
-        MapRange &operator=(MapRange &&v) {
-            p_range = move(v.p_range);
-            p_func  = move(v.p_func);
+        MapRange &operator=(MapRange &&__v) {
+            __range = move(__v.__range);
+            __func  = move(__v.__func);
             return *this;
         }
 
-        bool empty() const { return p_range.empty(); }
-        RangeSize<T> size() const { return p_range.size(); }
+        bool empty() const { return __range.empty(); }
+        octa::RangeSize<_T> size() const { return __range.size(); }
 
-        bool equals_front(const MapRange &range) const {
-            return p_range.equals_front(range.p_range);
+        bool equals_front(const MapRange &__r) const {
+            return __range.equals_front(__r.__range);
         }
-        bool equals_back(const MapRange &range) const {
-            return p_range.equals_front(range.p_range);
-        }
-
-        RangeDifference<T> distance_front(const MapRange &range) const {
-            return p_range.distance_front(range.p_range);
-        }
-        RangeDifference<T> distance_back(const MapRange &range) const {
-            return p_range.distance_back(range.p_range);
+        bool equals_back(const MapRange &__r) const {
+            return __range.equals_front(__r.__range);
         }
 
-        bool pop_front() { return p_range.pop_front(); }
-        bool pop_back() { return p_range.pop_back(); }
-
-        bool push_front() { return p_range.pop_front(); }
-        bool push_back() { return p_range.push_back(); }
-
-        RangeSize<T> pop_front_n(RangeSize<T> n) { p_range.pop_front_n(n); }
-        RangeSize<T> pop_back_n(RangeSize<T> n) { p_range.pop_back_n(n); }
-
-        RangeSize<T> push_front_n(RangeSize<T> n) { return p_range.push_front_n(n); }
-        RangeSize<T> push_back_n(RangeSize<T> n) { return p_range.push_back_n(n); }
-
-        R front() const { return p_func(p_range.front()); }
-        R back() const { return p_func(p_range.back()); }
-
-        R operator[](RangeSize<T> idx) const {
-            return p_func(p_range[idx]);
+        octa::RangeDifference<_T> distance_front(const MapRange &__r) const {
+            return __range.distance_front(__r.__range);
+        }
+        octa::RangeDifference<_T> distance_back(const MapRange &__r) const {
+            return __range.distance_back(__r.__range);
         }
 
-        MapRange<T, R> slice(RangeSize<T> start, RangeSize<T> end) {
-            return MapRange<T, R>(p_range.slice(start, end), p_func);
+        bool pop_front() { return __range.pop_front(); }
+        bool pop_back() { return __range.pop_back(); }
+
+        bool push_front() { return __range.pop_front(); }
+        bool push_back() { return __range.push_back(); }
+
+        octa::RangeSize<_T> pop_front_n(octa::RangeSize<_T> __n) {
+            __range.pop_front_n(__n);
+        }
+        octa::RangeSize<_T> pop_back_n(octa::RangeSize<_T> __n) {
+            __range.pop_back_n(__n);
+        }
+
+        octa::RangeSize<_T> push_front_n(octa::RangeSize<_T> __n) {
+            return __range.push_front_n(__n);
+        }
+        octa::RangeSize<_T> push_back_n(octa::RangeSize<_T> __n) {
+            return __range.push_back_n(__n);
+        }
+
+        _R front() const { return __func(__range.front()); }
+        _R back() const { return __func(__range.back()); }
+
+        _R operator[](octa::RangeSize<_T> __idx) const {
+            return __func(__range[__idx]);
+        }
+
+        MapRange<_T, _R> slice(octa::RangeSize<_T> __start,
+                               octa::RangeSize<_T> __end) {
+            return MapRange<_T, _R>(__range.slice(__start, __end), __func);
         }
     };
 
-    template<typename R, typename F>
-    using __OctaMapReturnType = decltype(declval<F>()(declval<RangeReference<R>>()));
+    template<typename _R, typename _F> using __OctaMapReturnType
+        = decltype(declval<_F>()(octa::declval<octa::RangeReference<_R>>()));
 
-    template<typename R, typename F>
-    MapRange<R, __OctaMapReturnType<R, F>> map(R range, F func) {
-        return MapRange<R, __OctaMapReturnType<R, F>>(range, func);
+    template<typename _R, typename _F>
+    MapRange<_R, __OctaMapReturnType<_R, _F>> map(_R __range, _F __func) {
+        return octa::MapRange<_R, __OctaMapReturnType<_R, _F>>(__range, __func);
     }
 
-    template<typename T>
+    template<typename _T>
     struct FilterRange: InputRange<
-        FilterRange<T>, CommonType<RangeCategory<T>, ForwardRangeTag>,
-        RangeValue<T>, RangeReference<T>, RangeSize<T>
+        FilterRange<_T>, octa::CommonType<octa::RangeCategory<_T>,
+                                          octa::ForwardRangeTag>,
+        octa::RangeValue<_T>, octa::RangeReference<_T>, octa::RangeSize<_T>
     > {
     private:
-        T p_range;
-        Function<bool(RangeReference<T>)> p_pred;
+        _T __range;
+        octa::Function<bool(octa::RangeReference<_T>)> __pred;
 
         void advance_valid() {
-            while (!p_range.empty() && !p_pred(front())) p_range.pop_front();
+            while (!__range.empty() && !__pred(front())) __range.pop_front();
         }
 
     public:
-        FilterRange(): p_range(), p_pred() {}
+        FilterRange(): __range(), __pred() {}
 
-        template<typename P>
-        FilterRange(const T &range, const P &pred): p_range(range),
-        p_pred(pred) {
+        template<typename _P>
+        FilterRange(const _T &__range, const _P &__pred): __range(__range),
+        __pred(__pred) {
             advance_valid();
         }
-        FilterRange(const FilterRange &it): p_range(it.p_range),
-        p_pred(it.p_pred) {
+        FilterRange(const FilterRange &__it): __range(__it.__range),
+        __pred(__it.__pred) {
             advance_valid();
         }
-        FilterRange(FilterRange &&it): p_range(move(it.p_range)),
-        p_pred(move(it.p_pred)) {
+        FilterRange(FilterRange &&__it): __range(move(__it.__range)),
+        __pred(move(__it.__pred)) {
             advance_valid();
         }
 
-        FilterRange &operator=(const FilterRange &v) {
-            p_range = v.p_range;
-            p_pred  = v.p_pred;
+        FilterRange &operator=(const FilterRange &__v) {
+            __range = __v.__range;
+            __pred  = __v.__pred;
             advance_valid();
             return *this;
         }
-        FilterRange &operator=(FilterRange &&v) {
-            p_range = move(v.p_range);
-            p_pred  = move(v.p_pred);
+        FilterRange &operator=(FilterRange &&__v) {
+            __range = move(__v.__range);
+            __pred  = move(__v.__pred);
             advance_valid();
             return *this;
         }
 
-        bool empty() const { return p_range.empty(); }
+        bool empty() const { return __range.empty(); }
 
-        bool equals_front(const FilterRange &range) const {
-            return p_range.equals_front(range.p_range);
+        bool equals_front(const FilterRange &__r) const {
+            return __range.equals_front(__r.__range);
         }
 
         bool pop_front() {
-            bool ret = p_range.pop_front();
+            bool __ret = __range.pop_front();
             advance_valid();
-            return ret;
+            return __ret;
         }
         bool push_front() {
-            T tmp = p_range;
-            if (!tmp.push_front()) return false;
-            while (!pred(tmp.front()))
-                if (!tmp.push_front())
+            _T __tmp = __range;
+            if (!__tmp.push_front()) return false;
+            while (!pred(__tmp.front()))
+                if (!__tmp.push_front())
                     return false;
-            p_range = tmp;
+            __range = __tmp;
             return true;
         }
 
-        RangeReference<T> front() const { return p_range.front(); }
+        octa::RangeReference<_T> front() const { return __range.front(); }
     };
 
-    template<typename R, typename P>
-    FilterRange<R> filter(R range, P pred) {
-        return FilterRange<R>(range, pred);
+    template<typename _R, typename _P>
+    FilterRange<_R> filter(_R __range, _P __pred) {
+        return octa::FilterRange<_R>(__range, __pred);
     }
 }
 

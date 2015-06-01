@@ -13,67 +13,67 @@
 namespace octa {
     /* move */
 
-    template<typename T>
-    static inline constexpr RemoveReference<T> &&move(T &&v) {
-        return static_cast<RemoveReference<T> &&>(v);
+    template<typename _T>
+    static inline constexpr RemoveReference<_T> &&move(_T &&__v) {
+        return static_cast<RemoveReference<_T> &&>(__v);
     }
 
     /* forward */
 
-    template<typename T>
-    static inline constexpr T &&forward(RemoveReference<T> &v) {
-        return static_cast<T &&>(v);
+    template<typename _T>
+    static inline constexpr _T &&forward(RemoveReference<_T> &__v) {
+        return static_cast<_T &&>(__v);
     }
 
-    template<typename T>
-    static inline constexpr T &&forward(RemoveReference<T> &&v) {
-        return static_cast<T &&>(v);
+    template<typename _T>
+    static inline constexpr _T &&forward(RemoveReference<_T> &&__v) {
+        return static_cast<_T &&>(__v);
     }
 
     /* declval */
 
-    template<typename T> AddRvalueReference<T> declval();
+    template<typename _T> AddRvalueReference<_T> declval();
 
     /* swap */
 
-    template<typename T>
+    template<typename _T>
     struct __OctaSwapTest {
-        template<typename U, void (U::*)(U &)> struct __OctaTest {};
-        template<typename U> static char __octa_test(__OctaTest<U, &U::swap> *);
-        template<typename U> static  int __octa_test(...);
-        static constexpr bool value = (sizeof(__octa_test<T>(0)) == sizeof(char));
+        template<typename _U, void (_U::*)(_U &)> struct __Test {};
+        template<typename _U> static char __test(__Test<_U, &_U::swap> *);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == sizeof(char));
     };
 
-    template<typename T> inline void __octa_swap(T &a, T &b, EnableIf<
-        __OctaSwapTest<T>::value, bool
+    template<typename _T> inline void __octa_swap(_T &__a, _T &__b, EnableIf<
+        __OctaSwapTest<_T>::value, bool
     > = true) {
-        a.swap(b);
+        __a.swap(__b);
     }
 
-    template<typename T> inline void __octa_swap(T &a, T &b, EnableIf<
-        !__OctaSwapTest<T>::value, bool
+    template<typename _T> inline void __octa_swap(_T &__a, _T &__b, EnableIf<
+        !__OctaSwapTest<_T>::value, bool
     > = true) {
-        T c(move(a));
-        a = move(b);
-        b = move(c);
+        _T __c(octa::move(__a));
+        __a = octa::move(__b);
+        __b = octa::move(__c);
     }
 
-    template<typename T> void swap(T &a, T &b) {
-        __octa_swap(a, b);
+    template<typename _T> void swap(_T &__a, _T &__b) {
+        __octa_swap(__a, __b);
     }
 
-    template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N]) {
-        for (size_t i = 0; i < N; ++i) {
-            swap(a[i], b[i]);
+    template<typename _T, size_t _N> void swap(_T (&__a)[_N], _T (&__b)[_N]) {
+        for (size_t __i = 0; __i < _N; ++__i) {
+            octa::swap(__a[__i], __b[__i]);
         }
     }
 
     /* pair */
 
-    template<typename T, typename U>
+    template<typename _T, typename _U>
     struct Pair {
-        T first;
-        U second;
+        _T first;
+        _U second;
 
         Pair() = default;
         ~Pair() = default;
@@ -81,46 +81,48 @@ namespace octa {
         Pair(const Pair &) = default;
         Pair(Pair &&) = default;
 
-        Pair(const T &x, const U &y): first(x), second(y) {}
+        Pair(const _T &__x, const _U &__y): first(__x), second(__y) {}
 
-        template<typename TT, typename UU>
-        Pair(TT &&x, UU &&y): first(forward<TT>(x)), second(forward<UU>(y)) {}
+        template<typename _TT, typename _UU>
+        Pair(_TT &&__x, _UU &&__y):
+            first(octa::forward<_TT>(__x)), second(octa::forward<_UU>(__y)) {}
 
-        template<typename TT, typename UU>
-        Pair(const Pair<TT, UU> &v): first(v.first), second(v.second) {}
+        template<typename _TT, typename _UU>
+        Pair(const Pair<_TT, _UU> &__v): first(__v.first), second(__v.second) {}
 
-        template<typename TT, typename UU>
-        Pair(Pair<TT, UU> &&v): first(move(v.first)), second(move(v.second)) {}
+        template<typename _TT, typename _UU>
+        Pair(Pair<_TT, _UU> &&__v):
+            first(octa::move(__v.first)), second(octa::move(__v.second)) {}
 
-        Pair &operator=(const Pair &v) {
-            first = v.first;
-            second = v.second;
+        Pair &operator=(const Pair &__v) {
+            first = __v.first;
+            second = __v.second;
             return *this;
         }
 
-        template<typename TT, typename UU>
-        Pair &operator=(const Pair<TT, UU> &v) {
-            first = v.first;
-            second = v.second;
+        template<typename _TT, typename _UU>
+        Pair &operator=(const Pair<_TT, _UU> &__v) {
+            first = __v.first;
+            second = __v.second;
             return *this;
         }
 
-        Pair &operator=(Pair &&v) {
-            first = move(v.first);
-            second = move(v.second);
+        Pair &operator=(Pair &&__v) {
+            first = octa::move(__v.first);
+            second = octa::move(__v.second);
             return *this;
         }
 
-        template<typename TT, typename UU>
-        Pair &operator=(Pair<TT, UU> &&v) {
-            first = forward<TT>(v.first);
-            second = forward<UU>(v.second);
+        template<typename _TT, typename _UU>
+        Pair &operator=(Pair<_TT, _UU> &&__v) {
+            first = octa::forward<_TT>(__v.first);
+            second = octa::forward<_UU>(__v.second);
             return *this;
         }
 
-        void swap(Pair &v) {
-            octa::swap(first, v.first);
-            octa::swap(second, v.second);
+        void swap(Pair &__v) {
+            octa::swap(first, __v.first);
+            octa::swap(second, __v.second);
         }
     };
 }

@@ -14,12 +14,14 @@
 namespace octa {
     /* basic function objects */
 
-#define __OCTA_DEFINE_BINARY_OP(name, op, rettype) \
-    template<typename T> struct name { \
-        rettype operator()(const T &x, const T &y) const { return x op y; } \
-        typedef T FirstArgType; \
-        typedef T SecondArgType; \
-        typedef rettype ResultType; \
+#define __OCTA_DEFINE_BINARY_OP(_name, _op, _rettype) \
+    template<typename _T> struct _name { \
+        _rettype operator()(const _T &__x, const _T &__y) const { \
+            return __x _op __y; \
+        } \
+        typedef _T FirstArgType; \
+        typedef _T SecondArgType; \
+        typedef _rettype ResultType; \
     };
 
     __OCTA_DEFINE_BINARY_OP(Less, <, bool)
@@ -30,78 +32,78 @@ namespace octa {
     __OCTA_DEFINE_BINARY_OP(NotEqual, !=, bool)
     __OCTA_DEFINE_BINARY_OP(LogicalAnd, &&, bool)
     __OCTA_DEFINE_BINARY_OP(LogicalOr, ||, bool)
-    __OCTA_DEFINE_BINARY_OP(Modulus, %, T)
-    __OCTA_DEFINE_BINARY_OP(Multiplies, *, T)
-    __OCTA_DEFINE_BINARY_OP(Divides, /, T)
-    __OCTA_DEFINE_BINARY_OP(Plus, +, T)
-    __OCTA_DEFINE_BINARY_OP(Minus, -, T)
-    __OCTA_DEFINE_BINARY_OP(BitAnd, &, T)
-    __OCTA_DEFINE_BINARY_OP(BitOr, |, T)
-    __OCTA_DEFINE_BINARY_OP(BitXor, ^, T)
+    __OCTA_DEFINE_BINARY_OP(Modulus, %, _T)
+    __OCTA_DEFINE_BINARY_OP(Multiplies, *, _T)
+    __OCTA_DEFINE_BINARY_OP(Divides, /, _T)
+    __OCTA_DEFINE_BINARY_OP(Plus, +, _T)
+    __OCTA_DEFINE_BINARY_OP(Minus, -, _T)
+    __OCTA_DEFINE_BINARY_OP(BitAnd, &, _T)
+    __OCTA_DEFINE_BINARY_OP(BitOr, |, _T)
+    __OCTA_DEFINE_BINARY_OP(BitXor, ^, _T)
 
 #undef __OCTA_DEFINE_BINARY_OP
 
-    template<typename T> struct LogicalNot {
-        bool operator()(const T &x) const { return !x; }
-        typedef T ArgType;
+    template<typename _T> struct LogicalNot {
+        bool operator()(const _T &__x) const { return !__x; }
+        typedef _T ArgType;
         typedef bool ResultType;
     };
 
-    template<typename T> struct Negate {
-        bool operator()(const T &x) const { return -x; }
-        typedef T ArgType;
-        typedef T ResultType;
+    template<typename _T> struct Negate {
+        bool operator()(const _T &__x) const { return -__x; }
+        typedef _T ArgType;
+        typedef _T ResultType;
     };
 
-    template<typename T> struct BinaryNegate {
-        typedef typename T::FirstArgType FirstArgType;
-        typedef typename T::SecondArgType SecondArgType;
+    template<typename _T> struct BinaryNegate {
+        typedef typename _T::FirstArgType FirstArgType;
+        typedef typename _T::SecondArgType SecondArgType;
         typedef bool ResultType;
 
-        explicit BinaryNegate(const T &f): p_fn(f) {}
+        explicit BinaryNegate(const _T &__f): __fn(__f) {}
 
-        bool operator()(const FirstArgType &x,
-                        const SecondArgType &y) {
-            return !p_fn(x, y);
+        bool operator()(const FirstArgType &__x,
+                        const SecondArgType &__y) {
+            return !__fn(__x, __y);
         }
     private:
-        T p_fn;
+        _T __fn;
     };
 
-    template<typename T> struct UnaryNegate {
-        typedef typename T::ArgType ArgType;
+    template<typename _T> struct UnaryNegate {
+        typedef typename _T::ArgType ArgType;
         typedef bool ResultType;
 
-        explicit UnaryNegate(const T &f): p_fn(f) {}
-        bool operator()(const ArgType &x) {
-            return !p_fn(x);
+        explicit UnaryNegate(const _T &__f): __fn(__f) {}
+        bool operator()(const ArgType &__x) {
+            return !__fn(__x);
         }
     private:
-        T p_fn;
+        _T __fn;
     };
 
-    template<typename T> UnaryNegate<T> not1(const T &fn) {
-        return UnaryNegate<T>(fn);
+    template<typename _T> UnaryNegate<_T> not1(const _T &__fn) {
+        return UnaryNegate<_T>(__fn);
     }
 
-    template<typename T> BinaryNegate<T> not2(const T &fn) {
-        return BinaryNegate<T>(fn);
+    template<typename _T> BinaryNegate<_T> not2(const _T &__fn) {
+        return BinaryNegate<_T>(__fn);
     }
 
     /* hash */
 
-    template<typename T> struct Hash;
+    template<typename _T> struct Hash;
 
-    template<typename T> struct __OctaHashBase {
-        typedef T ArgType;
+    template<typename _T> struct __OctaHashBase {
+        typedef _T ArgType;
         typedef size_t ResultType;
 
-        size_t operator()(T v) const {
-            return (size_t)v;
+        size_t operator()(_T __v) const {
+            return size_t(__v);
         }
     };
 
-#define __OCTA_HASH_BASIC(T) template<> struct Hash<T>: __OctaHashBase<T> {};
+#define __OCTA_HASH_BASIC(_T) template<> struct Hash<_T>: __OctaHashBase<_T> {};
 
     __OCTA_HASH_BASIC(bool)
     __OCTA_HASH_BASIC(char)
@@ -119,69 +121,69 @@ namespace octa {
 
 #undef __OCTA_HASH_BASIC
 
-    static inline size_t __octa_mem_hash(const void *p, size_t l) {
-        const uchar *d = (const uchar *)p;
-        size_t h = 5381;
-        for (size_t i = 0; i < l; ++i) h = ((h << 5) + h) ^ d[i];
-        return h;
+    static inline size_t __octa_mem_hash(const void *__p, size_t __l) {
+        const uchar *__d = (const uchar *)__p;
+        size_t __h = 5381;
+        for (size_t __i = 0; __i < __l; ++__i) __h = ((__h << 5) + __h) ^ __d[__i];
+        return __h;
     }
 
-    template<typename T, size_t = sizeof(T) / sizeof(size_t)>
+    template<typename _T, size_t = sizeof(_T) / sizeof(size_t)>
     struct __OctaScalarHash;
 
-    template<typename T> struct __OctaScalarHash<T, 0> {
-        typedef T ArgType;
+    template<typename _T> struct __OctaScalarHash<_T, 0> {
+        typedef _T ArgType;
         typedef size_t ResultType;
 
-        size_t operator()(T v) const {
-            union { T v; size_t h; } u;
-            u.h = 0;
-            u.v = v;
-            return u.h;
+        size_t operator()(_T __v) const {
+            union { _T __v; size_t __h; } __u;
+            __u.__h = 0;
+            __u.__v = __v;
+            return __u.__h;
         }
     };
 
-    template<typename T> struct __OctaScalarHash<T, 1> {
-        typedef T ArgType;
+    template<typename _T> struct __OctaScalarHash<_T, 1> {
+        typedef _T ArgType;
         typedef size_t ResultType;
 
-        size_t operator()(T v) const {
-            union { T v; size_t h; } u;
-            u.v = v;
-            return u.h;
+        size_t operator()(_T __v) const {
+            union { _T __v; size_t __h; } __u;
+            __u.__v = __v;
+            return __u.__h;
         }
     };
 
-    template<typename T> struct __OctaScalarHash<T, 2> {
-        typedef T ArgType;
+    template<typename _T> struct __OctaScalarHash<_T, 2> {
+        typedef _T ArgType;
         typedef size_t ResultType;
 
-        size_t operator()(T v) const {
-            union { T v; struct { size_t h1, h2; }; } u;
-            u.v = v;
-            return __octa_mem_hash((const void *)&u, sizeof(u));
+        size_t operator()(_T __v) const {
+            union { _T __v; struct { size_t __h1, __h2; }; } __u;
+            __u.__v = __v;
+            return __octa_mem_hash((const void *)&__u, sizeof(__u));
         }
     };
 
-    template<typename T> struct __OctaScalarHash<T, 3> {
-        typedef T ArgType;
+    template<typename _T> struct __OctaScalarHash<_T, 3> {
+        typedef _T ArgType;
         typedef size_t ResultType;
 
-        size_t operator()(T v) const {
-            union { T v; struct { size_t h1, h2, h3; }; } u;
-            u.v = v;
-            return __octa_mem_hash((const void *)&u, sizeof(u));
+        size_t operator()(_T __v) const {
+            union { _T __v; struct { size_t __h1, __h2, __h3; }; } __u;
+            __u.__v = __v;
+            return __octa_mem_hash((const void *)&__u, sizeof(__u));
         }
     };
 
-    template<typename T> struct __OctaScalarHash<T, 4> {
-        typedef T ArgType;
+    template<typename _T> struct __OctaScalarHash<_T, 4> {
+        typedef _T ArgType;
         typedef size_t ResultType;
 
-        size_t operator()(T v) const {
-            union { T v; struct { size_t h1, h2, h3, h4; }; } u;
-            u.v = v;
-            return __octa_mem_hash((const void *)&u, sizeof(u));
+        size_t operator()(_T __v) const {
+            union { _T __v; struct { size_t __h1, __h2, __h3, __h4; }; } __u;
+            __u.__v = __v;
+            return __octa_mem_hash((const void *)&__u, sizeof(__u));
         }
     };
 
@@ -189,146 +191,146 @@ namespace octa {
     template<> struct Hash<ullong>: __OctaScalarHash<ullong> {};
 
     template<> struct Hash<float>: __OctaScalarHash<float> {
-        size_t operator()(float v) const {
-            if (v == 0) return 0;
-            return __OctaScalarHash<float>::operator()(v);
+        size_t operator()(float __v) const {
+            if (__v == 0) return 0;
+            return __OctaScalarHash<float>::operator()(__v);
         }
     };
 
     template<> struct Hash<double>: __OctaScalarHash<double> {
-        size_t operator()(double v) const {
-            if (v == 0) return 0;
-            return __OctaScalarHash<double>::operator()(v);
+        size_t operator()(double __v) const {
+            if (__v == 0) return 0;
+            return __OctaScalarHash<double>::operator()(__v);
         }
     };
 
     template<> struct Hash<ldouble>: __OctaScalarHash<ldouble> {
-        size_t operator()(ldouble v) const {
-            if (v == 0) return 0;
+        size_t operator()(ldouble __v) const {
+            if (__v == 0) return 0;
 #ifdef __i386__
-            union { ldouble v; struct { size_t h1, h2, h3, h4; }; } u;
-            u.h1 = u.h2 = u.h3 = u.h4 = 0;
-            u.v = v;
-            return (u.h1 ^ u.h2 ^ u.h3 ^ u.h4);
+            union { ldouble __v; struct { size_t __h1, __h2, __h3, __h4; }; } __u;
+            __u.__h1 = __u.__h2 = __u.__h3 = __u.__h4 = 0;
+            __u.__v = __v;
+            return (__u.__h1 ^ __u.__h2 ^ __u.__h3 ^ __u.__h4);
 #else
 #ifdef __x86_64__
-            union { ldouble v; struct { size_t h1, h2; }; } u;
-            u.h1 = u.h2 = 0;
-            u.v = v;
-            return (u.h1 ^ u.h2);
+            union { ldouble __v; struct { size_t __h1, __h2; }; } __u;
+            __u.__h1 = __u.__h2 = 0;
+            __u.__v = __v;
+            return (__u.__h1 ^ __u.__h2);
 #else
-            return __OctaScalarHash<ldouble>::operator()(v);
+            return __OctaScalarHash<ldouble>::operator()(__v);
 #endif
 #endif
         }
     };
 
-    template<typename T> struct Hash<T *> {
-        typedef T *ArgType;
+    template<typename _T> struct Hash<_T *> {
+        typedef _T *ArgType;
         typedef size_t ResultType;
 
-        size_t operator()(T *v) const {
-            union { T *v; size_t h; } u;
-            u.v = v;
-            return __octa_mem_hash((const void *)&u, sizeof(u));
+        size_t operator()(_T *__v) const {
+            union { _T *__v; size_t __h; } __u;
+            __u.__v = __v;
+            return __octa_mem_hash((const void *)&__u, sizeof(__u));
         }
     };
 
     /* reference wrapper */
 
-    template<typename T>
+    template<typename _T>
     struct ReferenceWrapper {
-        typedef T type;
+        typedef _T type;
 
-        ReferenceWrapper(T &v): p_ptr(address_of(v)) {}
+        ReferenceWrapper(_T &__v): __ptr(address_of(__v)) {}
         ReferenceWrapper(const ReferenceWrapper &) = default;
-        ReferenceWrapper(T &&) = delete;
+        ReferenceWrapper(_T &&) = delete;
 
         ReferenceWrapper &operator=(const ReferenceWrapper &) = default;
 
-        operator T &() const { return *p_ptr; }
-        T &get() const { return *p_ptr; }
+        operator _T &() const { return *__ptr; }
+        _T &get() const { return *__ptr; }
 
     private:
-        T *p_ptr;
+        _T *__ptr;
     };
 
-    template<typename T>
-    ReferenceWrapper<T> ref(T &v) {
-        return ReferenceWrapper<T>(v);
+    template<typename _T>
+    ReferenceWrapper<_T> ref(_T &__v) {
+        return ReferenceWrapper<_T>(__v);
     }
-    template<typename T>
-    ReferenceWrapper<T> ref(ReferenceWrapper<T> v) {
-        return ReferenceWrapper<T>(v);
+    template<typename _T>
+    ReferenceWrapper<_T> ref(ReferenceWrapper<_T> __v) {
+        return ReferenceWrapper<_T>(__v);
     }
-    template<typename T> void ref(const T &&) = delete;
+    template<typename _T> void ref(const _T &&) = delete;
 
-    template<typename T>
-    ReferenceWrapper<const T> cref(const T &v) {
-        return ReferenceWrapper<T>(v);
+    template<typename _T>
+    ReferenceWrapper<const _T> cref(const _T &__v) {
+        return ReferenceWrapper<_T>(__v);
     }
-    template<typename T>
-    ReferenceWrapper<const T> cref(ReferenceWrapper<T> v) {
-        return ReferenceWrapper<T>(v);
+    template<typename _T>
+    ReferenceWrapper<const _T> cref(ReferenceWrapper<_T> __v) {
+        return ReferenceWrapper<_T>(__v);
     }
-    template<typename T> void cref(const T &&) = delete;
+    template<typename _T> void cref(const _T &&) = delete;
 
     /* mem_fn */
 
     template<typename, typename> struct __OctaMemTypes;
-    template<typename T, typename R, typename ...A>
-    struct __OctaMemTypes<T, R(A...)> {
-        typedef R ResultType;
-        typedef T ArgType;
+    template<typename _T, typename _R, typename ..._A>
+    struct __OctaMemTypes<_T, _R(_A...)> {
+        typedef _R ResultType;
+        typedef _T ArgType;
     };
-    template<typename T, typename R, typename A>
-    struct __OctaMemTypes<T, R(A)> {
-        typedef R ResultType;
-        typedef T FirstArgType;
-        typedef A SecondArgType;
+    template<typename _T, typename _R, typename _A>
+    struct __OctaMemTypes<_T, _R(_A)> {
+        typedef _R ResultType;
+        typedef _T FirstArgType;
+        typedef _A SecondArgType;
     };
-    template<typename T, typename R, typename ...A>
-    struct __OctaMemTypes<T, R(A...) const> {
-        typedef R ResultType;
-        typedef const T ArgType;
+    template<typename _T, typename _R, typename ..._A>
+    struct __OctaMemTypes<_T, _R(_A...) const> {
+        typedef _R ResultType;
+        typedef const _T ArgType;
     };
-    template<typename T, typename R, typename A>
-    struct __OctaMemTypes<T, R(A) const> {
-        typedef R ResultType;
-        typedef const T FirstArgType;
-        typedef A SecondArgType;
+    template<typename _T, typename _R, typename _A>
+    struct __OctaMemTypes<_T, _R(_A) const> {
+        typedef _R ResultType;
+        typedef const _T FirstArgType;
+        typedef _A SecondArgType;
     };
 
-    template<typename R, typename T>
-    class __OctaMemFn: __OctaMemTypes<T, R> {
-        R T::*p_ptr;
+    template<typename _R, typename _T>
+    class __OctaMemFn: __OctaMemTypes<_T, _R> {
+        _R _T::*__ptr;
     public:
-        __OctaMemFn(R T::*ptr): p_ptr(ptr) {}
-        template<typename... A>
-        auto operator()(T &obj, A &&...args) ->
-          decltype(((obj).*(p_ptr))(forward<A>(args)...)) {
-            return ((obj).*(p_ptr))(forward<A>(args)...);
+        __OctaMemFn(_R _T::*__ptr): __ptr(__ptr) {}
+        template<typename... _A>
+        auto operator()(_T &__obj, _A &&...__args) ->
+          decltype(((__obj).*(__ptr))(forward<_A>(__args)...)) {
+            return ((__obj).*(__ptr))(forward<_A>(__args)...);
         }
-        template<typename... A>
-        auto operator()(const T &obj, A &&...args) ->
-          decltype(((obj).*(p_ptr))(forward<A>(args)...)) const {
-            return ((obj).*(p_ptr))(forward<A>(args)...);
+        template<typename... _A>
+        auto operator()(const _T &__obj, _A &&...__args) ->
+          decltype(((__obj).*(__ptr))(forward<_A>(__args)...)) const {
+            return ((__obj).*(__ptr))(forward<_A>(__args)...);
         }
-        template<typename... A>
-        auto operator()(T *obj, A &&...args) ->
-          decltype(((obj)->*(p_ptr))(forward<A>(args)...)) {
-            return ((obj)->*(p_ptr))(forward<A>(args)...);
+        template<typename... _A>
+        auto operator()(_T *__obj, _A &&...__args) ->
+          decltype(((__obj)->*(__ptr))(forward<_A>(__args)...)) {
+            return ((__obj)->*(__ptr))(forward<_A>(__args)...);
         }
-        template<typename... A>
-        auto operator()(const T *obj, A &&...args) ->
-          decltype(((obj)->*(p_ptr))(forward<A>(args)...)) const {
-            return ((obj)->*(p_ptr))(forward<A>(args)...);
+        template<typename... _A>
+        auto operator()(const _T *__obj, _A &&...__args) ->
+          decltype(((__obj)->*(__ptr))(forward<_A>(__args)...)) const {
+            return ((__obj)->*(__ptr))(forward<_A>(__args)...);
         }
     };
 
-    template<typename R, typename T>
-    __OctaMemFn<R, T> mem_fn(R T:: *ptr) {
-        return __OctaMemFn<R, T>(ptr);
+    template<typename _R, typename _T>
+    __OctaMemFn<_R, _T> mem_fn(_R _T:: *__ptr) {
+        return __OctaMemFn<_R, _T>(__ptr);
     }
 
     /* function impl
@@ -338,296 +340,303 @@ namespace octa {
     template<typename> struct Function;
 
     struct __OctaFunctorData {
-        void *p1, *p2;
+        void *__p1, *__p2;
     };
 
-    template<typename T>
+    template<typename _T>
     struct __OctaFunctorInPlace {
-        static constexpr bool value = sizeof(T)  <= sizeof(__OctaFunctorData)
-          && (alignof(__OctaFunctorData) % alignof(T)) == 0
-          && octa::IsMoveConstructible<T>::value;
+        static constexpr bool value = sizeof(_T)  <= sizeof(__OctaFunctorData)
+          && (alignof(__OctaFunctorData) % alignof(_T)) == 0
+          && octa::IsMoveConstructible<_T>::value;
     };
 
-    template<typename T, typename E = void>
+    template<typename _T, typename _E = void>
     struct __OctaFunctorDataManager {
-        template<typename R, typename ...A>
-        static R call(const __OctaFunctorData &s, A ...args) {
-            return ((T &)s)(forward<A>(args)...);
+        template<typename _R, typename ..._A>
+        static _R __call(const __OctaFunctorData &__s, _A ...__args) {
+            return ((_T &)__s)(octa::forward<_A>(__args)...);
         }
 
-        static void store_f(__OctaFunctorData &s, T v) {
-            new (&get_ref(s)) T(forward<T>(v));
+        static void __store_f(__OctaFunctorData &__s, _T __v) {
+            new (&__get_ref(__s)) _T(octa::forward<_T>(__v));
         }
 
-        static void move_f(__OctaFunctorData &lhs, __OctaFunctorData &&rhs) {
-            new (&get_ref(lhs)) T(move(get_ref(rhs)));
+        static void __move_f(__OctaFunctorData &__lhs, __OctaFunctorData &&__rhs) {
+            new (&__get_ref(__lhs)) _T(octa::move(__get_ref(__rhs)));
         }
 
-        static void destroy_f(__OctaFunctorData &s) {
-            get_ref(s).~T();
+        static void __destroy_f(__OctaFunctorData &__s) {
+            __get_ref(__s).~_T();
         }
 
-        static T &get_ref(const __OctaFunctorData &s) {
-            return (T &)s;
+        static _T &__get_ref(const __OctaFunctorData &__s) {
+            return (_T &)__s;
         }
     };
 
-    template<typename T>
-    struct __OctaFunctorDataManager<T, EnableIf<!__OctaFunctorInPlace<T>::value>> {
-        template<typename R, typename ...A>
-        static R call(const __OctaFunctorData &s, A ...args) {
-            return (*(T *&)s)(forward<A>(args)...);
+    template<typename _T>
+    struct __OctaFunctorDataManager<_T, EnableIf<!__OctaFunctorInPlace<_T>::value>> {
+        template<typename _R, typename ..._A>
+        static _R __call(const __OctaFunctorData &__s, _A ...__args) {
+            return (*(_T *&)__s)(octa::forward<_A>(__args)...);
         }
 
-        static void store_f(__OctaFunctorData &s, T v) {
-            new (&get_ptr_ref(s)) T *(new T(forward<T>(v)));
+        static void __store_f(__OctaFunctorData &__s, _T __v) {
+            new (&__get_ptr_ref(__s)) _T *(new _T(octa::forward<_T>(__v)));
         }
 
-        static void move_f(__OctaFunctorData &lhs, __OctaFunctorData &&rhs) {
-            new (&get_ptr_ref(lhs)) T *(get_ptr_ref(rhs));
-            get_ptr_ref(rhs) = nullptr;
+        static void __move_f(__OctaFunctorData &__lhs, __OctaFunctorData &&__rhs) {
+            new (&__get_ptr_ref(__lhs)) _T *(__get_ptr_ref(__rhs));
+            __get_ptr_ref(__rhs) = nullptr;
         }
 
-        static void destroy_f(__OctaFunctorData &s) {
-            T *&ptr = get_ptr_ref(s);
-            if (!ptr) return;
-            delete ptr;
-            ptr = nullptr;
+        static void __destroy_f(__OctaFunctorData &__s) {
+            _T *&__ptr = __get_ptr_ref(__s);
+            if (!__ptr) return;
+            delete __ptr;
+            __ptr = nullptr;
         }
 
-        static T &get_ref(const __OctaFunctorData &s) {
-            return *get_ptr_ref(s);
+        static _T &__get_ref(const __OctaFunctorData &__s) {
+            return *__get_ptr_ref(__s);
         }
 
-        static T *&get_ptr_ref(__OctaFunctorData &s) {
-            return (T *&)s;
+        static _T *&__get_ptr_ref(__OctaFunctorData &__s) {
+            return (_T *&)__s;
         }
 
-        static T *&get_ptr_ref(const __OctaFunctorData &s) {
-            return (T *&)s;
+        static _T *&__get_ptr_ref(const __OctaFunctorData &__s) {
+            return (_T *&)__s;
         }
     };
 
     struct __OctaFunctionManager;
 
     struct __OctaFmStorage {
-        __OctaFunctorData data;
-        const __OctaFunctionManager *manager;
+        __OctaFunctorData __data;
+        const __OctaFunctionManager *__manager;
     };
 
-    template<typename T>
+    template<typename _T>
     static const __OctaFunctionManager &__octa_get_default_fm();
 
     struct __OctaFunctionManager {
-        template<typename T>
-        inline static const __OctaFunctionManager create_default_manager() {
+        template<typename _T>
+        inline static const __OctaFunctionManager __create_default_manager() {
             return __OctaFunctionManager {
-                &t_call_move_and_destroy<T>,
-                &t_call_copy<T>,
-                &t_call_destroy<T>
+                &__call_move_and_destroy<_T>,
+                &__call_copy<_T>,
+                &__call_destroy<_T>
             };
         }
 
-        void (* const call_move_and_destroy)(__OctaFmStorage &lhs,
-            __OctaFmStorage &&rhs);
-        void (* const call_copy)(__OctaFmStorage &lhs,
-            const __OctaFmStorage &rhs);
-        void (* const call_destroy)(__OctaFmStorage &s);
+        void (* const __call_move_and_destroyf)(__OctaFmStorage &__lhs,
+            __OctaFmStorage &&__rhs);
+        void (* const __call_copyf)(__OctaFmStorage &__lhs,
+            const __OctaFmStorage &__rhs);
+        void (* const __call_destroyf)(__OctaFmStorage &__s);
 
-        template<typename T>
-        static void t_call_move_and_destroy(__OctaFmStorage &lhs,
-        __OctaFmStorage &&rhs) {
-            typedef __OctaFunctorDataManager<T> spec;
-            spec::move_f(lhs.data, move(rhs.data));
-            spec::destroy_f(rhs.data);
-            lhs.manager = &__octa_get_default_fm<T>();
+        template<typename _T>
+        static void __call_move_and_destroy(__OctaFmStorage &__lhs,
+        __OctaFmStorage &&__rhs) {
+            typedef __OctaFunctorDataManager<_T> _spec;
+            _spec::__move_f(__lhs.__data, octa::move(__rhs.__data));
+            _spec::__destroy_f(__rhs.__data);
+            __lhs.__manager = &__octa_get_default_fm<_T>();
         }
 
-        template<typename T>
-        static void t_call_copy(__OctaFmStorage &lhs,
-        const __OctaFmStorage &rhs) {
-            typedef __OctaFunctorDataManager<T> spec;
-            lhs.manager = &__octa_get_default_fm<T>();
-            spec::store_f(lhs.data, spec::get_ref(rhs.data));
+        template<typename _T>
+        static void __call_copy(__OctaFmStorage &__lhs,
+        const __OctaFmStorage &__rhs) {
+            typedef __OctaFunctorDataManager<_T> _spec;
+            __lhs.__manager = &__octa_get_default_fm<_T>();
+            _spec::__store_f(__lhs.__data, _spec::__get_ref(__rhs.__data));
         }
 
-        template<typename T>
-        static void t_call_destroy(__OctaFmStorage &s) {
-            typedef __OctaFunctorDataManager<T> spec;
-            spec::destroy_f(s.data);
+        template<typename _T>
+        static void __call_destroy(__OctaFmStorage &__s) {
+            typedef __OctaFunctorDataManager<_T> _spec;
+            _spec::__destroy_f(__s.__data);
         }
     };
 
-    template<typename T>
+    template<typename _T>
     inline static const __OctaFunctionManager &__octa_get_default_fm() {
-        static const __OctaFunctionManager def_manager
-            = __OctaFunctionManager::create_default_manager<T>();
-        return def_manager;
+        static const __OctaFunctionManager __def_manager
+            = __OctaFunctionManager::__create_default_manager<_T>();
+        return __def_manager;
     }
 
-    template<typename R, typename...>
+    template<typename _R, typename...>
     struct __OctaFunction {
-        typedef R ResultType;
+        typedef _R ResultType;
     };
 
-    template<typename R, typename T>
-    struct __OctaFunction<R, T> {
-        typedef R ResultType;
-        typedef T ArgType;
+    template<typename _R, typename _T>
+    struct __OctaFunction<_R, _T> {
+        typedef _R ResultType;
+        typedef _T ArgType;
     };
 
-    template<typename R, typename T, typename U>
-    struct __OctaFunction<R, T, U> {
-        typedef R ResultType;
-        typedef T FirstArgType;
-        typedef U SecondArgType;
+    template<typename _R, typename _T, typename _U>
+    struct __OctaFunction<_R, _T, _U> {
+        typedef _R ResultType;
+        typedef _T FirstArgType;
+        typedef _U SecondArgType;
     };
 
     template<typename, typename>
-    struct IsValidFunctor {
+    struct __OctaIsValidFunctor {
         static constexpr bool value = false;
     };
 
-    template<typename R, typename ...A>
-    struct IsValidFunctor<Function<R(A...)>, R(A...)> {
+    template<typename _R, typename ..._A>
+    struct __OctaIsValidFunctor<Function<_R(_A...)>, _R(_A...)> {
         static constexpr bool value = false;
     };
 
     struct __OctaEmpty {
     };
 
-    template<typename T>
-    T func_to_functor(T &&f) {
-        return forward<T>(f);
+    template<typename _T>
+    _T __octa_func_to_functor(_T &&__f) {
+        return octa::forward<_T>(__f);
     }
 
-    template<typename RR, typename T, typename ...AA>
-    auto func_to_functor(RR (T::*f)(AA...)) -> decltype(mem_fn(f)) {
-        return mem_fn(f);
+    template<typename _RR, typename _T, typename ..._AA>
+    auto __octa_func_to_functor(_RR (_T::*__f)(_AA...))
+        -> decltype(mem_fn(__f)) {
+        return mem_fn(__f);
     }
 
-    template<typename RR, typename T, typename ...AA>
-    auto func_to_functor(RR (T::*f)(AA...) const) -> decltype(mem_fn(f)) {
-        return mem_fn(f);
+    template<typename _RR, typename _T, typename ..._AA>
+    auto __octa_func_to_functor(_RR (_T::*__f)(_AA...) const)
+        -> decltype(mem_fn(__f)) {
+        return mem_fn(__f);
     }
 
-    template<typename T, typename R, typename ...A>
-    struct IsValidFunctor<T, R(A...)> {
-        template<typename U>
-        static decltype(func_to_functor(declval<U>())(declval<A>()...)) __octa_test(U *);
+    template<typename _T, typename _R, typename ..._A>
+    struct __OctaIsValidFunctor<_T, _R(_A...)> {
+        template<typename _U>
+        static decltype(__octa_func_to_functor(octa::declval<_U>())
+            (octa::declval<_A>()...)) __test(_U *);
         template<typename>
-        static __OctaEmpty __octa_test(...);
+        static __OctaEmpty __test(...);
 
-        static constexpr bool value = IsConvertible<
-            decltype(__octa_test<T>(nullptr)), R
+        static constexpr bool value = octa::IsConvertible<
+            decltype(__test<_T>(nullptr)), _R
         >::value;
     };
 
-    template<typename R, typename ...A>
-    struct Function<R(A...)>: __OctaFunction<R, A...> {
-        Function(         ) { initialize_empty(); }
-        Function(nullptr_t) { initialize_empty(); }
+    template<typename _R, typename ..._A>
+    struct Function<_R(_A...)>: __OctaFunction<_R, _A...> {
+        Function(         ) { __init_empty(); }
+        Function(nullptr_t) { __init_empty(); }
 
-        Function(Function &&f) {
-            initialize_empty();
-            swap(f);
+        Function(Function &&__f) {
+            __init_empty();
+            swap(__f);
         }
 
-        Function(const Function &f): p_call(f.p_call) {
-            f.p_stor.manager->call_copy(p_stor, f.p_stor);
+        Function(const Function &__f): __call(__f.__call) {
+            __f.__stor.__manager->__call_copyf(__stor, __f.__stor);
         }
 
-        template<typename T>
-        Function(T f, EnableIf<IsValidFunctor<T, R(A...)>::value, __OctaEmpty>
+        template<typename _T>
+        Function(_T __f, EnableIf<__OctaIsValidFunctor<_T, _R(_A...)>::value, __OctaEmpty>
                           = __OctaEmpty()) {
-            if (func_is_null(f)) {
-                initialize_empty();
+            if (__func_is_null(__f)) {
+                __init_empty();
                 return;
             }
-            initialize(func_to_functor(forward<T>(f)));
+            __initialize(__octa_func_to_functor(octa::forward<_T>(__f)));
         }
 
         ~Function() {
-            p_stor.manager->call_destroy(p_stor);
+            __stor.__manager->__call_destroyf(__stor);
         }
 
-        Function &operator=(Function &&f) {
-            p_stor.manager->call_destroy(p_stor);
-            swap(f);
+        Function &operator=(Function &&__f) {
+            __stor.__manager->__call_destroyf(__stor);
+            swap(__f);
             return *this;
         }
 
-        Function &operator=(const Function &f) {
-            p_stor.manager->call_destroy(p_stor);
-            f.p_stor.manager->call_copy(p_stor, f.p_stor);
+        Function &operator=(const Function &__f) {
+            __stor.__manager->__call_destroyf(__stor);
+            __f.__stor.__manager->__call_copyf(__stor, __f.__stor);
             return *this;
         };
 
-        R operator()(A ...args) const {
-            return p_call(p_stor.data, forward<A>(args)...);
+        _R operator()(_A ...__args) const {
+            return __call(__stor.__data, octa::forward<_A>(__args)...);
         }
 
-        template<typename F> void assign(F &&f) {
-            Function(forward<F>(f)).swap(*this);
+        template<typename _F> void assign(_F &&__f) {
+            Function(octa::forward<_F>(__f)).swap(*this);
         }
 
-        void swap(Function &f) {
-            __OctaFmStorage tmp;
-            f.p_stor.manager->call_move_and_destroy(tmp, move(f.p_stor));
-            p_stor.manager->call_move_and_destroy(f.p_stor, move(p_stor));
-            tmp.manager->call_move_and_destroy(p_stor, move(tmp));
-            octa::swap(p_call, f.p_call);
+        void swap(Function &__f) {
+            __OctaFmStorage __tmp;
+            __f.__stor.__manager->__call_move_and_destroyf(__tmp,
+                octa::move(__f.__stor));
+            __stor.__manager->__call_move_and_destroyf(__f.__stor,
+                octa::move(__stor));
+            __tmp.__manager->__call_move_and_destroyf(__stor,
+                octa::move(__tmp));
+            octa::swap(__call, __f.__call);
         }
 
-        operator bool() const { return p_call != nullptr; }
+        operator bool() const { return __call != nullptr; }
 
     private:
-        __OctaFmStorage p_stor;
-        R (*p_call)(const __OctaFunctorData &, A...);
+        __OctaFmStorage __stor;
+        _R (*__call)(const __OctaFunctorData &, _A...);
 
-        template<typename T>
-        void initialize(T f) {
-            p_call = &__OctaFunctorDataManager<T>::template call<R, A...>;
-            p_stor.manager = &__octa_get_default_fm<T>();
-            __OctaFunctorDataManager<T>::store_f(p_stor.data, forward<T>(f));
+        template<typename _T>
+        void __initialize(_T __f) {
+            __call = &__OctaFunctorDataManager<_T>::template __call<_R, _A...>;
+            __stor.__manager = &__octa_get_default_fm<_T>();
+            __OctaFunctorDataManager<_T>::__store_f(__stor.__data,
+                octa::forward<_T>(__f));
         }
 
-        void initialize_empty() {
-            typedef R(*emptyf)(A...);
-            p_call = nullptr;
-            p_stor.manager = &__octa_get_default_fm<emptyf>();
-            __OctaFunctorDataManager<emptyf>::store_f(p_stor.data, nullptr);
+        void __init_empty() {
+            typedef _R(*__emptyf)(_A...);
+            __call = nullptr;
+            __stor.__manager = &__octa_get_default_fm<__emptyf>();
+            __OctaFunctorDataManager<__emptyf>::__store_f(__stor.__data, nullptr);
         }
 
-        template<typename T>
-        static bool func_is_null(const T &) { return false; }
+        template<typename _T>
+        static bool __func_is_null(const _T &) { return false; }
 
-        static bool func_is_null(R (* const &fptr)(A...)) {
-            return fptr == nullptr;
+        static bool __func_is_null(_R (* const &__fptr)(_A...)) {
+            return __fptr == nullptr;
         }
 
-        template<typename RR, typename T, typename ...AA>
-        static bool func_is_null(RR (T::* const &fptr)(AA...)) {
-            return fptr == nullptr;
+        template<typename _RR, typename _T, typename ..._AA>
+        static bool __func_is_null(_RR (_T::* const &__fptr)(_AA...)) {
+            return __fptr == nullptr;
         }
 
-        template<typename RR, typename T, typename ...AA>
-        static bool func_is_null(RR (T::* const &fptr)(AA...) const) {
-            return fptr == nullptr;
+        template<typename _RR, typename _T, typename ..._AA>
+        static bool __func_is_null(_RR (_T::* const &__fptr)(_AA...) const) {
+            return __fptr == nullptr;
         }
     };
 
-    template<typename T>
-    bool operator==(nullptr_t, const Function<T> &rhs) { return !rhs; }
+    template<typename _T>
+    bool operator==(nullptr_t, const Function<_T> &__rhs) { return !__rhs; }
 
-    template<typename T>
-    bool operator==(const Function<T> &lhs, nullptr_t) { return !lhs; }
+    template<typename _T>
+    bool operator==(const Function<_T> &__lhs, nullptr_t) { return !__lhs; }
 
-    template<typename T>
-    bool operator!=(nullptr_t, const Function<T> &rhs) { return rhs; }
+    template<typename _T>
+    bool operator!=(nullptr_t, const Function<_T> &__rhs) { return __rhs; }
 
-    template<typename T>
-    bool operator!=(const Function<T> &lhs, nullptr_t) { return lhs; }
+    template<typename _T>
+    bool operator!=(const Function<_T> &__lhs, nullptr_t) { return __lhs; }
 }
 
 #endif

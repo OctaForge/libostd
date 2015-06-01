@@ -17,298 +17,297 @@
 #include "octa/initializer_list.h"
 
 namespace octa {
-    template<typename T>
+    template<typename _T>
     class Vector {
-        T *p_buf;
-        size_t p_len, p_cap;
+        _T *__buf;
+        size_t __len, __cap;
 
-        void insert_base(size_t idx, size_t n) {
-            if (p_len + n > p_cap) reserve(p_len + n);
-            p_len += n;
-            for (size_t i = p_len - 1; i > idx + n - 1; --i) {
-                p_buf[i] = move(p_buf[i - n]);
+        void __insert_base(size_t __idx, size_t __n) {
+            if (__len + __n > __cap) reserve(__len + __n);
+            __len += __n;
+            for (size_t __i = __len - 1; __i > __idx + __n - 1; --__i) {
+                __buf[__i] = octa::move(__buf[__i - __n]);
             }
         }
 
-        template<typename R>
-        void ctor_from_range(R &range, EnableIf<IsFiniteRandomAccessRange<R>
-                ::value, bool
+        template<typename _R>
+        void __ctor_from_range(_R &__range, octa::EnableIf<
+            octa::IsFiniteRandomAccessRange<_R>::value, bool
         > = true) {
-            RangeSize<R> len = range.size();
-            reserve(len);
-            p_len = len;
-            for (size_t i = 0; !range.empty(); range.pop_front()) {
-                new (&p_buf[i]) T(range.front());
-                ++i;
+            octa::RangeSize<_R> __l = __range.size();
+            reserve(__l);
+            __len = __l;
+            for (size_t __i = 0; !__range.empty(); __range.pop_front()) {
+                new (&__buf[__i]) _T(__range.front());
+                ++__i;
             }
         }
 
-        template<typename R>
-        void ctor_from_range(R &range, EnableIf<!IsFiniteRandomAccessRange<R>
-            ::value, bool
+        template<typename _R>
+        void __ctor_from_range(_R &__range, EnableIf<
+            !octa::IsFiniteRandomAccessRange<_R>::value, bool
         > = true) {
-            size_t i = 0;
-            for (; !range.empty(); range.pop_front()) {
-                reserve(i + 1);
-                new (&p_buf[i]) T(range.front());
-                ++i;
-                p_len = i;
+            size_t __i = 0;
+            for (; !__range.empty(); __range.pop_front()) {
+                reserve(__i + 1);
+                new (&__buf[__i]) _T(__range.front());
+                ++__i;
+                __len = __i;
             }
         }
 
     public:
         enum { MIN_SIZE = 8 };
 
-        typedef size_t                 SizeType;
-        typedef ptrdiff_t              DiffType;
-        typedef       T                ValType;
-        typedef       T               &RefType;
-        typedef const T               &ConstRefType;
-        typedef       T               *PtrType;
-        typedef const T               *ConstPtrType;
-        typedef PointerRange<      T>  RangeType;
-        typedef PointerRange<const T>  ConstRangeType;
+        typedef size_t                  SizeType;
+        typedef ptrdiff_t               DiffType;
+        typedef       _T                ValType;
+        typedef       _T               &RefType;
+        typedef const _T               &ConstRefType;
+        typedef       _T               *PtrType;
+        typedef const _T               *ConstPtrType;
+        typedef PointerRange<      _T>  RangeType;
+        typedef PointerRange<const _T>  ConstRangeType;
 
-        Vector(): p_buf(nullptr), p_len(0), p_cap(0) {}
+        Vector(): __buf(nullptr), __len(0), __cap(0) {}
 
-        explicit Vector(size_t n, const T &val = T()): Vector() {
-            p_buf = (T *)new uchar[n * sizeof(T)];
-            p_len = p_cap = n;
-            T *cur = p_buf, *last = p_buf + n;
-            while (cur != last) new (cur++) T(val);
+        explicit Vector(size_t __n, const _T &__val = _T()): Vector() {
+            __buf = (_T *)new uchar[__n * sizeof(_T)];
+            __len = __cap = __n;
+            _T *__cur = __buf, *__last = __buf + __n;
+            while (__cur != __last) new (__cur++) _T(__val);
         }
 
-        Vector(const Vector &v): Vector() {
-            *this = v;
+        Vector(const Vector &__v): Vector() {
+            *this = __v;
         }
 
-        Vector(Vector &&v): p_buf(v.p_buf), p_len(v.p_len), p_cap(v.p_cap) {
-            v.p_buf = nullptr;
-            v.p_len = v.p_cap = 0;
+        Vector(Vector &&__v): __buf(__v.__buf), __len(__v.__len),
+                              __cap(__v.__cap) {
+            __v.__buf = nullptr;
+            __v.__len = __v.__cap = 0;
         }
 
-        Vector(InitializerList<T> v): Vector() {
-            size_t len = v.end() - v.begin();
-            const T *ptr = v.begin();
-            reserve(len);
-            for (size_t i = 0; i < len; ++i)
-                new (&p_buf[i]) T(ptr[i]);
-            p_len = len;
+        Vector(InitializerList<_T> __v): Vector() {
+            size_t __l = __v.end() - __v.begin();
+            const _T *__ptr = __v.begin();
+            reserve(__l);
+            for (size_t __i = 0; __i < __l; ++__i)
+                new (&__buf[__i]) _T(__ptr[__i]);
+            __len = __l;
         }
 
-        template<typename R> Vector(R range): Vector() {
-            ctor_from_range(range);
+        template<typename _R> Vector(_R __range): Vector() {
+            __ctor_from_range(__range);
         }
 
         ~Vector() {
             clear();
-            delete[] (uchar *)p_buf;
-            p_buf = nullptr;
-            p_cap = 0;
+            delete[] (uchar *)__buf;
         }
 
         void clear() {
-            if (p_len > 0 && !octa::IsPod<T>()) {
-                T *cur = p_buf, *last = p_buf + p_len;
-                while (cur != last) (*cur++).~T();
+            if (__len > 0 && !octa::IsPod<_T>()) {
+                _T *__cur = __buf, *__last = __buf + __len;
+                while (__cur != __last) (*__cur++).~_T();
             }
-            p_len = 0;
+            __len = 0;
         }
 
-        Vector<T> &operator=(const Vector<T> &v) {
-            if (this == &v) return *this;
+        Vector<_T> &operator=(const Vector<_T> &__v) {
+            if (this == &__v) return *this;
             clear();
-            reserve(v.p_cap);
-            p_len = v.p_len;
-            if (octa::IsPod<T>()) {
-                memcpy(p_buf, v.p_buf, p_len * sizeof(T));
+            reserve(__v.__cap);
+            __len = __v.__len;
+            if (octa::IsPod<_T>()) {
+                memcpy(__buf, __v.__buf, __len * sizeof(_T));
             } else {
-                T *cur = p_buf, *last = p_buf + p_len;
-                T *vbuf = v.p_buf;
-                while (cur != last) {
-                    new (cur++) T(*vbuf++);
+                _T *__cur = __buf, *__last = __buf + __len;
+                _T *__vbuf = __v.__buf;
+                while (__cur != __last) {
+                    new (__cur++) _T(*__vbuf++);
                 }
             }
             return *this;
         }
 
-        Vector<T> &operator=(Vector<T> &&v) {
+        Vector<_T> &operator=(Vector<_T> &&__v) {
             clear();
-            delete[] (uchar *)p_buf;
-            p_len = v.p_len;
-            p_cap = v.p_cap;
-            p_buf = v.disown();
+            delete[] (uchar *)__buf;
+            __len = __v.__len;
+            __cap = __v.__cap;
+            __buf = __v.disown();
             return *this;
         }
 
-        Vector<T> &operator=(InitializerList<T> il) {
+        Vector<_T> &operator=(InitializerList<_T> __il) {
             clear();
-            size_t ilen = il.end() - il.begin();
-            reserve(ilen);
-            if (octa::IsPod<T>()) {
-                memcpy(p_buf, il.begin(), ilen);
+            size_t __ilen = __il.end() - __il.begin();
+            reserve(__ilen);
+            if (octa::IsPod<_T>()) {
+                memcpy(__buf, __il.begin(), __ilen);
             } else {
-                T *buf = p_buf, *ibuf = il.begin(), *last = il.end();
-                while (ibuf != last) {
-                    new (buf++) T(*ibuf++);
+                _T *__tbuf = __buf, *__ibuf = __il.begin(), *__last = __il.end();
+                while (__ibuf != __last) {
+                    new (__tbuf++) _T(*__ibuf++);
                 }
             }
-            p_len = ilen;
+            __len = __ilen;
             return *this;
         }
 
-        template<typename R>
-        Vector<T> &operator=(R range) {
+        template<typename _R>
+        Vector<_T> &operator=(_R __range) {
             clear();
-            ctor_from_range(range);
+            __ctor_from_range(__range);
         }
 
-        void resize(size_t n, const T &v = T()) {
-            size_t len = p_len;
-            reserve(n);
-            p_len = n;
-            if (octa::IsPod<T>()) {
-                for (size_t i = len; i < p_len; ++i) {
-                    p_buf[i] = T(v);
+        void resize(size_t __n, const _T &__v = _T()) {
+            size_t __l = __len;
+            reserve(__n);
+            __len = __n;
+            if (octa::IsPod<_T>()) {
+                for (size_t __i = __l; __i < __len; ++__i) {
+                    __buf[__i] = _T(__v);
                 }
             } else {
-                T *first = p_buf + len;
-                T *last  = p_buf + p_len;
-                while (first != last) new (first++) T(v);
+                _T *__first = __buf + __l;
+                _T *__last  = __buf + __len;
+                while (__first != __last) new (__first++) _T(__v);
             }
         }
 
-        void reserve(size_t n) {
-            if (n <= p_cap) return;
-            size_t oc = p_cap;
-            if (!oc) {
-                p_cap = max(n, size_t(MIN_SIZE));
+        void reserve(size_t __n) {
+            if (__n <= __cap) return;
+            size_t __oc = __cap;
+            if (!__oc) {
+                __cap = octa::max(__n, size_t(MIN_SIZE));
             } else {
-                while (p_cap < n) p_cap *= 2;
+                while (__cap < __n) __cap *= 2;
             }
-            T *tmp = (T *)new uchar[p_cap * sizeof(T)];
-            if (oc > 0) {
-                if (octa::IsPod<T>()) {
-                    memcpy(tmp, p_buf, p_len * sizeof(T));
+            _T *__tmp = (_T *)new uchar[__cap * sizeof(_T)];
+            if (__oc > 0) {
+                if (octa::IsPod<_T>()) {
+                    memcpy(__tmp, __buf, __len * sizeof(_T));
                 } else {
-                    T *cur = p_buf, *tcur = tmp, *last = tmp + p_len;
-                    while (tcur != last) {
-                        new (tcur++) T(move(*cur));
-                        (*cur).~T();
-                        ++cur;
+                    _T *__cur = __buf, *__tcur = __tmp, *__last = __tmp + __len;
+                    while (__tcur != __last) {
+                        new (__tcur++) _T(octa::move(*__cur));
+                        (*__cur).~_T();
+                        ++__cur;
                     }
                 }
-                delete[] (uchar *)p_buf;
+                delete[] (uchar *)__buf;
             }
-            p_buf = tmp;
+            __buf = __tmp;
         }
 
-        T &operator[](size_t i) { return p_buf[i]; }
-        const T &operator[](size_t i) const { return p_buf[i]; }
+        _T &operator[](size_t __i) { return __buf[__i]; }
+        const _T &operator[](size_t __i) const { return __buf[__i]; }
 
-        T &at(size_t i) { return p_buf[i]; }
-        const T &at(size_t i) const { return p_buf[i]; }
+        _T &at(size_t __i) { return __buf[__i]; }
+        const _T &at(size_t __i) const { return __buf[__i]; }
 
-        T &push(const T &v) {
-            if (p_len == p_cap) reserve(p_len + 1);
-            new (&p_buf[p_len]) T(v);
-            return p_buf[p_len++];
+        _T &push(const _T &__v) {
+            if (__len == __cap) reserve(__len + 1);
+            new (&__buf[__len]) _T(__v);
+            return __buf[__len++];
         }
 
-        T &push() {
-            if (p_len == p_cap) reserve(p_len + 1);
-            new (&p_buf[p_len]) T;
-            return p_buf[p_len++];
+        _T &push() {
+            if (__len == __cap) reserve(__len + 1);
+            new (&__buf[__len]) _T;
+            return __buf[__len++];
         }
 
-        template<typename ...U>
-        T &emplace_back(U &&...args) {
-            if (p_len == p_cap) reserve(p_len + 1);
-            new (&p_buf[p_len]) T(forward<U>(args)...);
-            return p_buf[p_len++];
+        template<typename ..._U>
+        _T &emplace_back(_U &&...__args) {
+            if (__len == __cap) reserve(__len + 1);
+            new (&__buf[__len]) _T(octa::forward<_U>(__args)...);
+            return __buf[__len++];
         }
 
         void pop() {
-            if (!octa::IsPod<T>()) {
-                p_buf[--p_len].~T();
+            if (!octa::IsPod<_T>()) {
+                __buf[--__len].~_T();
             } else {
-                --p_len;
+                --__len;
             }
         }
 
-        T &front() { return p_buf[0]; }
-        const T &front() const { return p_buf[0]; };
+        _T &front() { return __buf[0]; }
+        const _T &front() const { return __buf[0]; };
 
-        T &back() { return p_buf[p_len - 1]; }
-        const T &back() const { return p_buf[p_len - 1]; }
+        _T &back() { return __buf[__len - 1]; }
+        const _T &back() const { return __buf[__len - 1]; }
 
-        T *data() { return p_buf; }
-        const T *data() const { return p_buf; }
+        _T *data() { return __buf; }
+        const _T *data() const { return __buf; }
 
-        size_t size() const { return p_len; }
-        size_t capacity() const { return p_cap; }
+        size_t size() const { return __len; }
+        size_t capacity() const { return __cap; }
 
-        bool empty() const { return (p_len == 0); }
+        bool empty() const { return (__len == 0); }
 
-        bool in_range(size_t idx) { return idx < p_len; }
-        bool in_range(int idx) { return idx >= 0 && size_t(idx) < p_len; }
-        bool in_range(const T *ptr) {
-            return ptr >= p_buf && ptr < &p_buf[p_len];
+        bool in_range(size_t __idx) { return __idx < __len; }
+        bool in_range(int __idx) { return __idx >= 0 && size_t(__idx) < __len; }
+        bool in_range(const _T *__ptr) {
+            return __ptr >= __buf && __ptr < &__buf[__len];
         }
 
-        T *disown() {
-            T *r = p_buf;
-            p_buf = nullptr;
-            p_len = p_cap = 0;
-            return r;
+        _T *disown() {
+            _T *__r = __buf;
+            __buf = nullptr;
+            __len = __cap = 0;
+            return __r;
         }
 
-        T *insert(size_t idx, T &&v) {
-            insert_base(idx, 1);
-            p_buf[idx] = move(v);
-            return &p_buf[idx];
+        _T *insert(size_t __idx, _T &&__v) {
+            __insert_base(__idx, 1);
+            __buf[__idx] = octa::move(__v);
+            return &__buf[__idx];
         }
 
-        T *insert(size_t idx, const T &v) {
-            insert_base(idx, 1);
-            p_buf[idx] = v;
-            return &p_buf[idx];
+        _T *insert(size_t __idx, const _T &__v) {
+            __insert_base(__idx, 1);
+            __buf[__idx] = __v;
+            return &__buf[__idx];
         }
 
-        T *insert(size_t idx, size_t n, const T &v) {
-            insert_base(idx, n);
-            for (size_t i = 0; i < n; ++i) {
-                p_buf[idx + i] = v;
+        _T *insert(size_t __idx, size_t __n, const _T &__v) {
+            __insert_base(__idx, __n);
+            for (size_t __i = 0; __i < __n; ++__i) {
+                __buf[__idx + __i] = __v;
             }
-            return &p_buf[idx];
+            return &__buf[__idx];
         }
 
-        template<typename U>
-        T *insert_range(size_t idx, U range) {
-            size_t len = range.size();
-            insert_base(idx, len);
-            for (size_t i = 0; i < len; ++i) {
-                p_buf[idx + i] = range.front();
-                range.pop_front();
+        template<typename _U>
+        _T *insert_range(size_t __idx, _U __range) {
+            size_t __l = __range.size();
+            __insert_base(__idx, __l);
+            for (size_t __i = 0; __i < __l; ++__i) {
+                __buf[__idx + __i] = __range.front();
+                __range.pop_front();
             }
-            return &p_buf[idx];
+            return &__buf[__idx];
         }
 
-        T *insert(size_t idx, InitializerList<T> il) {
-            return insert_range(idx, octa::each(il));
+        _T *insert(size_t __idx, InitializerList<_T> __il) {
+            return insert_range(__idx, octa::each(__il));
         }
 
         RangeType each() {
-            return PointerRange<T>(p_buf, p_buf + p_len);
+            return RangeType(__buf, __buf + __len);
         }
         ConstRangeType each() const {
-            return PointerRange<const T>(p_buf, p_buf + p_len);
+            return ConstRangeType(__buf, __buf + __len);
         }
 
-        void swap(Vector &v) {
-            octa::swap(p_len, v.p_len);
-            octa::swap(p_cap, v.p_cap);
-            octa::swap(p_buf, v.p_buf);
+        void swap(Vector &__v) {
+            octa::swap(__len, __v.__len);
+            octa::swap(__cap, __v.__cap);
+            octa::swap(__buf, __v.__buf);
         }
     };
 }
