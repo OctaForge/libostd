@@ -30,6 +30,15 @@ namespace octa {
         return static_cast<_T &&>(__v);
     }
 
+    /* exchange */
+
+    template<typename _T, typename _U = _T>
+    _T exchange(_T &__v, _U &&__nv) {
+        _T __old = move(__v);
+        __v = forward<_U>(__nv);
+        return __old;
+    }
+
     /* declval */
 
     template<typename _T> AddRvalueReference<_T> declval();
@@ -125,6 +134,32 @@ namespace octa {
             octa::swap(second, __v.second);
         }
     };
+
+    template<typename _T> struct ReferenceWrapper;
+
+    template<typename _T>
+    struct __OctaMakePairRetBase {
+        typedef _T Type;
+    };
+
+    template<typename _T>
+    struct __OctaMakePairRetBase<ReferenceWrapper<_T>> {
+        typedef _T &Type;
+    };
+
+    template<typename _T>
+    struct __OctaMakePairRet {
+        typedef typename __OctaMakePairRetBase<octa::Decay<_T>>::Type Type;
+    };
+
+    template<typename _T, typename _U>
+    Pair<typename __OctaMakePairRet<_T>::Type,
+         typename __OctaMakePairRet<_U>::Type
+     > make_pair(_T &&__a, _U &&__b) {
+        return Pair<typename __OctaMakePairRet<_T>::Type,
+                    typename __OctaMakePairRet<_U>::Type
+        >(forward<_T>(__a), forward<_U>(__b));;
+    }
 }
 
 #endif

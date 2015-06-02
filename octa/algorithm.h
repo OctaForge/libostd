@@ -373,7 +373,7 @@ namespace octa {
             __range1.pop_front();
             __range2.pop_front();
         }
-        return octa::Pair<_R1, _R2>(__range1, __range2);
+        return octa::make_pair(__range1, __range2);
     }
 
     template<typename _R, typename _T>
