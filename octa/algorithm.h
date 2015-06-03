@@ -39,90 +39,92 @@ namespace octa {
 
     /* sorting */
 
-    template<typename _R, typename _C>
-    void __octa_insort(_R __range, _C __compare) {
-        octa::RangeSize<_R> __rlen = __range.size();
-        for (octa::RangeSize<_R> __i = 1; __i < __rlen; ++__i) {
-            octa::RangeSize<_R> __j = __i;
-            octa::RangeReference<_R> __v = __range[__i];
-            while (__j > 0 && !__compare(__range[__j - 1], __v)) {
-                __range[__j] = __range[__j - 1];
-                --__j;
+    namespace detail {
+        template<typename _R, typename _C>
+        void insort(_R __range, _C __compare) {
+            octa::RangeSize<_R> __rlen = __range.size();
+            for (octa::RangeSize<_R> __i = 1; __i < __rlen; ++__i) {
+                octa::RangeSize<_R> __j = __i;
+                octa::RangeReference<_R> __v = __range[__i];
+                while (__j > 0 && !__compare(__range[__j - 1], __v)) {
+                    __range[__j] = __range[__j - 1];
+                    --__j;
+                }
+                __range[__j] = __v;
             }
-            __range[__j] = __v;
         }
-    }
 
-    template<typename _T, typename _U>
-    struct __OctaUnaryCompare {
-        const _T &__val;
-        _U __comp;
-        bool operator()(const _T &__v) const { return __comp(__v, __val); }
-    };
+        template<typename _T, typename _U>
+        struct UnaryCompare {
+            const _T &__val;
+            _U __comp;
+            bool operator()(const _T &__v) const { return __comp(__v, __val); }
+        };
 
-    template<typename _R, typename _C>
-    void __octa_hs_sift_down(_R __range, octa::RangeSize<_R> __s,
-    octa::RangeSize<_R> __e, _C __compare) {
-        octa::RangeSize<_R> __r = __s;
-        while ((__r * 2 + 1) <= __e) {
-            octa::RangeSize<_R> __ch = __r * 2 + 1;
-            octa::RangeSize<_R> __sw = __r;
-            if (__compare(__range[__sw], __range[__ch]))
-                __sw = __ch;
-            if (((__ch + 1) <= __e) && __compare(__range[__sw], __range[__ch + 1]))
-                __sw = __ch + 1;
-            if (__sw != __r) {
-                octa::swap(__range[__r], __range[__sw]);
-                __r = __sw;
-            } else return;
+        template<typename _R, typename _C>
+        void hs_sift_down(_R __range, octa::RangeSize<_R> __s,
+        octa::RangeSize<_R> __e, _C __compare) {
+            octa::RangeSize<_R> __r = __s;
+            while ((__r * 2 + 1) <= __e) {
+                octa::RangeSize<_R> __ch = __r * 2 + 1;
+                octa::RangeSize<_R> __sw = __r;
+                if (__compare(__range[__sw], __range[__ch]))
+                    __sw = __ch;
+                if (((__ch + 1) <= __e) && __compare(__range[__sw], __range[__ch + 1]))
+                    __sw = __ch + 1;
+                if (__sw != __r) {
+                    octa::swap(__range[__r], __range[__sw]);
+                    __r = __sw;
+                } else return;
+            }
         }
-    }
 
-    template<typename _R, typename _C>
-    void __octa_heapsort(_R __range, _C __compare) {
-        octa::RangeSize<_R> __len = __range.size();
-        octa::RangeSize<_R> __st = (__len - 2) / 2;
-        for (;;) {
-            __octa_hs_sift_down(__range, __st, __len - 1, __compare);
-            if (__st-- == 0) break;
+        template<typename _R, typename _C>
+        void heapsort(_R __range, _C __compare) {
+            octa::RangeSize<_R> __len = __range.size();
+            octa::RangeSize<_R> __st = (__len - 2) / 2;
+            for (;;) {
+                octa::detail::hs_sift_down(__range, __st, __len - 1, __compare);
+                if (__st-- == 0) break;
+            }
+            octa::RangeSize<_R> __e = __len - 1;
+            while (__e > 0) {
+                octa::swap(__range[__e], __range[0]);
+                --__e;
+                octa::detail::hs_sift_down(__range, 0, __e, __compare);
+            }
         }
-        octa::RangeSize<_R> __e = __len - 1;
-        while (__e > 0) {
-            octa::swap(__range[__e], __range[0]);
-            --__e;
-            __octa_hs_sift_down(__range, 0, __e, __compare);
-        }
-    }
 
-    template<typename _R, typename _C>
-    void __octa_introloop(_R __range, _C __compare, RangeSize<_R> __depth) {
-        if (__range.size() <= 10) {
-            __octa_insort(__range, __compare);
-            return;
+        template<typename _R, typename _C>
+        void introloop(_R __range, _C __compare, RangeSize<_R> __depth) {
+            if (__range.size() <= 10) {
+                octa::detail::insort(__range, __compare);
+                return;
+            }
+            if (__depth == 0) {
+                octa::detail::heapsort(__range, __compare);
+                return;
+            }
+            octa::RangeReference<_R> __p = __range[__range.size() / 2];
+            octa::swap(__p, __range.back());
+            _R __r = octa::partition(__range,
+                octa::detail::UnaryCompare<decltype(__p), _C>{ __p, __compare });
+            _R __l = __range.slice(0, __range.size() - __r.size());
+            octa::swap(__r.front(), __r.back());
+            octa::detail::introloop(__l, __compare, __depth - 1);
+            octa::detail::introloop(__r, __compare, __depth - 1);
         }
-        if (__depth == 0) {
-            __octa_heapsort(__range, __compare);
-            return;
-        }
-        octa::RangeReference<_R> __p = __range[__range.size() / 2];
-        octa::swap(__p, __range.back());
-        _R __r = octa::partition(__range,
-            __OctaUnaryCompare<decltype(__p), _C>{ __p, __compare });
-        _R __l = __range.slice(0, __range.size() - __r.size());
-        octa::swap(__r.front(), __r.back());
-        __octa_introloop(__l, __compare, __depth - 1);
-        __octa_introloop(__r, __compare, __depth - 1);
-    }
 
-    template<typename _R, typename _C>
-    void __octa_introsort(_R __range, _C __compare) {
-        __octa_introloop(__range, __compare, octa::RangeSize<_R>(2
-            * (log(__range.size()) / log(2))));
+        template<typename _R, typename _C>
+        void introsort(_R __range, _C __compare) {
+            octa::detail::introloop(__range, __compare, octa::RangeSize<_R>(2
+                * (log(__range.size()) / log(2))));
+        }
     }
 
     template<typename _R, typename _C>
     void sort(_R __range, _C __compare) {
-        __octa_introsort(__range, __compare);
+        octa::detail::introsort(__range, __compare);
     }
 
     template<typename _R>
@@ -489,12 +491,16 @@ namespace octa {
         }
     };
 
-    template<typename _R, typename _F> using __OctaMapReturnType
-        = decltype(declval<_F>()(octa::declval<octa::RangeReference<_R>>()));
+    namespace detail {
+        template<typename _R, typename _F> using MapReturnType
+            = decltype(declval<_F>()(octa::declval<octa::RangeReference<_R>>()));
+    }
 
     template<typename _R, typename _F>
-    MapRange<_R, __OctaMapReturnType<_R, _F>> map(_R __range, _F __func) {
-        return octa::MapRange<_R, __OctaMapReturnType<_R, _F>>(__range, __func);
+    MapRange<_R, octa::detail::MapReturnType<_R, _F>> map(_R __range,
+                                                          _F __func) {
+        return octa::MapRange<_R, octa::detail::MapReturnType<_R, _F>>(__range,
+            __func);
     }
 
     template<typename _T>
