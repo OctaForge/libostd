@@ -51,11 +51,11 @@ namespace octa {
     struct IntegralConstant {
         static constexpr _T value = __val;
 
-        typedef _T ValType;
+        typedef _T Value;
         typedef IntegralConstant<_T, __val> Type;
 
-        constexpr operator ValType() const { return value; }
-        constexpr ValType operator()() const { return value; }
+        constexpr operator Value() const { return value; }
+        constexpr Value operator()() const { return value; }
     };
 
     typedef IntegralConstant<bool, true>  True;

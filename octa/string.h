@@ -25,15 +25,15 @@ namespace octa {
         }
 
     public:
-        typedef size_t                  SizeType;
-        typedef ptrdiff_t               DiffType;
-        typedef       _T                ValType;
-        typedef       _T               &RefType;
-        typedef const _T               &ConstRefType;
-        typedef       _T               *PtrType;
-        typedef const _T               *ConstPtrType;
-        typedef PointerRange<      _T>  RangeType;
-        typedef PointerRange<const _T>  ConstRangeType;
+        typedef size_t                  Size;
+        typedef ptrdiff_t               Difference;
+        typedef       _T                Value;
+        typedef       _T               &Reference;
+        typedef const _T               &ConstReference;
+        typedef       _T               *Pointer;
+        typedef const _T               *ConstPointer;
+        typedef PointerRange<      _T>  Range;
+        typedef PointerRange<const _T>  ConstRange;
 
         StringBase(): __buf(1, '\0') {}
 
@@ -47,7 +47,7 @@ namespace octa {
         }
 
         /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
-        StringBase(const _T *__v): __buf(ConstRangeType(__v, strlen(__v) + 1)) {}
+        StringBase(const _T *__v): __buf(ConstRange(__v, strlen(__v) + 1)) {}
 
         template<typename _R> StringBase(_R __range): __buf(__range) {
             __terminate();
@@ -64,7 +64,7 @@ namespace octa {
             return *this;
         }
         StringBase<_T> &operator=(const _T *__v) {
-            __buf = ConstRangeType(__v, strlen(__v) + 1);
+            __buf = ConstRange(__v, strlen(__v) + 1);
             return *this;
         }
 
@@ -124,7 +124,7 @@ namespace octa {
 
         StringBase<_T> &append(const _T *__s) {
             __buf.pop();
-            __buf.insert_range(__buf.size(), ConstRangeType(__s,
+            __buf.insert_range(__buf.size(), ConstRange(__s,
                 strlen(__s) + 1));
             return *this;
         }
@@ -157,11 +157,11 @@ namespace octa {
             return *this;
         }
 
-        RangeType each() {
-            return RangeType(__buf.data(), size());
+        Range each() {
+            return Range(__buf.data(), size());
         }
-        ConstRangeType each() const {
-            return ConstRangeType(__buf.data(), size());
+        ConstRange each() const {
+            return ConstRange(__buf.data(), size());
         }
 
         void swap(StringBase &__v) {
@@ -225,8 +225,8 @@ namespace octa {
     };
 
     template<typename _T> struct ToString {
-        typedef _T ArgType;
-        typedef String ResultType;
+        typedef _T Argument;
+        typedef String Result;
 
         template<typename _U>
         static String __octa_to_str(const _U &__v,
@@ -281,16 +281,16 @@ namespace octa {
     }
 
     template<> struct ToString<bool> {
-        typedef bool ArgType;
-        typedef String ResultType;
+        typedef bool Argument;
+        typedef String Result;
         String operator()(bool __b) {
             return __b ? "true" : "false";
         }
     };
 
     template<> struct ToString<char> {
-        typedef char ArgType;
-        typedef String ResultType;
+        typedef char Argument;
+        typedef String Result;
         String operator()(char __c) {
             String __ret;
             __ret.push(__c);
@@ -300,8 +300,8 @@ namespace octa {
 
 #define __OCTA_TOSTR_NUM(_T, __fmt) \
     template<> struct ToString<_T> { \
-        typedef _T ArgType; \
-        typedef String ResultType; \
+        typedef _T Argument; \
+        typedef String Result; \
         String operator()(_T __v) { \
             String __ret; \
             __octa_str_printf((octa::Vector<char> *)&__ret, __fmt, __v); \
@@ -323,9 +323,9 @@ namespace octa {
 #undef __OCTA_TOSTR_NUM
 
     template<typename _T> struct ToString<_T *> {
-        typedef _T *ArgType;
-        typedef String ResultType;
-        String operator()(ArgType __v) {
+        typedef _T *Argument;
+        typedef String Result;
+        String operator()(Argument __v) {
             String __ret;
             __octa_str_printf((octa::Vector<char> *)&__ret, "%p", __v);
             return octa::move(__ret);
@@ -333,17 +333,17 @@ namespace octa {
     };
 
     template<> struct ToString<String> {
-        typedef const String &ArgType;
-        typedef String ResultType;
-        String operator()(ArgType __s) {
+        typedef const String &Argument;
+        typedef String Result;
+        String operator()(Argument __s) {
             return __s;
         }
     };
 
     template<typename _T, typename _U> struct ToString<octa::Pair<_T, _U>> {
-        typedef const octa::Pair<_T, _U> &ArgType;
-        typedef String ResultType;
-        String operator()(ArgType __v) {
+        typedef const octa::Pair<_T, _U> &Argument;
+        typedef String Result;
+        String operator()(Argument __v) {
             String __ret("{");
             __ret += ToString<octa::RemoveCv<octa::RemoveReference<_T>>>()
                 (__v.first);

@@ -59,15 +59,15 @@ namespace octa {
     public:
         enum { MIN_SIZE = 8 };
 
-        typedef size_t                  SizeType;
-        typedef ptrdiff_t               DiffType;
-        typedef       _T                ValType;
-        typedef       _T               &RefType;
-        typedef const _T               &ConstRefType;
-        typedef       _T               *PtrType;
-        typedef const _T               *ConstPtrType;
-        typedef PointerRange<      _T>  RangeType;
-        typedef PointerRange<const _T>  ConstRangeType;
+        typedef size_t                  Size;
+        typedef ptrdiff_t               Difference;
+        typedef       _T                Value;
+        typedef       _T               &Reference;
+        typedef const _T               &ConstReference;
+        typedef       _T               *Pointer;
+        typedef const _T               *ConstPointer;
+        typedef PointerRange<      _T>  Range;
+        typedef PointerRange<const _T>  ConstRange;
 
         Vector(): __buf(nullptr), __len(0), __cap(0) {}
 
@@ -297,11 +297,11 @@ namespace octa {
             return insert_range(__idx, octa::each(__il));
         }
 
-        RangeType each() {
-            return RangeType(__buf, __buf + __len);
+        Range each() {
+            return Range(__buf, __buf + __len);
         }
-        ConstRangeType each() const {
-            return ConstRangeType(__buf, __buf + __len);
+        ConstRange each() const {
+            return ConstRange(__buf, __buf + __len);
         }
 
         void swap(Vector &__v) {

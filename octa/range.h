@@ -35,10 +35,10 @@ namespace octa {
     using Range##_Name = typename __OctaRange##_Name<_T>::Type;
 
     __OCTA_RANGE_TRAIT(Category, Category)
-    __OCTA_RANGE_TRAIT(Size, SizeType)
-    __OCTA_RANGE_TRAIT(Value, ValType)
-    __OCTA_RANGE_TRAIT(Reference, RefType)
-    __OCTA_RANGE_TRAIT(Difference, DiffType)
+    __OCTA_RANGE_TRAIT(Size, Size)
+    __OCTA_RANGE_TRAIT(Value, Value)
+    __OCTA_RANGE_TRAIT(Reference, Reference)
+    __OCTA_RANGE_TRAIT(Difference, Difference)
 
 #undef __OCTA_RANGE_TRAIT
 
@@ -139,7 +139,7 @@ namespace octa {
     private:
         _T __range;
     public:
-        typedef _T RangeType;
+        typedef _T Range;
 
         RangeHalf(): __range() {}
         RangeHalf(const _T &__range): __range(__range) {}
@@ -279,10 +279,10 @@ namespace octa {
              typename _S = size_t, typename _D = ptrdiff_t
     > struct InputRange {
         typedef _C Category;
-        typedef _S SizeType;
-        typedef _D DiffType;
-        typedef _V ValType;
-        typedef _R RefType;
+        typedef _S Size;
+        typedef _D Difference;
+        typedef _V Value;
+        typedef _R Reference;
 
         __OctaRangeIterator<_B> begin() const {
             return __OctaRangeIterator<_B>((const _B &)*this);
@@ -291,19 +291,19 @@ namespace octa {
             return __OctaRangeIterator<_B>();
         }
 
-        SizeType pop_front_n(SizeType __n) {
+        Size pop_front_n(Size __n) {
             return __octa_pop_front_n<_B>(*((_B *)this), __n);
         }
 
-        SizeType pop_back_n(SizeType __n) {
+        Size pop_back_n(Size __n) {
             return __octa_pop_back_n<_B>(*((_B *)this), __n);
         }
 
-        SizeType push_front_n(SizeType __n) {
+        Size push_front_n(Size __n) {
             return __octa_push_front_n<_B>(*((_B *)this), __n);
         }
 
-        SizeType push_back_n(SizeType __n) {
+        Size push_back_n(Size __n) {
             return __octa_push_back_n<_B>(*((_B *)this), __n);
         }
 
@@ -320,10 +320,10 @@ namespace octa {
              typename _D = ptrdiff_t
     > struct OutputRange {
         typedef OutputRangeTag Category;
-        typedef _S SizeType;
-        typedef _D DiffType;
-        typedef _V ValType;
-        typedef _R RefType;
+        typedef _S Size;
+        typedef _D Difference;
+        typedef _V Value;
+        typedef _R Reference;
     };
 
     template<typename _T>

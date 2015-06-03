@@ -19,9 +19,9 @@ namespace octa {
         _rettype operator()(const _T &__x, const _T &__y) const { \
             return __x _op __y; \
         } \
-        typedef _T FirstArgType; \
-        typedef _T SecondArgType; \
-        typedef _rettype ResultType; \
+        typedef _T FirstArgument; \
+        typedef _T SecondArgument; \
+        typedef _rettype Result; \
     };
 
     __OCTA_DEFINE_BINARY_OP(Less, <, bool)
@@ -45,25 +45,25 @@ namespace octa {
 
     template<typename _T> struct LogicalNot {
         bool operator()(const _T &__x) const { return !__x; }
-        typedef _T ArgType;
-        typedef bool ResultType;
+        typedef _T Argument;
+        typedef bool Result;
     };
 
     template<typename _T> struct Negate {
         bool operator()(const _T &__x) const { return -__x; }
-        typedef _T ArgType;
-        typedef _T ResultType;
+        typedef _T Argument;
+        typedef _T Result;
     };
 
     template<typename _T> struct BinaryNegate {
-        typedef typename _T::FirstArgType FirstArgType;
-        typedef typename _T::SecondArgType SecondArgType;
-        typedef bool ResultType;
+        typedef typename _T::FirstArgument FirstArgument;
+        typedef typename _T::SecondArgument SecondArgument;
+        typedef bool Result;
 
         explicit BinaryNegate(const _T &__f): __fn(__f) {}
 
-        bool operator()(const FirstArgType &__x,
-                        const SecondArgType &__y) {
+        bool operator()(const FirstArgument &__x,
+                        const SecondArgument &__y) {
             return !__fn(__x, __y);
         }
     private:
@@ -71,11 +71,11 @@ namespace octa {
     };
 
     template<typename _T> struct UnaryNegate {
-        typedef typename _T::ArgType ArgType;
-        typedef bool ResultType;
+        typedef typename _T::Argument Argument;
+        typedef bool Result;
 
         explicit UnaryNegate(const _T &__f): __fn(__f) {}
-        bool operator()(const ArgType &__x) {
+        bool operator()(const Argument &__x) {
             return !__fn(__x);
         }
     private:
@@ -95,8 +95,8 @@ namespace octa {
     template<typename _T> struct Hash;
 
     template<typename _T> struct __OctaHashBase {
-        typedef _T ArgType;
-        typedef size_t ResultType;
+        typedef _T Argument;
+        typedef size_t Result;
 
         size_t operator()(_T __v) const {
             return size_t(__v);
@@ -132,8 +132,8 @@ namespace octa {
     struct __OctaScalarHash;
 
     template<typename _T> struct __OctaScalarHash<_T, 0> {
-        typedef _T ArgType;
-        typedef size_t ResultType;
+        typedef _T Argument;
+        typedef size_t Result;
 
         size_t operator()(_T __v) const {
             union { _T __v; size_t __h; } __u;
@@ -144,8 +144,8 @@ namespace octa {
     };
 
     template<typename _T> struct __OctaScalarHash<_T, 1> {
-        typedef _T ArgType;
-        typedef size_t ResultType;
+        typedef _T Argument;
+        typedef size_t Result;
 
         size_t operator()(_T __v) const {
             union { _T __v; size_t __h; } __u;
@@ -155,8 +155,8 @@ namespace octa {
     };
 
     template<typename _T> struct __OctaScalarHash<_T, 2> {
-        typedef _T ArgType;
-        typedef size_t ResultType;
+        typedef _T Argument;
+        typedef size_t Result;
 
         size_t operator()(_T __v) const {
             union { _T __v; struct { size_t __h1, __h2; }; } __u;
@@ -166,8 +166,8 @@ namespace octa {
     };
 
     template<typename _T> struct __OctaScalarHash<_T, 3> {
-        typedef _T ArgType;
-        typedef size_t ResultType;
+        typedef _T Argument;
+        typedef size_t Result;
 
         size_t operator()(_T __v) const {
             union { _T __v; struct { size_t __h1, __h2, __h3; }; } __u;
@@ -177,8 +177,8 @@ namespace octa {
     };
 
     template<typename _T> struct __OctaScalarHash<_T, 4> {
-        typedef _T ArgType;
-        typedef size_t ResultType;
+        typedef _T Argument;
+        typedef size_t Result;
 
         size_t operator()(_T __v) const {
             union { _T __v; struct { size_t __h1, __h2, __h3, __h4; }; } __u;
@@ -226,8 +226,8 @@ namespace octa {
     };
 
     template<typename _T> struct Hash<_T *> {
-        typedef _T *ArgType;
-        typedef size_t ResultType;
+        typedef _T *Argument;
+        typedef size_t Result;
 
         size_t operator()(_T *__v) const {
             union { _T *__v; size_t __h; } __u;
@@ -280,25 +280,25 @@ namespace octa {
     template<typename, typename> struct __OctaMemTypes;
     template<typename _T, typename _R, typename ..._A>
     struct __OctaMemTypes<_T, _R(_A...)> {
-        typedef _R ResultType;
-        typedef _T ArgType;
+        typedef _R Result;
+        typedef _T Argument;
     };
     template<typename _T, typename _R, typename _A>
     struct __OctaMemTypes<_T, _R(_A)> {
-        typedef _R ResultType;
-        typedef _T FirstArgType;
-        typedef _A SecondArgType;
+        typedef _R Result;
+        typedef _T FirstArgument;
+        typedef _A SecondArgument;
     };
     template<typename _T, typename _R, typename ..._A>
     struct __OctaMemTypes<_T, _R(_A...) const> {
-        typedef _R ResultType;
-        typedef const _T ArgType;
+        typedef _R Result;
+        typedef const _T Argument;
     };
     template<typename _T, typename _R, typename _A>
     struct __OctaMemTypes<_T, _R(_A) const> {
-        typedef _R ResultType;
-        typedef const _T FirstArgType;
-        typedef _A SecondArgType;
+        typedef _R Result;
+        typedef const _T FirstArgument;
+        typedef _A SecondArgument;
     };
 
     template<typename _R, typename _T>
@@ -469,20 +469,20 @@ namespace octa {
 
     template<typename _R, typename...>
     struct __OctaFunction {
-        typedef _R ResultType;
+        typedef _R Result;
     };
 
     template<typename _R, typename _T>
     struct __OctaFunction<_R, _T> {
-        typedef _R ResultType;
-        typedef _T ArgType;
+        typedef _R Result;
+        typedef _T Argument;
     };
 
     template<typename _R, typename _T, typename _U>
     struct __OctaFunction<_R, _T, _U> {
-        typedef _R ResultType;
-        typedef _T FirstArgType;
-        typedef _U SecondArgType;
+        typedef _R Result;
+        typedef _T FirstArgument;
+        typedef _U SecondArgument;
     };
 
     template<typename, typename>
