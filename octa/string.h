@@ -16,7 +16,7 @@
 namespace octa {
     static constexpr size_t npos = -1;
 
-    template<typename _T>
+    template<typename _T, typename _A = octa::Allocator<_T>>
     class StringBase {
         octa::Vector<_T> __buf;
 
@@ -34,22 +34,30 @@ namespace octa {
         typedef const _T               *ConstPointer;
         typedef PointerRange<      _T>  Range;
         typedef PointerRange<const _T>  ConstRange;
+        typedef _A                      Allocator;
 
-        StringBase(): __buf(1, '\0') {}
+        StringBase(const _A &__a = _A()): __buf(1, '\0', __a) {}
 
         StringBase(const StringBase &__s): __buf(__s.__buf) {}
+        StringBase(const StringBase &__s, const _A &__a):
+            __buf(__s.__buf, __a) {}
         StringBase(StringBase &&__s): __buf(octa::move(__s.__buf)) {}
+        StringBase(StringBase &&__s, const _A &__a):
+            __buf(octa::move(__s.__buf), __a) {}
 
-        StringBase(const StringBase &__s, size_t __pos, size_t __len = npos):
+        StringBase(const StringBase &__s, size_t __pos, size_t __len = npos,
+        const _A &__a = _A()):
             __buf(__s.__buf.each().slice(__pos,
-                (__len == npos) ? __s.__buf.size() : (__pos + __len))) {
+                (__len == npos) ? __s.__buf.size() : (__pos + __len)), __a) {
             __terminate();
         }
 
         /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
-        StringBase(const _T *__v): __buf(ConstRange(__v, strlen(__v) + 1)) {}
+        StringBase(const _T *__v, const _A &__a = _A()):
+            __buf(ConstRange(__v, strlen(__v) + 1), __a) {}
 
-        template<typename _R> StringBase(_R __range): __buf(__range) {
+        template<typename _R> StringBase(_R __range, const _A &__a = _A()):
+        __buf(__range, __a) {
             __terminate();
         }
 

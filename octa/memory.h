@@ -1032,7 +1032,7 @@ namespace octa {
         -> decltype(__a.max_size(), octa::True());
 
     template<typename _A>
-    auto __octa_alloc_max_size_test(const volatile _A &__a) -> octa::False;
+    auto __octa_alloc_max_size_test(const _A &__a) -> octa::False;
 
     template<typename _A>
     struct __OctaAllocMaxSizeTest: octa::IntegralConstant<bool,
@@ -1064,7 +1064,7 @@ namespace octa {
         -> decltype(__a.container_copy(), octa::True());
 
     template<typename _A>
-    auto __octa_alloc_copy_test(const volatile _A &__a) -> octa::False;
+    auto __octa_alloc_copy_test(const _A &__a) -> octa::False;
 
     template<typename _A>
     struct __OctaAllocCopyTest: octa::IntegralConstant<bool,
