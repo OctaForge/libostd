@@ -14,365 +14,363 @@
 #include "octa/vector.h"
 
 namespace octa {
-    static constexpr size_t npos = -1;
+static constexpr size_t npos = -1;
 
-    template<typename _T, typename _A = octa::Allocator<_T>>
-    class StringBase {
-        octa::Vector<_T> __buf;
+template<typename _T, typename _A = octa::Allocator<_T>>
+class StringBase {
+    octa::Vector<_T> p_buf;
 
-        void __terminate() {
-            if (__buf.empty() || (__buf.back() != '\0')) __buf.push('\0');
-        }
-
-    public:
-        typedef size_t                  Size;
-        typedef ptrdiff_t               Difference;
-        typedef       _T                Value;
-        typedef       _T               &Reference;
-        typedef const _T               &ConstReference;
-        typedef       _T               *Pointer;
-        typedef const _T               *ConstPointer;
-        typedef PointerRange<      _T>  Range;
-        typedef PointerRange<const _T>  ConstRange;
-        typedef _A                      Allocator;
-
-        StringBase(const _A &__a = _A()): __buf(1, '\0', __a) {}
-
-        StringBase(const StringBase &__s): __buf(__s.__buf) {}
-        StringBase(const StringBase &__s, const _A &__a):
-            __buf(__s.__buf, __a) {}
-        StringBase(StringBase &&__s): __buf(octa::move(__s.__buf)) {}
-        StringBase(StringBase &&__s, const _A &__a):
-            __buf(octa::move(__s.__buf), __a) {}
-
-        StringBase(const StringBase &__s, size_t __pos, size_t __len = npos,
-        const _A &__a = _A()):
-            __buf(__s.__buf.each().slice(__pos,
-                (__len == npos) ? __s.__buf.size() : (__pos + __len)), __a) {
-            __terminate();
-        }
-
-        /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
-        StringBase(const _T *__v, const _A &__a = _A()):
-            __buf(ConstRange(__v, strlen(__v) + 1), __a) {}
-
-        template<typename _R> StringBase(_R __range, const _A &__a = _A()):
-        __buf(__range, __a) {
-            __terminate();
-        }
-
-        void clear() { __buf.clear(); }
-
-        StringBase<_T> &operator=(const StringBase &__v) {
-            __buf.operator=(__v);
-            return *this;
-        }
-        StringBase<_T> &operator=(StringBase &&__v) {
-            __buf.operator=(octa::move(__v));
-            return *this;
-        }
-        StringBase<_T> &operator=(const _T *__v) {
-            __buf = ConstRange(__v, strlen(__v) + 1);
-            return *this;
-        }
-
-        void resize(size_t __n, _T __v = _T()) {
-            __buf.pop();
-            __buf.resize(__n, __v);
-            __terminate();
-        }
-
-        void reserve(size_t __n) {
-            __buf.reserve(__n + 1);
-        }
-
-        _T &operator[](size_t __i) { return __buf[__i]; }
-        const _T &operator[](size_t __i) const { return __buf[__i]; }
-
-        _T &at(size_t __i) { return __buf[__i]; }
-        const _T &at(size_t __i) const { return __buf[__i]; }
-
-        _T &front() { return __buf[0]; }
-        const _T &front() const { return __buf[0]; };
-
-        _T &back() { return __buf[size() - 1]; }
-        const _T &back() const { return __buf[size() - 1]; }
-
-        _T *data() { return __buf.data(); }
-        const _T *data() const { return __buf.data(); }
-
-        size_t size() const {
-            return __buf.size() - 1;
-        }
-
-        size_t capacity() const {
-            return __buf.capacity() - 1;
-        }
-
-        bool empty() const { return (size() == 0); }
-
-        void push(_T __v) {
-            __buf.back() = __v;
-            __buf.push('\0');
-        }
-
-        StringBase<_T> &append(const StringBase &__s) {
-            __buf.pop();
-            __buf.insert_range(__buf.size(), __s.__buf.each());
-            return *this;
-        }
-
-        StringBase<_T> &append(const StringBase &__s, size_t __idx, size_t __len) {
-            __buf.pop();
-            __buf.insert_range(__buf.size(), octa::PointerRange<_T>(&__s[__idx],
-                (__len == npos) ? (__s.size() - __idx) : __len));
-            __terminate();
-            return *this;
-        }
-
-        StringBase<_T> &append(const _T *__s) {
-            __buf.pop();
-            __buf.insert_range(__buf.size(), ConstRange(__s,
-                strlen(__s) + 1));
-            return *this;
-        }
-
-        StringBase<_T> &append(size_t __n, _T __c) {
-            __buf.pop();
-            for (size_t __i = 0; __i < __n; ++__i) __buf.push(__c);
-            __buf.push('\0');
-            return *this;
-        }
-
-        template<typename _R>
-        StringBase<_T> &append_range(_R __range) {
-            __buf.pop();
-            __buf.insert_range(__buf.size(), __range);
-            __terminate();
-            return *this;
-        }
-
-        StringBase<_T> &operator+=(const StringBase &__s) {
-            return append(__s);
-        }
-        StringBase<_T> &operator+=(const _T *__s) {
-            return append(__s);
-        }
-        StringBase<_T> &operator+=(_T __c) {
-            __buf.pop();
-            __buf.push(__c);
-            __buf.push('\0');
-            return *this;
-        }
-
-        Range each() {
-            return Range(__buf.data(), size());
-        }
-        ConstRange each() const {
-            return ConstRange(__buf.data(), size());
-        }
-
-        void swap(StringBase &__v) {
-            __buf.swap(__v);
-        }
-    };
-
-    typedef StringBase<char> String;
-
-    template<typename _T>
-    struct __OctaIsRangeTest {
-        template<typename _U> static char __test(typename _U::Category *);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == sizeof(char));
-    };
-
-    template<typename _T, typename _F>
-    String concat(const _T &__v, const String &__sep, _F __func) {
-        String __ret;
-        auto __range = octa::each(__v);
-        if (__range.empty()) return octa::move(__ret);
-        for (;;) {
-            __ret += __func(__range.front());
-            __range.pop_front();
-            if (__range.empty()) break;
-            __ret += __sep;
-        }
-        return octa::move(__ret);
+    void terminate() {
+        if (p_buf.empty() || (p_buf.back() != '\0')) p_buf.push('\0');
     }
 
-    template<typename _T>
-    String concat(const _T &__v, const String &__sep = " ") {
-        String __ret;
-        auto __range = octa::each(__v);
-        if (__range.empty()) return octa::move(__ret);
-        for (;;) {
-            __ret += __range.front();
-            __range.pop_front();
-            if (__range.empty()) break;
-            __ret += __sep;
-        }
-        return octa::move(__ret);
+public:
+    typedef size_t                  Size;
+    typedef ptrdiff_t               Difference;
+    typedef       _T                Value;
+    typedef       _T               &Reference;
+    typedef const _T               &ConstReference;
+    typedef       _T               *Pointer;
+    typedef const _T               *ConstPointer;
+    typedef PointerRange<      _T>  Range;
+    typedef PointerRange<const _T>  ConstRange;
+    typedef _A                      Allocator;
+
+    StringBase(const _A &a = _A()): p_buf(1, '\0', a) {}
+
+    StringBase(const StringBase &s): p_buf(s.p_buf) {}
+    StringBase(const StringBase &s, const _A &a):
+        p_buf(s.p_buf, a) {}
+    StringBase(StringBase &&s): p_buf(octa::move(s.p_buf)) {}
+    StringBase(StringBase &&s, const _A &a):
+        p_buf(octa::move(s.p_buf), a) {}
+
+    StringBase(const StringBase &s, size_t pos, size_t len = npos,
+    const _A &a = _A()):
+        p_buf(s.p_buf.each().slice(pos,
+            (len == npos) ? s.p_buf.size() : (pos + len)), a) {
+        terminate();
     }
 
-    template<typename _T, typename _F>
-    String concat(std::initializer_list<_T> __v, const String &__sep, _F __func) {
-        return concat(octa::each(__v), __sep, __func);
+    /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
+    StringBase(const _T *v, const _A &a = _A()):
+        p_buf(ConstRange(v, strlen(v) + 1), a) {}
+
+    template<typename _R> StringBase(_R range, const _A &a = _A()):
+    p_buf(range, a) {
+        terminate();
     }
 
-    template<typename _T>
-    String concat(std::initializer_list<_T> __v, const String &__sep = " ") {
-        return concat(octa::each(__v), __sep);
+    void clear() { p_buf.clear(); }
+
+    StringBase<_T> &operator=(const StringBase &v) {
+        p_buf.operator=(v);
+        return *this;
+    }
+    StringBase<_T> &operator=(StringBase &&v) {
+        p_buf.operator=(octa::move(v));
+        return *this;
+    }
+    StringBase<_T> &operator=(const _T *v) {
+        p_buf = ConstRange(v, strlen(v) + 1);
+        return *this;
     }
 
+    void resize(size_t n, _T v = _T()) {
+        p_buf.pop();
+        p_buf.resize(n, v);
+        terminate();
+    }
+
+    void reserve(size_t n) {
+        p_buf.reserve(n + 1);
+    }
+
+    _T &operator[](size_t i) { return p_buf[i]; }
+    const _T &operator[](size_t i) const { return p_buf[i]; }
+
+    _T &at(size_t i) { return p_buf[i]; }
+    const _T &at(size_t i) const { return p_buf[i]; }
+
+    _T &front() { return p_buf[0]; }
+    const _T &front() const { return p_buf[0]; };
+
+    _T &back() { return p_buf[size() - 1]; }
+    const _T &back() const { return p_buf[size() - 1]; }
+
+    _T *data() { return p_buf.data(); }
+    const _T *data() const { return p_buf.data(); }
+
+    size_t size() const {
+        return p_buf.size() - 1;
+    }
+
+    size_t capacity() const {
+        return p_buf.capacity() - 1;
+    }
+
+    bool empty() const { return (size() == 0); }
+
+    void push(_T v) {
+        p_buf.back() = v;
+        p_buf.push('\0');
+    }
+
+    StringBase<_T> &append(const StringBase &s) {
+        p_buf.pop();
+        p_buf.insert_range(p_buf.size(), s.p_buf.each());
+        return *this;
+    }
+
+    StringBase<_T> &append(const StringBase &s, size_t idx, size_t len) {
+        p_buf.pop();
+        p_buf.insert_range(p_buf.size(), octa::PointerRange<_T>(&s[idx],
+            (len == npos) ? (s.size() - idx) : len));
+        terminate();
+        return *this;
+    }
+
+    StringBase<_T> &append(const _T *s) {
+        p_buf.pop();
+        p_buf.insert_range(p_buf.size(), ConstRange(s,
+            strlen(s) + 1));
+        return *this;
+    }
+
+    StringBase<_T> &append(size_t n, _T c) {
+        p_buf.pop();
+        for (size_t i = 0; i < n; ++i) p_buf.push(c);
+        p_buf.push('\0');
+        return *this;
+    }
+
+    template<typename _R>
+    StringBase<_T> &append_range(_R range) {
+        p_buf.pop();
+        p_buf.insert_range(p_buf.size(), range);
+        terminate();
+        return *this;
+    }
+
+    StringBase<_T> &operator+=(const StringBase &s) {
+        return append(s);
+    }
+    StringBase<_T> &operator+=(const _T *s) {
+        return append(s);
+    }
+    StringBase<_T> &operator+=(_T c) {
+        p_buf.pop();
+        p_buf.push(c);
+        p_buf.push('\0');
+        return *this;
+    }
+
+    Range each() {
+        return Range(p_buf.data(), size());
+    }
+    ConstRange each() const {
+        return ConstRange(p_buf.data(), size());
+    }
+
+    void swap(StringBase &v) {
+        p_buf.swap(v);
+    }
+};
+
+typedef StringBase<char> String;
+
+template<typename _T, typename _F>
+String concat(const _T v, const String &sep, _F func) {
+    String ret;
+    auto range = octa::each(v);
+    if (range.empty()) return octa::move(ret);
+    for (;;) {
+        ret += func(range.front());
+        range.pop_front();
+        if (range.empty()) break;
+        ret += sep;
+    }
+    return octa::move(ret);
+}
+
+template<typename _T>
+String concat(const _T &v, const String &sep = " ") {
+    String ret;
+    auto range = octa::each(v);
+    if (range.empty()) return octa::move(ret);
+    for (;;) {
+        ret += range.front();
+        range.pop_front();
+        if (range.empty()) break;
+        ret += sep;
+    }
+    return octa::move(ret);
+}
+
+template<typename _T, typename _F>
+String concat(std::initializer_list<_T> v, const String &sep, _F func) {
+    return concat(octa::each(v), sep, func);
+}
+
+template<typename _T>
+String concat(std::initializer_list<_T> v, const String &sep = " ") {
+    return concat(octa::each(v), sep);
+}
+
+namespace detail {
     template<typename _T>
-    struct __OctaToStringTest {
-        template<typename _U, String (_U::*)() const> struct __Test {};
-        template<typename _U> static char __test(__Test<_U, &_U::to_string> *);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == sizeof(char));
+    struct ToStringTest {
+        template<typename _U, String (_U::*)() const> struct Test {};
+        template<typename _U> static char test(Test<_U, &_U::to_string> *);
+        template<typename _U> static  int test(...);
+        static constexpr bool value = (sizeof(test<_T>(0)) == sizeof(char));
     };
+}
 
-    template<typename _T> struct ToString {
-        typedef _T Argument;
-        typedef String Result;
+template<typename _T> struct ToString {
+    typedef _T Argument;
+    typedef String Result;
 
-        template<typename _U>
-        static String __octa_to_str(const _U &__v,
-            octa::EnableIf<__OctaToStringTest<_U>::value, bool> = true
-        ) {
-            return __v.to_string();
-        }
+    template<typename _U>
+    static String to_str(const _U &v,
+        octa::EnableIf<octa::detail::ToStringTest<_U>::value, bool> = true
+    ) {
+        return v.to_string();
+    }
 
-        template<typename _U>
-        static String __octa_to_str(const _U &__v,
-            octa::EnableIf<!__OctaToStringTest<_U>::value &&
-                !octa::IsScalar<_U>::value, bool> = true
-        ) {
-            String __ret("{");
-            __ret += concat(octa::each(__v), ", ", ToString<octa::RangeReference<
-                decltype(octa::each(__v))
-            >>());
-            __ret += "}";
-            return octa::move(__ret);
-        }
+    template<typename _U>
+    static String to_str(const _U &v,
+        octa::EnableIf<!octa::detail::ToStringTest<_U>::value &&
+            !octa::IsScalar<_U>::value, bool> = true
+    ) {
+        String ret("{");
+        ret += concat(octa::each(v), ", ", ToString<octa::RangeReference<
+            decltype(octa::each(v))
+        >>());
+        ret += "}";
+        return octa::move(ret);
+    }
 
-        template<typename _U>
-        static String __octa_to_str(const _U &__v,
-            octa::EnableIf<!__OctaToStringTest<_U>::value &&
-                octa::IsScalar<_U>::value, bool> = true
-        ) {
-            return ToString<_U>()(__v);
-        }
+    template<typename _U>
+    static String to_str(const _U &v,
+        octa::EnableIf<!octa::detail::ToStringTest<_U>::value &&
+            octa::IsScalar<_U>::value, bool> = true
+    ) {
+        return ToString<_U>()(v);
+    }
 
-        String operator()(const _T &__v) {
-            return octa::move(__octa_to_str<octa::RemoveCv<
-                octa::RemoveReference<_T>
-            >>(__v));
-        }
-    };
+    String operator()(const _T &v) {
+        return octa::move(to_str<octa::RemoveCv<
+            octa::RemoveReference<_T>
+        >>(v));
+    }
+};
 
+namespace detail {
     template<typename _T>
-    void __octa_str_printf(octa::Vector<char> *__s, const char *__fmt, _T __v) {
-        char __buf[256];
-        int __n = snprintf(__buf, sizeof(__buf), __fmt, __v);
-        __s->clear();
-        __s->reserve(__n + 1);
-        if (__n >= (int)sizeof(__buf))
-            snprintf(__s->data(), __n + 1, __fmt, __v);
-        else if (__n > 0)
-            memcpy(__s->data(), __buf, __n + 1);
+    void str_printf(octa::Vector<char> *s, const char *fmt, _T v) {
+        char buf[256];
+        int n = snprintf(buf, sizeof(buf), fmt, v);
+        s->clear();
+        s->reserve(n + 1);
+        if (n >= (int)sizeof(buf))
+            snprintf(s->data(), n + 1, fmt, v);
+        else if (n > 0)
+            memcpy(s->data(), buf, n + 1);
         else {
-            __n = 0;
-            *(__s->data()) = '\0';
+            n = 0;
+            *(s->data()) = '\0';
         }
-        *(((size_t *)__s) + 1) = __n + 1;
-    }
-
-    template<> struct ToString<bool> {
-        typedef bool Argument;
-        typedef String Result;
-        String operator()(bool __b) {
-            return __b ? "true" : "false";
-        }
-    };
-
-    template<> struct ToString<char> {
-        typedef char Argument;
-        typedef String Result;
-        String operator()(char __c) {
-            String __ret;
-            __ret.push(__c);
-            return octa::move(__ret);
-        }
-    };
-
-#define __OCTA_TOSTR_NUM(_T, __fmt) \
-    template<> struct ToString<_T> { \
-        typedef _T Argument; \
-        typedef String Result; \
-        String operator()(_T __v) { \
-            String __ret; \
-            __octa_str_printf((octa::Vector<char> *)&__ret, __fmt, __v); \
-            return octa::move(__ret); \
-        } \
-    };
-
-    __OCTA_TOSTR_NUM(int, "%d")
-    __OCTA_TOSTR_NUM(int &, "%d")
-    __OCTA_TOSTR_NUM(uint, "%u")
-    __OCTA_TOSTR_NUM(long, "%ld")
-    __OCTA_TOSTR_NUM(ulong, "%lu")
-    __OCTA_TOSTR_NUM(llong, "%lld")
-    __OCTA_TOSTR_NUM(ullong, "%llu")
-    __OCTA_TOSTR_NUM(float, "%f")
-    __OCTA_TOSTR_NUM(double, "%f")
-    __OCTA_TOSTR_NUM(ldouble, "%Lf")
-
-#undef __OCTA_TOSTR_NUM
-
-    template<typename _T> struct ToString<_T *> {
-        typedef _T *Argument;
-        typedef String Result;
-        String operator()(Argument __v) {
-            String __ret;
-            __octa_str_printf((octa::Vector<char> *)&__ret, "%p", __v);
-            return octa::move(__ret);
-        }
-    };
-
-    template<> struct ToString<String> {
-        typedef const String &Argument;
-        typedef String Result;
-        String operator()(Argument __s) {
-            return __s;
-        }
-    };
-
-    template<typename _T, typename _U> struct ToString<octa::Pair<_T, _U>> {
-        typedef const octa::Pair<_T, _U> &Argument;
-        typedef String Result;
-        String operator()(Argument __v) {
-            String __ret("{");
-            __ret += ToString<octa::RemoveCv<octa::RemoveReference<_T>>>()
-                (__v.first);
-            __ret += ", ";
-            __ret += ToString<octa::RemoveCv<octa::RemoveReference<_U>>>()
-                (__v.second);
-            __ret += "}";
-            return octa::move(__ret);
-        }
-    };
-
-    template<typename _T>
-    String to_string(const _T &__v) {
-        return octa::move(ToString<octa::RemoveCv<octa::RemoveReference<_T>>>
-            ()(__v));
-    }
-
-    template<typename _T>
-    String to_string(std::initializer_list<_T> __init) {
-        return octa::move(ToString<std::initializer_list<_T>>()(__init));
+        *(((size_t *)s) + 1) = n + 1;
     }
 }
+
+template<> struct ToString<bool> {
+    typedef bool Argument;
+    typedef String Result;
+    String operator()(bool b) {
+        return b ? "true" : "false";
+    }
+};
+
+template<> struct ToString<char> {
+    typedef char Argument;
+    typedef String Result;
+    String operator()(char c) {
+        String ret;
+        ret.push(c);
+        return octa::move(ret);
+    }
+};
+
+#define OCTA_TOSTR_NUM(_T, fmt) \
+template<> struct ToString<_T> { \
+    typedef _T Argument; \
+    typedef String Result; \
+    String operator()(_T v) { \
+        String ret; \
+        octa::detail::str_printf((octa::Vector<char> *)&ret, fmt, v); \
+        return octa::move(ret); \
+    } \
+};
+
+OCTA_TOSTR_NUM(int, "%d")
+OCTA_TOSTR_NUM(int &, "%d")
+OCTA_TOSTR_NUM(uint, "%u")
+OCTA_TOSTR_NUM(long, "%ld")
+OCTA_TOSTR_NUM(ulong, "%lu")
+OCTA_TOSTR_NUM(llong, "%lld")
+OCTA_TOSTR_NUM(ullong, "%llu")
+OCTA_TOSTR_NUM(float, "%f")
+OCTA_TOSTR_NUM(double, "%f")
+OCTA_TOSTR_NUM(ldouble, "%Lf")
+
+#undef OCTA_TOSTR_NUM
+
+template<typename _T> struct ToString<_T *> {
+    typedef _T *Argument;
+    typedef String Result;
+    String operator()(Argument v) {
+        String ret;
+        octa::detail::str_printf((octa::Vector<char> *)&ret, "%p", v);
+        return octa::move(ret);
+    }
+};
+
+template<> struct ToString<String> {
+    typedef const String &Argument;
+    typedef String Result;
+    String operator()(Argument s) {
+        return s;
+    }
+};
+
+template<typename _T, typename _U> struct ToString<octa::Pair<_T, _U>> {
+    typedef const octa::Pair<_T, _U> &Argument;
+    typedef String Result;
+    String operator()(Argument v) {
+        String ret("{");
+        ret += ToString<octa::RemoveCv<octa::RemoveReference<_T>>>()
+            (v.first);
+        ret += ", ";
+        ret += ToString<octa::RemoveCv<octa::RemoveReference<_U>>>()
+            (v.second);
+        ret += "}";
+        return octa::move(ret);
+    }
+};
+
+template<typename _T>
+String to_string(const _T &v) {
+    return octa::move(ToString<octa::RemoveCv<octa::RemoveReference<_T>>>
+        ()(v));
+}
+
+template<typename _T>
+String to_string(std::initializer_list<_T> init) {
+    return octa::move(ToString<std::initializer_list<_T>>()(init));
+}
+
+} /* namespace octa */
 
 #endif
