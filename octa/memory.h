@@ -73,21 +73,21 @@ namespace octa {
         template<typename _V>
         static int  __test(...);
         template<typename _V>
-        static char __test(typename _V::template rebind<_U> * = 0);
+        static char __test(typename _V::template Rebind<_U> * = 0);
 
         static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
     };
 
     template<typename _T, typename _U, bool = __OctaHasRebind<_T, _U>::value>
     struct __OctaPtrTraitsRebindType {
-        typedef typename _T::template rebind<_U> Type;
+        typedef typename _T::template Rebind<_U> Type;
     };
 
     template<template<typename, typename...> class _T, typename _U,
         typename ..._A, typename _V
     >
     struct __OctaPtrTraitsRebindType<_T<_U, _A...>, _V, true> {
-        typedef typename _T<_U, _A...>::template rebind<_V> Type;
+        typedef typename _T<_U, _A...>::template Rebind<_V> Type;
     };
 
     template<template<typename, typename...> class _T, typename _U,
@@ -638,6 +638,458 @@ namespace octa {
     template<typename _T, typename _U>
     bool operator!=(const Allocator<_T> &, const Allocator<_U> &) {
         return false;
+    }
+
+    /* allocator traits - modeled after libc++ */
+
+    template<typename _T>
+    struct __OctaConstPtrTest {
+        template<typename _U> static char __test(
+            typename _U::ConstPtrType * = 0);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    };
+
+    template<typename _T, typename _P, typename _A,
+        bool = __OctaConstPtrTest<_A>::value>
+    struct __OctaConstPtrType {
+        typedef typename _A::ConstPtrType Type;
+    };
+
+    template<typename _T, typename _P, typename _A>
+    struct __OctaConstPtrType<_T, _P, _A, false> {
+        typedef PointerRebind<_P, const _T> Type;
+    };
+
+    template<typename _T>
+    struct __OctaVoidPtrTest {
+        template<typename _U> static char __test(
+            typename _U::VoidPtrType * = 0);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    };
+
+    template<typename _P, typename _A, bool = __OctaVoidPtrTest<_A>::value>
+    struct __OctaVoidPtrType {
+        typedef typename _A::VoidPtrType Type;
+    };
+
+    template<typename _P, typename _A>
+    struct __OctaVoidPtrType<_P, _A, false> {
+        typedef PointerRebind<_P, void> Type;
+    };
+
+    template<typename _T>
+    struct __OctaConstVoidPtrTest {
+        template<typename _U> static char __test(
+            typename _U::ConstVoidPtrType * = 0);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    };
+
+    template<typename _P, typename _A, bool = __OctaConstVoidPtrTest<_A>::value>
+    struct __OctaConstVoidPtrType {
+        typedef typename _A::ConstVoidPtrType Type;
+    };
+
+    template<typename _P, typename _A>
+    struct __OctaConstVoidPtrType<_P, _A, false> {
+        typedef PointerRebind<_P, const void> Type;
+    };
+
+    template<typename _T>
+    struct __OctaSizeTest {
+        template<typename _U> static char __test(typename _U::SizeType * = 0);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    };
+
+    template<typename _A, typename _D, bool = __OctaSizeTest<_A>::value>
+    struct __OctaSizeType {
+        typedef octa::MakeUnsigned<_D> Type;
+    };
+
+    template<typename _A, typename _D>
+    struct __OctaSizeType<_A, _D, true> {
+        typedef typename _A::SizeType Type;
+    };
+
+    /* allocator type traits */
+
+    template<typename _A>
+    using AllocatorType = _A;
+
+    template<typename _A>
+    using AllocatorValue = typename AllocatorType<_A>::ValType;
+
+    template<typename _A>
+    using AllocatorPointer = typename __OctaPtrType<
+        AllocatorValue<_A>, AllocatorType <_A>
+    >::Type;
+
+    template<typename _A>
+    using AllocatorConstPointer = typename __OctaConstPtrType<
+        AllocatorValue<_A>, AllocatorPointer<_A>, AllocatorType<_A>
+    >::Type;
+
+    template<typename _A>
+    using AllocatorVoidPointer = typename __OctaVoidPtrType<
+        AllocatorPointer<_A>, AllocatorType<_A>
+    >::Type;
+
+    template<typename _A>
+    using AllocatorConstVoidPointer = typename __OctaConstVoidPtrType<
+        AllocatorPointer<_A>, AllocatorType<_A>
+    >::Type;
+
+    /* allocator difference */
+
+    template<typename _T>
+    struct __OctaDiffTest {
+        template<typename _U> static char __test(typename _U::DiffType * = 0);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    };
+
+    template<typename _A, typename _P, bool = __OctaDiffTest<_A>::value>
+    struct __OctaAllocDiffType {
+        typedef PointerDifference<_P> Type;
+    };
+
+    template<typename _A, typename _P>
+    struct __OctaAllocDiffType<_A, _P, true> {
+        typedef typename _A::DiffType Type;
+    };
+
+    template<typename _A>
+    using AllocatorDifference = typename __OctaAllocDiffType<
+        _A, AllocatorPointer<_A>
+    >::Type;
+
+    /* allocator size */
+
+    template<typename _A>
+    using AllocatorSize = typename __OctaSizeType<
+        _A, AllocatorDifference<_A>
+    >::Type;
+
+    /* allocator rebind */
+
+    template<typename _T, typename _U, bool = __OctaHasRebind<_T, _U>::value>
+    struct __OctaAllocTraitsRebindType {
+        typedef typename _T::template Rebind<_U> Type;
+    };
+
+    template<template<typename, typename...> class _A, typename _T,
+        typename ..._Args, typename _U
+    >
+    struct __OctaAllocTraitsRebindType<_A<_T, _Args...>, _U, true> {
+        typedef typename _A<_T, _Args...>::template Rebind<_U> Type;
+    };
+
+    template<template<typename, typename...> class _A, typename _T,
+        typename ..._Args, typename _U
+    >
+    struct __OctaAllocTraitsRebindType<_A<_T, _Args...>, _U, false> {
+        typedef _A<_U, _Args...> Type;
+    };
+
+    template<typename _A, typename _T>
+    using AllocatorRebind = typename __OctaAllocTraitsRebindType<
+        AllocatorType<_A>, _T
+    >::Type;
+
+    /* allocator propagate on container copy assignment */
+
+    template<typename _T>
+    struct __OctaPropagateOnContainerCopyAssignmentTest {
+        template<typename _U> static char __test(
+            typename _U::PropagateOnContainerCopyAssignment * = 0);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    };
+
+    template<typename _A, bool = __OctaPropagateOnContainerCopyAssignmentTest<
+        _A
+    >::value> struct __OctaPropagateOnContainerCopyAssignment {
+        typedef octa::False Type;
+    };
+
+    template<typename _A>
+    struct __OctaPropagateOnContainerCopyAssignment<_A, true> {
+        typedef typename _A::PropagateOnContainerCopyAssignment Type;
+    };
+
+    template<typename _A>
+    using PropagateOnContainerCopyAssignment
+        = typename __OctaPropagateOnContainerCopyAssignment<_A>::Type;
+
+    /* allocator propagate on container move assignment */
+
+    template<typename _T>
+    struct __OctaPropagateOnContainerMoveAssignmentTest {
+        template<typename _U> static char __test(
+            typename _U::PropagateOnContainerMoveAssignment * = 0);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    };
+
+    template<typename _A, bool = __OctaPropagateOnContainerMoveAssignmentTest<
+        _A
+    >::value> struct __OctaPropagateOnContainerMoveAssignment {
+        typedef octa::False Type;
+    };
+
+    template<typename _A>
+    struct __OctaPropagateOnContainerMoveAssignment<_A, true> {
+        typedef typename _A::PropagateOnContainerMoveAssignment Type;
+    };
+
+    template<typename _A>
+    using PropagateOnContainerMoveAssignment
+        = typename __OctaPropagateOnContainerMoveAssignment<_A>::Type;
+
+    /* allocator propagate on container swap */
+
+    template<typename _T>
+    struct __OctaPropagateOnContainerSwapTest {
+        template<typename _U> static char __test(
+            typename _U::PropagateOnContainerSwap * = 0);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    };
+
+    template<typename _A, bool = __OctaPropagateOnContainerSwapTest<_A>::value>
+    struct __OctaPropagateOnContainerSwap {
+        typedef octa::False Type;
+    };
+
+    template<typename _A>
+    struct __OctaPropagateOnContainerSwap<_A, true> {
+        typedef typename _A::PropagateOnContainerSwap Type;
+    };
+
+    template<typename _A>
+    using PropagateOnContainerSwap
+        = typename __OctaPropagateOnContainerSwap<_A>::Type;
+
+    /* allocator is always equal */
+
+    template<typename _T>
+    struct __OctaIsAlwaysEqualTest {
+        template<typename _U> static char __test(
+            typename _U::IsAlwaysEqual * = 0);
+        template<typename _U> static  int __test(...);
+        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    };
+
+    template<typename _A, bool = __OctaIsAlwaysEqualTest<_A>::value>
+    struct __OctaIsAlwaysEqual {
+        typedef typename octa::IsEmpty<_A>::Type Type;
+    };
+
+    template<typename _A>
+    struct __OctaIsAlwaysEqual<_A, true> {
+        typedef typename _A::IsAlwaysEqual Type;
+    };
+
+    template<typename _A>
+    using IsAlwaysEqual = typename __OctaIsAlwaysEqual<_A>::Type;
+
+    /* allocator allocate */
+
+    template<typename _A>
+    inline AllocatorPointer<_A>
+    allocator_allocate(_A &__a, AllocatorSize<_A> __n) {
+        return __a.allocate(__n);
+    }
+
+    template<typename _A, typename _S, typename _CVP>
+    auto __octa_allocate_hint_test(_A &&__a, _S &&__sz, _CVP &&__p)
+        -> decltype(__a.allocate(__sz, __p), octa::True());
+
+    template<typename _A, typename _S, typename _CVP>
+    auto __octa_allocate_hint_test(const _A &__a, _S &&__sz, _CVP &&__p)
+        -> octa::False;
+
+    template<typename _A, typename _S, typename _CVP>
+    struct __OctaAllocateHintTest: octa::IntegralConstant<bool,
+        octa::IsSame<
+            decltype(__octa_allocate_hint_test(octa::declval<_A>(),
+                                               octa::declval<_S>(),
+                                               octa::declval<_CVP>())),
+            octa::True
+        >::value
+    > {};
+
+    template<typename _A>
+    inline AllocatorPointer<_A>
+    __octa_allocate(_A &__a, AllocatorSize<_A> __n,
+                    AllocatorConstVoidPointer<_A> __h, octa::True) {
+        return __a.allocate(__n, __h);
+    }
+
+    template<typename _A>
+    inline AllocatorPointer<_A>
+    __octa_allocate(_A &__a, AllocatorSize<_A> __n,
+                    AllocatorConstVoidPointer<_A>, octa::False) {
+        return __a.allocate(__n);
+    }
+
+    template<typename _A>
+    inline AllocatorPointer<_A>
+    allocator_allocate(_A &__a, AllocatorSize<_A> __n,
+                       AllocatorConstVoidPointer<_A> __h) {
+        return __octa_allocate(__a, __n, __h, __OctaAllocateHintTest<
+            _A, AllocatorSize<_A>, AllocatorConstVoidPointer<_A>
+        >());
+    }
+
+    /* allocator deallocate */
+
+    template<typename _A>
+    inline void allocator_deallocate(_A &__a, AllocatorPointer<_A> __p,
+                                     AllocatorSize<_A> __n) {
+        __a.deallocate(__p, __n);
+    }
+
+    /* allocator construct */
+
+    template<typename _A, typename _T, typename ..._Args>
+    auto __octa_construct_test(_A &&__a, _T *__p, _Args &&...__args)
+        -> decltype(__a.construct(__p, octa::forward<_Args>(__args)...),
+            octa::True());
+
+    template<typename _A, typename _T, typename ..._Args>
+    auto __octa_construct_test(const _A &__a, _T *__p, _Args &&...__args)
+        -> octa::False;
+
+    template<typename _A, typename _T, typename ..._Args>
+    struct __OctaConstructTest: octa::IntegralConstant<bool,
+        octa::IsSame<
+            decltype(__octa_construct_test(octa::declval<_A>(),
+                                           octa::declval<_T>(),
+                                           octa::declval<_Args>()...)),
+            octa::True
+        >::value
+    > {};
+
+    template<typename _A, typename _T, typename ..._Args>
+    inline void
+    __octa_construct(octa::True, _A &__a, _T *__p, _Args &&...__args) {
+        __a.construct(__p, octa::forward<_Args>(__args)...);
+    }
+
+    template<typename _A, typename _T, typename ..._Args>
+    inline void
+    __octa_construct(octa::False, _A &, _T *__p, _Args &&...__args) {
+        ::new ((void *)__p) _T(octa::forward<_Args>(__args)...);
+    }
+
+    template<typename _A, typename _T, typename ..._Args>
+    inline void allocator_construct(_A &__a, _T *__p, _Args &&...__args) {
+        __octa_construct(__OctaConstructTest<_A, _T *, _Args...>(),
+                         __a, __p, octa::forward<_Args>(__args)...);
+    }
+
+    /* allocator destroy */
+
+    template<typename _A, typename _P>
+    auto __octa_destroy_test(_A &&__a, _P &&__p)
+        -> decltype(__a.destroy(__p), octa::True());
+
+    template<typename _A, typename _P>
+    auto __octa_destroy_test(const _A &__a, _P &&__p) -> octa::False;
+
+    template<typename _A, typename _P>
+    struct __OctaDestroyTest: octa::IntegralConstant<bool,
+        octa::IsSame<
+            decltype(__octa_destroy_test(octa::declval<_A>(),
+                                         octa::declval<_P>())),
+            octa::True
+        >::value
+    > {};
+
+    template<typename _A, typename _T>
+    inline void __octa_destroy(octa::True, _A &__a, _T *__p) {
+        __a.destroy(__p);
+    }
+
+    template<typename _A, typename _T>
+    inline void __octa_destroy(octa::False, _A &, _T *__p) {
+        __p->~_T();
+    }
+
+    template<typename _A, typename _T>
+    inline void allocator_destroy(_A &__a, _T *__p) {
+        __octa_destroy(__OctaDestroyTest<_A, _T *>(), __a, __p);
+    }
+
+    /* allocator max size */
+
+    template<typename _A>
+    auto __octa_alloc_max_size_test(_A &&__a)
+        -> decltype(__a.max_size(), octa::True());
+
+    template<typename _A>
+    auto __octa_alloc_max_size_test(const volatile _A &__a) -> octa::False;
+
+    template<typename _A>
+    struct __OctaAllocMaxSizeTest: octa::IntegralConstant<bool,
+        octa::IsSame<
+            decltype(__octa_alloc_max_size_test(octa::declval<_A &>())),
+            octa::True
+        >::value
+    > {};
+
+    template<typename _A>
+    inline AllocatorSize<_A> __octa_alloc_max_size(octa::True, const _A &__a) {
+        return __a.max_size();
+    }
+
+    template<typename _A>
+    inline AllocatorSize<_A> __octa_alloc_max_size(octa::False, const _A &) {
+        return AllocatorSize<_A>(~0);
+    }
+
+    template<typename _A>
+    inline AllocatorSize<_A> allocator_max_size(const _A &__a) {
+        return __octa_alloc_max_size(__OctaAllocMaxSizeTest<const _A>(), __a);
+    }
+
+    /* allocator container copy */
+
+    template<typename _A>
+    auto __octa_alloc_copy_test(_A &&__a)
+        -> decltype(__a.container_copy(), octa::True());
+
+    template<typename _A>
+    auto __octa_alloc_copy_test(const volatile _A &__a) -> octa::False;
+
+    template<typename _A>
+    struct __OctaAllocCopyTest: octa::IntegralConstant<bool,
+        octa::IsSame<
+            decltype(__octa_alloc_copy_test(octa::declval<_A &>())),
+            octa::True
+        >::value
+    > {};
+
+    template<typename _A>
+    inline AllocatorType<_A>
+    __octa_alloc_container_copy(octa::True, const _A &__a) {
+        return __a.container_copy();
+    }
+
+    template<typename _A>
+    inline AllocatorType<_A>
+    __octa_alloc_container_copy(octa::False, const _A &__a) {
+        return __a;
+    }
+
+    template<typename _A>
+    inline AllocatorType<_A> allocator_container_copy(const _A &__a) {
+        return __octa_alloc_container_copy(__OctaAllocCopyTest<const _A>(),
+            __a);
     }
 }
 
