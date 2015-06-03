@@ -10,23 +10,25 @@
 #include <stddef.h>
 
 namespace octa {
-    typedef signed char schar;
-    typedef unsigned char uchar;
-    typedef unsigned short ushort;
-    typedef unsigned int  uint;
-    typedef unsigned long ulong;
-    typedef unsigned long long ullong;
-    typedef long long llong;
 
-    typedef long double ldouble;
+typedef signed char schar;
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned int  uint;
+typedef unsigned long ulong;
+typedef unsigned long long ullong;
+typedef long long llong;
 
-    typedef decltype(nullptr) nullptr_t;
+typedef long double ldouble;
+
+typedef decltype(nullptr) nullptr_t;
 
 #if defined(__CLANG_MAX_ALIGN_T_DEFINED) || defined(_GCC_MAX_ALIGN_T)
-    using ::max_align_t;
+using ::max_align_t;
 #else
-    typedef long double max_align_t;
+typedef long double max_align_t;
 #endif
+
 }
 
 using octa::schar;
