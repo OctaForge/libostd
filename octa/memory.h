@@ -545,356 +545,369 @@ namespace octa {
     template<typename _T, typename ..._A>
     typename __OctaBoxIf<_T>::__OctaBoxKnownSize make_box(_A &&...__args) = delete;
 
-    /* allocator */
+/* allocator */
 
-    template<typename> struct Allocator;
+template<typename> struct Allocator;
 
-    template<> struct Allocator<void> {
-        typedef void        Value;
-        typedef void       *Pointer;
-        typedef const void *ConstPointer;
+template<> struct Allocator<void> {
+    typedef void        Value;
+    typedef void       *Pointer;
+    typedef const void *ConstPointer;
 
-        template<typename _U> using Rebind = Allocator<_U>;
+    template<typename _U> using Rebind = Allocator<_U>;
+};
+
+template<> struct Allocator<const void> {
+    typedef const void  Value;
+    typedef const void *Pointer;
+    typedef const void *ConstPointer;
+
+    template<typename _U> using Rebind = Allocator<_U>;
+};
+
+template<typename _T> struct Allocator {
+    typedef size_t     Size;
+    typedef ptrdiff_t  Difference;
+    typedef _T         Value;
+    typedef _T        &Reference;
+    typedef const _T  &ConstReference;
+    typedef _T        *Pointer;
+    typedef const _T  *ConstPointer;
+
+    template<typename _U> using Rebind = Allocator<_U>;
+
+    Pointer address(Reference v) const {
+        return address_of(v);
+    };
+    ConstPointer address(ConstReference v) const {
+        return address_of(v);
     };
 
-    template<> struct Allocator<const void> {
-        typedef const void  Value;
-        typedef const void *Pointer;
-        typedef const void *ConstPointer;
+    Size max_size() const { return Size(~0) / sizeof(_T); }
 
-        template<typename _U> using Rebind = Allocator<_U>;
-    };
-
-    template<typename _T> struct Allocator {
-        typedef size_t     Size;
-        typedef ptrdiff_t  Difference;
-        typedef _T         Value;
-        typedef _T        &Reference;
-        typedef const _T  &ConstReference;
-        typedef _T        *Pointer;
-        typedef const _T  *ConstPointer;
-
-        template<typename _U> using Rebind = Allocator<_U>;
-
-        Pointer address(Reference __v) const {
-            return address_of(__v);
-        };
-        ConstPointer address(ConstReference __v) const {
-            return address_of(__v);
-        };
-
-        Size max_size() const { return Size(~0) / sizeof(_T); }
-
-        Pointer allocate(Size __n, Allocator<void>::ConstPointer = nullptr) {
-            return (Pointer) ::new uchar[__n * sizeof(_T)];
-        }
-
-        void deallocate(Pointer __p, Size) { ::delete[] (uchar *) __p; }
-
-        template<typename _U, typename ..._A>
-        void construct(_U *__p, _A &&...__args) {
-            ::new((void *)__p) _U(octa::forward<_A>(__args)...);
-        }
-
-        void destroy(Pointer __p) { __p->~_T(); }
-    };
-
-    template<typename _T> struct Allocator<const _T> {
-        typedef size_t     Size;
-        typedef ptrdiff_t  Difference;
-        typedef const _T   Value;
-        typedef const _T  &Reference;
-        typedef const _T  &ConstReference;
-        typedef const _T  *Pointer;
-        typedef const _T  *ConstPointer;
-
-        template<typename _U> using Rebind = Allocator<_U>;
-
-        ConstPointer address(ConstReference __v) const {
-            return address_of(__v);
-        };
-
-        Size max_size() const { return Size(~0) / sizeof(_T); }
-
-        Pointer allocate(Size __n, Allocator<void>::ConstPointer = nullptr) {
-            return (Pointer) ::new uchar[__n * sizeof(_T)];
-        }
-
-        void deallocate(Pointer __p, Size) { ::delete[] (uchar *) __p; }
-
-        template<typename _U, typename ..._A>
-        void construct(_U *__p, _A &&...__args) {
-            ::new((void *)__p) _U(octa::forward<_A>(__args)...);
-        }
-
-        void destroy(Pointer __p) { __p->~_T(); }
-    };
-
-    template<typename _T, typename _U>
-    bool operator==(const Allocator<_T> &, const Allocator<_U> &) {
-        return true;
+    Pointer allocate(Size n, Allocator<void>::ConstPointer = nullptr) {
+        return (Pointer) ::new uchar[n * sizeof(_T)];
     }
 
-    template<typename _T, typename _U>
-    bool operator!=(const Allocator<_T> &, const Allocator<_U> &) {
-        return false;
+    void deallocate(Pointer p, Size) { ::delete[] (uchar *) p; }
+
+    template<typename _U, typename ..._A>
+    void construct(_U *p, _A &&...args) {
+        ::new((void *)p) _U(octa::forward<_A>(args)...);
     }
 
-    /* allocator traits - modeled after libc++ */
+    void destroy(Pointer p) { p->~_T(); }
+};
 
+template<typename _T> struct Allocator<const _T> {
+    typedef size_t     Size;
+    typedef ptrdiff_t  Difference;
+    typedef const _T   Value;
+    typedef const _T  &Reference;
+    typedef const _T  &ConstReference;
+    typedef const _T  *Pointer;
+    typedef const _T  *ConstPointer;
+
+    template<typename _U> using Rebind = Allocator<_U>;
+
+    ConstPointer address(ConstReference v) const {
+        return address_of(v);
+    };
+
+    Size max_size() const { return Size(~0) / sizeof(_T); }
+
+    Pointer allocate(Size n, Allocator<void>::ConstPointer = nullptr) {
+        return (Pointer) ::new uchar[n * sizeof(_T)];
+    }
+
+    void deallocate(Pointer p, Size) { ::delete[] (uchar *) p; }
+
+    template<typename _U, typename ..._A>
+    void construct(_U *p, _A &&...args) {
+        ::new((void *)p) _U(octa::forward<_A>(args)...);
+    }
+
+    void destroy(Pointer p) { p->~_T(); }
+};
+
+template<typename _T, typename _U>
+bool operator==(const Allocator<_T> &, const Allocator<_U> &) {
+    return true;
+}
+
+template<typename _T, typename _U>
+bool operator!=(const Allocator<_T> &, const Allocator<_U> &) {
+    return false;
+}
+
+/* allocator traits - modeled after libc++ */
+
+namespace detail {
     template<typename _T>
-    struct __OctaConstPtrTest {
-        template<typename _U> static char __test(
+    struct ConstPtrTest {
+        template<typename _U> static char test(
             typename _U::ConstPointer * = 0);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+        template<typename _U> static  int test(...);
+        static constexpr bool value = (sizeof(test<_T>(0)) == 1);
     };
 
     template<typename _T, typename _P, typename _A,
-        bool = __OctaConstPtrTest<_A>::value>
-    struct __OctaConstPointer {
+        bool = ConstPtrTest<_A>::value>
+    struct ConstPointer {
         typedef typename _A::ConstPointer Type;
     };
 
     template<typename _T, typename _P, typename _A>
-    struct __OctaConstPointer<_T, _P, _A, false> {
+    struct ConstPointer<_T, _P, _A, false> {
         typedef PointerRebind<_P, const _T> Type;
     };
 
     template<typename _T>
-    struct __OctaVoidPtrTest {
-        template<typename _U> static char __test(
+    struct VoidPtrTest {
+        template<typename _U> static char test(
             typename _U::VoidPointer * = 0);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+        template<typename _U> static  int test(...);
+        static constexpr bool value = (sizeof(test<_T>(0)) == 1);
     };
 
-    template<typename _P, typename _A, bool = __OctaVoidPtrTest<_A>::value>
-    struct __OctaVoidPointer {
+    template<typename _P, typename _A, bool = VoidPtrTest<_A>::value>
+    struct VoidPointer {
         typedef typename _A::VoidPointer Type;
     };
 
     template<typename _P, typename _A>
-    struct __OctaVoidPointer<_P, _A, false> {
+    struct VoidPointer<_P, _A, false> {
         typedef PointerRebind<_P, void> Type;
     };
 
     template<typename _T>
-    struct __OctaConstVoidPtrTest {
-        template<typename _U> static char __test(
+    struct ConstVoidPtrTest {
+        template<typename _U> static char test(
             typename _U::ConstVoidPointer * = 0);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+        template<typename _U> static  int test(...);
+        static constexpr bool value = (sizeof(test<_T>(0)) == 1);
     };
 
-    template<typename _P, typename _A, bool = __OctaConstVoidPtrTest<_A>::value>
-    struct __OctaConstVoidPointer {
+    template<typename _P, typename _A, bool = ConstVoidPtrTest<_A>::value>
+    struct ConstVoidPointer {
         typedef typename _A::ConstVoidPointer Type;
     };
 
     template<typename _P, typename _A>
-    struct __OctaConstVoidPointer<_P, _A, false> {
+    struct ConstVoidPointer<_P, _A, false> {
         typedef PointerRebind<_P, const void> Type;
     };
 
     template<typename _T>
-    struct __OctaSizeTest {
-        template<typename _U> static char __test(typename _U::Size * = 0);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    struct SizeTest {
+        template<typename _U> static char test(typename _U::Size * = 0);
+        template<typename _U> static  int test(...);
+        static constexpr bool value = (sizeof(test<_T>(0)) == 1);
     };
 
-    template<typename _A, typename _D, bool = __OctaSizeTest<_A>::value>
-    struct __OctaSize {
+    template<typename _A, typename _D, bool = SizeTest<_A>::value>
+    struct SizeBase {
         typedef octa::MakeUnsigned<_D> Type;
     };
 
     template<typename _A, typename _D>
-    struct __OctaSize<_A, _D, true> {
+    struct SizeBase<_A, _D, true> {
         typedef typename _A::Size Type;
     };
+} /* namespace detail */
 
-    /* allocator type traits */
+/* allocator type traits */
 
-    template<typename _A>
-    using AllocatorType = _A;
+template<typename _A>
+using AllocatorType = _A;
 
-    template<typename _A>
-    using AllocatorValue = typename AllocatorType<_A>::Value;
+template<typename _A>
+using AllocatorValue = typename AllocatorType<_A>::Value;
 
-    template<typename _A>
-    using AllocatorPointer = typename __OctaPointer<
-        AllocatorValue<_A>, AllocatorType <_A>
-    >::Type;
+template<typename _A>
+using AllocatorPointer = typename __OctaPointer<
+    AllocatorValue<_A>, AllocatorType <_A>
+>::Type;
 
-    template<typename _A>
-    using AllocatorConstPointer = typename __OctaConstPointer<
-        AllocatorValue<_A>, AllocatorPointer<_A>, AllocatorType<_A>
-    >::Type;
+template<typename _A>
+using AllocatorConstPointer = typename octa::detail::ConstPointer<
+    AllocatorValue<_A>, AllocatorPointer<_A>, AllocatorType<_A>
+>::Type;
 
-    template<typename _A>
-    using AllocatorVoidPointer = typename __OctaVoidPointer<
-        AllocatorPointer<_A>, AllocatorType<_A>
-    >::Type;
+template<typename _A>
+using AllocatorVoidPointer = typename octa::detail::VoidPointer<
+    AllocatorPointer<_A>, AllocatorType<_A>
+>::Type;
 
-    template<typename _A>
-    using AllocatorConstVoidPointer = typename __OctaConstVoidPointer<
-        AllocatorPointer<_A>, AllocatorType<_A>
-    >::Type;
+template<typename _A>
+using AllocatorConstVoidPointer = typename octa::detail::ConstVoidPointer<
+    AllocatorPointer<_A>, AllocatorType<_A>
+>::Type;
 
-    /* allocator difference */
+/* allocator difference */
 
+namespace detail {
     template<typename _T>
-    struct __OctaDiffTest {
-        template<typename _U> static char __test(typename _U::Difference * = 0);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    struct DiffTest {
+        template<typename _U> static char test(typename _U::Difference * = 0);
+        template<typename _U> static  int test(...);
+        static constexpr bool value = (sizeof(test<_T>(0)) == 1);
     };
 
-    template<typename _A, typename _P, bool = __OctaDiffTest<_A>::value>
-    struct __OctaAllocDifference {
+    template<typename _A, typename _P, bool = DiffTest<_A>::value>
+    struct AllocDifference {
         typedef PointerDifference<_P> Type;
     };
 
     template<typename _A, typename _P>
-    struct __OctaAllocDifference<_A, _P, true> {
+    struct AllocDifference<_A, _P, true> {
         typedef typename _A::Difference Type;
     };
+}
 
-    template<typename _A>
-    using AllocatorDifference = typename __OctaAllocDifference<
-        _A, AllocatorPointer<_A>
-    >::Type;
+template<typename _A>
+using AllocatorDifference = typename octa::detail::AllocDifference<
+    _A, AllocatorPointer<_A>
+>::Type;
 
-    /* allocator size */
+/* allocator size */
 
-    template<typename _A>
-    using AllocatorSize = typename __OctaSize<
-        _A, AllocatorDifference<_A>
-    >::Type;
+template<typename _A>
+using AllocatorSize = typename octa::detail::SizeBase<
+    _A, AllocatorDifference<_A>
+>::Type;
 
-    /* allocator rebind */
+/* allocator rebind */
 
+namespace detail {
     template<typename _T, typename _U, bool = __OctaHasRebind<_T, _U>::value>
-    struct __OctaAllocTraitsRebindType {
+    struct AllocTraitsRebindType {
         typedef typename _T::template Rebind<_U> Type;
     };
 
     template<template<typename, typename...> class _A, typename _T,
         typename ..._Args, typename _U
     >
-    struct __OctaAllocTraitsRebindType<_A<_T, _Args...>, _U, true> {
+    struct AllocTraitsRebindType<_A<_T, _Args...>, _U, true> {
         typedef typename _A<_T, _Args...>::template Rebind<_U> Type;
     };
 
     template<template<typename, typename...> class _A, typename _T,
         typename ..._Args, typename _U
     >
-    struct __OctaAllocTraitsRebindType<_A<_T, _Args...>, _U, false> {
+    struct AllocTraitsRebindType<_A<_T, _Args...>, _U, false> {
         typedef _A<_U, _Args...> Type;
     };
+} /* namespace detail */
 
-    template<typename _A, typename _T>
-    using AllocatorRebind = typename __OctaAllocTraitsRebindType<
-        AllocatorType<_A>, _T
-    >::Type;
+template<typename _A, typename _T>
+using AllocatorRebind = typename octa::detail::AllocTraitsRebindType<
+    AllocatorType<_A>, _T
+>::Type;
 
-    /* allocator propagate on container copy assignment */
+/* allocator propagate on container copy assignment */
 
+namespace detail {
     template<typename _T>
-    struct __OctaPropagateOnContainerCopyAssignmentTest {
-        template<typename _U> static char __test(
+    struct PropagateOnContainerCopyAssignmentTest {
+        template<typename _U> static char test(
             typename _U::PropagateOnContainerCopyAssignment * = 0);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+        template<typename _U> static  int test(...);
+        static constexpr bool value = (sizeof(test<_T>(0)) == 1);
     };
 
-    template<typename _A, bool = __OctaPropagateOnContainerCopyAssignmentTest<
+    template<typename _A, bool = PropagateOnContainerCopyAssignmentTest<
         _A
-    >::value> struct __OctaPropagateOnContainerCopyAssignment {
+    >::value> struct PropagateOnContainerCopyAssignmentBase {
         typedef octa::False Type;
     };
 
     template<typename _A>
-    struct __OctaPropagateOnContainerCopyAssignment<_A, true> {
+    struct PropagateOnContainerCopyAssignmentBase<_A, true> {
         typedef typename _A::PropagateOnContainerCopyAssignment Type;
     };
+} /* namespace detail */
 
-    template<typename _A>
-    using PropagateOnContainerCopyAssignment
-        = typename __OctaPropagateOnContainerCopyAssignment<_A>::Type;
+template<typename _A>
+using PropagateOnContainerCopyAssignment
+    = typename octa::detail::PropagateOnContainerCopyAssignmentBase<_A>::Type;
 
-    /* allocator propagate on container move assignment */
+/* allocator propagate on container move assignment */
 
+namespace detail {
     template<typename _T>
-    struct __OctaPropagateOnContainerMoveAssignmentTest {
-        template<typename _U> static char __test(
+    struct PropagateOnContainerMoveAssignmentTest {
+        template<typename _U> static char test(
             typename _U::PropagateOnContainerMoveAssignment * = 0);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+        template<typename _U> static  int test(...);
+        static constexpr bool value = (sizeof(test<_T>(0)) == 1);
     };
 
-    template<typename _A, bool = __OctaPropagateOnContainerMoveAssignmentTest<
+    template<typename _A, bool = PropagateOnContainerMoveAssignmentTest<
         _A
-    >::value> struct __OctaPropagateOnContainerMoveAssignment {
+    >::value> struct PropagateOnContainerMoveAssignmentBase {
         typedef octa::False Type;
     };
 
     template<typename _A>
-    struct __OctaPropagateOnContainerMoveAssignment<_A, true> {
+    struct PropagateOnContainerMoveAssignmentBase<_A, true> {
         typedef typename _A::PropagateOnContainerMoveAssignment Type;
     };
+} /* namespace detail */
 
-    template<typename _A>
-    using PropagateOnContainerMoveAssignment
-        = typename __OctaPropagateOnContainerMoveAssignment<_A>::Type;
+template<typename _A>
+using PropagateOnContainerMoveAssignment
+    = typename octa::detail::PropagateOnContainerMoveAssignmentBase<_A>::Type;
 
-    /* allocator propagate on container swap */
+/* allocator propagate on container swap */
 
+namespace detail {
     template<typename _T>
-    struct __OctaPropagateOnContainerSwapTest {
-        template<typename _U> static char __test(
+    struct PropagateOnContainerSwapTest {
+        template<typename _U> static char test(
             typename _U::PropagateOnContainerSwap * = 0);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+        template<typename _U> static  int test(...);
+        static constexpr bool value = (sizeof(test<_T>(0)) == 1);
     };
 
-    template<typename _A, bool = __OctaPropagateOnContainerSwapTest<_A>::value>
-    struct __OctaPropagateOnContainerSwap {
+    template<typename _A, bool = PropagateOnContainerSwapTest<_A>::value>
+    struct PropagateOnContainerSwapBase {
         typedef octa::False Type;
     };
 
     template<typename _A>
-    struct __OctaPropagateOnContainerSwap<_A, true> {
+    struct PropagateOnContainerSwapBase<_A, true> {
         typedef typename _A::PropagateOnContainerSwap Type;
     };
+} /* namespace detail */
 
-    template<typename _A>
-    using PropagateOnContainerSwap
-        = typename __OctaPropagateOnContainerSwap<_A>::Type;
+template<typename _A>
+using PropagateOnContainerSwap
+    = typename octa::detail::PropagateOnContainerSwapBase<_A>::Type;
 
-    /* allocator is always equal */
+/* allocator is always equal */
 
+namespace detail {
     template<typename _T>
-    struct __OctaIsAlwaysEqualTest {
-        template<typename _U> static char __test(
-            typename _U::IsAlwaysEqual * = 0);
-        template<typename _U> static  int __test(...);
-        static constexpr bool value = (sizeof(__test<_T>(0)) == 1);
+    struct IsAlwaysEqualTest {
+        template<typename _U> static char test(typename _U::IsAlwaysEqual * = 0);
+        template<typename _U> static  int test(...);
+        static constexpr bool value = (sizeof(test<_T>(0)) == 1);
     };
 
-    template<typename _A, bool = __OctaIsAlwaysEqualTest<_A>::value>
-    struct __OctaIsAlwaysEqual {
+    template<typename _A, bool = IsAlwaysEqualTest<_A>::value>
+    struct IsAlwaysEqualBase {
         typedef typename octa::IsEmpty<_A>::Type Type;
     };
 
     template<typename _A>
-    struct __OctaIsAlwaysEqual<_A, true> {
+    struct IsAlwaysEqualBase<_A, true> {
         typedef typename _A::IsAlwaysEqual Type;
     };
+} /* namespace detail */
 
-    template<typename _A>
-    using IsAlwaysEqual = typename __OctaIsAlwaysEqual<_A>::Type;
+template<typename _A>
+using IsAlwaysEqual = typename octa::detail::IsAlwaysEqualBase<_A>::Type;
 
 /* allocator allocate */
 
