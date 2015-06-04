@@ -14,24 +14,21 @@ namespace octa {
     /* forward declarations */
 
 namespace detail {
-    template<typename> struct RemoveCv;
+    template<typename> struct RemoveCvBase;
     template<typename> struct AddLr;
     template<typename> struct AddRr;
-    template<typename> struct AddConst;
-    template<typename> struct RemoveReference;
-    template<typename> struct RemoveAllExtents;
+    template<typename> struct AddConstBase;
+    template<typename> struct RemoveReferenceBase;
+    template<typename> struct RemoveAllExtentsBase;
 
     template<typename ...> struct CommonTypeBase;
 }
 
-template<typename> struct __OctaAddConst;
 template<typename> struct IsReference;
-template<typename> struct __OctaRemoveReference;
-template<typename> struct __OctaRemoveAllExtents;
 template<typename> struct IsTriviallyDefaultConstructible;
 
 template<typename _T>
-using RemoveCv = typename octa::detail::RemoveCv<_T>::Type;
+using RemoveCv = typename octa::detail::RemoveCvBase<_T>::Type;
 
 template<typename _T>
 using AddLvalueReference = typename octa::detail::AddLr<_T>::Type;
@@ -40,13 +37,13 @@ template<typename _T>
 using AddRvalueReference = typename octa::detail::AddRr<_T>::Type;
 
 template<typename _T>
-using AddConst = typename __OctaAddConst<_T>::Type;
+using AddConst = typename octa::detail::AddConstBase<_T>::Type;
 
 template<typename _T>
-using RemoveReference = typename __OctaRemoveReference<_T>::Type;
+using RemoveReference = typename octa::detail::RemoveReferenceBase<_T>::Type;
 
 template<typename _T>
-using RemoveAllExtents = typename __OctaRemoveAllExtents<_T>::Type;
+using RemoveAllExtents = typename octa::detail::RemoveAllExtentsBase<_T>::Type;
 
 namespace detail {
     template<typename _T> octa::AddRvalueReference<_T> declval_in();
@@ -482,290 +479,306 @@ template<typename _T> struct IsMoveAssignable: IsAssignable<
     const AddRvalueReference<_T>
 > {};
 
-    /* is destructible */
+/* is destructible */
 
-    template<typename> struct __OctaIsDtibleApply { typedef int Type; };
+namespace detail {
+    template<typename> struct IsDtibleApply { typedef int Type; };
 
     template<typename _T> struct IsDestructorWellformed {
-        template<typename _TT> static char __test(typename __OctaIsDtibleApply<
+        template<typename _TT> static char test(typename IsDtibleApply<
             decltype(octa::detail::declval_in<_TT &>().~_TT())
         >::Type);
 
-        template<typename _TT> static int __test(...);
+        template<typename _TT> static int test(...);
 
-        static constexpr bool value = (sizeof(__test<_T>(12)) == sizeof(char));
+        static constexpr bool value = (sizeof(test<_T>(12)) == sizeof(char));
     };
 
-    template<typename, bool> struct __OctaDtibleImpl;
+    template<typename, bool> struct DtibleImpl;
 
     template<typename _T>
-    struct __OctaDtibleImpl<_T, false>: IntegralConstant<bool,
-        IsDestructorWellformed<RemoveAllExtents<_T>>::value
+    struct DtibleImpl<_T, false>: octa::IntegralConstant<bool,
+        IsDestructorWellformed<octa::RemoveAllExtents<_T>>::value
     > {};
 
     template<typename _T>
-    struct __OctaDtibleImpl<_T, true>: True {};
+    struct DtibleImpl<_T, true>: True {};
 
-    template<typename _T, bool> struct __OctaDtibleFalse;
+    template<typename _T, bool> struct DtibleFalse;
 
-    template<typename _T> struct __OctaDtibleFalse<_T, false>
-        : __OctaDtibleImpl<_T, IsReference<_T>::value> {};
+    template<typename _T> struct DtibleFalse<_T, false>
+        : DtibleImpl<_T, octa::IsReference<_T>::value> {};
 
-    template<typename _T> struct __OctaDtibleFalse<_T, true>: False {};
+    template<typename _T> struct DtibleFalse<_T, true>: False {};
+} /* namespace detail */
 
-    template<typename _T>
-    struct IsDestructible: __OctaDtibleFalse<_T, IsFunction<_T>::value> {};
+template<typename _T>
+struct IsDestructible: octa::detail::DtibleFalse<_T, IsFunction<_T>::value> {};
 
-    template<typename _T> struct IsDestructible<_T[]>: False {};
-    template<           > struct IsDestructible<void>: False {};
+template<typename _T> struct IsDestructible<_T[]>: False {};
+template<           > struct IsDestructible<void>: False {};
 
-    /* is trivially constructible */
+/* is trivially constructible */
 
-    template<typename _T, typename ..._A>
-    struct IsTriviallyConstructible: False {};
+template<typename _T, typename ..._A>
+struct IsTriviallyConstructible: False {};
 
-    template<typename _T>
-    struct IsTriviallyConstructible<_T>: IntegralConstant<bool,
-        __has_trivial_constructor(_T)
-    > {};
+template<typename _T>
+struct IsTriviallyConstructible<_T>: IntegralConstant<bool,
+    __has_trivial_constructor(_T)
+> {};
 
-    template<typename _T>
-    struct IsTriviallyConstructible<_T, _T &>: IntegralConstant<bool,
-        __has_trivial_copy(_T)
-    > {};
+template<typename _T>
+struct IsTriviallyConstructible<_T, _T &>: IntegralConstant<bool,
+    __has_trivial_copy(_T)
+> {};
 
-    template<typename _T>
-    struct IsTriviallyConstructible<_T, const _T &>: IntegralConstant<bool,
-        __has_trivial_copy(_T)
-    > {};
+template<typename _T>
+struct IsTriviallyConstructible<_T, const _T &>: IntegralConstant<bool,
+    __has_trivial_copy(_T)
+> {};
 
-    template<typename _T>
-    struct IsTriviallyConstructible<_T, _T &&>: IntegralConstant<bool,
-        __has_trivial_copy(_T)
-    > {};
+template<typename _T>
+struct IsTriviallyConstructible<_T, _T &&>: IntegralConstant<bool,
+    __has_trivial_copy(_T)
+> {};
 
-    /* is trivially default constructible */
+/* is trivially default constructible */
 
-    template<typename _T>
-    struct IsTriviallyDefaultConstructible: IsTriviallyConstructible<_T> {};
+template<typename _T>
+struct IsTriviallyDefaultConstructible: IsTriviallyConstructible<_T> {};
 
-    /* is trivially copy constructible */
+/* is trivially copy constructible */
 
-    template<typename _T>
-    struct IsTriviallyCopyConstructible: IsTriviallyConstructible<_T,
-        AddLvalueReference<const _T>
-    > {};
+template<typename _T>
+struct IsTriviallyCopyConstructible: IsTriviallyConstructible<_T,
+    AddLvalueReference<const _T>
+> {};
 
-    /* is trivially move constructible */
+/* is trivially move constructible */
 
-    template<typename _T>
-    struct IsTriviallyMoveConstructible: IsTriviallyConstructible<_T,
-        AddRvalueReference<_T>
-    > {};
+template<typename _T>
+struct IsTriviallyMoveConstructible: IsTriviallyConstructible<_T,
+    AddRvalueReference<_T>
+> {};
 
-    /* is trivially assignable */
+/* is trivially assignable */
 
-    template<typename _T, typename ..._A>
-    struct IsTriviallyAssignable: False {};
+template<typename _T, typename ..._A>
+struct IsTriviallyAssignable: False {};
 
-    template<typename _T>
-    struct IsTriviallyAssignable<_T>: IntegralConstant<bool,
-        __has_trivial_assign(_T)
-    > {};
+template<typename _T>
+struct IsTriviallyAssignable<_T>: IntegralConstant<bool,
+    __has_trivial_assign(_T)
+> {};
 
-    template<typename _T>
-    struct IsTriviallyAssignable<_T, _T &>: IntegralConstant<bool,
-        __has_trivial_copy(_T)
-    > {};
+template<typename _T>
+struct IsTriviallyAssignable<_T, _T &>: IntegralConstant<bool,
+    __has_trivial_copy(_T)
+> {};
 
-    template<typename _T>
-    struct IsTriviallyAssignable<_T, const _T &>: IntegralConstant<bool,
-        __has_trivial_copy(_T)
-    > {};
+template<typename _T>
+struct IsTriviallyAssignable<_T, const _T &>: IntegralConstant<bool,
+    __has_trivial_copy(_T)
+> {};
 
-    template<typename _T>
-    struct IsTriviallyAssignable<_T, _T &&>: IntegralConstant<bool,
-        __has_trivial_copy(_T)
-    > {};
+template<typename _T>
+struct IsTriviallyAssignable<_T, _T &&>: IntegralConstant<bool,
+    __has_trivial_copy(_T)
+> {};
 
-    /* is trivially copy assignable */
+/* is trivially copy assignable */
 
-    template<typename _T>
-    struct IsTriviallyCopyAssignable: IsTriviallyAssignable<_T,
-        AddLvalueReference<const _T>
-    > {};
+template<typename _T>
+struct IsTriviallyCopyAssignable: IsTriviallyAssignable<_T,
+    AddLvalueReference<const _T>
+> {};
 
-    /* is trivially move assignable */
+/* is trivially move assignable */
 
-    template<typename _T>
-    struct IsTriviallyMoveAssignable: IsTriviallyAssignable<_T,
-        AddRvalueReference<_T>
-    > {};
+template<typename _T>
+struct IsTriviallyMoveAssignable: IsTriviallyAssignable<_T,
+    AddRvalueReference<_T>
+> {};
 
-    /* is trivially destructible */
+/* is trivially destructible */
 
-    template<typename _T>
-    struct IsTriviallyDestructible: IntegralConstant<bool,
-        __has_trivial_destructor(_T)
-    > {};
+template<typename _T>
+struct IsTriviallyDestructible: IntegralConstant<bool,
+    __has_trivial_destructor(_T)
+> {};
 
-    /* is base of */
+/* is base of */
 
-    template<typename _B, typename _D>
-    struct IsBaseOf: IntegralConstant<bool, __is_base_of(_B, _D)> {};
+template<typename _B, typename _D>
+struct IsBaseOf: IntegralConstant<bool, __is_base_of(_B, _D)> {};
 
-    /* is convertible */
+/* is convertible */
 
-    template<typename _F, typename _T, bool = IsVoid<_F>::value
-        || IsFunction<_T>::value || IsArray<_T>::value
-    > struct __OctaIsConvertible {
-        typedef typename IsVoid<_T>::Type Type;
+namespace detail {
+    template<typename _F, typename _T, bool = octa::IsVoid<_F>::value
+        || octa::IsFunction<_T>::value || octa::IsArray<_T>::value
+    > struct IsConvertibleBase {
+        typedef typename octa::IsVoid<_T>::Type Type;
     };
 
     template<typename _F, typename _T>
-    struct __OctaIsConvertible<_F, _T, false> {
-        template<typename _TT> static void __test_f(_TT);
+    struct IsConvertibleBase<_F, _T, false> {
+        template<typename _TT> static void test_f(_TT);
 
         template<typename _FF, typename _TT,
-            typename = decltype(__test_f<_TT>(octa::detail::declval_in<_FF>()))
-        > static True __test(int);
+            typename = decltype(test_f<_TT>(declval_in<_FF>()))
+        > static octa::True test(int);
 
-        template<typename, typename> static False __test(...);
+        template<typename, typename> static octa::False test(...);
 
-        typedef decltype(__test<_F, _T>(0)) Type;
+        typedef decltype(test<_F, _T>(0)) Type;
     };
+}
 
-    template<typename _F, typename _T>
-    struct IsConvertible: __OctaIsConvertible<_F, _T>::Type {};
+template<typename _F, typename _T>
+struct IsConvertible: octa::detail::IsConvertibleBase<_F, _T>::Type {};
 
-    /* type equality */
+/* type equality */
 
-    template<typename, typename> struct IsSame        : False {};
-    template<typename _T       > struct IsSame<_T, _T>:  True {};
+template<typename, typename> struct IsSame        : False {};
+template<typename _T       > struct IsSame<_T, _T>:  True {};
 
-    /* extent */
+/* extent */
 
-    template<typename _T, unsigned _I = 0>
-    struct Extent: IntegralConstant<size_t, 0> {};
+template<typename _T, unsigned _I = 0>
+struct Extent: IntegralConstant<size_t, 0> {};
 
-    template<typename _T>
-    struct Extent<_T[], 0>: IntegralConstant<size_t, 0> {};
+template<typename _T>
+struct Extent<_T[], 0>: IntegralConstant<size_t, 0> {};
 
-    template<typename _T, unsigned _I>
-    struct Extent<_T[], _I>: IntegralConstant<size_t, Extent<_T, _I - 1>::value> {};
+template<typename _T, unsigned _I>
+struct Extent<_T[], _I>: IntegralConstant<size_t, Extent<_T, _I - 1>::value> {};
 
-    template<typename _T, size_t _N>
-    struct Extent<_T[_N], 0>: IntegralConstant<size_t, _N> {};
+template<typename _T, size_t _N>
+struct Extent<_T[_N], 0>: IntegralConstant<size_t, _N> {};
 
-    template<typename _T, size_t _N, unsigned _I>
-    struct Extent<_T[_N], _I>: IntegralConstant<size_t, Extent<_T, _I - 1>::value> {};
+template<typename _T, size_t _N, unsigned _I>
+struct Extent<_T[_N], _I>: IntegralConstant<size_t, Extent<_T, _I - 1>::value> {};
 
-    /* rank */
+/* rank */
 
-    template<typename _T> struct Rank: IntegralConstant<size_t, 0> {};
+template<typename _T> struct Rank: IntegralConstant<size_t, 0> {};
 
-    template<typename _T>
-    struct Rank<_T[]>: IntegralConstant<size_t, Rank<_T>::value + 1> {};
+template<typename _T>
+struct Rank<_T[]>: IntegralConstant<size_t, Rank<_T>::value + 1> {};
 
-    template<typename _T, size_t _N>
-    struct Rank<_T[_N]>: IntegralConstant<size_t, Rank<_T>::value + 1> {};
+template<typename _T, size_t _N>
+struct Rank<_T[_N]>: IntegralConstant<size_t, Rank<_T>::value + 1> {};
 
-    /* remove const, volatile, cv */
-
-    template<typename _T>
-    struct __OctaRemoveConst           { typedef _T Type; };
-    template<typename _T>
-    struct __OctaRemoveConst<const _T> { typedef _T Type; };
-
-    template<typename _T>
-    struct __OctaRemoveVolatile              { typedef _T Type; };
-    template<typename _T>
-    struct __OctaRemoveVolatile<volatile _T> { typedef _T Type; };
-
-    template<typename _T>
-    using RemoveConst = typename __OctaRemoveConst<_T>::Type;
-    template<typename _T>
-    using RemoveVolatile = typename __OctaRemoveVolatile<_T>::Type;
+/* remove const, volatile, cv */
 
 namespace detail {
     template<typename _T>
-    struct RemoveCv {
+    struct RemoveConstBase           { typedef _T Type; };
+    template<typename _T>
+    struct RemoveConstBase<const _T> { typedef _T Type; };
+
+    template<typename _T>
+    struct RemoveVolatileBase              { typedef _T Type; };
+    template<typename _T>
+    struct RemoveVolatileBase<volatile _T> { typedef _T Type; };
+}
+
+template<typename _T>
+using RemoveConst = typename octa::detail::RemoveConstBase<_T>::Type;
+template<typename _T>
+using RemoveVolatile = typename octa::detail::RemoveVolatileBase<_T>::Type;
+
+namespace detail {
+    template<typename _T>
+    struct RemoveCvBase {
         typedef octa::RemoveVolatile<octa::RemoveConst<_T>> Type;
     };
 }
 
-    /* add const, volatile, cv */
+/* add const, volatile, cv */
 
-    template<typename _T, bool = IsReference<_T>::value
-         || IsFunction<_T>::value || IsConst<_T>::value>
-    struct __OctaAddConstBase { typedef _T Type; };
+namespace detail {
+    template<typename _T, bool = octa::IsReference<_T>::value
+         || octa::IsFunction<_T>::value || octa::IsConst<_T>::value>
+    struct AddConstCore { typedef _T Type; };
 
-    template<typename _T> struct __OctaAddConstBase<_T, false> {
+    template<typename _T> struct AddConstCore<_T, false> {
         typedef const _T Type;
     };
 
-    template<typename _T> struct __OctaAddConst {
-        typedef typename __OctaAddConstBase<_T>::Type Type;
+    template<typename _T> struct AddConstBase {
+        typedef typename AddConstCore<_T>::Type Type;
     };
 
-    template<typename _T, bool = IsReference<_T>::value
-         || IsFunction<_T>::value || IsVolatile<_T>::value>
-    struct __OctaAddVolatileBase { typedef _T Type; };
+    template<typename _T, bool = octa::IsReference<_T>::value
+         || octa::IsFunction<_T>::value || octa::IsVolatile<_T>::value>
+    struct AddVolatileCore { typedef _T Type; };
 
-    template<typename _T> struct __OctaAddVolatileBase<_T, false> {
+    template<typename _T> struct AddVolatileCore<_T, false> {
         typedef volatile _T Type;
     };
 
-    template<typename _T> struct __OctaAddVolatile {
-        typedef typename __OctaAddVolatileBase<_T>::Type Type;
+    template<typename _T> struct AddVolatileBase {
+        typedef typename AddVolatileCore<_T>::Type Type;
     };
+}
 
-    template<typename _T>
-    using AddVolatile = typename __OctaAddVolatile<_T>::Type;
+template<typename _T>
+using AddVolatile = typename octa::detail::AddVolatileBase<_T>::Type;
 
+namespace detail {
     template<typename _T>
-    struct __OctaAddCv {
-        typedef AddConst<AddVolatile<_T>> Type;
+    struct AddCvBase {
+        typedef octa::AddConst<octa::AddVolatile<_T>> Type;
     };
+}
 
-    template<typename _T>
-    using AddCv = typename __OctaAddCv<_T>::Type;
+template<typename _T>
+using AddCv = typename octa::detail::AddCvBase<_T>::Type;
 
-    /* remove reference */
+/* remove reference */
 
+namespace detail {
     template<typename _T>
-    struct __OctaRemoveReference        { typedef _T Type; };
+    struct RemoveReferenceBase        { typedef _T Type; };
     template<typename _T>
-    struct __OctaRemoveReference<_T &>  { typedef _T Type; };
+    struct RemoveReferenceBase<_T &>  { typedef _T Type; };
     template<typename _T>
-    struct __OctaRemoveReference<_T &&> { typedef _T Type; };
+    struct RemoveReferenceBase<_T &&> { typedef _T Type; };
+}
 
-    /* remove pointer */
+/* remove pointer */
 
+namespace detail {
     template<typename _T>
-    struct __OctaRemovePointer                      { typedef _T Type; };
+    struct RemovePointerBase                      { typedef _T Type; };
     template<typename _T>
-    struct __OctaRemovePointer<_T *               > { typedef _T Type; };
+    struct RemovePointerBase<_T *               > { typedef _T Type; };
     template<typename _T>
-    struct __OctaRemovePointer<_T * const         > { typedef _T Type; };
+    struct RemovePointerBase<_T * const         > { typedef _T Type; };
     template<typename _T>
-    struct __OctaRemovePointer<_T * volatile      > { typedef _T Type; };
+    struct RemovePointerBase<_T * volatile      > { typedef _T Type; };
     template<typename _T>
-    struct __OctaRemovePointer<_T * const volatile> { typedef _T Type; };
+    struct RemovePointerBase<_T * const volatile> { typedef _T Type; };
+}
 
-    template<typename _T>
-    using RemovePointer = typename __OctaRemovePointer<_T>::Type;
+template<typename _T>
+using RemovePointer = typename octa::detail::RemovePointerBase<_T>::Type;
 
-    /* add pointer */
+/* add pointer */
 
-    template<typename _T> struct __OctaAddPointer {
-        typedef RemoveReference<_T> *Type;
+namespace detail {
+    template<typename _T> struct AddPointerBase {
+        typedef octa::RemoveReference<_T> *Type;
     };
+}
 
-    template<typename _T>
-    using AddPointer = typename __OctaAddPointer<_T>::Type;
+template<typename _T>
+using AddPointer = typename octa::detail::AddPointerBase<_T>::Type;
 
-    /* add lvalue reference */
+/* add lvalue reference */
 
 namespace detail {
     template<typename _T> struct AddLr        { typedef _T &Type; };
@@ -785,7 +798,7 @@ namespace detail {
     };
 }
 
-    /* add rvalue reference */
+/* add rvalue reference */
 
 namespace detail {
     template<typename _T> struct AddRr        { typedef _T &&Type; };
@@ -805,29 +818,33 @@ namespace detail {
     };
 }
 
-    /* remove extent */
+/* remove extent */
 
+namespace detail {
     template<typename _T>
-    struct __OctaRemoveExtent         { typedef _T Type; };
+    struct RemoveExtentBase         { typedef _T Type; };
     template<typename _T>
-    struct __OctaRemoveExtent<_T[ ] > { typedef _T Type; };
+    struct RemoveExtentBase<_T[ ] > { typedef _T Type; };
     template<typename _T, size_t _N>
-    struct __OctaRemoveExtent<_T[_N]> { typedef _T Type; };
+    struct RemoveExtentBase<_T[_N]> { typedef _T Type; };
+}
 
-    template<typename _T>
-    using RemoveExtent = typename __OctaRemoveExtent<_T>::Type;
+template<typename _T>
+using RemoveExtent = typename octa::detail::RemoveExtentBase<_T>::Type;
 
-    /* remove all extents */
+/* remove all extents */
 
-    template<typename _T> struct __OctaRemoveAllExtents { typedef _T Type; };
+namespace detail {
+    template<typename _T> struct RemoveAllExtentsBase { typedef _T Type; };
 
-    template<typename _T> struct __OctaRemoveAllExtents<_T[]> {
-        typedef RemoveAllExtents<_T> Type;
+    template<typename _T> struct RemoveAllExtentsBase<_T[]> {
+        typedef RemoveAllExtentsBase<_T> Type;
     };
 
-    template<typename _T, size_t _N> struct __OctaRemoveAllExtents<_T[_N]> {
-        typedef RemoveAllExtents<_T> Type;
+    template<typename _T, size_t _N> struct RemoveAllExtentsBase<_T[_N]> {
+        typedef RemoveAllExtentsBase<_T> Type;
     };
+}
 
 /* make (un)signed
  *
@@ -1090,65 +1107,71 @@ namespace detail {
 template<typename _T, typename _U, typename ..._V>
 using CommonType = typename octa::detail::CommonTypeBase<_T, _U, _V...>::Type;
 
-    /* aligned storage */
+/* aligned storage */
 
-    template<size_t _N> struct __OctaAlignedTest {
+namespace detail {
+    template<size_t _N> struct AlignedTest {
         union type {
-            uchar __data[_N];
-            octa::max_align_t __align;
+            uchar data[_N];
+            octa::max_align_t align;
         };
     };
 
-    template<size_t _N, size_t _A> struct __OctaAlignedStorage {
+    template<size_t _N, size_t _A> struct AlignedStorageBase {
         struct type {
-            alignas(_A) uchar __data[_N];
+            alignas(_A) uchar data[_N];
         };
     };
+}
 
-    template<size_t _N, size_t _A
-        = alignof(typename __OctaAlignedTest<_N>::Type)
-    > using AlignedStorage = typename __OctaAlignedStorage<_N, _A>::Type;
+template<size_t _N, size_t _A
+    = alignof(typename octa::detail::AlignedTest<_N>::Type)
+> using AlignedStorage = typename octa::detail::AlignedStorageBase<_N, _A>::Type;
 
-    /* aligned union */
+/* aligned union */
 
-    template<size_t ..._N> struct __OctaAlignMax;
+namespace detail {
+    template<size_t ..._N> struct AlignMax;
 
-    template<size_t _N> struct __OctaAlignMax<_N> {
+    template<size_t _N> struct AlignMax<_N> {
         static constexpr size_t value = _N;
     };
 
-    template<size_t _N1, size_t _N2> struct __OctaAlignMax<_N1, _N2> {
+    template<size_t _N1, size_t _N2> struct AlignMax<_N1, _N2> {
         static constexpr size_t value = (_N1 > _N2) ? _N1 : _N2;
     };
 
     template<size_t _N1, size_t _N2, size_t ..._N>
-    struct __OctaAlignMax<_N1, _N2, _N...> {
+    struct AlignMax<_N1, _N2, _N...> {
         static constexpr size_t value
-            = __OctaAlignMax<__OctaAlignMax<_N1, _N2>::value, _N...>::value;
+            = AlignMax<AlignMax<_N1, _N2>::value, _N...>::value;
     };
 
-    template<size_t _N, typename ..._T> struct __OctaAlignedUnion {
-        static constexpr size_t __alignment_value
-            = __OctaAlignMax<alignof(_T)...>::value;
+    template<size_t _N, typename ..._T> struct AlignedUnionBase {
+        static constexpr size_t alignment_value
+            = AlignMax<alignof(_T)...>::value;
 
         struct type {
-            alignas(__alignment_value) uchar __data[__OctaAlignMax<_N,
+            alignas(alignment_value) uchar data[AlignMax<_N,
                 sizeof(_T)...>::value];
         };
     };
+} /* namespace detail */
 
-    template<size_t _N, typename ..._T>
-    using AlignedUnion = typename __OctaAlignedUnion<_N, _T...>::Type;
+template<size_t _N, typename ..._T>
+using AlignedUnion = typename octa::detail::AlignedUnionBase<_N, _T...>::Type;
 
-    /* underlying type */
+/* underlying type */
 
+namespace detail {
     /* gotta wrap, in a struct otherwise clang ICEs... */
-    template<typename _T> struct __OctaUnderlyingType {
+    template<typename _T> struct UnderlyingTypeBase {
         typedef __underlying_type(_T) Type;
     };
+}
 
-    template<typename _T>
-    using UnderlyingType = typename __OctaUnderlyingType<_T>::Type;
+template<typename _T>
+using UnderlyingType = typename octa::detail::UnderlyingTypeBase<_T>::Type;
 }
 
 #endif
