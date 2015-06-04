@@ -14,78 +14,78 @@ namespace octa {
 
 /* move */
 
-template<typename _T>
-static inline constexpr RemoveReference<_T> &&move(_T &&v) {
-    return static_cast<RemoveReference<_T> &&>(v);
+template<typename T>
+static inline constexpr RemoveReference<T> &&move(T &&v) {
+    return static_cast<RemoveReference<T> &&>(v);
 }
 
 /* forward */
 
-template<typename _T>
-static inline constexpr _T &&forward(RemoveReference<_T> &v) {
-    return static_cast<_T &&>(v);
+template<typename T>
+static inline constexpr T &&forward(RemoveReference<T> &v) {
+    return static_cast<T &&>(v);
 }
 
-template<typename _T>
-static inline constexpr _T &&forward(RemoveReference<_T> &&v) {
-    return static_cast<_T &&>(v);
+template<typename T>
+static inline constexpr T &&forward(RemoveReference<T> &&v) {
+    return static_cast<T &&>(v);
 }
 
 /* exchange */
 
-template<typename _T, typename _U = _T>
-_T exchange(_T &v, _U &&nv) {
-    _T old = move(v);
-    v = forward<_U>(nv);
+template<typename T, typename U = T>
+T exchange(T &v, U &&nv) {
+    T old = move(v);
+    v = forward<U>(nv);
     return old;
 }
 
 /* declval */
 
-template<typename _T> AddRvalueReference<_T> declval();
+template<typename T> AddRvalueReference<T> declval();
 
 /* swap */
 
 namespace detail {
-    template<typename _T>
+    template<typename T>
     struct SwapTest {
-        template<typename _U, void (_U::*)(_U &)> struct Test {};
-        template<typename _U> static char test(Test<_U, &_U::swap> *);
-        template<typename _U> static  int test(...);
-        static constexpr bool value = (sizeof(test<_T>(0)) == sizeof(char));
+        template<typename U, void (U::*)(U &)> struct Test {};
+        template<typename U> static char test(Test<U, &U::swap> *);
+        template<typename U> static  int test(...);
+        static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
     };
 
-    template<typename _T> inline void swap(_T &a, _T &b, EnableIf<
-        octa::detail::SwapTest<_T>::value, bool
+    template<typename T> inline void swap(T &a, T &b, EnableIf<
+        octa::detail::SwapTest<T>::value, bool
     > = true) {
         a.swap(b);
     }
 
-    template<typename _T> inline void swap(_T &a, _T &b, EnableIf<
-        !octa::detail::SwapTest<_T>::value, bool
+    template<typename T> inline void swap(T &a, T &b, EnableIf<
+        !octa::detail::SwapTest<T>::value, bool
     > = true) {
-        _T c(octa::move(a));
+        T c(octa::move(a));
         a = octa::move(b);
         b = octa::move(c);
     }
 }
 
-template<typename _T> void swap(_T &a, _T &b) {
+template<typename T> void swap(T &a, T &b) {
    octa::detail::swap(a, b);
 }
 
-template<typename _T, size_t _N> void swap(_T (&a)[_N], _T (&b)[_N]) {
-    for (size_t i = 0; i < _N; ++i) {
+template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N]) {
+    for (size_t i = 0; i < N; ++i) {
         octa::swap(a[i], b[i]);
     }
 }
 
 /* pair */
 
-template<typename _T, typename _U>
+template<typename T, typename U>
 struct Pair {
-    _T first;
-    _U second;
+    T first;
+    U second;
 
     Pair() = default;
     ~Pair() = default;
@@ -93,17 +93,17 @@ struct Pair {
     Pair(const Pair &) = default;
     Pair(Pair &&) = default;
 
-    Pair(const _T &x, const _U &y): first(x), second(y) {}
+    Pair(const T &x, const U &y): first(x), second(y) {}
 
-    template<typename _TT, typename _UU>
-    Pair(_TT &&x, _UU &&y):
-        first(octa::forward<_TT>(x)), second(octa::forward<_UU>(y)) {}
+    template<typename TT, typename UU>
+    Pair(TT &&x, UU &&y):
+        first(octa::forward<TT>(x)), second(octa::forward<UU>(y)) {}
 
-    template<typename _TT, typename _UU>
-    Pair(const Pair<_TT, _UU> &v): first(v.first), second(v.second) {}
+    template<typename TT, typename UU>
+    Pair(const Pair<TT, UU> &v): first(v.first), second(v.second) {}
 
-    template<typename _TT, typename _UU>
-    Pair(Pair<_TT, _UU> &&v):
+    template<typename TT, typename UU>
+    Pair(Pair<TT, UU> &&v):
         first(octa::move(v.first)), second(octa::move(v.second)) {}
 
     Pair &operator=(const Pair &v) {
@@ -112,8 +112,8 @@ struct Pair {
         return *this;
     }
 
-    template<typename _TT, typename _UU>
-    Pair &operator=(const Pair<_TT, _UU> &v) {
+    template<typename TT, typename UU>
+    Pair &operator=(const Pair<TT, UU> &v) {
         first = v.first;
         second = v.second;
         return *this;
@@ -125,10 +125,10 @@ struct Pair {
         return *this;
     }
 
-    template<typename _TT, typename _UU>
-    Pair &operator=(Pair<_TT, _UU> &&v) {
-        first = octa::forward<_TT>(v.first);
-        second = octa::forward<_UU>(v.second);
+    template<typename TT, typename UU>
+    Pair &operator=(Pair<TT, UU> &&v) {
+        first = octa::forward<TT>(v.first);
+        second = octa::forward<UU>(v.second);
         return *this;
     }
 
@@ -138,32 +138,32 @@ struct Pair {
     }
 };
 
-template<typename _T> struct ReferenceWrapper;
+template<typename T> struct ReferenceWrapper;
 
 namespace detail {
-    template<typename _T>
+    template<typename T>
     struct MakePairRetBase {
-        typedef _T Type;
+        typedef T Type;
     };
 
-    template<typename _T>
-    struct MakePairRetBase<ReferenceWrapper<_T>> {
-        typedef _T &Type;
+    template<typename T>
+    struct MakePairRetBase<ReferenceWrapper<T>> {
+        typedef T &Type;
     };
 
-    template<typename _T>
+    template<typename T>
     struct MakePairRet {
-        typedef typename octa::detail::MakePairRetBase<octa::Decay<_T>>::Type Type;
+        typedef typename octa::detail::MakePairRetBase<octa::Decay<T>>::Type Type;
     };
 } /* namespace detail */
 
-template<typename _T, typename _U>
-Pair<typename octa::detail::MakePairRet<_T>::Type,
-     typename octa::detail::MakePairRet<_U>::Type
- > make_pair(_T &&a, _U &&b) {
-    return Pair<typename octa::detail::MakePairRet<_T>::Type,
-                typename octa::detail::MakePairRet<_U>::Type
-    >(forward<_T>(a), forward<_U>(b));;
+template<typename T, typename U>
+Pair<typename octa::detail::MakePairRet<T>::Type,
+     typename octa::detail::MakePairRet<U>::Type
+ > make_pair(T &&a, U &&b) {
+    return Pair<typename octa::detail::MakePairRet<T>::Type,
+                typename octa::detail::MakePairRet<U>::Type
+    >(forward<T>(a), forward<U>(b));;
 }
 
 } /* namespace octa */

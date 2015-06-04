@@ -17,9 +17,9 @@ namespace octa {
 
 /* partitioning */
 
-template<typename _R, typename _U>
-_R partition(_R range, _U pred) {
-    _R ret = range;
+template<typename R, typename U>
+R partition(R range, U pred) {
+    R ret = range;
     for (; !range.empty(); range.pop_front()) {
         if (pred(range.front())) {
             octa::swap(range.front(), ret.front());
@@ -29,8 +29,8 @@ _R partition(_R range, _U pred) {
     return ret;
 }
 
-template<typename _R, typename _P>
-bool is_partitioned(_R range, _P pred) {
+template<typename R, typename P>
+bool is_partitioned(R range, P pred) {
     for (; !range.empty() && pred(range.front()); range.pop_front());
     for (; !range.empty(); range.pop_front())
         if (pred(range.front())) return false;
@@ -40,12 +40,12 @@ bool is_partitioned(_R range, _P pred) {
 /* sorting */
 
 namespace detail {
-    template<typename _R, typename _C>
-    void insort(_R range, _C compare) {
-        octa::RangeSize<_R> rlen = range.size();
-        for (octa::RangeSize<_R> i = 1; i < rlen; ++i) {
-            octa::RangeSize<_R> j = i;
-            octa::RangeReference<_R> v = range[i];
+    template<typename R, typename C>
+    void insort(R range, C compare) {
+        octa::RangeSize<R> rlen = range.size();
+        for (octa::RangeSize<R> i = 1; i < rlen; ++i) {
+            octa::RangeSize<R> j = i;
+            octa::RangeReference<R> v = range[i];
             while (j > 0 && !compare(range[j - 1], v)) {
                 range[j] = range[j - 1];
                 --j;
@@ -54,20 +54,20 @@ namespace detail {
         }
     }
 
-    template<typename _T, typename _U>
+    template<typename T, typename U>
     struct UnaryCompare {
-        const _T &val;
-        _U comp;
-        bool operator()(const _T &v) const { return comp(v, val); }
+        const T &val;
+        U comp;
+        bool operator()(const T &v) const { return comp(v, val); }
     };
 
-    template<typename _R, typename _C>
-    void hs_sift_down(_R range, octa::RangeSize<_R> s,
-    octa::RangeSize<_R> e, _C compare) {
-        octa::RangeSize<_R> r = s;
+    template<typename R, typename C>
+    void hs_sift_down(R range, octa::RangeSize<R> s,
+    octa::RangeSize<R> e, C compare) {
+        octa::RangeSize<R> r = s;
         while ((r * 2 + 1) <= e) {
-            octa::RangeSize<_R> ch = r * 2 + 1;
-            octa::RangeSize<_R> sw = r;
+            octa::RangeSize<R> ch = r * 2 + 1;
+            octa::RangeSize<R> sw = r;
             if (compare(range[sw], range[ch]))
                 sw = ch;
             if (((ch + 1) <= e) && compare(range[sw], range[ch + 1]))
@@ -79,15 +79,15 @@ namespace detail {
         }
     }
 
-    template<typename _R, typename _C>
-    void heapsort(_R range, _C compare) {
-        octa::RangeSize<_R> len = range.size();
-        octa::RangeSize<_R> st = (len - 2) / 2;
+    template<typename R, typename C>
+    void heapsort(R range, C compare) {
+        octa::RangeSize<R> len = range.size();
+        octa::RangeSize<R> st = (len - 2) / 2;
         for (;;) {
             octa::detail::hs_sift_down(range, st, len - 1, compare);
             if (st-- == 0) break;
         }
-        octa::RangeSize<_R> e = len - 1;
+        octa::RangeSize<R> e = len - 1;
         while (e > 0) {
             octa::swap(range[e], range[0]);
             --e;
@@ -95,8 +95,8 @@ namespace detail {
         }
     }
 
-    template<typename _R, typename _C>
-    void introloop(_R range, _C compare, RangeSize<_R> depth) {
+    template<typename R, typename C>
+    void introloop(R range, C compare, RangeSize<R> depth) {
         if (range.size() <= 10) {
             octa::detail::insort(range, compare);
             return;
@@ -105,201 +105,201 @@ namespace detail {
             octa::detail::heapsort(range, compare);
             return;
         }
-        octa::RangeReference<_R> p = range[range.size() / 2];
+        octa::RangeReference<R> p = range[range.size() / 2];
         octa::swap(p, range.back());
-        _R r = octa::partition(range,
-            octa::detail::UnaryCompare<decltype(p), _C>{ p, compare });
-        _R l = range.slice(0, range.size() - r.size());
+        R r = octa::partition(range,
+            octa::detail::UnaryCompare<decltype(p), C>{ p, compare });
+        R l = range.slice(0, range.size() - r.size());
         octa::swap(r.front(), r.back());
         octa::detail::introloop(l, compare, depth - 1);
         octa::detail::introloop(r, compare, depth - 1);
     }
 
-    template<typename _R, typename _C>
-    void introsort(_R range, _C compare) {
-        octa::detail::introloop(range, compare, octa::RangeSize<_R>(2
+    template<typename R, typename C>
+    void introsort(R range, C compare) {
+        octa::detail::introloop(range, compare, octa::RangeSize<R>(2
             * (log(range.size()) / log(2))));
     }
 } /* namespace detail */
 
-template<typename _R, typename _C>
-void sort(_R range, _C compare) {
+template<typename R, typename C>
+void sort(R range, C compare) {
     octa::detail::introsort(range, compare);
 }
 
-template<typename _R>
-void sort(_R range) {
-    sort(range, octa::Less<RangeValue<_R>>());
+template<typename R>
+void sort(R range) {
+    sort(range, octa::Less<RangeValue<R>>());
 }
 
 /* min/max(_element) */
 
-template<typename _T>
-inline const _T &min(const _T &a, const _T &b) {
+template<typename T>
+inline const T &min(const T &a, const T &b) {
     return (a < b) ? a : b;
 }
-template<typename _T, typename _C>
-inline const _T &min(const _T &a, const _T &b, _C compare) {
+template<typename T, typename C>
+inline const T &min(const T &a, const T &b, C compare) {
     return compare(a, b) ? a : b;
 }
 
-template<typename _T>
-inline const _T &max(const _T &a, const _T &b) {
+template<typename T>
+inline const T &max(const T &a, const T &b) {
     return (a < b) ? b : a;
 }
-template<typename _T, typename _C>
-inline const _T &max(const _T &a, const _T &b, _C compare) {
+template<typename T, typename C>
+inline const T &max(const T &a, const T &b, C compare) {
     return compare(a, b) ? b : a;
 }
 
-template<typename _R>
-inline _R min_element(_R range) {
-    _R r = range;
+template<typename R>
+inline R min_element(R range) {
+    R r = range;
     for (; !range.empty(); range.pop_front())
         if (octa::min(r.front(), range.front()) == range.front())
             r = range;
     return r;
 }
-template<typename _R, typename _C>
-inline _R min_element(_R range, _C compare) {
-    _R r = range;
+template<typename R, typename C>
+inline R min_element(R range, C compare) {
+    R r = range;
     for (; !range.empty(); range.pop_front())
         if (octa::min(r.front(), range.front(), compare) == range.front())
             r = range;
     return r;
 }
 
-template<typename _R>
-inline _R max_element(_R range) {
-    _R r = range;
+template<typename R>
+inline R max_element(R range) {
+    R r = range;
     for (; !range.empty(); range.pop_front())
         if (octa::max(r.front(), range.front()) == range.front())
             r = range;
     return r;
 }
-template<typename _R, typename _C>
-inline _R max_element(_R range, _C compare) {
-    _R r = range;
+template<typename R, typename C>
+inline R max_element(R range, C compare) {
+    R r = range;
     for (; !range.empty(); range.pop_front())
         if (octa::max(r.front(), range.front(), compare) == range.front())
             r = range;
     return r;
 }
 
-template<typename _T>
-inline _T min(std::initializer_list<_T> il) {
+template<typename T>
+inline T min(std::initializer_list<T> il) {
     return octa::min_element(octa::each(il)).front();
 }
-template<typename _T, typename _C>
-inline _T min(std::initializer_list<_T> il, _C compare) {
+template<typename T, typename C>
+inline T min(std::initializer_list<T> il, C compare) {
     return octa::min_element(octa::each(il), compare).front();
 }
 
-template<typename _T>
-inline _T max(std::initializer_list<_T> il) {
+template<typename T>
+inline T max(std::initializer_list<T> il) {
     return octa::max_element(octa::each(il)).front();
 }
 
-template<typename _T, typename _C>
-inline _T max(std::initializer_list<_T> il, _C compare) {
+template<typename T, typename C>
+inline T max(std::initializer_list<T> il, C compare) {
     return octa::max_element(octa::each(il), compare).front();
 }
 
 /* clamp */
 
-template<typename _T, typename _U>
-inline _T clamp(const _T &v, const _U &lo, const _U &hi) {
-    return octa::max(_T(lo), octa::min(v, _T(hi)));
+template<typename T, typename U>
+inline T clamp(const T &v, const U &lo, const U &hi) {
+    return octa::max(T(lo), octa::min(v, T(hi)));
 }
 
-template<typename _T, typename _U, typename _C>
-inline _T clamp(const _T &v, const _U &lo, const _U &hi, _C compare) {
-    return octa::max(_T(lo), octa::min(v, _T(hi), compare), compare);
+template<typename T, typename U, typename C>
+inline T clamp(const T &v, const U &lo, const U &hi, C compare) {
+    return octa::max(T(lo), octa::min(v, T(hi), compare), compare);
 }
 
 /* algos that don't change the range */
 
-template<typename _R, typename _F>
-_F for_each(_R range, _F func) {
+template<typename R, typename F>
+F for_each(R range, F func) {
     for (; !range.empty(); range.pop_front())
         func(range.front());
     return octa::move(func);
 }
 
-template<typename _R, typename _P>
-bool all_of(_R range, _P pred) {
+template<typename R, typename P>
+bool all_of(R range, P pred) {
     for (; !range.empty(); range.pop_front())
         if (!pred(range.front())) return false;
     return true;
 }
 
-template<typename _R, typename _P>
-bool any_of(_R range, _P pred) {
+template<typename R, typename P>
+bool any_of(R range, P pred) {
     for (; !range.empty(); range.pop_front())
         if (pred(range.front())) return true;
     return false;
 }
 
-template<typename _R, typename _P>
-bool none_of(_R range, _P pred) {
+template<typename R, typename P>
+bool none_of(R range, P pred) {
     for (; !range.empty(); range.pop_front())
         if (pred(range.front())) return false;
     return true;
 }
 
-template<typename _R, typename _T>
-_R find(_R range, const _T &v) {
+template<typename R, typename T>
+R find(R range, const T &v) {
     for (; !range.empty(); range.pop_front())
         if (range.front() == v)
             break;
     return range;
 }
 
-template<typename _R, typename _P>
-_R find_if(_R range, _P pred) {
+template<typename R, typename P>
+R find_if(R range, P pred) {
     for (; !range.empty(); range.pop_front())
         if (pred(range.front()))
             break;
     return range;
 }
 
-template<typename _R, typename _P>
-_R find_if_not(_R range, _P pred) {
+template<typename R, typename P>
+R find_if_not(R range, P pred) {
     for (; !range.empty(); range.pop_front())
         if (!pred(range.front()))
             break;
     return range;
 }
 
-template<typename _R, typename _T>
-RangeSize<_R> count(_R range, const _T &v) {
-    RangeSize<_R> ret = 0;
+template<typename R, typename T>
+RangeSize<R> count(R range, const T &v) {
+    RangeSize<R> ret = 0;
     for (; !range.empty(); range.pop_front())
         if (range.front() == v)
             ++ret;
     return ret;
 }
 
-template<typename _R, typename _P>
-RangeSize<_R> count_if(_R range, _P pred) {
-    RangeSize<_R> ret = 0;
+template<typename R, typename P>
+RangeSize<R> count_if(R range, P pred) {
+    RangeSize<R> ret = 0;
     for (; !range.empty(); range.pop_front())
         if (pred(range.front()))
             ++ret;
     return ret;
 }
 
-template<typename _R, typename _P>
-RangeSize<_R> count_if_not(_R range, _P pred) {
-    RangeSize<_R> ret = 0;
+template<typename R, typename P>
+RangeSize<R> count_if_not(R range, P pred) {
+    RangeSize<R> ret = 0;
     for (; !range.empty(); range.pop_front())
         if (!pred(range.front()))
             ++ret;
     return ret;
 }
 
-template<typename _R>
-bool equal(_R range1, _R range2) {
+template<typename R>
+bool equal(R range1, R range2) {
     for (; !range1.empty(); range1.pop_front()) {
         if (range2.empty() || (range1.front() != range2.front()))
             return false;
@@ -310,38 +310,38 @@ bool equal(_R range1, _R range2) {
 
 /* algos that modify ranges or work with output ranges */
 
-template<typename _R1, typename _R2>
-_R2 copy(_R1 irange, _R2 orange) {
+template<typename R1, typename R2>
+R2 copy(R1 irange, R2 orange) {
     for (; !irange.empty(); irange.pop_front())
         orange.put(irange.front());
     return orange;
 }
 
-template<typename _R1, typename _R2, typename _P>
-_R2 copy_if(_R1 irange, _R2 orange, _P pred) {
+template<typename R1, typename R2, typename P>
+R2 copy_if(R1 irange, R2 orange, P pred) {
     for (; !irange.empty(); irange.pop_front())
         if (pred(irange.front()))
             orange.put(irange.front());
     return orange;
 }
 
-template<typename _R1, typename _R2, typename _P>
-_R2 copy_if_not(_R1 irange, _R2 orange, _P pred) {
+template<typename R1, typename R2, typename P>
+R2 copy_if_not(R1 irange, R2 orange, P pred) {
     for (; !irange.empty(); irange.pop_front())
         if (!pred(irange.front()))
             orange.put(irange.front());
     return orange;
 }
 
-template<typename _R1, typename _R2>
-_R2 move(_R1 irange, _R2 orange) {
+template<typename R1, typename R2>
+R2 move(R1 irange, R2 orange) {
     for (; !irange.empty(); irange.pop_front())
         orange.put(octa::move(irange.front()));
     return orange;
 }
 
-template<typename _R>
-void reverse(_R range) {
+template<typename R>
+void reverse(R range) {
     while (!range.empty()) {
         octa::swap(range.front(), range.back());
         range.pop_front();
@@ -349,27 +349,27 @@ void reverse(_R range) {
     }
 }
 
-template<typename _R1, typename _R2>
-_R2 reverse_copy(_R1 irange, _R2 orange) {
+template<typename R1, typename R2>
+R2 reverse_copy(R1 irange, R2 orange) {
     for (; !irange.empty(); irange.pop_back())
         orange.put(irange.back());
     return orange;
 }
 
-template<typename _R, typename _T>
-void fill(_R range, const _T &v) {
+template<typename R, typename T>
+void fill(R range, const T &v) {
     for (; !range.empty(); range.pop_front())
         range.front() = v;
 }
 
-template<typename _R, typename _F>
-void generate(_R range, _F gen) {
+template<typename R, typename F>
+void generate(R range, F gen) {
     for (; !range.empty(); range.pop_front())
         range.front() = gen();
 }
 
-template<typename _R1, typename _R2>
-octa::Pair<_R1, _R2> swap_ranges(_R1 range1, _R2 range2) {
+template<typename R1, typename R2>
+octa::Pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
     while (!range1.empty() && !range2.empty()) {
         octa::swap(range1.front(), range2.front());
         range1.pop_front();
@@ -378,52 +378,52 @@ octa::Pair<_R1, _R2> swap_ranges(_R1 range1, _R2 range2) {
     return octa::make_pair(range1, range2);
 }
 
-template<typename _R, typename _T>
-void iota(_R range, _T value) {
+template<typename R, typename T>
+void iota(R range, T value) {
     for (; !range.empty(); range.pop_front())
         range.front() = value++;
 }
 
-template<typename _R, typename _T>
-_T foldl(_R range, _T init) {
+template<typename R, typename T>
+T foldl(R range, T init) {
     for (; !range.empty(); range.pop_front())
         init = init + range.front();
     return init;
 }
 
-template<typename _R, typename _T, typename _F>
-_T foldl(_R range, _T init, _F func) {
+template<typename R, typename T, typename F>
+T foldl(R range, T init, F func) {
     for (; !range.empty(); range.pop_front())
         init = func(init, range.front());
     return init;
 }
 
-template<typename _R, typename _T>
-_T foldr(_R range, _T init) {
+template<typename R, typename T>
+T foldr(R range, T init) {
     for (; !range.empty(); range.pop_back())
         init = init + range.back();
     return init;
 }
 
-template<typename _R, typename _T, typename _F>
-_T foldr(_R range, _T init, _F func) {
+template<typename R, typename T, typename F>
+T foldr(R range, T init, F func) {
     for (; !range.empty(); range.pop_back())
         init = func(init, range.back());
     return init;
 }
 
-template<typename _T, typename _R>
+template<typename T, typename R>
 struct MapRange: InputRange<
-    MapRange<_T, _R>, octa::RangeCategory<_T>, _R, _R, octa::RangeSize<_T>
+    MapRange<T, R>, octa::RangeCategory<T>, R, R, octa::RangeSize<T>
 > {
 private:
-    _T p_range;
-    octa::Function<_R(octa::RangeReference<_T>)> p_func;
+    T p_range;
+    octa::Function<R(octa::RangeReference<T>)> p_func;
 
 public:
     MapRange(): p_range(), p_func() {}
-    template<typename _F>
-    MapRange(const _T &range, const _F &func):
+    template<typename F>
+    MapRange(const T &range, const F &func):
         p_range(range), p_func(func) {}
     MapRange(const MapRange &it):
         p_range(it.p_range), p_func(it.p_func) {}
@@ -442,7 +442,7 @@ public:
     }
 
     bool empty() const { return p_range.empty(); }
-    octa::RangeSize<_T> size() const { return p_range.size(); }
+    octa::RangeSize<T> size() const { return p_range.size(); }
 
     bool equals_front(const MapRange &r) const {
         return p_range.equals_front(r.p_range);
@@ -451,10 +451,10 @@ public:
         return p_range.equals_front(r.p_range);
     }
 
-    octa::RangeDifference<_T> distance_front(const MapRange &r) const {
+    octa::RangeDifference<T> distance_front(const MapRange &r) const {
         return p_range.distance_front(r.p_range);
     }
-    octa::RangeDifference<_T> distance_back(const MapRange &r) const {
+    octa::RangeDifference<T> distance_back(const MapRange &r) const {
         return p_range.distance_back(r.p_range);
     }
 
@@ -464,54 +464,54 @@ public:
     bool push_front() { return p_range.pop_front(); }
     bool push_back() { return p_range.push_back(); }
 
-    octa::RangeSize<_T> pop_front_n(octa::RangeSize<_T> n) {
+    octa::RangeSize<T> pop_front_n(octa::RangeSize<T> n) {
         p_range.pop_front_n(n);
     }
-    octa::RangeSize<_T> pop_back_n(octa::RangeSize<_T> n) {
+    octa::RangeSize<T> pop_back_n(octa::RangeSize<T> n) {
         p_range.pop_back_n(n);
     }
 
-    octa::RangeSize<_T> push_front_n(octa::RangeSize<_T> n) {
+    octa::RangeSize<T> push_front_n(octa::RangeSize<T> n) {
         return p_range.push_front_n(n);
     }
-    octa::RangeSize<_T> push_back_n(octa::RangeSize<_T> n) {
+    octa::RangeSize<T> push_back_n(octa::RangeSize<T> n) {
         return p_range.push_back_n(n);
     }
 
-    _R front() const { return p_func(p_range.front()); }
-    _R back() const { return p_func(p_range.back()); }
+    R front() const { return p_func(p_range.front()); }
+    R back() const { return p_func(p_range.back()); }
 
-    _R operator[](octa::RangeSize<_T> idx) const {
+    R operator[](octa::RangeSize<T> idx) const {
         return p_func(p_range[idx]);
     }
 
-    MapRange<_T, _R> slice(octa::RangeSize<_T> start,
-                           octa::RangeSize<_T> end) {
-        return MapRange<_T, _R>(p_range.slice(start, end), p_func);
+    MapRange<T, R> slice(octa::RangeSize<T> start,
+                           octa::RangeSize<T> end) {
+        return MapRange<T, R>(p_range.slice(start, end), p_func);
     }
 };
 
 namespace detail {
-    template<typename _R, typename _F> using MapReturnType
-        = decltype(declval<_F>()(octa::declval<octa::RangeReference<_R>>()));
+    template<typename R, typename F> using MapReturnType
+        = decltype(declval<F>()(octa::declval<octa::RangeReference<R>>()));
 }
 
-template<typename _R, typename _F>
-MapRange<_R, octa::detail::MapReturnType<_R, _F>> map(_R range,
-                                                      _F func) {
-    return octa::MapRange<_R, octa::detail::MapReturnType<_R, _F>>(range,
+template<typename R, typename F>
+MapRange<R, octa::detail::MapReturnType<R, F>> map(R range,
+                                                      F func) {
+    return octa::MapRange<R, octa::detail::MapReturnType<R, F>>(range,
         func);
 }
 
-template<typename _T>
+template<typename T>
 struct FilterRange: InputRange<
-    FilterRange<_T>, octa::CommonType<octa::RangeCategory<_T>,
+    FilterRange<T>, octa::CommonType<octa::RangeCategory<T>,
                                       octa::ForwardRangeTag>,
-    octa::RangeValue<_T>, octa::RangeReference<_T>, octa::RangeSize<_T>
+    octa::RangeValue<T>, octa::RangeReference<T>, octa::RangeSize<T>
 > {
 private:
-    _T p_range;
-    octa::Function<bool(octa::RangeReference<_T>)> p_pred;
+    T p_range;
+    octa::Function<bool(octa::RangeReference<T>)> p_pred;
 
     void advance_valid() {
         while (!p_range.empty() && !p_pred(front())) p_range.pop_front();
@@ -520,8 +520,8 @@ private:
 public:
     FilterRange(): p_range(), p_pred() {}
 
-    template<typename _P>
-    FilterRange(const _T &range, const _P &pred): p_range(range),
+    template<typename P>
+    FilterRange(const T &range, const P &pred): p_range(range),
     p_pred(pred) {
         advance_valid();
     }
@@ -559,7 +559,7 @@ public:
         return ret;
     }
     bool push_front() {
-        _T tmp = p_range;
+        T tmp = p_range;
         if (!tmp.push_front()) return false;
         while (!p_pred(tmp.front()))
             if (!tmp.push_front())
@@ -568,12 +568,12 @@ public:
         return true;
     }
 
-    octa::RangeReference<_T> front() const { return p_range.front(); }
+    octa::RangeReference<T> front() const { return p_range.front(); }
 };
 
-template<typename _R, typename _P>
-FilterRange<_R> filter(_R range, _P pred) {
-    return octa::FilterRange<_R>(range, pred);
+template<typename R, typename P>
+FilterRange<R> filter(R range, P pred) {
+    return octa::FilterRange<R>(range, pred);
 }
 
 } /* namespace octa */

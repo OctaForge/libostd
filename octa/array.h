@@ -14,55 +14,55 @@
 
 namespace octa {
 
-template<typename _T, size_t _N>
+template<typename T, size_t N>
 struct Array {
     typedef size_t                  Size;
     typedef ptrdiff_t               Difference;
-    typedef       _T                Value;
-    typedef       _T               &Reference;
-    typedef const _T               &ConstReference;
-    typedef       _T               *Pointer;
-    typedef const _T               *ConstPointer;
-    typedef PointerRange<      _T>  Range;
-    typedef PointerRange<const _T>  ConstRange;
+    typedef       T                Value;
+    typedef       T               &Reference;
+    typedef const T               &ConstReference;
+    typedef       T               *Pointer;
+    typedef const T               *ConstPointer;
+    typedef PointerRange<      T>  Range;
+    typedef PointerRange<const T>  ConstRange;
 
-    _T &operator[](size_t i) { return p_buf[i]; }
-    const _T &operator[](size_t i) const { return p_buf[i]; }
+    T &operator[](size_t i) { return p_buf[i]; }
+    const T &operator[](size_t i) const { return p_buf[i]; }
 
-    _T &at(size_t i) { return p_buf[i]; }
-    const _T &at(size_t i) const { return p_buf[i]; }
+    T &at(size_t i) { return p_buf[i]; }
+    const T &at(size_t i) const { return p_buf[i]; }
 
-    _T &front() { return p_buf[0]; }
-    const _T &front() const { return p_buf[0]; }
+    T &front() { return p_buf[0]; }
+    const T &front() const { return p_buf[0]; }
 
-    _T &back() { return p_buf[(_N > 0) ? (_N - 1) : 0]; }
-    const _T &back() const { return p_buf[(_N > 0) ? (_N - 1) : 0]; }
+    T &back() { return p_buf[(N > 0) ? (N - 1) : 0]; }
+    const T &back() const { return p_buf[(N > 0) ? (N - 1) : 0]; }
 
-    size_t size() const { return _N; }
+    size_t size() const { return N; }
 
-    bool empty() const { return _N == 0; }
+    bool empty() const { return N == 0; }
 
-    bool in_range(size_t idx) { return idx < _N; }
-    bool in_range(int idx) { return idx >= 0 && size_t(idx) < _N; }
-    bool in_range(const _T *ptr) {
-        return ptr >= &p_buf[0] && ptr < &p_buf[_N];
+    bool in_range(size_t idx) { return idx < N; }
+    bool in_range(int idx) { return idx >= 0 && size_t(idx) < N; }
+    bool in_range(const T *ptr) {
+        return ptr >= &p_buf[0] && ptr < &p_buf[N];
     }
 
-    _T *data() { return p_buf; }
-    const _T *data() const { return p_buf; }
+    T *data() { return p_buf; }
+    const T *data() const { return p_buf; }
 
     Range each() {
-        return octa::PointerRange<_T>(p_buf, p_buf + _N);
+        return octa::PointerRange<T>(p_buf, p_buf + N);
     }
     ConstRange each() const {
-        return octa::PointerRange<const _T>(p_buf, p_buf + _N);
+        return octa::PointerRange<const T>(p_buf, p_buf + N);
     }
 
     void swap(Array &v) {
         octa::swap_ranges(each(), v.each());
     }
 
-    _T p_buf[(_N > 0) ? _N : 1];
+    T p_buf[(N > 0) ? N : 1];
 };
 
 } /* namespace octa */

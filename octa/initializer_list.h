@@ -14,19 +14,19 @@
 /* must be in std namespace otherwise the compiler won't know about it */
 namespace std {
 
-template<typename _T>
+template<typename T>
 class initializer_list {
-    const _T *p_buf;
+    const T *p_buf;
     size_t p_len;
 
-    initializer_list(const _T *v, size_t n): p_buf(v), p_len(n) {}
+    initializer_list(const T *v, size_t n): p_buf(v), p_len(n) {}
 public:
     initializer_list(): p_buf(nullptr), p_len(0) {}
 
     size_t size() const { return p_len; }
 
-    const _T *begin() const { return p_buf; }
-    const _T *end() const { return p_buf + p_len; }
+    const T *begin() const { return p_buf; }
+    const T *end() const { return p_buf + p_len; }
 };
 
 }
@@ -36,11 +36,11 @@ public:
 
 namespace octa {
 
-template<typename _T> using InitializerList = std::initializer_list<_T>;
+template<typename T> using InitializerList = std::initializer_list<T>;
 
-template<typename _T>
-octa::PointerRange<const _T> each(std::initializer_list<_T> init) {
-    return octa::PointerRange<const _T>(init.begin(), init.end());
+template<typename T>
+octa::PointerRange<const T> each(std::initializer_list<T> init) {
+    return octa::PointerRange<const T>(init.begin(), init.end());
 }
 
 }
