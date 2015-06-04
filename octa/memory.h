@@ -206,344 +206,346 @@ namespace octa {
 
     /* box */
 
+namespace detail {
     template<typename _T, typename _U, bool = octa::IsEmpty<_U>::value>
-    struct __OctaBoxPair;
+    struct BoxPair;
 
     template<typename _T, typename _U>
-    struct __OctaBoxPair<_T, _U, false> { /* non-empty deleter */
-        _T *__ptr;
+    struct BoxPair<_T, _U, false> { /* non-empty deleter */
+        _T *p_ptr;
     private:
-        _U  __del;
+        _U  p_del;
 
     public:
         template<typename _D>
-        __OctaBoxPair(_T *__ptr, _D &&__dltr): __ptr(__ptr),
-            __del(octa::forward<_D>(__dltr)) {}
+        BoxPair(_T *ptr, _D &&dltr): p_ptr(ptr), p_del(octa::forward<_D>(dltr)) {}
 
-        _U &get_deleter() { return __del; }
-        const _U &get_deleter() const { return __del; }
+        _U &get_deleter() { return p_del; }
+        const _U &get_deleter() const { return p_del; }
 
-        void swap(__OctaBoxPair &__v) {
-            octa::swap(__ptr, __v.__ptr);
-            octa::swap(__del, __v.__del);
+        void swap(BoxPair &v) {
+            octa::swap(p_ptr, v.p_ptr);
+            octa::swap(p_del, v.p_del);
         }
     };
 
     template<typename _T, typename _U>
-    struct __OctaBoxPair<_T, _U, true>: _U { /* empty deleter */
-        _T *__ptr;
+    struct BoxPair<_T, _U, true>: _U { /* empty deleter */
+        _T *p_ptr;
 
         template<typename _D>
-        __OctaBoxPair(_T *__ptr, _D &&__dltr):
-            _U(octa::forward<_D>(__dltr)), __ptr(__ptr) {}
+        BoxPair(_T *ptr, _D &&dltr): _U(octa::forward<_D>(dltr)), p_ptr(ptr) {}
 
         _U &get_deleter() { return *this; }
         const _U &get_deleter() const { return *this; }
 
-        void swap(__OctaBoxPair &__v) {
-            octa::swap(__ptr, __v.__ptr);
+        void swap(BoxPair &v) {
+            octa::swap(p_ptr, v.p_ptr);
         }
     };
 
     template<typename _T>
-    static int __octa_ptr_test(...);
+    static int ptr_test(...);
     template<typename _T>
-    static char __octa_ptr_test(typename _T::Pointer * = 0);
+    static char ptr_test(typename _T::Pointer * = 0);
 
-    template<typename _T> struct __OctaHasPtr: octa::IntegralConstant<bool,
-        (sizeof(__octa_ptr_test<_T>(0)) == 1)
+    template<typename _T> struct HasPtr: octa::IntegralConstant<bool,
+        (sizeof(ptr_test<_T>(0)) == 1)
     > {};
 
-    template<typename _T, typename _D, bool = __OctaHasPtr<_D>::value>
-    struct __OctaPointerBase {
+    template<typename _T, typename _D, bool = HasPtr<_D>::value>
+    struct PointerBase {
         typedef typename _D::Pointer Type;
     };
 
-    template<typename _T, typename _D> struct __OctaPointerBase<_T, _D, false> {
+    template<typename _T, typename _D> struct PointerBase<_T, _D, false> {
         typedef _T *Type;
     };
 
-    template<typename _T, typename _D> struct __OctaPointer {
-        typedef typename __OctaPointerBase<_T, octa::RemoveReference<_D>>::Type Type;
+    template<typename _T, typename _D> struct PointerType {
+        typedef typename PointerBase<_T, octa::RemoveReference<_D>>::Type Type;
     };
+} /* namespace detail */
 
-    template<typename _T, typename _D = DefaultDelete<_T>>
-    struct Box {
-        typedef _T Element;
-        typedef _D Deleter;
-        typedef typename __OctaPointer<_T, _D>::Type Pointer;
+template<typename _T, typename _D = DefaultDelete<_T>>
+struct Box {
+    typedef _T Element;
+    typedef _D Deleter;
+    typedef typename octa::detail::PointerType<_T, _D>::Type Pointer;
 
-    private:
-        struct __OctaNat { int __x; };
+private:
+    struct Nat { int x; };
 
-        typedef RemoveReference<_D> &_D_ref;
-        typedef const RemoveReference<_D> &_D_cref;
+    typedef RemoveReference<_D> &_D_ref;
+    typedef const RemoveReference<_D> &_D_cref;
 
-    public:
-        constexpr Box(): __stor(nullptr, _D()) {
-            static_assert(!octa::IsPointer<_D>::value,
-                "Box constructed with null fptr deleter");
-        }
-        constexpr Box(nullptr_t): __stor(nullptr, _D()) {
-            static_assert(!octa::IsPointer<_D>::value,
-                "Box constructed with null fptr deleter");
-        }
+public:
+    constexpr Box(): p_stor(nullptr, _D()) {
+        static_assert(!octa::IsPointer<_D>::value,
+            "Box constructed with null fptr deleter");
+    }
+    constexpr Box(nullptr_t): p_stor(nullptr, _D()) {
+        static_assert(!octa::IsPointer<_D>::value,
+            "Box constructed with null fptr deleter");
+    }
 
-        explicit Box(Pointer __p): __stor(__p, _D()) {
-            static_assert(!octa::IsPointer<_D>::value,
-                "Box constructed with null fptr deleter");
-        }
+    explicit Box(Pointer p): p_stor(p, _D()) {
+        static_assert(!octa::IsPointer<_D>::value,
+            "Box constructed with null fptr deleter");
+    }
 
-        Box(Pointer __p, octa::Conditional<octa::IsReference<_D>::value,
-            _D, octa::AddLvalueReference<const _D>
-        > __d): __stor(__p, __d) {}
+    Box(Pointer p, octa::Conditional<octa::IsReference<_D>::value,
+        _D, octa::AddLvalueReference<const _D>
+    > d): p_stor(p, d) {}
 
-        Box(Pointer __p, octa::RemoveReference<_D> &&__d):
-        __stor(__p, octa::move(__d)) {
-            static_assert(!octa::IsReference<_D>::value,
-                "rvalue deleter cannot be a ref");
-        }
+    Box(Pointer p, octa::RemoveReference<_D> &&d):
+    p_stor(p, octa::move(d)) {
+        static_assert(!octa::IsReference<_D>::value,
+            "rvalue deleter cannot be a ref");
+    }
 
-        Box(Box &&__u): __stor(__u.release(),
-            octa::forward<_D>(__u.get_deleter())) {}
+    Box(Box &&u): p_stor(u.release(), octa::forward<_D>(u.get_deleter())) {}
 
-        template<typename _TT, typename _DD>
-        Box(Box<_TT, _DD> &&__u, octa::EnableIf<!octa::IsArray<_TT>::value
-            && octa::IsConvertible<typename Box<_TT, _DD>::Pointer, Pointer>::value
-            && octa::IsConvertible<_DD, _D>::value
-            && (!octa::IsReference<_D>::value || octa::IsSame<_D, _DD>::value)
-        > = __OctaNat()): __stor(__u.release(), octa::forward<_DD>(__u.get_deleter())) {}
+    template<typename _TT, typename _DD>
+    Box(Box<_TT, _DD> &&u, octa::EnableIf<!octa::IsArray<_TT>::value
+        && octa::IsConvertible<typename Box<_TT, _DD>::Pointer, Pointer>::value
+        && octa::IsConvertible<_DD, _D>::value
+        && (!octa::IsReference<_D>::value || octa::IsSame<_D, _DD>::value)
+    > = Nat()): p_stor(u.release(), octa::forward<_DD>(u.get_deleter())) {}
 
-        Box &operator=(Box &&__u) {
-            reset(__u.release());
-            __stor.get_deleter() = octa::forward<_D>(__u.get_deleter());
-            return *this;
-        }
+    Box &operator=(Box &&u) {
+        reset(u.release());
+        p_stor.get_deleter() = octa::forward<_D>(u.get_deleter());
+        return *this;
+    }
 
-        template<typename _TT, typename _DD>
-        EnableIf<!octa::IsArray<_TT>::value
-            && octa::IsConvertible<typename Box<_TT, _DD>::Pointer, Pointer>::value
-            && octa::IsAssignable<_D &, _DD &&>::value,
-            Box &
-        > operator=(Box<_TT, _DD> &&__u) {
-            reset(__u.release());
-            __stor.get_deleter() = octa::forward<_DD>(__u.get_deleter());
-            return *this;
-        }
+    template<typename _TT, typename _DD>
+    EnableIf<!octa::IsArray<_TT>::value
+        && octa::IsConvertible<typename Box<_TT, _DD>::Pointer, Pointer>::value
+        && octa::IsAssignable<_D &, _DD &&>::value,
+        Box &
+    > operator=(Box<_TT, _DD> &&u) {
+        reset(u.release());
+        p_stor.get_deleter() = octa::forward<_DD>(u.get_deleter());
+        return *this;
+    }
 
-        Box &operator=(nullptr_t) {
-            reset();
-            return *this;
-        }
+    Box &operator=(nullptr_t) {
+        reset();
+        return *this;
+    }
 
-        ~Box() { reset(); }
+    ~Box() { reset(); }
 
-        octa::AddLvalueReference<_T> operator*() const { return *__stor.__ptr; }
-        Pointer operator->() const { return __stor.__ptr; }
+    octa::AddLvalueReference<_T> operator*() const { return *p_stor.p_ptr; }
+    Pointer operator->() const { return p_stor.p_ptr; }
 
-        explicit operator bool() const {
-            return __stor.__ptr != nullptr;
-        }
+    explicit operator bool() const {
+        return p_stor.p_ptr != nullptr;
+    }
 
-        Pointer get() const { return __stor.__ptr; }
+    Pointer get() const { return p_stor.p_ptr; }
 
-        _D_ref  get_deleter()       { return __stor.get_deleter(); }
-        _D_cref get_deleter() const { return __stor.get_deleter(); }
+    _D_ref  get_deleter()       { return p_stor.get_deleter(); }
+    _D_cref get_deleter() const { return p_stor.get_deleter(); }
 
-        Pointer release() {
-            Pointer __p = __stor.__ptr;
-            __stor.__ptr = nullptr;
-            return __p;
-        }
+    Pointer release() {
+        Pointer p = p_stor.p_ptr;
+        p_stor.p_ptr = nullptr;
+        return p;
+    }
 
-        void reset(Pointer __p = nullptr) {
-            Pointer __tmp = __stor.__ptr;
-            __stor.__ptr = __p;
-            if (__tmp) __stor.get_deleter()(__tmp);
-        }
+    void reset(Pointer p = nullptr) {
+        Pointer tmp = p_stor.p_ptr;
+        p_stor.p_ptr = p;
+        if (tmp) p_stor.get_deleter()(tmp);
+    }
 
-        void swap(Box &__u) {
-            __stor.swap(__u.__stor);
-        }
+    void swap(Box &u) {
+        p_stor.swap(u.p_stor);
+    }
 
-    private:
-        __OctaBoxPair<_T, _D> __stor;
-    };
+private:
+    octa::detail::BoxPair<_T, _D> p_stor;
+};
 
+namespace detail {
     template<typename _T, typename _U, bool = octa::IsSame<
         octa::RemoveCv<PointerElement<_T>>,
         octa::RemoveCv<PointerElement<_U>>
-    >::value> struct __OctaSameOrLessCvQualifiedBase: octa::IsConvertible<_T, _U> {};
+    >::value> struct SameOrLessCvQualifiedBase: octa::IsConvertible<_T, _U> {};
 
     template<typename _T, typename _U>
-    struct __OctaSameOrLessCvQualifiedBase<_T, _U, false>: octa::False {};
+    struct SameOrLessCvQualifiedBase<_T, _U, false>: octa::False {};
 
     template<typename _T, typename _U, bool = octa::IsPointer<_T>::value
         || octa::IsSame<_T, _U>::value || __OctaHasElement<_T>::value
-    > struct __OctaSameOrLessCvQualified: __OctaSameOrLessCvQualifiedBase<_T, _U> {};
+    > struct SameOrLessCvQualified: SameOrLessCvQualifiedBase<_T, _U> {};
 
     template<typename _T, typename _U>
-    struct __OctaSameOrLessCvQualified<_T, _U, false>: octa::False {};
+    struct SameOrLessCvQualified<_T, _U, false>: octa::False {};
+} /* namespace detail */
 
-    template<typename _T, typename _D>
-    struct Box<_T[], _D> {
-        typedef _T Element;
-        typedef _D Deleter;
-        typedef typename __OctaPointer<_T, _D>::Type Pointer;
+template<typename _T, typename _D>
+struct Box<_T[], _D> {
+    typedef _T Element;
+    typedef _D Deleter;
+    typedef typename octa::detail::PointerType<_T, _D>::Type Pointer;
 
-    private:
-        struct __OctaNat { int __x; };
+private:
+    struct Nat { int x; };
 
-        typedef RemoveReference<_D> &_D_ref;
-        typedef const RemoveReference<_D> &_D_cref;
+    typedef RemoveReference<_D> &_D_ref;
+    typedef const RemoveReference<_D> &_D_cref;
 
-    public:
-        constexpr Box(): __stor(nullptr, _D()) {
-            static_assert(!octa::IsPointer<_D>::value,
-                "Box constructed with null fptr deleter");
-        }
-        constexpr Box(nullptr_t): __stor(nullptr, _D()) {
-            static_assert(!octa::IsPointer<_D>::value,
-                "Box constructed with null fptr deleter");
-        }
-
-        template<typename _U> explicit Box(_U __p, octa::EnableIf<
-            __OctaSameOrLessCvQualified<_U, Pointer>::value, __OctaNat
-        > = __OctaNat()): __stor(__p, _D()) {
-            static_assert(!octa::IsPointer<_D>::value,
-                "Box constructed with null fptr deleter");
-        }
-
-        template<typename _U> Box(_U __p, octa::Conditional<
-            octa::IsReference<_D>::value,
-            _D, AddLvalueReference<const _D>
-        > __d, octa::EnableIf<__OctaSameOrLessCvQualified<_U, Pointer>::value,
-        __OctaNat> = __OctaNat()): __stor(__p, __d) {}
-
-        Box(nullptr_t, octa::Conditional<octa::IsReference<_D>::value,
-            _D, AddLvalueReference<const _D>
-        > __d): __stor(nullptr, __d) {}
-
-        template<typename _U> Box(_U __p, octa::RemoveReference<_D> &&__d,
-        octa::EnableIf<
-            __OctaSameOrLessCvQualified<_U, Pointer>::value, __OctaNat
-        > = __OctaNat()): __stor(__p, octa::move(__d)) {
-            static_assert(!octa::IsReference<_D>::value,
-                "rvalue deleter cannot be a ref");
-        }
-
-        Box(nullptr_t, octa::RemoveReference<_D> &&__d):
-        __stor(nullptr, octa::move(__d)) {
-            static_assert(!octa::IsReference<_D>::value,
-                "rvalue deleter cannot be a ref");
-        }
-
-        Box(Box &&__u): __stor(__u.release(),
-            octa::forward<_D>(__u.get_deleter())) {}
-
-        template<typename _TT, typename _DD>
-        Box(Box<_TT, _DD> &&__u, EnableIf<IsArray<_TT>::value
-            && __OctaSameOrLessCvQualified<typename Box<_TT, _DD>::Pointer,
-                                           Pointer>::value
-            && octa::IsConvertible<_DD, _D>::value
-            && (!octa::IsReference<_D>::value ||
-                 octa::IsSame<_D, _DD>::value)> = __OctaNat()
-        ): __stor(__u.release(), octa::forward<_DD>(__u.get_deleter())) {}
-
-        Box &operator=(Box &&__u) {
-            reset(__u.release());
-            __stor.get_deleter() = octa::forward<_D>(__u.get_deleter());
-            return *this;
-        }
-
-        template<typename _TT, typename _DD>
-        EnableIf<octa::IsArray<_TT>::value
-            && __OctaSameOrLessCvQualified<typename Box<_TT, _DD>::Pointer,
-                                           Pointer>::value
-            && IsAssignable<_D &, _DD &&>::value,
-            Box &
-        > operator=(Box<_TT, _DD> &&__u) {
-            reset(__u.release());
-            __stor.get_deleter() = octa::forward<_DD>(__u.get_deleter());
-            return *this;
-        }
-
-        Box &operator=(nullptr_t) {
-            reset();
-            return *this;
-        }
-
-        ~Box() { reset(); }
-
-        octa::AddLvalueReference<_T> operator[](size_t __idx) const {
-            return __stor.__ptr[__idx];
-        }
-
-        explicit operator bool() const {
-            return __stor.__ptr != nullptr;
-        }
-
-        Pointer get() const { return __stor.__ptr; }
-
-        _D_ref  get_deleter()       { return __stor.get_deleter(); }
-        _D_cref get_deleter() const { return __stor.get_deleter(); }
-
-        Pointer release() {
-            Pointer __p = __stor.__ptr;
-            __stor.__ptr = nullptr;
-            return __p;
-        }
-
-        template<typename _U> EnableIf<
-            __OctaSameOrLessCvQualified<_U, Pointer>::value, void
-        > reset(_U __p) {
-            Pointer __tmp = __stor.__ptr;
-            __stor.__ptr = __p;
-            if (__tmp) __stor.get_deleter()(__tmp);
-        }
-
-        void reset(nullptr_t) {
-            Pointer __tmp = __stor.__ptr;
-            __stor.__ptr = nullptr;
-            if (__tmp) __stor.get_deleter()(__tmp);
-        }
-
-        void reset() {
-            reset(nullptr);
-        }
-
-        void swap(Box &__u) {
-            __stor.swap(__u.__stor);
-        }
-
-    private:
-        __OctaBoxPair<_T, _D> __stor;
-    };
-
-    template<typename _T> struct __OctaBoxIf {
-        typedef Box<_T> __OctaBox;
-    };
-
-    template<typename _T> struct __OctaBoxIf<_T[]> {
-        typedef Box<_T[]> __OctaBoxUnknownSize;
-    };
-
-    template<typename _T, size_t _N> struct __OctaBoxIf<_T[_N]> {
-        typedef void __OctaBoxKnownSize;
-    };
-
-    template<typename _T, typename ..._A>
-    typename __OctaBoxIf<_T>::__OctaBox make_box(_A &&...__args) {
-        return Box<_T>(new _T(octa::forward<_A>(__args)...));
+public:
+    constexpr Box(): p_stor(nullptr, _D()) {
+        static_assert(!octa::IsPointer<_D>::value,
+            "Box constructed with null fptr deleter");
+    }
+    constexpr Box(nullptr_t): p_stor(nullptr, _D()) {
+        static_assert(!octa::IsPointer<_D>::value,
+            "Box constructed with null fptr deleter");
     }
 
-    template<typename _T>
-    typename __OctaBoxIf<_T>::__OctaBoxUnknownSize make_box(size_t __n) {
-        return Box<_T>(new octa::RemoveExtent<_T>[__n]());
+    template<typename _U> explicit Box(_U p, octa::EnableIf<
+        octa::detail::SameOrLessCvQualified<_U, Pointer>::value, Nat
+    > = Nat()): p_stor(p, _D()) {
+        static_assert(!octa::IsPointer<_D>::value,
+            "Box constructed with null fptr deleter");
     }
 
-    template<typename _T, typename ..._A>
-    typename __OctaBoxIf<_T>::__OctaBoxKnownSize make_box(_A &&...__args) = delete;
+    template<typename _U> Box(_U p, octa::Conditional<
+        octa::IsReference<_D>::value,
+        _D, AddLvalueReference<const _D>
+    > d, octa::EnableIf<octa::detail::SameOrLessCvQualified<_U, Pointer>::value,
+    Nat> = Nat()): p_stor(p, d) {}
+
+    Box(nullptr_t, octa::Conditional<octa::IsReference<_D>::value,
+        _D, AddLvalueReference<const _D>
+    > d): p_stor(nullptr, d) {}
+
+    template<typename _U> Box(_U p, octa::RemoveReference<_D> &&d,
+    octa::EnableIf<
+        octa::detail::SameOrLessCvQualified<_U, Pointer>::value, Nat
+    > = Nat()): p_stor(p, octa::move(d)) {
+        static_assert(!octa::IsReference<_D>::value,
+            "rvalue deleter cannot be a ref");
+    }
+
+    Box(nullptr_t, octa::RemoveReference<_D> &&d):
+    p_stor(nullptr, octa::move(d)) {
+        static_assert(!octa::IsReference<_D>::value,
+            "rvalue deleter cannot be a ref");
+    }
+
+    Box(Box &&u): p_stor(u.release(), octa::forward<_D>(u.get_deleter())) {}
+
+    template<typename _TT, typename _DD>
+    Box(Box<_TT, _DD> &&u, EnableIf<IsArray<_TT>::value
+        && octa::detail::SameOrLessCvQualified<typename Box<_TT, _DD>::Pointer,
+                                               Pointer>::value
+        && octa::IsConvertible<_DD, _D>::value
+        && (!octa::IsReference<_D>::value ||
+             octa::IsSame<_D, _DD>::value)> = Nat()
+    ): p_stor(u.release(), octa::forward<_DD>(u.get_deleter())) {}
+
+    Box &operator=(Box &&u) {
+        reset(u.release());
+        p_stor.get_deleter() = octa::forward<_D>(u.get_deleter());
+        return *this;
+    }
+
+    template<typename _TT, typename _DD>
+    EnableIf<octa::IsArray<_TT>::value
+        && octa::detail::SameOrLessCvQualified<typename Box<_TT, _DD>::Pointer,
+                                               Pointer>::value
+        && IsAssignable<_D &, _DD &&>::value,
+        Box &
+    > operator=(Box<_TT, _DD> &&u) {
+        reset(u.release());
+        p_stor.get_deleter() = octa::forward<_DD>(u.get_deleter());
+        return *this;
+    }
+
+    Box &operator=(nullptr_t) {
+        reset();
+        return *this;
+    }
+
+    ~Box() { reset(); }
+
+    octa::AddLvalueReference<_T> operator[](size_t idx) const {
+        return p_stor.p_ptr[idx];
+    }
+
+    explicit operator bool() const {
+        return p_stor.p_ptr != nullptr;
+    }
+
+    Pointer get() const { return p_stor.p_ptr; }
+
+    _D_ref  get_deleter()       { return p_stor.get_deleter(); }
+    _D_cref get_deleter() const { return p_stor.get_deleter(); }
+
+    Pointer release() {
+        Pointer p = p_stor.p_ptr;
+        p_stor.p_ptr = nullptr;
+        return p;
+    }
+
+    template<typename _U> EnableIf<
+        octa::detail::SameOrLessCvQualified<_U, Pointer>::value, void
+    > reset(_U p) {
+        Pointer tmp = p_stor.p_ptr;
+        p_stor.p_ptr = p;
+        if (tmp) p_stor.get_deleter()(tmp);
+    }
+
+    void reset(nullptr_t) {
+        Pointer tmp = p_stor.p_ptr;
+        p_stor.p_ptr = nullptr;
+        if (tmp) p_stor.get_deleter()(tmp);
+    }
+
+    void reset() {
+        reset(nullptr);
+    }
+
+    void swap(Box &u) {
+        p_stor.swap(u.p_stor);
+    }
+
+private:
+    octa::detail::BoxPair<_T, _D> p_stor;
+};
+
+namespace detail {
+    template<typename _T> struct BoxIf {
+        typedef Box<_T> Box;
+    };
+
+    template<typename _T> struct BoxIf<_T[]> {
+        typedef Box<_T[]> BoxUnknownSize;
+    };
+
+    template<typename _T, size_t _N> struct BoxIf<_T[_N]> {
+        typedef void BoxKnownSize;
+    };
+}
+
+template<typename _T, typename ..._A>
+typename octa::detail::BoxIf<_T>::Box make_box(_A &&...args) {
+    return Box<_T>(new _T(octa::forward<_A>(args)...));
+}
+
+template<typename _T>
+typename octa::detail::BoxIf<_T>::BoxUnknownSize make_box(size_t n) {
+    return Box<_T>(new octa::RemoveExtent<_T>[n]());
+}
+
+template<typename _T, typename ..._A>
+typename octa::detail::BoxIf<_T>::BoxKnownSize make_box(_A &&...args) = delete;
 
 /* allocator */
 
@@ -725,7 +727,7 @@ template<typename _A>
 using AllocatorValue = typename AllocatorType<_A>::Value;
 
 template<typename _A>
-using AllocatorPointer = typename __OctaPointer<
+using AllocatorPointer = typename octa::detail::PointerType<
     AllocatorValue<_A>, AllocatorType <_A>
 >::Type;
 
