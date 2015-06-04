@@ -522,11 +522,11 @@ private:
 
 namespace detail {
     template<typename _T> struct BoxIf {
-        typedef Box<_T> Box;
+        typedef octa::Box<_T> Box;
     };
 
     template<typename _T> struct BoxIf<_T[]> {
-        typedef Box<_T[]> BoxUnknownSize;
+        typedef octa::Box<_T[]> BoxUnknownSize;
     };
 
     template<typename _T, size_t _N> struct BoxIf<_T[_N]> {
