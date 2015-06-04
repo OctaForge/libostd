@@ -15,9 +15,9 @@
 namespace octa {
     /* address of */
 
-    template<typename _T> constexpr _T *address_of(_T &__v) {
+    template<typename _T> constexpr _T *address_of(_T &v) {
         return reinterpret_cast<_T *>(&const_cast<char &>
-            (reinterpret_cast<const volatile char &>(__v)));
+            (reinterpret_cast<const volatile char &>(v)));
     }
 
     /* pointer traits */
@@ -187,8 +187,8 @@ namespace octa {
 
         template<typename _U> DefaultDelete(const DefaultDelete<_U> &) {};
 
-        void operator()(_T *__p) const {
-            delete __p;
+        void operator()(_T *p) const {
+            delete p;
         }
     };
 
@@ -198,8 +198,8 @@ namespace octa {
 
         template<typename _U> DefaultDelete(const DefaultDelete<_U[]> &) {};
 
-        void operator()(_T *__p) const {
-            delete[] __p;
+        void operator()(_T *p) const {
+            delete[] p;
         }
         template<typename _U> void operator()(_U *) const = delete;
     };
@@ -896,201 +896,207 @@ namespace octa {
     template<typename _A>
     using IsAlwaysEqual = typename __OctaIsAlwaysEqual<_A>::Type;
 
-    /* allocator allocate */
+/* allocator allocate */
 
-    template<typename _A>
-    inline AllocatorPointer<_A>
-    allocator_allocate(_A &__a, AllocatorSize<_A> __n) {
-        return __a.allocate(__n);
-    }
+template<typename _A>
+inline AllocatorPointer<_A>
+allocator_allocate(_A &a, AllocatorSize<_A> n) {
+    return a.allocate(n);
+}
+
+namespace detail {
+    template<typename _A, typename _S, typename _CVP>
+    auto allocate_hint_test(_A &&a, _S &&sz, _CVP &&p)
+        -> decltype(a.allocate(sz, p), octa::True());
 
     template<typename _A, typename _S, typename _CVP>
-    auto __octa_allocate_hint_test(_A &&__a, _S &&__sz, _CVP &&__p)
-        -> decltype(__a.allocate(__sz, __p), octa::True());
-
-    template<typename _A, typename _S, typename _CVP>
-    auto __octa_allocate_hint_test(const _A &__a, _S &&__sz, _CVP &&__p)
+    auto allocate_hint_test(const _A &, _S &&, _CVP &&)
         -> octa::False;
 
     template<typename _A, typename _S, typename _CVP>
-    struct __OctaAllocateHintTest: octa::IntegralConstant<bool,
+    struct AllocateHintTest: octa::IntegralConstant<bool,
         octa::IsSame<
-            decltype(__octa_allocate_hint_test(octa::declval<_A>(),
-                                               octa::declval<_S>(),
-                                               octa::declval<_CVP>())),
+            decltype(allocate_hint_test(octa::declval<_A>(),
+                                        octa::declval<_S>(),
+                                        octa::declval<_CVP>())),
             octa::True
         >::value
     > {};
 
     template<typename _A>
-    inline AllocatorPointer<_A>
-    __octa_allocate(_A &__a, AllocatorSize<_A> __n,
-                    AllocatorConstVoidPointer<_A> __h, octa::True) {
-        return __a.allocate(__n, __h);
+    inline AllocatorPointer<_A> allocate(_A &a, AllocatorSize<_A> n,
+                                         AllocatorConstVoidPointer<_A> h,
+                                         octa::True) {
+        return a.allocate(n, h);
     }
 
     template<typename _A>
-    inline AllocatorPointer<_A>
-    __octa_allocate(_A &__a, AllocatorSize<_A> __n,
-                    AllocatorConstVoidPointer<_A>, octa::False) {
-        return __a.allocate(__n);
+    inline AllocatorPointer<_A> allocate(_A &a, AllocatorSize<_A> n,
+                                         AllocatorConstVoidPointer<_A>,
+                                         octa::False) {
+        return a.allocate(n);
     }
+} /* namespace detail */
 
-    template<typename _A>
-    inline AllocatorPointer<_A>
-    allocator_allocate(_A &__a, AllocatorSize<_A> __n,
-                       AllocatorConstVoidPointer<_A> __h) {
-        return __octa_allocate(__a, __n, __h, __OctaAllocateHintTest<
+template<typename _A>
+inline AllocatorPointer<_A>
+allocator_allocate(_A &a, AllocatorSize<_A> n,
+                   AllocatorConstVoidPointer<_A> h) {
+    return octa::detail::allocate(a, n, h,
+        octa::detail::AllocateHintTest<
             _A, AllocatorSize<_A>, AllocatorConstVoidPointer<_A>
         >());
-    }
+}
 
-    /* allocator deallocate */
+/* allocator deallocate */
 
-    template<typename _A>
-    inline void allocator_deallocate(_A &__a, AllocatorPointer<_A> __p,
-                                     AllocatorSize<_A> __n) {
-        __a.deallocate(__p, __n);
-    }
+template<typename _A>
+inline void allocator_deallocate(_A &a, AllocatorPointer<_A> p,
+                                 AllocatorSize<_A> n) {
+    a.deallocate(p, n);
+}
 
-    /* allocator construct */
+/* allocator construct */
 
+namespace detail {
     template<typename _A, typename _T, typename ..._Args>
-    auto __octa_construct_test(_A &&__a, _T *__p, _Args &&...__args)
-        -> decltype(__a.construct(__p, octa::forward<_Args>(__args)...),
+    auto construct_test(_A &&a, _T *p, _Args &&...args)
+        -> decltype(a.construct(p, octa::forward<_Args>(args)...),
             octa::True());
 
     template<typename _A, typename _T, typename ..._Args>
-    auto __octa_construct_test(const _A &__a, _T *__p, _Args &&...__args)
+    auto construct_test(const _A &, _T *, _Args &&...)
         -> octa::False;
 
     template<typename _A, typename _T, typename ..._Args>
-    struct __OctaConstructTest: octa::IntegralConstant<bool,
+    struct ConstructTest: octa::IntegralConstant<bool,
         octa::IsSame<
-            decltype(__octa_construct_test(octa::declval<_A>(),
-                                           octa::declval<_T>(),
-                                           octa::declval<_Args>()...)),
+            decltype(construct_test(octa::declval<_A>(),
+                                    octa::declval<_T>(),
+                                    octa::declval<_Args>()...)),
             octa::True
         >::value
     > {};
 
     template<typename _A, typename _T, typename ..._Args>
-    inline void
-    __octa_construct(octa::True, _A &__a, _T *__p, _Args &&...__args) {
-        __a.construct(__p, octa::forward<_Args>(__args)...);
+    inline void construct(octa::True, _A &a, _T *p, _Args &&...args) {
+        a.construct(p, octa::forward<_Args>(args)...);
     }
 
     template<typename _A, typename _T, typename ..._Args>
-    inline void
-    __octa_construct(octa::False, _A &, _T *__p, _Args &&...__args) {
-        ::new ((void *)__p) _T(octa::forward<_Args>(__args)...);
+    inline void construct(octa::False, _A &, _T *p, _Args &&...args) {
+        ::new ((void *)p) _T(octa::forward<_Args>(args)...);
     }
+} /* namespace detail */
 
-    template<typename _A, typename _T, typename ..._Args>
-    inline void allocator_construct(_A &__a, _T *__p, _Args &&...__args) {
-        __octa_construct(__OctaConstructTest<_A, _T *, _Args...>(),
-                         __a, __p, octa::forward<_Args>(__args)...);
-    }
+template<typename _A, typename _T, typename ..._Args>
+inline void allocator_construct(_A &a, _T *p, _Args &&...args) {
+    octa::detail::construct(octa::detail::ConstructTest<
+        _A, _T *, _Args...
+    >(), a, p, octa::forward<_Args>(args)...);
+}
 
-    /* allocator destroy */
+/* allocator destroy */
+
+namespace detail {
+    template<typename _A, typename _P>
+    auto destroy_test(_A &&a, _P &&p) -> decltype(a.destroy(p), octa::True());
 
     template<typename _A, typename _P>
-    auto __octa_destroy_test(_A &&__a, _P &&__p)
-        -> decltype(__a.destroy(__p), octa::True());
+    auto destroy_test(const _A &, _P &&) -> octa::False;
 
     template<typename _A, typename _P>
-    auto __octa_destroy_test(const _A &__a, _P &&__p) -> octa::False;
-
-    template<typename _A, typename _P>
-    struct __OctaDestroyTest: octa::IntegralConstant<bool,
+    struct DestroyTest: octa::IntegralConstant<bool,
         octa::IsSame<
-            decltype(__octa_destroy_test(octa::declval<_A>(),
-                                         octa::declval<_P>())),
+            decltype(destroy_test(octa::declval<_A>(), octa::declval<_P>())),
             octa::True
         >::value
     > {};
 
     template<typename _A, typename _T>
-    inline void __octa_destroy(octa::True, _A &__a, _T *__p) {
-        __a.destroy(__p);
+    inline void destroy(octa::True, _A &a, _T *p) {
+        a.destroy(p);
     }
 
     template<typename _A, typename _T>
-    inline void __octa_destroy(octa::False, _A &, _T *__p) {
-        __p->~_T();
+    inline void destroy(octa::False, _A &, _T *p) {
+        p->~_T();
     }
+} /* namespace detail */
 
-    template<typename _A, typename _T>
-    inline void allocator_destroy(_A &__a, _T *__p) {
-        __octa_destroy(__OctaDestroyTest<_A, _T *>(), __a, __p);
-    }
+template<typename _A, typename _T>
+inline void allocator_destroy(_A &a, _T *p) {
+    octa::detail::destroy(octa::detail::DestroyTest<_A, _T *>(), a, p);
+}
 
-    /* allocator max size */
+/* allocator max size */
+
+namespace detail {
+    template<typename _A>
+    auto alloc_max_size_test(_A &&a) -> decltype(a.max_size(), octa::True());
 
     template<typename _A>
-    auto __octa_alloc_max_size_test(_A &&__a)
-        -> decltype(__a.max_size(), octa::True());
+    auto alloc_max_size_test(const _A &) -> octa::False;
 
     template<typename _A>
-    auto __octa_alloc_max_size_test(const _A &__a) -> octa::False;
-
-    template<typename _A>
-    struct __OctaAllocMaxSizeTest: octa::IntegralConstant<bool,
+    struct AllocMaxSizeTest: octa::IntegralConstant<bool,
         octa::IsSame<
-            decltype(__octa_alloc_max_size_test(octa::declval<_A &>())),
+            decltype(alloc_max_size_test(octa::declval<_A &>())),
             octa::True
         >::value
     > {};
 
     template<typename _A>
-    inline AllocatorSize<_A> __octa_alloc_max_size(octa::True, const _A &__a) {
-        return __a.max_size();
+    inline AllocatorSize<_A> alloc_max_size(octa::True, const _A &a) {
+        return a.max_size();
     }
 
     template<typename _A>
-    inline AllocatorSize<_A> __octa_alloc_max_size(octa::False, const _A &) {
+    inline AllocatorSize<_A> alloc_max_size(octa::False, const _A &) {
         return AllocatorSize<_A>(~0);
     }
+} /* namespace detail */
+
+template<typename _A>
+inline AllocatorSize<_A> allocator_max_size(const _A &a) {
+    return octa::detail::alloc_max_size(octa::detail::AllocMaxSizeTest<
+        const _A
+    >(), a);
+}
+
+/* allocator container copy */
+
+namespace detail {
+    template<typename _A>
+    auto alloc_copy_test(_A &&a) -> decltype(a.container_copy(), octa::True());
 
     template<typename _A>
-    inline AllocatorSize<_A> allocator_max_size(const _A &__a) {
-        return __octa_alloc_max_size(__OctaAllocMaxSizeTest<const _A>(), __a);
-    }
-
-    /* allocator container copy */
+    auto alloc_copy_test(const _A &) -> octa::False;
 
     template<typename _A>
-    auto __octa_alloc_copy_test(_A &&__a)
-        -> decltype(__a.container_copy(), octa::True());
-
-    template<typename _A>
-    auto __octa_alloc_copy_test(const _A &__a) -> octa::False;
-
-    template<typename _A>
-    struct __OctaAllocCopyTest: octa::IntegralConstant<bool,
+    struct AllocCopyTest: octa::IntegralConstant<bool,
         octa::IsSame<
-            decltype(__octa_alloc_copy_test(octa::declval<_A &>())),
-            octa::True
+            decltype(alloc_copy_test(octa::declval<_A &>())), octa::True
         >::value
     > {};
 
     template<typename _A>
-    inline AllocatorType<_A>
-    __octa_alloc_container_copy(octa::True, const _A &__a) {
-        return __a.container_copy();
+    inline AllocatorType<_A> alloc_container_copy(octa::True, const _A &a) {
+        return a.container_copy();
     }
 
     template<typename _A>
-    inline AllocatorType<_A>
-    __octa_alloc_container_copy(octa::False, const _A &__a) {
-        return __a;
+    inline AllocatorType<_A> alloc_container_copy(octa::False, const _A &a) {
+        return a;
     }
+} /* namespace detail */
 
-    template<typename _A>
-    inline AllocatorType<_A> allocator_container_copy(const _A &__a) {
-        return __octa_alloc_container_copy(__OctaAllocCopyTest<const _A>(),
-            __a);
-    }
+template<typename _A>
+inline AllocatorType<_A> allocator_container_copy(const _A &a) {
+    return octa::detail::alloc_container_copy(octa::detail::AllocCopyTest<
+        const _A
+    >(), a);
+}
 }
 
 #endif
