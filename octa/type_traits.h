@@ -71,7 +71,7 @@ template<typename T, T val> constexpr T IntegralConstant<T, val>::value;
 
 namespace detail {
     template<typename T> struct IsVoidBase      : False {};
-    template<           > struct IsVoidBase<void>:  True {};
+    template<          > struct IsVoidBase<void>:  True {};
 }
 
     template<typename T>
@@ -277,12 +277,12 @@ struct IsAbstract: IntegralConstant<bool, __is_abstract(T)> {};
 
 /* is const */
 
-template<typename   > struct IsConst          : False {};
+template<typename  > struct IsConst         : False {};
 template<typename T> struct IsConst<const T>:  True {};
 
 /* is volatile */
 
-template<typename   > struct IsVolatile             : False {};
+template<typename  > struct IsVolatile            : False {};
 template<typename T> struct IsVolatile<volatile T>:  True {};
 
 /* is empty */
@@ -641,8 +641,8 @@ struct IsConvertible: octa::detail::IsConvertibleBase<F, T>::Type {};
 
 /* type equality */
 
-template<typename, typename> struct IsSame        : False {};
-template<typename T       > struct IsSame<T, T>:  True {};
+template<typename, typename> struct IsSame      : False {};
+template<typename T        > struct IsSame<T, T>:  True {};
 
 /* extent */
 
@@ -675,12 +675,12 @@ struct Rank<T[N]>: IntegralConstant<size_t, Rank<T>::value + 1> {};
 
 namespace detail {
     template<typename T>
-    struct RemoveConstBase           { typedef T Type; };
+    struct RemoveConstBase          { typedef T Type; };
     template<typename T>
     struct RemoveConstBase<const T> { typedef T Type; };
 
     template<typename T>
-    struct RemoveVolatileBase              { typedef T Type; };
+    struct RemoveVolatileBase             { typedef T Type; };
     template<typename T>
     struct RemoveVolatileBase<volatile T> { typedef T Type; };
 }
@@ -742,7 +742,7 @@ using AddCv = typename octa::detail::AddCvBase<T>::Type;
 
 namespace detail {
     template<typename T>
-    struct RemoveReferenceBase        { typedef T Type; };
+    struct RemoveReferenceBase       { typedef T Type; };
     template<typename T>
     struct RemoveReferenceBase<T &>  { typedef T Type; };
     template<typename T>
@@ -753,7 +753,7 @@ namespace detail {
 
 namespace detail {
     template<typename T>
-    struct RemovePointerBase                      { typedef T Type; };
+    struct RemovePointerBase                     { typedef T Type; };
     template<typename T>
     struct RemovePointerBase<T *               > { typedef T Type; };
     template<typename T>
@@ -781,7 +781,7 @@ using AddPointer = typename octa::detail::AddPointerBase<T>::Type;
 /* add lvalue reference */
 
 namespace detail {
-    template<typename T> struct AddLr        { typedef T &Type; };
+    template<typename T> struct AddLr       { typedef T &Type; };
     template<typename T> struct AddLr<T  &> { typedef T &Type; };
     template<typename T> struct AddLr<T &&> { typedef T &Type; };
     template<> struct AddLr<void> {
@@ -801,7 +801,7 @@ namespace detail {
 /* add rvalue reference */
 
 namespace detail {
-    template<typename T> struct AddRr        { typedef T &&Type; };
+    template<typename T> struct AddRr       { typedef T &&Type; };
     template<typename T> struct AddRr<T  &> { typedef T &&Type; };
     template<typename T> struct AddRr<T &&> { typedef T &&Type; };
     template<> struct AddRr<void> {
