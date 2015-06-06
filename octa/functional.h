@@ -505,9 +505,6 @@ namespace detail {
         static constexpr bool value = false;
     };
 
-    struct Empty {
-    };
-
     template<typename T>
     T func_to_functor(T &&f) {
         return octa::forward<T>(f);
@@ -527,11 +524,13 @@ namespace detail {
 
     template<typename T, typename R, typename ...A>
     struct IsValidFunctor<T, R(A...)> {
+        struct Nat {};
+
         template<typename U>
         static decltype(func_to_functor(octa::declval<U>())
             (octa::declval<A>()...)) test(U *);
         template<typename>
-        static Empty test(...);
+        static Nat test(...);
 
         static constexpr bool value = octa::IsConvertible<
             decltype(test<T>(nullptr)), R
@@ -555,9 +554,8 @@ struct Function<R(A...)>: octa::detail::FunctionBase<R, A...> {
 
     template<typename T>
     Function(T f, EnableIf<
-        octa::detail::IsValidFunctor<T, R(A...)>::value,
-        octa::detail::Empty
-    > = octa::detail::Empty()) {
+        octa::detail::IsValidFunctor<T, R(A...)>::value, bool
+    > = true) {
         if (func_is_null(f)) {
             init_empty();
             return;
