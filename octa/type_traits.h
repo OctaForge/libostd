@@ -11,7 +11,7 @@
 #include "octa/types.h"
 
 namespace octa {
-    /* forward declarations */
+/* forward declarations */
 
 namespace detail {
     template<typename> struct RemoveCvBase;
@@ -1172,6 +1172,6 @@ namespace detail {
 
 template<typename T>
 using UnderlyingType = typename octa::detail::UnderlyingTypeBase<T>::Type;
-}
+} /* namespace octa */
 
 #endif
