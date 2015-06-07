@@ -412,70 +412,13 @@ T foldr(R range, T init, F func) {
     return init;
 }
 
-namespace detail {
-    template<typename F>
-    struct HofLambdaTypes: HofLambdaTypes<decltype(&F::operator())> {};
-
-    template<typename C, typename R, typename A>
-    struct HofLambdaTypes<R (C::*)(A) const> {
-        typedef R Result;
-        typedef A Arg;
-    };
-
-    template<typename F>
-    using HofLambdaRet = typename HofLambdaTypes<F>::Result;
-
-    template<typename F>
-    using HofLambdaArg = typename HofLambdaTypes<F>::Arg;
-
-    template<typename F>
-    struct HofFuncTest {
-        template<typename FF>
-        static char test(HofLambdaRet<FF> (*)(HofLambdaArg<FF>));
-        template<typename FF>
-        static int test(...);
-        static constexpr bool value = (sizeof(test<F>(octa::declval<F>())) == 1);
-    };
-
-    template<typename F, bool = HofFuncTest<F>::value>
-    struct HofFuncTypeObjBase {
-        typedef octa::Function<HofLambdaRet<F>(HofLambdaArg<F>)> Type;
-    };
-
-    template<typename F>
-    struct HofFuncTypeObjBase<F, true> {
-        typedef HofLambdaRet<F> (*Type)(HofLambdaArg<F>);
-    };
-
-    template<typename F, bool = octa::IsDefaultConstructible<F>::value &&
-                                octa::IsMoveConstructible<F>::value
-    > struct HofFuncTypeObj {
-        typedef typename HofFuncTypeObjBase<F>::Type Type;
-    };
-
-    template<typename F>
-    struct HofFuncTypeObj<F, true> {
-        typedef F Type;
-    };
-
-    template<typename F, bool = octa::IsClass<F>::value>
-    struct HofFuncType {
-        typedef F Type;
-    };
-
-    template<typename F>
-    struct HofFuncType<F, true> {
-        typedef typename HofFuncTypeObj<F>::Type Type;
-    };
-}
-
 template<typename T, typename F, typename R>
 struct MapRange: InputRange<
     MapRange<T, F, R>, octa::RangeCategory<T>, R, R, octa::RangeSize<T>
 > {
 private:
     T p_range;
-    typename octa::detail::HofFuncType<F>::Type p_func;
+    typename octa::FunctionMakeDefaultConstructible<F> p_func;
 
 public:
     MapRange(): p_range(), p_func() {}
@@ -567,7 +510,7 @@ struct FilterRange: InputRange<
 > {
 private:
     T p_range;
-    typename octa::detail::HofFuncType<F>::Type p_pred;
+    typename octa::FunctionMakeDefaultConstructible<F> p_pred;
 
     void advance_valid() {
         while (!p_range.empty() && !p_pred(front())) p_range.pop_front();

@@ -735,6 +735,60 @@ bool operator!=(nullptr_t, const Function<T> &rhs) { return rhs; }
 template<typename T>
 bool operator!=(const Function<T> &lhs, nullptr_t) { return lhs; }
 
+namespace detail {
+    template<typename F>
+    struct DcLambdaTypes: DcLambdaTypes<decltype(&F::operator())> {};
+
+    template<typename C, typename R, typename ...A>
+    struct DcLambdaTypes<R (C::*)(A...) const> {
+        typedef R (*Ptr)(A...);
+        typedef octa::Function<R(A...)> Obj;
+    };
+
+    template<typename F>
+    struct DcFuncTest {
+        template<typename FF>
+        static char test(typename DcLambdaTypes<FF>::Ptr);
+        template<typename FF>
+        static int test(...);
+        static constexpr bool value = (sizeof(test<F>(octa::declval<F>())) == 1);
+    };
+
+    template<typename F, bool = DcFuncTest<F>::value>
+    struct DcFuncTypeObjBase {
+        typedef typename DcLambdaTypes<F>::Obj Type;
+    };
+
+    template<typename F>
+    struct DcFuncTypeObjBase<F, true> {
+        typedef typename DcLambdaTypes<F>::Ptr Type;
+    };
+
+    template<typename F, bool = octa::IsDefaultConstructible<F>::value &&
+                                octa::IsMoveConstructible<F>::value
+    > struct DcFuncTypeObj {
+        typedef typename DcFuncTypeObjBase<F>::Type Type;
+    };
+
+    template<typename F>
+    struct DcFuncTypeObj<F, true> {
+        typedef F Type;
+    };
+
+    template<typename F, bool = octa::IsClass<F>::value>
+    struct DcFuncType {
+        typedef F Type;
+    };
+
+    template<typename F>
+    struct DcFuncType<F, true> {
+        typedef typename DcFuncTypeObj<F>::Type Type;
+    };
+}
+
+template<typename F> using FunctionMakeDefaultConstructible
+    = typename octa::detail::DcFuncType<F>::Type;
+
 } /* namespace octa */
 
 #endif
