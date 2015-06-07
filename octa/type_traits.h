@@ -135,7 +135,7 @@ template<typename T, size_t N> struct IsArray<T[N]>:  True {};
 /* is pointer */
 
 namespace detail {
-    template<typename   > struct IsPointerBase    : False {};
+    template<typename  > struct IsPointerBase     : False {};
     template<typename T> struct IsPointerBase<T *>:  True {};
 }
 
@@ -144,12 +144,12 @@ struct IsPointer: octa::detail::IsPointerBase<RemoveCv<T>> {};
 
 /* is lvalue reference */
 
-template<typename   > struct IsLvalueReference    : False {};
+template<typename  > struct IsLvalueReference     : False {};
 template<typename T> struct IsLvalueReference<T &>:  True {};
 
 /* is rvalue reference */
 
-template<typename   > struct IsRvalueReference     : False {};
+template<typename  > struct IsRvalueReference      : False {};
 template<typename T> struct IsRvalueReference<T &&>:  True {};
 
 /* is enum */
@@ -174,13 +174,13 @@ namespace detail {
     template<typename T> int  function_test(...);
 
     template<typename T> T                 &function_source(int);
-    template<typename T> FunctionTestDummy   function_source(...);
+    template<typename T> FunctionTestDummy  function_source(...);
 
     template<typename T, bool = octa::IsClass<T>::value ||
-                                 octa::IsUnion<T>::value ||
-                                 octa::IsVoid<T>::value ||
-                                 octa::IsReference<T>::value ||
-                                 octa::IsNullPointer<T>::value
+                                octa::IsUnion<T>::value ||
+                                octa::IsVoid<T>::value ||
+                                octa::IsReference<T>::value ||
+                                octa::IsNullPointer<T>::value
     > struct IsFunctionBase: IntegralConstant<bool,
         sizeof(function_test<T>(function_source<T>(0))) == 1
     > {};

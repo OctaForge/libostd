@@ -412,17 +412,81 @@ T foldr(R range, T init, F func) {
     return init;
 }
 
-template<typename T, typename R>
+namespace detail {
+    template<typename F>
+    struct MapLambdaArgs: MapLambdaArgs<decltype(&F::operator())> {};
+
+    template<typename C, typename R, typename A>
+    struct MapLambdaArgs<R(C::*)(A) const> {
+        typedef R Result;
+        typedef A Arg;
+    };
+
+    template<typename F>
+    using MapLambdaRet = typename MapLambdaArgs<F>::Result;
+
+    template<typename F>
+    using MapLambdaArg = typename MapLambdaArgs<F>::Arg;
+
+    template<typename T, typename F>
+    struct MapFuncTest {
+        template<typename FF>
+        static char test(MapLambdaRet<FF> (*)(MapLambdaArg<FF>));
+        template<typename FF>
+        static int test(...);
+
+        static constexpr bool value = (sizeof(test<F>(octa::declval<F>())) == 1) &&
+            octa::IsConvertible<
+                octa::RangeReference<T>,
+                decltype(octa::declval<F>()(octa::declval<
+                    octa::RangeReference<T>
+                >()))
+            >::value;
+    };
+
+    template<typename T, typename R, typename F,
+        bool = octa::IsDefaultConstructible<F>::value &&
+        octa::IsMoveConstructible<F>::value
+    > struct MapFuncTypeObjBase {
+        typedef octa::Function<R(octa::RangeReference<T>)> Type;
+    };
+
+    template<typename T, typename R, typename F>
+    struct MapFuncTypeObjBase<T, R, F, true> {
+        typedef F Type;
+    };
+
+    template<typename T, typename R, typename F, bool = MapFuncTest<T, F>::value>
+    struct MapFuncTypeObj {
+        typedef typename MapFuncTypeObjBase<T, R, F>::Type Type;
+    };
+
+    template<typename T, typename R, typename F>
+    struct MapFuncTypeObj<T, R, F, true> {
+        typedef MapLambdaRet<F>(*Type)(MapLambdaArg<F>);
+    };
+
+    template<typename T, typename R, typename F, bool = octa::IsClass<F>::value>
+    struct MapFuncType {
+        typedef typename MapFuncTypeObj<T, R, F>::Type Type;
+    };
+
+    template<typename T, typename R, typename F>
+    struct MapFuncType<T, R, F, false> {
+        typedef F Type;
+    };
+}
+
+template<typename T, typename F, typename R>
 struct MapRange: InputRange<
-    MapRange<T, R>, octa::RangeCategory<T>, R, R, octa::RangeSize<T>
+    MapRange<T, F, R>, octa::RangeCategory<T>, R, R, octa::RangeSize<T>
 > {
 private:
     T p_range;
-    octa::Function<R(octa::RangeReference<T>)> p_func;
+    typename octa::detail::MapFuncType<T, R, F>::Type p_func;
 
 public:
     MapRange(): p_range(), p_func() {}
-    template<typename F>
     MapRange(const T &range, const F &func):
         p_range(range), p_func(func) {}
     MapRange(const MapRange &it):
@@ -485,9 +549,9 @@ public:
         return p_func(p_range[idx]);
     }
 
-    MapRange<T, R> slice(octa::RangeSize<T> start,
+    MapRange slice(octa::RangeSize<T> start,
                            octa::RangeSize<T> end) {
-        return MapRange<T, R>(p_range.slice(start, end), p_func);
+        return MapRange(p_range.slice(start, end), p_func);
     }
 };
 
@@ -496,17 +560,18 @@ namespace detail {
         = decltype(declval<F>()(octa::declval<octa::RangeReference<R>>()));
 }
 
+
 template<typename R, typename F>
-MapRange<R, octa::detail::MapReturnType<R, F>> map(R range,
+MapRange<R, F, octa::detail::MapReturnType<R, F>> map(R range,
                                                       F func) {
-    return octa::MapRange<R, octa::detail::MapReturnType<R, F>>(range,
+    return octa::MapRange<R, F, octa::detail::MapReturnType<R, F>>(range,
         func);
 }
 
 template<typename T>
 struct FilterRange: InputRange<
     FilterRange<T>, octa::CommonType<octa::RangeCategory<T>,
-                                      octa::ForwardRangeTag>,
+                                     octa::ForwardRangeTag>,
     octa::RangeValue<T>, octa::RangeReference<T>, octa::RangeSize<T>
 > {
 private:
