@@ -366,11 +366,21 @@ namespace detail {
 
         template<typename A>
         A &get_alloc() {
-            return (A &)manager;
+            union {
+                const FunctionManager **m;
+                A *alloc;
+            } u;
+            u.m = &manager;
+            return *u.alloc;
         }
         template<typename A>
         const A &get_alloc() const {
-            return (const A &)manager;
+            union {
+                const FunctionManager * const *m;
+                const A *alloc;
+            } u;
+            u.m = &manager;
+            return *u.alloc;
         }
     };
 
@@ -394,7 +404,12 @@ namespace detail {
         }
 
         static T &get_ref(const FmStorage &s) {
-            return (T &)(s.data);
+            union {
+                const FunctorData *data;
+                T *ret;
+            } u;
+            u.data = &s.data;
+            return *u.ret;
         }
     };
 
@@ -741,7 +756,7 @@ namespace detail {
 
     template<typename C, typename R, typename ...A>
     struct DcLambdaTypes<R (C::*)(A...) const> {
-        typedef R (*Ptr)(A...);
+        typedef octa::Function<R(A...)> Ptr;
         typedef octa::Function<R(A...)> Obj;
     };
 
