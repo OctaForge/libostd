@@ -1,4 +1,4 @@
-/* Core typedefs for OctaSTD.
+/* Core type aliases for OctaSTD.
  *
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
@@ -11,22 +11,22 @@
 
 namespace octa {
 
-typedef signed char schar;
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef unsigned int  uint;
-typedef unsigned long ulong;
-typedef unsigned long long ullong;
-typedef long long llong;
+using schar = signed char;
+using uchar = unsigned char;
+using ushort = unsigned short;
+using uint = unsigned int;
+using ulong = unsigned long;
+using ullong = unsigned long long;
+using llong = long long;
 
-typedef long double ldouble;
+using ldouble = long double;
 
-typedef decltype(nullptr) nullptr_t;
+using nullptr_t = decltype(nullptr);
 
 #if defined(__CLANG_MAX_ALIGN_T_DEFINED) || defined(_GCC_MAX_ALIGN_T)
 using ::max_align_t;
 #else
-typedef long double max_align_t;
+using max_align_t = long double;
 #endif
 
 }

@@ -27,11 +27,11 @@ template<typename T> struct RangeHalf;
 namespace detail { \
     template<typename T> \
     struct Range##Name##Base { \
-        typedef typename T::TypeName Type; \
+        using Type = typename T::TypeName; \
     }; \
     template<typename T> \
     struct Range##Name##Base<RangeHalf<T>> { \
-        typedef typename T::TypeName Type; \
+        using Type = typename T::TypeName; \
     }; \
 } \
 template<typename T> \
@@ -146,7 +146,7 @@ struct RangeHalf {
 private:
     T p_range;
 public:
-    typedef T Range;
+    using Range = T;
 
     RangeHalf(): p_range() {}
     RangeHalf(const T &range): p_range(range) {}
@@ -287,11 +287,11 @@ namespace detail {
 template<typename B, typename C, typename V, typename R = V &,
          typename S = size_t, typename D = ptrdiff_t
 > struct InputRange {
-    typedef C Category;
-    typedef S Size;
-    typedef D Difference;
-    typedef V Value;
-    typedef R Reference;
+    using Category = C;
+    using Size = S;
+    using Difference = D;
+    using Value = V;
+    using Reference = R;
 
     octa::detail::RangeIterator<B> begin() const {
         return octa::detail::RangeIterator<B>((const B &)*this);
@@ -328,11 +328,11 @@ template<typename B, typename C, typename V, typename R = V &,
 template<typename V, typename R = V &, typename S = size_t,
          typename D = ptrdiff_t
 > struct OutputRange {
-    typedef OutputRangeTag Category;
-    typedef S Size;
-    typedef D Difference;
-    typedef V Value;
-    typedef R Reference;
+    using Category = OutputRangeTag;
+    using Size = S;
+    using Difference = D;
+    using Value = V;
+    using Reference = R;
 };
 
 template<typename T>
@@ -341,8 +341,8 @@ struct ReverseRange: InputRange<ReverseRange<T>,
     RangeDifference<T>
 > {
 private:
-    typedef RangeReference<T> r_ref;
-    typedef RangeSize<T> r_size;
+    using Rref = RangeReference<T>;
+    using Rsize = RangeSize<T>;
 
     T p_range;
 
@@ -373,7 +373,7 @@ public:
     }
 
     bool empty() const { return p_range.empty(); }
-    r_size size() const { return p_range.size(); }
+    Rsize size() const { return p_range.size(); }
 
     bool equals_front(const ReverseRange &r) const {
     return p_range.equals_back(r.p_range);
@@ -395,19 +395,19 @@ public:
     bool push_front() { return p_range.push_back(); }
     bool push_back() { return p_range.push_front(); }
 
-    r_size pop_front_n(r_size n) { return p_range.pop_front_n(n); }
-    r_size pop_back_n(r_size n) { return p_range.pop_back_n(n); }
+    Rsize pop_front_n(Rsize n) { return p_range.pop_front_n(n); }
+    Rsize pop_back_n(Rsize n) { return p_range.pop_back_n(n); }
 
-    r_size push_front_n(r_size n) { return p_range.push_front_n(n); }
-    r_size push_back_n(r_size n) { return p_range.push_back_n(n); }
+    Rsize push_front_n(Rsize n) { return p_range.push_front_n(n); }
+    Rsize push_back_n(Rsize n) { return p_range.push_back_n(n); }
 
-    r_ref front() const { return p_range.back(); }
-    r_ref back() const { return p_range.front(); }
+    Rref front() const { return p_range.back(); }
+    Rref back() const { return p_range.front(); }
 
-    r_ref operator[](r_size i) const { return p_range[size() - i - 1]; }
+    Rref operator[](Rsize i) const { return p_range[size() - i - 1]; }
 
-    ReverseRange<T> slice(r_size start, r_size end) const {
-        r_size len = p_range.size();
+    ReverseRange<T> slice(Rsize start, Rsize end) const {
+        Rsize len = p_range.size();
         return ReverseRange<T>(p_range.slice(len - end, len - start));
     }
 };
@@ -423,9 +423,9 @@ struct MoveRange: InputRange<MoveRange<T>,
     RangeDifference<T>
 > {
 private:
-    typedef RangeValue<T>   r_val;
-    typedef RangeValue<T> &&r_ref;
-    typedef RangeSize<T>    r_size;
+    using Rval = RangeValue<T>;
+    using Rref = RangeValue<T> &&;
+    using Rsize = RangeSize<T>;
 
     T p_range;
 
@@ -456,7 +456,7 @@ public:
     }
 
     bool empty() const { return p_range.empty(); }
-    r_size size() const { return p_range.size(); }
+    Rsize size() const { return p_range.size(); }
 
     bool equals_front(const MoveRange &r) const {
         return p_range.equals_front(r.p_range);
@@ -478,23 +478,23 @@ public:
     bool push_front() { return p_range.push_front(); }
     bool push_back() { return p_range.push_back(); }
 
-    r_size pop_front_n(r_size n) { return p_range.pop_front_n(n); }
-    r_size pop_back_n(r_size n) { return p_range.pop_back_n(n); }
+    Rsize pop_front_n(Rsize n) { return p_range.pop_front_n(n); }
+    Rsize pop_back_n(Rsize n) { return p_range.pop_back_n(n); }
 
-    r_size push_front_n(r_size n) { return p_range.push_front_n(n); }
-    r_size push_back_n(r_size n) { return p_range.push_back_n(n); }
+    Rsize push_front_n(Rsize n) { return p_range.push_front_n(n); }
+    Rsize push_back_n(Rsize n) { return p_range.push_back_n(n); }
 
-    r_ref front() const { return octa::move(p_range.front()); }
-    r_ref back() const { return octa::move(p_range.back()); }
+    Rref front() const { return octa::move(p_range.front()); }
+    Rref back() const { return octa::move(p_range.back()); }
 
-    r_ref operator[](r_size i) const { return octa::move(p_range[i]); }
+    Rref operator[](Rsize i) const { return octa::move(p_range[i]); }
 
-    MoveRange<T> slice(r_size start, r_size end) const {
+    MoveRange<T> slice(Rsize start, Rsize end) const {
         return MoveRange<T>(p_range.slice(start, end));
     }
 
-    void put(const r_val &v) { p_range.put(v); }
-    void put(r_val &&v) { p_range.put(octa::move(v)); }
+    void put(const Rval &v) { p_range.put(v); }
+    void put(Rval &&v) { p_range.put(octa::move(v)); }
 };
 
 template<typename T>
@@ -653,11 +653,11 @@ struct EnumeratedRange: InputRange<EnumeratedRange<T>,
     RangeSize<T>
 > {
 private:
-    typedef RangeReference<T> r_ref;
-    typedef RangeSize<T> r_size;
+    using Rref = RangeReference<T>;
+    using Rsize = RangeSize<T>;
 
     T p_range;
-    r_size p_index;
+    Rsize p_index;
 
 public:
     EnumeratedRange(): p_range(), p_index(0) {}
@@ -705,14 +705,14 @@ public:
         return false;
     }
 
-    r_size pop_front_n(r_size n) {
-        r_size ret = p_range.pop_front_n(n);
+    Rsize pop_front_n(Rsize n) {
+        Rsize ret = p_range.pop_front_n(n);
         p_index += ret;
         return ret;
     }
 
-    EnumeratedValue<r_ref, r_size> front() const {
-        return EnumeratedValue<r_ref, r_size> { p_index, p_range.front() };
+    EnumeratedValue<Rref, Rsize> front() const {
+        return EnumeratedValue<Rref, Rsize> { p_index, p_range.front() };
     }
 };
 

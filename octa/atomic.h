@@ -382,11 +382,11 @@ namespace detail {
 
     template<typename T>
     struct Atomic<T, true>: Atomic<T, false> {
-        typedef Atomic<T, false> _base_t;
+        using Base = Atomic<T, false>;
 
         Atomic() = default;
 
-        constexpr Atomic(T v): _base_t(v) {}
+        constexpr Atomic(T v): Base(v) {}
 
         T fetch_add(T op, MemoryOrder ord = MemoryOrder::seq_cst) volatile {
             return atomic_fetch_add(&this->p_a, op, ord);
@@ -452,35 +452,35 @@ namespace detail {
 
     template<typename T>
     struct Atomic: octa::detail::Atomic<T> {
-        typedef octa::detail::Atomic<T> _base_t;
+        using Base = octa::detail::Atomic<T>;
 
         Atomic() = default;
 
-        constexpr Atomic(T v): _base_t(v) {}
+        constexpr Atomic(T v): Base(v) {}
 
         T operator=(T v) volatile {
-            _base_t::store(v); return v;
+            Base::store(v); return v;
         }
 
         T operator=(T v) {
-            _base_t::store(v); return v;
+            Base::store(v); return v;
         }
     };
 
     template<typename T>
     struct Atomic<T *>: octa::detail::Atomic<T *> {
-        typedef octa::detail::Atomic<T *> _base_t;
+        using Base = octa::detail::Atomic<T *>;
 
         Atomic() = default;
 
-        constexpr Atomic(T *v): _base_t(v) {}
+        constexpr Atomic(T *v): Base(v) {}
 
         T *operator=(T *v) volatile {
-            _base_t::store(v); return v;
+            Base::store(v); return v;
         }
 
         T *operator=(T *v) {
-            _base_t::store(v); return v;
+            Base::store(v); return v;
         }
 
         T *fetch_add(ptrdiff_t op, MemoryOrder ord = MemoryOrder::seq_cst)
@@ -917,27 +917,27 @@ namespace detail {
         octa::detail::atomic_signal_fence(ord);
     }
 
-    typedef Atomic<bool  > AtomicBool;
-    typedef Atomic<char  > AtomicChar;
-    typedef Atomic<schar > AtomicSchar;
-    typedef Atomic<uchar > AtomicUchar;
-    typedef Atomic<short > AtomicShort;
-    typedef Atomic<ushort> AtomicUshort;
-    typedef Atomic<int   > AtomicInt;
-    typedef Atomic<uint  > AtomicUint;
-    typedef Atomic<long  > AtomicLong;
-    typedef Atomic<ulong > AtomicUlong;
-    typedef Atomic<llong > AtomicLlong;
-    typedef Atomic<ullong> AtomicUllong;
+    using AtomicBool = Atomic<bool>;
+    using AtomicChar = Atomic<char>;
+    using AtomicSchar = Atomic<schar>;
+    using AtomicUchar = Atomic<uchar>;
+    using AtomicShort = Atomic<short>;
+    using AtomicUshort = Atomic<ushort>;
+    using AtomicInt = Atomic<int>;
+    using AtomicUint = Atomic<uint>;
+    using AtomicLong = Atomic<long>;
+    using AtomicUlong = Atomic<ulong>;
+    using AtomicLlong = Atomic<llong>;
+    using AtomicUllong = Atomic<ullong>;
 
-    typedef Atomic<char16_t> AtomicChar16;
-    typedef Atomic<char32_t> AtomicChar32;
-    typedef Atomic< wchar_t> AtomicWchar;
+    using AtomicChar16 = Atomic<char16_t>;
+    using AtomicChar32 = Atomic<char32_t>;
+    using AtomicWchar = Atomic<wchar_t>;
 
-    typedef Atomic< intptr_t> AtomicIntptr;
-    typedef Atomic<uintptr_t> AtomicUintptr;
-    typedef Atomic<   size_t> AtomicSize;
-    typedef Atomic<ptrdiff_t> AtomicPtrdiff;
+    using AtomicIntptr = Atomic<intptr_t>;
+    using AtomicUintptr = Atomic<uintptr_t>;
+    using AtomicSize = Atomic<size_t>;
+    using AtomicPtrdiff = Atomic<ptrdiff_t>;
 
 #define ATOMIC_FLAG_INIT {false}
 #define ATOMIC_VAR_INIT(v) {v}

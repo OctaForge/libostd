@@ -25,16 +25,16 @@ class StringBase {
     }
 
 public:
-    typedef size_t                  Size;
-    typedef ptrdiff_t               Difference;
-    typedef       T                Value;
-    typedef       T               &Reference;
-    typedef const T               &ConstReference;
-    typedef       T               *Pointer;
-    typedef const T               *ConstPointer;
-    typedef PointerRange<      T>  Range;
-    typedef PointerRange<const T>  ConstRange;
-    typedef A                      Allocator;
+    using Size = size_t;
+    using Difference = ptrdiff_t;
+    using Value = T;
+    using Reference = T &;
+    using ConstReference = const T &;
+    using Pointer = T *;
+    using ConstPointer = const T *;
+    using Range = PointerRange<T>;
+    using ConstRange = PointerRange<const T>;
+    using Allocator = A;
 
     StringBase(const A &a = A()): p_buf(1, '\0', a) {}
 
@@ -177,7 +177,7 @@ public:
     }
 };
 
-typedef StringBase<char> String;
+using String = StringBase<char>;
 
 template<typename T, typename F>
 String concat(const T v, const String &sep, F func) {
@@ -228,8 +228,8 @@ namespace detail {
 }
 
 template<typename T> struct ToString {
-    typedef T Argument;
-    typedef String Result;
+    using Argument = T;
+    using Result = String;
 
     template<typename U>
     static String to_str(const U &v,
@@ -286,16 +286,16 @@ namespace detail {
 }
 
 template<> struct ToString<bool> {
-    typedef bool Argument;
-    typedef String Result;
+    using Argument = bool;
+    using Result = String;
     String operator()(bool b) {
         return b ? "true" : "false";
     }
 };
 
 template<> struct ToString<char> {
-    typedef char Argument;
-    typedef String Result;
+    using Argument = char;
+    using Result = String;
     String operator()(char c) {
         String ret;
         ret.push(c);
@@ -305,8 +305,8 @@ template<> struct ToString<char> {
 
 #define OCTA_TOSTR_NUM(T, fmt) \
 template<> struct ToString<T> { \
-    typedef T Argument; \
-    typedef String Result; \
+    using Argument = T; \
+    using Result = String; \
     String operator()(T v) { \
         String ret; \
         octa::detail::str_printf((octa::Vector<char> *)&ret, fmt, v); \
@@ -328,8 +328,8 @@ OCTA_TOSTR_NUM(ldouble, "%Lf")
 #undef OCTA_TOSTR_NUM
 
 template<typename T> struct ToString<T *> {
-    typedef T *Argument;
-    typedef String Result;
+    using Argument = T *;
+    using Result = String;
     String operator()(Argument v) {
         String ret;
         octa::detail::str_printf((octa::Vector<char> *)&ret, "%p", v);
@@ -338,16 +338,16 @@ template<typename T> struct ToString<T *> {
 };
 
 template<> struct ToString<String> {
-    typedef const String &Argument;
-    typedef String Result;
+    using Argument = const String &;
+    using Result = String;
     String operator()(Argument s) {
         return s;
     }
 };
 
 template<typename T, typename U> struct ToString<octa::Pair<T, U>> {
-    typedef const octa::Pair<T, U> &Argument;
-    typedef String Result;
+    using Argument = const octa::Pair<T, U> &;
+    using Result = String;
     String operator()(Argument v) {
         String ret("{");
         ret += ToString<octa::RemoveCv<octa::RemoveReference<T>>>()

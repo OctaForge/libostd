@@ -143,17 +143,17 @@ template<typename T> struct ReferenceWrapper;
 namespace detail {
     template<typename T>
     struct MakePairRetBase {
-        typedef T Type;
+        using Type = T;
     };
 
     template<typename T>
     struct MakePairRetBase<ReferenceWrapper<T>> {
-        typedef T &Type;
+        using Type = T &;
     };
 
     template<typename T>
     struct MakePairRet {
-        typedef typename octa::detail::MakePairRetBase<octa::Decay<T>>::Type Type;
+        using Type = typename octa::detail::MakePairRetBase<octa::Decay<T>>::Type;
     };
 } /* namespace detail */
 

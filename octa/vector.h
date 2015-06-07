@@ -59,9 +59,9 @@ namespace detail {
 
 template<typename T, typename A = octa::Allocator<T>>
 class Vector {
-    typedef octa::detail::VectorPair<T, A> _vp_type;
+    using VecPair = octa::detail::VectorPair<T, A>;
 
-    _vp_type p_buf;
+    VecPair p_buf;
     size_t p_len, p_cap;
 
     void insert_base(size_t idx, size_t n) {
@@ -114,18 +114,16 @@ class Vector {
     }
 
 public:
-    enum { MIN_SIZE = 8 };
-
-    typedef size_t                 Size;
-    typedef ptrdiff_t              Difference;
-    typedef       T                Value;
-    typedef       T               &Reference;
-    typedef const T               &ConstReference;
-    typedef       T               *Pointer;
-    typedef const T               *ConstPointer;
-    typedef PointerRange<      T>  Range;
-    typedef PointerRange<const T>  ConstRange;
-    typedef A                     Allocator;
+    using Size = size_t;
+    using Difference = ptrdiff_t;
+    using Value = T;
+    using Reference = T &;
+    using ConstReference = const T &;
+    using Pointer = T *;
+    using ConstPointer = const T *;
+    using Range = PointerRange<T>;
+    using ConstRange = PointerRange<const T>;
+    using Allocator = A;
 
     Vector(const A &a = A()): p_buf(nullptr, a), p_len(0), p_cap(0) {}
 
@@ -176,7 +174,7 @@ public:
             }
             return;
         }
-        new (&p_buf) _vp_type(v.p_buf.p_ptr,
+        new (&p_buf) VecPair(v.p_buf.p_ptr,
             octa::move(v.p_buf.get_alloc()));
         p_len = v.p_len;
         p_cap = v.p_cap;
@@ -227,8 +225,8 @@ public:
         octa::allocator_deallocate(p_buf.get_alloc(), p_buf.p_ptr, p_cap);
         p_len = v.p_len;
         p_cap = v.p_cap;
-        p_buf.~_vp_type();
-        new (&p_buf) _vp_type(v.disown(), octa::move(v.p_buf.get_alloc()));
+        p_buf.~VecPair();
+        new (&p_buf) VecPair(v.disown(), octa::move(v.p_buf.get_alloc()));
         return *this;
     }
 
@@ -276,7 +274,7 @@ public:
         if (n <= p_cap) return;
         size_t oc = p_cap;
         if (!oc) {
-            p_cap = octa::max(n, size_t(MIN_SIZE));
+            p_cap = octa::max(n, size_t(8));
         } else {
             while (p_cap < n) p_cap *= 2;
         }

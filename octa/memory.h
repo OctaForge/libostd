@@ -35,27 +35,27 @@ namespace detail {
     struct PointerElementBase;
 
     template<typename T> struct PointerElementBase<T, true> {
-        typedef typename T::Element Type;
+        using Type = typename T::Element;
     };
 
     template<template<typename, typename...> class T, typename U, typename ...A>
     struct PointerElementBase<T<U, A...>, true> {
-        typedef typename T<U, A...>::Element Type;
+        using Type = typename T<U, A...>::Element;
     };
 
     template<template<typename, typename...> class T, typename U, typename ...A>
     struct PointerElementBase<T<U, A...>, false> {
-        typedef U Type;
+        using Type = U;
     };
 
     template<typename T>
     struct PointerElementType {
-        typedef typename PointerElementBase<T>::Type Type;
+        using Type = typename PointerElementBase<T>::Type;
     };
 
     template<typename T>
     struct PointerElementType<T *> {
-        typedef T Type;
+        using Type = T;
     };
 
     template<typename T>
@@ -68,21 +68,21 @@ namespace detail {
 
     template<typename T, bool = HasDifference<T>::value>
     struct PointerDifferenceBase {
-        typedef ptrdiff_t Type;
+        using Type = ptrdiff_t;
     };
 
     template<typename T> struct PointerDifferenceBase<T, true> {
-        typedef typename T::Difference Type;
+        using Type = typename T::Difference;
     };
 
     template<typename T>
     struct PointerDifferenceType {
-        typedef typename PointerDifferenceBase<T>::Type Type;
+        using Type = typename PointerDifferenceBase<T>::Type;
     };
 
     template<typename T>
     struct PointerDifferenceType<T *> {
-        typedef ptrdiff_t Type;
+        using Type = ptrdiff_t;
     };
 
     template<typename T, typename U>
@@ -96,21 +96,21 @@ namespace detail {
 
     template<typename T, typename U, bool = HasRebind<T, U>::value>
     struct PointerRebindBase {
-        typedef typename T::template Rebind<U> Type;
+        using Type = typename T::template Rebind<U>;
     };
 
     template<template<typename, typename...> class T, typename U,
         typename ...A, typename V
     >
     struct PointerRebindBase<T<U, A...>, V, true> {
-        typedef typename T<U, A...>::template Rebind<V> Type;
+        using Type = typename T<U, A...>::template Rebind<V>;
     };
 
     template<template<typename, typename...> class T, typename U,
         typename ...A, typename V
     >
     struct PointerRebindBase<T<U, A...>, V, false> {
-        typedef T<V, A...> Type;
+        using Type = T<V, A...>;
     };
 
     template<typename T, typename U>
@@ -125,12 +125,12 @@ namespace detail {
 
     template<typename T>
     struct PointerPointer {
-        typedef T Type;
+        using Type = T;
     };
 
     template<typename T>
     struct PointerPointer<T *> {
-        typedef T *Type;
+        using Type = T *;
     };
 } /*namespace detail */
 
@@ -255,29 +255,29 @@ namespace detail {
 
     template<typename T, typename D, bool = HasPtr<D>::value>
     struct PointerBase {
-        typedef typename D::Pointer Type;
+        using Type = typename D::Pointer;
     };
 
     template<typename T, typename D> struct PointerBase<T, D, false> {
-        typedef T *Type;
+        using Type = T *;
     };
 
     template<typename T, typename D> struct PointerType {
-        typedef typename PointerBase<T, octa::RemoveReference<D>>::Type Type;
+        using Type = typename PointerBase<T, octa::RemoveReference<D>>::Type;
     };
 } /* namespace detail */
 
 template<typename T, typename D = DefaultDelete<T>>
 struct Box {
-    typedef T Element;
-    typedef D Deleter;
-    typedef typename octa::detail::PointerType<T, D>::Type Pointer;
+    using Element = T;
+    using Deleter = D;
+    using Pointer = typename octa::detail::PointerType<T, D>::Type;
 
 private:
     struct Nat { int x; };
 
-    typedef RemoveReference<D> &D_ref;
-    typedef const RemoveReference<D> &D_cref;
+    using Dref = RemoveReference<D> &;
+    using Dcref = const RemoveReference<D> &;
 
 public:
     constexpr Box(): p_stor(nullptr, D()) {
@@ -346,8 +346,8 @@ public:
 
     Pointer get() const { return p_stor.p_ptr; }
 
-    D_ref  get_deleter()       { return p_stor.get_deleter(); }
-    D_cref get_deleter() const { return p_stor.get_deleter(); }
+    Dref  get_deleter()       { return p_stor.get_deleter(); }
+    Dcref get_deleter() const { return p_stor.get_deleter(); }
 
     Pointer release() {
         Pointer p = p_stor.p_ptr;
@@ -388,15 +388,15 @@ namespace detail {
 
 template<typename T, typename D>
 struct Box<T[], D> {
-    typedef T Element;
-    typedef D Deleter;
-    typedef typename octa::detail::PointerType<T, D>::Type Pointer;
+    using Element = T;
+    using Deleter = D;
+    using Pointer = typename octa::detail::PointerType<T, D>::Type;
 
 private:
     struct Nat { int x; };
 
-    typedef RemoveReference<D> &D_ref;
-    typedef const RemoveReference<D> &D_cref;
+    using Dref = RemoveReference<D> &;
+    using Dcref = const RemoveReference<D> &;
 
 public:
     constexpr Box(): p_stor(nullptr, D()) {
@@ -485,8 +485,8 @@ public:
 
     Pointer get() const { return p_stor.p_ptr; }
 
-    D_ref  get_deleter()       { return p_stor.get_deleter(); }
-    D_cref get_deleter() const { return p_stor.get_deleter(); }
+    Dref  get_deleter()       { return p_stor.get_deleter(); }
+    Dcref get_deleter() const { return p_stor.get_deleter(); }
 
     Pointer release() {
         Pointer p = p_stor.p_ptr;
@@ -522,15 +522,15 @@ private:
 
 namespace detail {
     template<typename T> struct BoxIf {
-        typedef octa::Box<T> Box;
+        using Box = octa::Box<T>;
     };
 
     template<typename T> struct BoxIf<T[]> {
-        typedef octa::Box<T[]> BoxUnknownSize;
+        using BoxUnknownSize = octa::Box<T[]>;
     };
 
     template<typename T, size_t N> struct BoxIf<T[N]> {
-        typedef void BoxKnownSize;
+        using BoxKnownSize = void;
     };
 }
 
@@ -552,29 +552,29 @@ typename octa::detail::BoxIf<T>::BoxKnownSize make_box(A &&...args) = delete;
 template<typename> struct Allocator;
 
 template<> struct Allocator<void> {
-    typedef void        Value;
-    typedef void       *Pointer;
-    typedef const void *ConstPointer;
+    using Value = void;
+    using Pointer = void *;
+    using ConstPointer = const void *;
 
     template<typename U> using Rebind = Allocator<U>;
 };
 
 template<> struct Allocator<const void> {
-    typedef const void  Value;
-    typedef const void *Pointer;
-    typedef const void *ConstPointer;
+    using Value = const void;
+    using Pointer = const void *;
+    using ConstPointer = const void *;
 
     template<typename U> using Rebind = Allocator<U>;
 };
 
 template<typename T> struct Allocator {
-    typedef size_t     Size;
-    typedef ptrdiff_t  Difference;
-    typedef T         Value;
-    typedef T        &Reference;
-    typedef const T  &ConstReference;
-    typedef T        *Pointer;
-    typedef const T  *ConstPointer;
+    using Size = size_t;
+    using Difference = ptrdiff_t;
+    using Value = T;
+    using Reference = T &;
+    using ConstReference = const T &;
+    using Pointer = T *;
+    using ConstPointer = const T *;
 
     template<typename U> using Rebind = Allocator<U>;
 
@@ -602,13 +602,13 @@ template<typename T> struct Allocator {
 };
 
 template<typename T> struct Allocator<const T> {
-    typedef size_t     Size;
-    typedef ptrdiff_t  Difference;
-    typedef const T   Value;
-    typedef const T  &Reference;
-    typedef const T  &ConstReference;
-    typedef const T  *Pointer;
-    typedef const T  *ConstPointer;
+    using Size = size_t;
+    using Difference = ptrdiff_t;
+    using Value = const T;
+    using Reference = const T &;
+    using ConstReference = const T &;
+    using Pointer = const T *;
+    using ConstPointer = const T *;
 
     template<typename U> using Rebind = Allocator<U>;
 
@@ -656,12 +656,12 @@ namespace detail {
     template<typename T, typename P, typename A,
         bool = ConstPtrTest<A>::value>
     struct ConstPointer {
-        typedef typename A::ConstPointer Type;
+        using Type = typename A::ConstPointer;
     };
 
     template<typename T, typename P, typename A>
     struct ConstPointer<T, P, A, false> {
-        typedef PointerRebind<P, const T> Type;
+        using Type = PointerRebind<P, const T>;
     };
 
     template<typename T>
@@ -674,12 +674,12 @@ namespace detail {
 
     template<typename P, typename A, bool = VoidPtrTest<A>::value>
     struct VoidPointer {
-        typedef typename A::VoidPointer Type;
+        using Type = typename A::VoidPointer;
     };
 
     template<typename P, typename A>
     struct VoidPointer<P, A, false> {
-        typedef PointerRebind<P, void> Type;
+        using Type = PointerRebind<P, void>;
     };
 
     template<typename T>
@@ -692,12 +692,12 @@ namespace detail {
 
     template<typename P, typename A, bool = ConstVoidPtrTest<A>::value>
     struct ConstVoidPointer {
-        typedef typename A::ConstVoidPointer Type;
+        using Type = typename A::ConstVoidPointer;
     };
 
     template<typename P, typename A>
     struct ConstVoidPointer<P, A, false> {
-        typedef PointerRebind<P, const void> Type;
+        using Type = PointerRebind<P, const void>;
     };
 
     template<typename T>
@@ -709,12 +709,12 @@ namespace detail {
 
     template<typename A, typename D, bool = SizeTest<A>::value>
     struct SizeBase {
-        typedef octa::MakeUnsigned<D> Type;
+        using Type = octa::MakeUnsigned<D>;
     };
 
     template<typename A, typename D>
     struct SizeBase<A, D, true> {
-        typedef typename A::Size Type;
+        using Type = typename A::Size;
     };
 } /* namespace detail */
 
@@ -758,12 +758,12 @@ namespace detail {
 
     template<typename A, typename P, bool = DiffTest<A>::value>
     struct AllocDifference {
-        typedef PointerDifference<P> Type;
+        using Type = PointerDifference<P>;
     };
 
     template<typename A, typename P>
     struct AllocDifference<A, P, true> {
-        typedef typename A::Difference Type;
+        using Type = typename A::Difference;
     };
 }
 
@@ -784,21 +784,21 @@ using AllocatorSize = typename octa::detail::SizeBase<
 namespace detail {
     template<typename T, typename U, bool = octa::detail::HasRebind<T, U>::value>
     struct AllocTraitsRebindType {
-        typedef typename T::template Rebind<U> Type;
+        using Type = typename T::template Rebind<U>;
     };
 
     template<template<typename, typename...> class A, typename T,
         typename ...Args, typename U
     >
     struct AllocTraitsRebindType<A<T, Args...>, U, true> {
-        typedef typename A<T, Args...>::template Rebind<U> Type;
+        using Type = typename A<T, Args...>::template Rebind<U>;
     };
 
     template<template<typename, typename...> class A, typename T,
         typename ...Args, typename U
     >
     struct AllocTraitsRebindType<A<T, Args...>, U, false> {
-        typedef A<U, Args...> Type;
+        using Type = A<U, Args...>;
     };
 } /* namespace detail */
 
@@ -821,12 +821,12 @@ namespace detail {
     template<typename A, bool = PropagateOnContainerCopyAssignmentTest<
         A
     >::value> struct PropagateOnContainerCopyAssignmentBase {
-        typedef octa::False Type;
+        using Type = octa::False;
     };
 
     template<typename A>
     struct PropagateOnContainerCopyAssignmentBase<A, true> {
-        typedef typename A::PropagateOnContainerCopyAssignment Type;
+        using Type = typename A::PropagateOnContainerCopyAssignment;
     };
 } /* namespace detail */
 
@@ -848,12 +848,12 @@ namespace detail {
     template<typename A, bool = PropagateOnContainerMoveAssignmentTest<
         A
     >::value> struct PropagateOnContainerMoveAssignmentBase {
-        typedef octa::False Type;
+        using Type = octa::False;
     };
 
     template<typename A>
     struct PropagateOnContainerMoveAssignmentBase<A, true> {
-        typedef typename A::PropagateOnContainerMoveAssignment Type;
+        using Type = typename A::PropagateOnContainerMoveAssignment;
     };
 } /* namespace detail */
 
@@ -874,12 +874,12 @@ namespace detail {
 
     template<typename A, bool = PropagateOnContainerSwapTest<A>::value>
     struct PropagateOnContainerSwapBase {
-        typedef octa::False Type;
+        using Type = octa::False;
     };
 
     template<typename A>
     struct PropagateOnContainerSwapBase<A, true> {
-        typedef typename A::PropagateOnContainerSwap Type;
+        using Type = typename A::PropagateOnContainerSwap;
     };
 } /* namespace detail */
 
@@ -899,12 +899,12 @@ namespace detail {
 
     template<typename A, bool = IsAlwaysEqualTest<A>::value>
     struct IsAlwaysEqualBase {
-        typedef typename octa::IsEmpty<A>::Type Type;
+        using Type = typename octa::IsEmpty<A>::Type;
     };
 
     template<typename A>
     struct IsAlwaysEqualBase<A, true> {
-        typedef typename A::IsAlwaysEqual Type;
+        using Type = typename A::IsAlwaysEqual;
     };
 } /* namespace detail */
 

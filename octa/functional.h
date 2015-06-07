@@ -15,14 +15,14 @@ namespace octa {
 
 /* basic function objects */
 
-#define OCTA_DEFINE_BINARY_OP(_name, _op, _rettype) \
-template<typename T> struct _name { \
-    _rettype operator()(const T &x, const T &y) const { \
-        return x _op y; \
+#define OCTA_DEFINE_BINARY_OP(name, op, RT) \
+template<typename T> struct name { \
+    RT operator()(const T &x, const T &y) const { \
+        return x op y; \
     } \
-    typedef T FirstArgument; \
-    typedef T SecondArgument; \
-    typedef _rettype Result; \
+    using FirstArgument = T; \
+    using SecondARgument = T; \
+    using Result = RT; \
 };
 
 OCTA_DEFINE_BINARY_OP(Less, <, bool)
@@ -46,20 +46,20 @@ OCTA_DEFINE_BINARY_OP(BitXor, ^, T)
 
 template<typename T> struct LogicalNot {
     bool operator()(const T &x) const { return !x; }
-    typedef T Argument;
-    typedef bool Result;
+    using Argument = T;
+    using Result = bool;
 };
 
 template<typename T> struct Negate {
     bool operator()(const T &x) const { return -x; }
-    typedef T Argument;
-    typedef T Result;
+    using Argument = T;
+    using Result = T;
 };
 
 template<typename T> struct BinaryNegate {
-    typedef typename T::FirstArgument FirstArgument;
-    typedef typename T::SecondArgument SecondArgument;
-    typedef bool Result;
+    using FirstArgument = typename T::FirstArgument;
+    using SecondArgument = typename T::SecondArgument;
+    using Result = bool;
 
     explicit BinaryNegate(const T &f): p_fn(f) {}
 
@@ -72,8 +72,8 @@ private:
 };
 
 template<typename T> struct UnaryNegate {
-    typedef typename T::Argument Argument;
-    typedef bool Result;
+    using Argument = typename T::Argument;
+    using Result = bool;
 
     explicit UnaryNegate(const T &f): p_fn(f) {}
     bool operator()(const Argument &x) {
@@ -97,8 +97,8 @@ template<typename T> struct Hash;
 
 namespace detail {
     template<typename T> struct HashBase {
-        typedef T Argument;
-        typedef size_t Result;
+        using Argument = T;
+        using Result = size_t;
 
         size_t operator()(T v) const {
             return size_t(v);
@@ -136,8 +136,8 @@ namespace detail {
     struct ScalarHash;
 
     template<typename T> struct ScalarHash<T, 0> {
-        typedef T Argument;
-        typedef size_t Result;
+        using Argument = T;
+        using Result = size_t;
 
         size_t operator()(T v) const {
             union { T v; size_t h; } u;
@@ -148,8 +148,8 @@ namespace detail {
     };
 
     template<typename T> struct ScalarHash<T, 1> {
-        typedef T Argument;
-        typedef size_t Result;
+        using Argument = T;
+        using Result = size_t;
 
         size_t operator()(T v) const {
             union { T v; size_t h; } u;
@@ -159,8 +159,8 @@ namespace detail {
     };
 
     template<typename T> struct ScalarHash<T, 2> {
-        typedef T Argument;
-        typedef size_t Result;
+        using Argument = T;
+        using Result = size_t;
 
         size_t operator()(T v) const {
             union { T v; struct { size_t h1, h2; }; } u;
@@ -170,8 +170,8 @@ namespace detail {
     };
 
     template<typename T> struct ScalarHash<T, 3> {
-        typedef T Argument;
-        typedef size_t Result;
+        using Argument = T;
+        using Result = size_t;
 
         size_t operator()(T v) const {
             union { T v; struct { size_t h1, h2, h3; }; } u;
@@ -181,8 +181,8 @@ namespace detail {
     };
 
     template<typename T> struct ScalarHash<T, 4> {
-        typedef T Argument;
-        typedef size_t Result;
+        using Argument = T;
+        using Result = size_t;
 
         size_t operator()(T v) const {
             union { T v; struct { size_t h1, h2, h3, h4; }; } u;
@@ -231,8 +231,8 @@ template<> struct Hash<ldouble>: octa::detail::ScalarHash<ldouble> {
 };
 
 template<typename T> struct Hash<T *> {
-    typedef T *Argument;
-    typedef size_t Result;
+    using Argument = T *;
+    using Result = size_t;
 
     size_t operator()(T *v) const {
         union { T *v; size_t h; } u;
@@ -245,7 +245,7 @@ template<typename T> struct Hash<T *> {
 
 template<typename T>
 struct ReferenceWrapper {
-    typedef T type;
+    using Type = T;
 
     ReferenceWrapper(T &v): p_ptr(address_of(v)) {}
     ReferenceWrapper(const ReferenceWrapper &) = default;
@@ -286,25 +286,25 @@ namespace detail {
     template<typename, typename> struct MemTypes;
     template<typename T, typename R, typename ...A>
     struct MemTypes<T, R(A...)> {
-        typedef R Result;
-        typedef T Argument;
+        using Result = R;
+        using Argument = T;
     };
     template<typename T, typename R, typename A>
     struct MemTypes<T, R(A)> {
-        typedef R Result;
-        typedef T FirstArgument;
-        typedef A SecondArgument;
+        using Result = R;
+        using FirstArgument = T;
+        using SecondArgument = A;
     };
     template<typename T, typename R, typename ...A>
     struct MemTypes<T, R(A...) const> {
-        typedef R Result;
-        typedef const T Argument;
+        using Result = R;
+        using Argument = const T;
     };
     template<typename T, typename R, typename A>
     struct MemTypes<T, R(A) const> {
-        typedef R Result;
-        typedef const T FirstArgument;
-        typedef A SecondArgument;
+        using Result = R;
+        using FirstArgument = const T;
+        using SecondArgument = A;
     };
 
     template<typename R, typename T>
@@ -488,9 +488,9 @@ namespace detail {
         template<typename T, typename A>
         static void call_move_and_destroy(FmStorage &lhs,
         FmStorage &&rhs) {
-            typedef FunctorDataManager<T, A> _spec;
-            _spec::move_f(lhs, octa::move(rhs));
-            _spec::destroy_f(rhs.get_alloc<A>(), rhs);
+            using Spec = FunctorDataManager<T, A>;
+            Spec::move_f(lhs, octa::move(rhs));
+            Spec::destroy_f(rhs.get_alloc<A>(), rhs);
             create_fm<T, A>(lhs, octa::move(rhs.get_alloc<A>()));
             rhs.get_alloc<A>().~A();
         }
@@ -498,22 +498,22 @@ namespace detail {
         template<typename T, typename A>
         static void call_copy(FmStorage &lhs,
         const FmStorage &rhs) {
-            typedef FunctorDataManager<T, A> _spec;
+            using Spec = FunctorDataManager<T, A>;
             create_fm<T, A>(lhs, A(rhs.get_alloc<A>()));
-            _spec::store_f(lhs, _spec::get_ref(rhs));
+            Spec::store_f(lhs, Spec::get_ref(rhs));
         }
 
         template<typename T, typename A>
         static void call_copy_fo(FmStorage &lhs,
         const FmStorage &rhs) {
-            typedef FunctorDataManager<T, A> _spec;
-            _spec::store_f(lhs, _spec::get_ref(rhs));
+            using Spec = FunctorDataManager<T, A>;
+            Spec::store_f(lhs, Spec::get_ref(rhs));
         }
 
         template<typename T, typename A>
         static void call_destroy(FmStorage &s) {
-            typedef FunctorDataManager<T, A> _spec;
-            _spec::destroy_f(s.get_alloc<A>(), s);
+            using Spec = FunctorDataManager<T, A>;
+            Spec::destroy_f(s.get_alloc<A>(), s);
             s.get_alloc<A>().~A();
         }
     };
@@ -527,20 +527,20 @@ namespace detail {
 
     template<typename R, typename...>
     struct FunctionBase {
-        typedef R Result;
+        using Result = R;
     };
 
     template<typename R, typename T>
     struct FunctionBase<R, T> {
-        typedef R Result;
-        typedef T Argument;
+        using Result = R;
+        using Argument = T;
     };
 
     template<typename R, typename T, typename U>
     struct FunctionBase<R, T, U> {
-        typedef R Result;
-        typedef T FirstArgument;
-        typedef U SecondArgument;
+        using Result = R;
+        using FirstArgument = T;
+        using SecondArgument = U;
     };
 
     template<typename, typename>
@@ -638,7 +638,7 @@ struct Function<R(Args...)>: octa::detail::FunctionBase<R, Args...> {
             return;
         }
 
-        typedef AllocatorRebind<A, Function> AA;
+        using AA = AllocatorRebind<A, Function>;
         const octa::detail::FunctionManager *mff
             = &octa::detail::get_default_fm<Function, AA>();
         if (f.p_stor.manager == mff) {
@@ -712,8 +712,8 @@ private:
     }
 
     void init_empty() {
-        typedef R(*emptyf)(Args...);
-        typedef octa::Allocator<emptyf> emptya;
+        using emptyf = R(*)(Args...);
+        using emptya = octa::Allocator<emptyf>;
         p_call = nullptr;
         octa::detail::create_fm<emptyf, emptya>(p_stor, emptya());
         octa::detail::FunctorDataManager<emptyf, emptya>::store_f(p_stor,
@@ -756,8 +756,8 @@ namespace detail {
 
     template<typename C, typename R, typename ...A>
     struct DcLambdaTypes<R (C::*)(A...) const> {
-        typedef R (*Ptr)(A...);
-        typedef octa::Function<R(A...)> Obj;
+        using Ptr = R (*)(A...);
+        using Obj = octa::Function<R(A...)>;
     };
 
     template<typename F>
@@ -771,33 +771,33 @@ namespace detail {
 
     template<typename F, bool = DcFuncTest<F>::value>
     struct DcFuncTypeObjBase {
-        typedef typename DcLambdaTypes<F>::Obj Type;
+        using Type = typename DcLambdaTypes<F>::Obj;
     };
 
     template<typename F>
     struct DcFuncTypeObjBase<F, true> {
-        typedef typename DcLambdaTypes<F>::Ptr Type;
+        using Type = typename DcLambdaTypes<F>::Ptr;
     };
 
     template<typename F, bool = octa::IsDefaultConstructible<F>::value &&
                                 octa::IsMoveConstructible<F>::value
     > struct DcFuncTypeObj {
-        typedef typename DcFuncTypeObjBase<F>::Type Type;
+        using Type = typename DcFuncTypeObjBase<F>::Type;
     };
 
     template<typename F>
     struct DcFuncTypeObj<F, true> {
-        typedef F Type;
+        using Type = F;
     };
 
     template<typename F, bool = octa::IsClass<F>::value>
     struct DcFuncType {
-        typedef F Type;
+        using Type = F;
     };
 
     template<typename F>
     struct DcFuncType<F, true> {
-        typedef typename DcFuncTypeObj<F>::Type Type;
+        using Type = typename DcFuncTypeObj<F>::Type;
     };
 }
 

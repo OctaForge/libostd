@@ -16,15 +16,15 @@ namespace octa {
 
 template<typename T, size_t N>
 struct Array {
-    typedef size_t                  Size;
-    typedef ptrdiff_t               Difference;
-    typedef       T                Value;
-    typedef       T               &Reference;
-    typedef const T               &ConstReference;
-    typedef       T               *Pointer;
-    typedef const T               *ConstPointer;
-    typedef PointerRange<      T>  Range;
-    typedef PointerRange<const T>  ConstRange;
+    using Size = size_t;
+    using Difference = ptrdiff_t;
+    using Value = T;
+    using Reference = T &;
+    using ConstReference = const T &;
+    using Pointer = T *;
+    using ConstPointer = const T *;
+    using Range = PointerRange<T>;
+    using ConstRange = PointerRange<const T>;
 
     T &operator[](size_t i) { return p_buf[i]; }
     const T &operator[](size_t i) const { return p_buf[i]; }
