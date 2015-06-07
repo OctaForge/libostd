@@ -445,35 +445,36 @@ namespace detail {
     };
 
     template<typename T, typename R, typename F,
-        bool = octa::IsDefaultConstructible<F>::value &&
-        octa::IsMoveConstructible<F>::value
+        bool = MapFuncTest<T, F>::value
     > struct MapFuncTypeObjBase {
         typedef octa::Function<R(octa::RangeReference<T>)> Type;
     };
 
     template<typename T, typename R, typename F>
     struct MapFuncTypeObjBase<T, R, F, true> {
-        typedef F Type;
+        typedef MapLambdaRet<F>(*Type)(MapLambdaArg<F>);
     };
 
-    template<typename T, typename R, typename F, bool = MapFuncTest<T, F>::value>
-    struct MapFuncTypeObj {
+    template<typename T, typename R, typename F,
+        bool = octa::IsDefaultConstructible<F>::value &&
+               octa::IsMoveConstructible<F>::value
+    > struct MapFuncTypeObj {
         typedef typename MapFuncTypeObjBase<T, R, F>::Type Type;
     };
 
     template<typename T, typename R, typename F>
     struct MapFuncTypeObj<T, R, F, true> {
-        typedef MapLambdaRet<F>(*Type)(MapLambdaArg<F>);
+        typedef F Type;
     };
 
     template<typename T, typename R, typename F, bool = octa::IsClass<F>::value>
     struct MapFuncType {
-        typedef typename MapFuncTypeObj<T, R, F>::Type Type;
+        typedef F Type;
     };
 
     template<typename T, typename R, typename F>
-    struct MapFuncType<T, R, F, false> {
-        typedef F Type;
+    struct MapFuncType<T, R, F, true> {
+        typedef typename MapFuncTypeObj<T, R, F>::Type Type;
     };
 }
 
