@@ -1112,6 +1112,11 @@ inline AllocatorType<A> allocator_container_copy(const A &a) {
         const A
     >(), a);
 }
-}
+
+struct AllocatorArg {};
+
+constexpr AllocatorArg allocator_arg = AllocatorArg();
+
+} /* namespace octa */
 
 #endif

@@ -358,85 +358,107 @@ namespace detail {
           && octa::IsMoveConstructible<T>::value;
     };
 
-    template<typename T, typename E = void>
-    struct FunctorDataManager {
-        template<typename R, typename ...A>
-        static R call(const FunctorData &s, A ...args) {
-            return ((T &)s)(octa::forward<A>(args)...);
-        }
-
-        static void store_f(FunctorData &s, T v) {
-            new (&get_ref(s)) T(octa::forward<T>(v));
-        }
-
-        static void move_f(FunctorData &lhs, FunctorData &&rhs) {
-            new (&get_ref(lhs)) T(octa::move(get_ref(rhs)));
-        }
-
-        static void destroy_f(FunctorData &s) {
-            get_ref(s).~T();
-        }
-
-        static T &get_ref(const FunctorData &s) {
-            return (T &)s;
-        }
-    };
-
-    template<typename T>
-    struct FunctorDataManager<T,
-        EnableIf<!FunctorInPlace<T>::value>
-    > {
-        template<typename R, typename ...A>
-        static R call(const FunctorData &s, A ...args) {
-            return (*(T *&)s)(octa::forward<A>(args)...);
-        }
-
-        static void store_f(FunctorData &s, T v) {
-            new (&get_ptr_ref(s)) T *(new T(octa::forward<T>(v)));
-        }
-
-        static void move_f(FunctorData &lhs, FunctorData &&rhs) {
-            new (&get_ptr_ref(lhs)) T *(get_ptr_ref(rhs));
-            get_ptr_ref(rhs) = nullptr;
-        }
-
-        static void destroy_f(FunctorData &s) {
-            T *&ptr = get_ptr_ref(s);
-            if (!ptr) return;
-            delete ptr;
-            ptr = nullptr;
-        }
-
-        static T &get_ref(const FunctorData &s) {
-            return *get_ptr_ref(s);
-        }
-
-        static T *&get_ptr_ref(FunctorData &s) {
-            return (T *&)s;
-        }
-
-        static T *&get_ptr_ref(const FunctorData &s) {
-            return (T *&)s;
-        }
-    };
-
     struct FunctionManager;
 
     struct FmStorage {
         FunctorData data;
         const FunctionManager *manager;
+
+        template<typename A>
+        A &get_alloc() {
+            return (A &)manager;
+        }
+        template<typename A>
+        const A &get_alloc() const {
+            return (const A &)manager;
+        }
     };
 
-    template<typename T>
+    template<typename T, typename A, typename E = void>
+    struct FunctorDataManager {
+        template<typename R, typename ...Args>
+        static R call(const FunctorData &s, Args ...args) {
+            return ((T &)s)(octa::forward<Args>(args)...);
+        }
+
+        static void store_f(FmStorage &s, T v) {
+            new (&get_ref(s)) T(octa::forward<T>(v));
+        }
+
+        static void move_f(FmStorage &lhs, FmStorage &&rhs) {
+            new (&get_ref(lhs)) T(octa::move(get_ref(rhs)));
+        }
+
+        static void destroy_f(A &, FmStorage &s) {
+            get_ref(s).~T();
+        }
+
+        static T &get_ref(const FmStorage &s) {
+            return (T &)(s.data);
+        }
+    };
+
+    template<typename T, typename A>
+    struct FunctorDataManager<T, A,
+        EnableIf<!FunctorInPlace<T>::value>
+    > {
+        template<typename R, typename ...Args>
+        static R call(const FunctorData &s, Args ...args) {
+            return (*(octa::AllocatorPointer<A> &)s)
+                (octa::forward<Args>(args)...);
+        }
+
+        static void store_f(FmStorage &s, T v) {
+            A &a = s.get_alloc<A>();
+            AllocatorPointer<A> *ptr = new (&get_ptr_ref(s))
+                AllocatorPointer<A>(allocator_allocate(a, 1));
+            allocator_construct(a, *ptr, octa::forward<T>(v));
+        }
+
+        static void move_f(FmStorage &lhs, FmStorage &&rhs) {
+            new (&get_ptr_ref(lhs)) AllocatorPointer<A>(octa::move(
+                get_ptr_ref(rhs)));
+            get_ptr_ref(rhs) = nullptr;
+        }
+
+        static void destroy_f(A &a, FmStorage &s) {
+            AllocatorPointer<A> &ptr = get_ptr_ref(s);
+            if (!ptr) return;
+            allocator_destroy(a, ptr);
+            allocator_deallocate(a, ptr, 1);
+            ptr = nullptr;
+        }
+
+        static T &get_ref(const FmStorage &s) {
+            return *get_ptr_ref(s);
+        }
+
+        static AllocatorPointer<A> &get_ptr_ref(FmStorage &s) {
+            return (AllocatorPointer<A> &)(s.data);
+        }
+
+        static AllocatorPointer<A> &get_ptr_ref(const FmStorage &s) {
+            return (AllocatorPointer<A> &)(s.data);
+        }
+    };
+
+    template<typename T, typename A>
     static const FunctionManager &get_default_fm();
 
+    template<typename T, typename A>
+    static void create_fm(FmStorage &s, A &&a) {
+        new (&s.get_alloc<A>()) A(octa::move(a));
+        s.manager = &get_default_fm<T, A>();
+    }
+
     struct FunctionManager {
-        template<typename T>
-        inline static const FunctionManager create_default_manager() {
+        template<typename T, typename A>
+        inline static constexpr FunctionManager create_default_manager() {
             return FunctionManager {
-                &call_move_and_destroy<T>,
-                &call_copy<T>,
-                &call_destroy<T>
+                &call_move_and_destroy<T, A>,
+                &call_copy<T, A>,
+                &call_copy_fo<T, A>,
+                &call_destroy<T, A>
             };
         }
 
@@ -444,36 +466,47 @@ namespace detail {
             FmStorage &&rhs);
         void (* const call_copyf)(FmStorage &lhs,
             const FmStorage &rhs);
+        void (* const call_copyf_fo)(FmStorage &lhs,
+            const FmStorage &rhs);
         void (* const call_destroyf)(FmStorage &s);
 
-        template<typename T>
+        template<typename T, typename A>
         static void call_move_and_destroy(FmStorage &lhs,
         FmStorage &&rhs) {
-            typedef FunctorDataManager<T> _spec;
-            _spec::move_f(lhs.data, octa::move(rhs.data));
-            _spec::destroy_f(rhs.data);
-            lhs.manager = &get_default_fm<T>();
+            typedef FunctorDataManager<T, A> _spec;
+            _spec::move_f(lhs, octa::move(rhs));
+            _spec::destroy_f(rhs.get_alloc<A>(), rhs);
+            create_fm<T, A>(lhs, octa::move(rhs.get_alloc<A>()));
+            rhs.get_alloc<A>().~A();
         }
 
-        template<typename T>
+        template<typename T, typename A>
         static void call_copy(FmStorage &lhs,
         const FmStorage &rhs) {
-            typedef FunctorDataManager<T> _spec;
-            lhs.manager = &get_default_fm<T>();
-            _spec::store_f(lhs.data, _spec::get_ref(rhs.data));
+            typedef FunctorDataManager<T, A> _spec;
+            create_fm<T, A>(lhs, A(rhs.get_alloc<A>()));
+            _spec::store_f(lhs, _spec::get_ref(rhs));
         }
 
-        template<typename T>
+        template<typename T, typename A>
+        static void call_copy_fo(FmStorage &lhs,
+        const FmStorage &rhs) {
+            typedef FunctorDataManager<T, A> _spec;
+            _spec::store_f(lhs, _spec::get_ref(rhs));
+        }
+
+        template<typename T, typename A>
         static void call_destroy(FmStorage &s) {
-            typedef FunctorDataManager<T> _spec;
-            _spec::destroy_f(s.data);
+            typedef FunctorDataManager<T, A> _spec;
+            _spec::destroy_f(s.get_alloc<A>(), s);
+            s.get_alloc<A>().~A();
         }
     };
 
-    template<typename T>
+    template<typename T, typename A>
     inline static const FunctionManager &get_default_fm() {
         static const FunctionManager def_manager
-            = FunctionManager::create_default_manager<T>();
+            = FunctionManager::create_default_manager<T, A>();
         return def_manager;
     }
 
@@ -536,10 +569,13 @@ namespace detail {
             decltype(test<T>(nullptr)), R
         >::value;
     };
+
+    template<typename T>
+    using FunctorType = decltype(func_to_functor(octa::declval<T>()));
 } /* namespace detail */
 
-template<typename R, typename ...A>
-struct Function<R(A...)>: octa::detail::FunctionBase<R, A...> {
+template<typename R, typename ...Args>
+struct Function<R(Args...)>: octa::detail::FunctionBase<R, Args...> {
     Function(         ) { init_empty(); }
     Function(nullptr_t) { init_empty(); }
 
@@ -554,13 +590,60 @@ struct Function<R(A...)>: octa::detail::FunctionBase<R, A...> {
 
     template<typename T>
     Function(T f, EnableIf<
-        octa::detail::IsValidFunctor<T, R(A...)>::value, bool
+        octa::detail::IsValidFunctor<T, R(Args...)>::value, bool
     > = true) {
         if (func_is_null(f)) {
             init_empty();
             return;
         }
-        initialize(octa::detail::func_to_functor(octa::forward<T>(f)));
+        initialize(octa::detail::func_to_functor(octa::forward<T>(f)),
+            octa::Allocator<octa::detail::FunctorType<T>>());
+    }
+
+    template<typename A>
+    Function(octa::AllocatorArg, const A &) { init_empty(); }
+
+    template<typename A>
+    Function(octa::AllocatorArg, const A &, nullptr_t) { init_empty(); }
+
+    template<typename A>
+    Function(octa::AllocatorArg, const A &, Function &&f) {
+        init_empty();
+        swap(f);
+    }
+
+    template<typename A>
+    Function(octa::AllocatorArg, const A &a, const Function &f):
+    p_call(f.p_call) {
+        const octa::detail::FunctionManager *mfa
+            = &octa::detail::get_default_fm<octa::AllocatorValue<A>, A>();
+        if (f.p_stor.manager == mfa) {
+            octa::detail::create_fm<octa::AllocatorValue<A>, A>(p_stor, A(a));
+            mfa->call_copyf_fo(p_stor, f.p_stor);
+            return;
+        }
+
+        typedef AllocatorRebind<A, Function> AA;
+        const octa::detail::FunctionManager *mff
+            = &octa::detail::get_default_fm<Function, AA>();
+        if (f.p_stor.manager == mff) {
+            octa::detail::create_fm<Function, AA>(p_stor, AA(a));
+            mff->call_copyf_fo(p_stor, f.P_stor);
+            return;
+        }
+
+        initialize(f, AA(a));
+    }
+
+    template<typename A, typename T>
+    Function(octa::AllocatorArg, const A &a, T f, EnableIf<
+        octa::detail::IsValidFunctor<T, R(Args...)>::value, bool
+    > = true) {
+        if (func_is_null(f)) {
+            init_empty();
+            return;
+        }
+        initialize(octa::detail::func_to_functor(octa::forward<T>(f)), A(a));
     }
 
     ~Function() {
@@ -575,16 +658,17 @@ struct Function<R(A...)>: octa::detail::FunctionBase<R, A...> {
 
     Function &operator=(const Function &f) {
         p_stor.manager->call_destroyf(p_stor);
-        f.p_stor.manager->call_copyf(p_stor, f.p_stor);
+        swap(Function(f));
         return *this;
     };
 
-    R operator()(A ...args) const {
-        return p_call(p_stor.data, octa::forward<A>(args)...);
+    R operator()(Args ...args) const {
+        return p_call(p_stor.data, octa::forward<Args>(args)...);
     }
 
-    template<typename _F> void assign(_F &&f) {
-        Function(octa::forward<_F>(f)).swap(*this);
+    template<typename F, typename A>
+    void assign(F &&f, const A &a) {
+        Function(octa::allocator_arg, a, octa::forward<F>(f)).swap(*this);
     }
 
     void swap(Function &f) {
@@ -602,37 +686,39 @@ struct Function<R(A...)>: octa::detail::FunctionBase<R, A...> {
 
 private:
     octa::detail::FmStorage p_stor;
-    R (*p_call)(const octa::detail::FunctorData &, A...);
+    R (*p_call)(const octa::detail::FunctorData &, Args...);
 
-    template<typename T>
-    void initialize(T f) {
-        p_call = &octa::detail::FunctorDataManager<T>::template call<R, A...>;
-        p_stor.manager = &octa::detail::get_default_fm<T>();
-        octa::detail::FunctorDataManager<T>::store_f(p_stor.data,
+    template<typename T, typename A>
+    void initialize(T &&f, A &&a) {
+        p_call = &octa::detail::FunctorDataManager<T, A>::template call<R, Args...>;
+        octa::detail::create_fm<T, A>(p_stor, octa::forward<A>(a));
+        octa::detail::FunctorDataManager<T, A>::store_f(p_stor,
             octa::forward<T>(f));
     }
 
     void init_empty() {
-        typedef R(*emptyf)(A...);
+        typedef R(*emptyf)(Args...);
+        typedef octa::Allocator<emptyf> emptya;
         p_call = nullptr;
-        p_stor.manager = &octa::detail::get_default_fm<emptyf>();
-        octa::detail::FunctorDataManager<emptyf>::store_f(p_stor.data, nullptr);
+        octa::detail::create_fm<emptyf, emptya>(p_stor, emptya());
+        octa::detail::FunctorDataManager<emptyf, emptya>::store_f(p_stor,
+            nullptr);
     }
 
     template<typename T>
     static bool func_is_null(const T &) { return false; }
 
-    static bool func_is_null(R (* const &fptr)(A...)) {
+    static bool func_is_null(R (* const &fptr)(Args...)) {
         return fptr == nullptr;
     }
 
-    template<typename RR, typename T, typename ...AA>
-    static bool func_is_null(RR (T::* const &fptr)(AA...)) {
+    template<typename RR, typename T, typename ...AArgs>
+    static bool func_is_null(RR (T::* const &fptr)(AArgs...)) {
         return fptr == nullptr;
     }
 
-    template<typename RR, typename T, typename ...AA>
-    static bool func_is_null(RR (T::* const &fptr)(AA...) const) {
+    template<typename RR, typename T, typename ...AArgs>
+    static bool func_is_null(RR (T::* const &fptr)(AArgs...) const) {
         return fptr == nullptr;
     }
 };
