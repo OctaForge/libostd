@@ -756,7 +756,7 @@ namespace detail {
 
     template<typename C, typename R, typename ...A>
     struct DcLambdaTypes<R (C::*)(A...) const> {
-        typedef octa::Function<R(A...)> Ptr;
+        typedef R (*Ptr)(A...);
         typedef octa::Function<R(A...)> Obj;
     };
 
