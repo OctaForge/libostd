@@ -435,13 +435,7 @@ namespace detail {
         template<typename FF>
         static int test(...);
 
-        static constexpr bool value = (sizeof(test<F>(octa::declval<F>())) == 1) &&
-            octa::IsConvertible<
-                octa::RangeReference<T>,
-                decltype(octa::declval<F>()(octa::declval<
-                    octa::RangeReference<T>
-                >()))
-            >::value;
+        static constexpr bool value = (sizeof(test<F>(octa::declval<F>())) == 1);
     };
 
     template<typename T, typename R, typename F,
