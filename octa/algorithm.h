@@ -418,7 +418,7 @@ struct MapRange: InputRange<
 > {
 private:
     T p_range;
-    typename octa::FunctionMakeDefaultConstructible<F> p_func;
+    octa::FunctionMakeDefaultConstructible<F> p_func;
 
 public:
     MapRange(): p_range(), p_func() {}
@@ -510,7 +510,7 @@ struct FilterRange: InputRange<
 > {
 private:
     T p_range;
-    typename octa::FunctionMakeDefaultConstructible<F> p_pred;
+    octa::FunctionMakeDefaultConstructible<F> p_pred;
 
     void advance_valid() {
         while (!p_range.empty() && !p_pred(front())) p_range.pop_front();
