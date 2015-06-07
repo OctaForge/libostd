@@ -414,59 +414,58 @@ T foldr(R range, T init, F func) {
 
 namespace detail {
     template<typename F>
-    struct MapLambdaTypes: MapLambdaTypes<decltype(&F::operator())> {};
+    struct HofLambdaTypes: HofLambdaTypes<decltype(&F::operator())> {};
 
     template<typename C, typename R, typename A>
-    struct MapLambdaTypes<R (C::*)(A) const> {
+    struct HofLambdaTypes<R (C::*)(A) const> {
         typedef R Result;
         typedef A Arg;
     };
 
     template<typename F>
-    using MapLambdaRet = typename MapLambdaTypes<F>::Result;
+    using HofLambdaRet = typename HofLambdaTypes<F>::Result;
 
     template<typename F>
-    using MapLambdaArg = typename MapLambdaTypes<F>::Arg;
+    using HofLambdaArg = typename HofLambdaTypes<F>::Arg;
 
     template<typename F>
-    struct MapFuncTest {
+    struct HofFuncTest {
         template<typename FF>
-        static char test(MapLambdaRet<FF> (*)(MapLambdaArg<FF>));
+        static char test(HofLambdaRet<FF> (*)(HofLambdaArg<FF>));
         template<typename FF>
         static int test(...);
         static constexpr bool value = (sizeof(test<F>(octa::declval<F>())) == 1);
     };
 
-    template<typename R, typename F, bool = MapFuncTest<F>::value>
-    struct MapFuncTypeObjBase {
-        typedef octa::Function<R(MapLambdaArg<F>)> Type;
+    template<typename F, bool = HofFuncTest<F>::value>
+    struct HofFuncTypeObjBase {
+        typedef octa::Function<HofLambdaRet<F>(HofLambdaArg<F>)> Type;
     };
 
-    template<typename R, typename F>
-    struct MapFuncTypeObjBase<R, F, true> {
-        typedef MapLambdaRet<F> (*Type)(MapLambdaArg<F>);
+    template<typename F>
+    struct HofFuncTypeObjBase<F, true> {
+        typedef HofLambdaRet<F> (*Type)(HofLambdaArg<F>);
     };
 
-    template<typename R, typename F,
-        bool = octa::IsDefaultConstructible<F>::value &&
-               octa::IsMoveConstructible<F>::value
-    > struct MapFuncTypeObj {
-        typedef typename MapFuncTypeObjBase<R, F>::Type Type;
+    template<typename F, bool = octa::IsDefaultConstructible<F>::value &&
+                                octa::IsMoveConstructible<F>::value
+    > struct HofFuncTypeObj {
+        typedef typename HofFuncTypeObjBase<F>::Type Type;
     };
 
-    template<typename R, typename F>
-    struct MapFuncTypeObj<R, F, true> {
+    template<typename F>
+    struct HofFuncTypeObj<F, true> {
         typedef F Type;
     };
 
-    template<typename R, typename F, bool = octa::IsClass<F>::value>
-    struct MapFuncType {
+    template<typename F, bool = octa::IsClass<F>::value>
+    struct HofFuncType {
         typedef F Type;
     };
 
-    template<typename R, typename F>
-    struct MapFuncType<R, F, true> {
-        typedef typename MapFuncTypeObj<R, F>::Type Type;
+    template<typename F>
+    struct HofFuncType<F, true> {
+        typedef typename HofFuncTypeObj<F>::Type Type;
     };
 }
 
@@ -476,7 +475,7 @@ struct MapRange: InputRange<
 > {
 private:
     T p_range;
-    typename octa::detail::MapFuncType<R, F>::Type p_func;
+    typename octa::detail::HofFuncType<F>::Type p_func;
 
 public:
     MapRange(): p_range(), p_func() {}
@@ -560,56 +559,6 @@ MapRange<R, F, octa::detail::MapReturnType<R, F>> map(R range,
         func);
 }
 
-namespace detail {
-    template<typename F>
-    struct FilterLambdaArg: FilterLambdaArg<decltype(&F::operator())> {};
-
-    template<typename C, typename A>
-    struct FilterLambdaArg<bool (C::*)(A) const> {
-        typedef A Type;
-    };
-
-    template<typename F>
-    struct FilterPredTest {
-        template<typename FF>
-        static char test(bool (*)(typename FilterLambdaArg<FF>::Type));
-        template<typename FF>
-        static int test(...);
-        static constexpr bool value = (sizeof(test<F>(octa::declval<F>())) == 1);
-    };
-
-    template<typename F, bool = FilterPredTest<F>::value>
-    struct FilterPredTypeObjBase {
-        typedef octa::Function<bool(typename FilterLambdaArg<F>::Type)> Type;
-    };
-
-    template<typename F>
-    struct FilterPredTypeObjBase<F, true> {
-        typedef bool (*Type)(typename FilterLambdaArg<F>::Type);
-    };
-
-    template<typename F, bool = octa::IsDefaultConstructible<F>::value &&
-                                octa::IsMoveConstructible<F>::value
-    > struct FilterPredTypeObj {
-        typedef typename FilterPredTypeObjBase<F>::Type Type;
-    };
-
-    template<typename F>
-    struct FilterPredTypeObj<F, true> {
-        typedef F Type;
-    };
-
-    template<typename F, bool = octa::IsClass<F>::value>
-    struct FilterPredType {
-        typedef F Type;
-    };
-
-    template<typename F>
-    struct FilterPredType<F, true> {
-        typedef typename FilterPredTypeObj<F>::Type Type;
-    };
-}
-
 template<typename T, typename F>
 struct FilterRange: InputRange<
     FilterRange<T, F>, octa::CommonType<octa::RangeCategory<T>,
@@ -618,7 +567,7 @@ struct FilterRange: InputRange<
 > {
 private:
     T p_range;
-    typename octa::detail::FilterPredType<F>::Type p_pred;
+    typename octa::detail::HofFuncType<F>::Type p_pred;
 
     void advance_valid() {
         while (!p_range.empty() && !p_pred(front())) p_range.pop_front();
