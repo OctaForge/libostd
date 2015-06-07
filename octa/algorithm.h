@@ -414,19 +414,19 @@ T foldr(R range, T init, F func) {
 
 namespace detail {
     template<typename F>
-    struct MapLambdaArgs: MapLambdaArgs<decltype(&F::operator())> {};
+    struct MapLambdaTypes: MapLambdaTypes<decltype(&F::operator())> {};
 
     template<typename C, typename R, typename A>
-    struct MapLambdaArgs<R(C::*)(A) const> {
+    struct MapLambdaTypes<R (C::*)(A) const> {
         typedef R Result;
         typedef A Arg;
     };
 
     template<typename F>
-    using MapLambdaRet = typename MapLambdaArgs<F>::Result;
+    using MapLambdaRet = typename MapLambdaTypes<F>::Result;
 
     template<typename F>
-    using MapLambdaArg = typename MapLambdaArgs<F>::Arg;
+    using MapLambdaArg = typename MapLambdaTypes<F>::Arg;
 
     template<typename T, typename F>
     struct MapFuncTest {
@@ -434,7 +434,6 @@ namespace detail {
         static char test(MapLambdaRet<FF> (*)(MapLambdaArg<FF>));
         template<typename FF>
         static int test(...);
-
         static constexpr bool value = (sizeof(test<F>(octa::declval<F>())) == 1);
     };
 
@@ -446,7 +445,7 @@ namespace detail {
 
     template<typename T, typename R, typename F>
     struct MapFuncTypeObjBase<T, R, F, true> {
-        typedef MapLambdaRet<F>(*Type)(MapLambdaArg<F>);
+        typedef MapLambdaRet<F> (*Type)(MapLambdaArg<F>);
     };
 
     template<typename T, typename R, typename F,
@@ -555,7 +554,6 @@ namespace detail {
         = decltype(declval<F>()(octa::declval<octa::RangeReference<R>>()));
 }
 
-
 template<typename R, typename F>
 MapRange<R, F, octa::detail::MapReturnType<R, F>> map(R range,
                                                       F func) {
@@ -563,15 +561,67 @@ MapRange<R, F, octa::detail::MapReturnType<R, F>> map(R range,
         func);
 }
 
-template<typename T>
+namespace detail {
+    template<typename F>
+    struct FilterLambdaArg: FilterLambdaArg<decltype(&F::operator())> {};
+
+    template<typename C, typename A>
+    struct FilterLambdaArg<bool (C::*)(A) const> {
+        typedef A Type;
+    };
+
+    template<typename T, typename F>
+    struct FilterPredTest {
+        template<typename FF>
+        static char test(bool (*)(typename FilterLambdaArg<FF>::Type));
+        template<typename FF>
+        static int test(...);
+        static constexpr bool value = (sizeof(test<F>(octa::declval<F>())) == 1);
+    };
+
+    template<typename T, typename F,
+        bool = FilterPredTest<T, F>::value
+    > struct FilterPredTypeObjBase {
+        typedef octa::Function<bool(octa::RangeReference<T>)> Type;
+    };
+
+    template<typename T, typename F>
+    struct FilterPredTypeObjBase<T, F, true> {
+        typedef bool (*Type)(typename FilterLambdaArg<F>::Type);
+    };
+
+    template<typename T, typename F,
+        bool = octa::IsDefaultConstructible<F>::value &&
+               octa::IsMoveConstructible<F>::value
+    > struct FilterPredTypeObj {
+        typedef typename FilterPredTypeObjBase<T, F>::Type Type;
+    };
+
+    template<typename T, typename F>
+    struct FilterPredTypeObj<T, F, true> {
+        typedef F Type;
+    };
+
+    template<typename T, typename F, bool = octa::IsClass<F>::value>
+    struct FilterPredType {
+        typedef F Type;
+    };
+
+    template<typename T, typename F>
+    struct FilterPredType<T, F, true> {
+        typedef typename FilterPredTypeObj<T, F>::Type Type;
+    };
+}
+
+template<typename T, typename F>
 struct FilterRange: InputRange<
-    FilterRange<T>, octa::CommonType<octa::RangeCategory<T>,
+    FilterRange<T, F>, octa::CommonType<octa::RangeCategory<T>,
                                      octa::ForwardRangeTag>,
     octa::RangeValue<T>, octa::RangeReference<T>, octa::RangeSize<T>
 > {
 private:
     T p_range;
-    octa::Function<bool(octa::RangeReference<T>)> p_pred;
+    typename octa::detail::FilterPredType<T, F>::Type p_pred;
 
     void advance_valid() {
         while (!p_range.empty() && !p_pred(front())) p_range.pop_front();
@@ -631,9 +681,19 @@ public:
     octa::RangeReference<T> front() const { return p_range.front(); }
 };
 
+namespace detail {
+    template<typename R, typename P> using FilterPred
+        = octa::EnableIf<IsSame<
+            decltype(octa::declval<P>()(octa::declval<
+                octa::RangeReference<R>
+            >())),
+            bool
+        >::value, P>;
+}
+
 template<typename R, typename P>
-FilterRange<R> filter(R range, P pred) {
-    return octa::FilterRange<R>(range, pred);
+FilterRange<R, octa::detail::FilterPred<R, P>> filter(R range, P pred) {
+    return octa::FilterRange<R, P>(range, pred);
 }
 
 } /* namespace octa */
