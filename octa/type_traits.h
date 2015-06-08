@@ -646,19 +646,19 @@ template<typename T        > struct IsSame<T, T>:  True {};
 
 /* extent */
 
-template<typename T, unsigned I = 0>
+template<typename T, uint I = 0>
 struct Extent: IntegralConstant<size_t, 0> {};
 
 template<typename T>
 struct Extent<T[], 0>: IntegralConstant<size_t, 0> {};
 
-template<typename T, unsigned I>
+template<typename T, uint I>
 struct Extent<T[], I>: IntegralConstant<size_t, Extent<T, I - 1>::value> {};
 
 template<typename T, size_t N>
 struct Extent<T[N], 0>: IntegralConstant<size_t, N> {};
 
-template<typename T, size_t N, unsigned I>
+template<typename T, size_t N, uint I>
 struct Extent<T[N], I>: IntegralConstant<size_t, Extent<T, I - 1>::value> {};
 
 /* rank */
