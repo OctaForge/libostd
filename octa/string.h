@@ -14,7 +14,7 @@
 #include "octa/vector.h"
 
 namespace octa {
-static constexpr size_t npos = -1;
+static constexpr octa::Size npos = -1;
 
 template<typename T, typename A = octa::Allocator<T>>
 class StringBase {
@@ -25,15 +25,15 @@ class StringBase {
     }
 
 public:
-    using Size = size_t;
-    using Difference = ptrdiff_t;
+    using Size = octa::Size;
+    using Difference = octa::Ptrdiff;
     using Value = T;
     using Reference = T &;
     using ConstReference = const T &;
     using Pointer = T *;
     using ConstPointer = const T *;
-    using Range = PointerRange<T>;
-    using ConstRange = PointerRange<const T>;
+    using Range = octa::PointerRange<T>;
+    using ConstRange = octa::PointerRange<const T>;
     using Allocator = A;
 
     StringBase(const A &a = A()): p_buf(1, '\0', a) {}
@@ -45,7 +45,7 @@ public:
     StringBase(StringBase &&s, const A &a):
         p_buf(octa::move(s.p_buf), a) {}
 
-    StringBase(const StringBase &s, size_t pos, size_t len = npos,
+    StringBase(const StringBase &s, octa::Size pos, octa::Size len = npos,
     const A &a = A()):
         p_buf(s.p_buf.each().slice(pos,
             (len == npos) ? s.p_buf.size() : (pos + len)), a) {
@@ -76,21 +76,21 @@ public:
         return *this;
     }
 
-    void resize(size_t n, T v = T()) {
+    void resize(octa::Size n, T v = T()) {
         p_buf.pop();
         p_buf.resize(n, v);
         terminate();
     }
 
-    void reserve(size_t n) {
+    void reserve(octa::Size n) {
         p_buf.reserve(n + 1);
     }
 
-    T &operator[](size_t i) { return p_buf[i]; }
-    const T &operator[](size_t i) const { return p_buf[i]; }
+    T &operator[](octa::Size i) { return p_buf[i]; }
+    const T &operator[](octa::Size i) const { return p_buf[i]; }
 
-    T &at(size_t i) { return p_buf[i]; }
-    const T &at(size_t i) const { return p_buf[i]; }
+    T &at(octa::Size i) { return p_buf[i]; }
+    const T &at(octa::Size i) const { return p_buf[i]; }
 
     T &front() { return p_buf[0]; }
     const T &front() const { return p_buf[0]; };
@@ -101,11 +101,11 @@ public:
     T *data() { return p_buf.data(); }
     const T *data() const { return p_buf.data(); }
 
-    size_t size() const {
+    octa::Size size() const {
         return p_buf.size() - 1;
     }
 
-    size_t capacity() const {
+    octa::Size capacity() const {
         return p_buf.capacity() - 1;
     }
 
@@ -122,9 +122,9 @@ public:
         return *this;
     }
 
-    StringBase<T> &append(const StringBase &s, size_t idx, size_t len) {
+    StringBase<T> &append(const StringBase &s, octa::Size idx, octa::Size len) {
         p_buf.pop();
-        p_buf.insert_range(p_buf.size(), octa::PointerRange<T>(&s[idx],
+        p_buf.insert_range(p_buf.size(), Range(&s[idx],
             (len == npos) ? (s.size() - idx) : len));
         terminate();
         return *this;
@@ -137,9 +137,9 @@ public:
         return *this;
     }
 
-    StringBase<T> &append(size_t n, T c) {
+    StringBase<T> &append(octa::Size n, T c) {
         p_buf.pop();
-        for (size_t i = 0; i < n; ++i) p_buf.push(c);
+        for (octa::Size i = 0; i < n; ++i) p_buf.push(c);
         p_buf.push('\0');
         return *this;
     }
@@ -281,7 +281,7 @@ namespace detail {
             n = 0;
             *(s->data()) = '\0';
         }
-        *(((size_t *)s) + 1) = n + 1;
+        *(((octa::Size *)s) + 1) = n + 1;
     }
 }
 
@@ -316,14 +316,15 @@ template<> struct ToString<T> { \
 
 OCTA_TOSTR_NUM(int, "%d")
 OCTA_TOSTR_NUM(int &, "%d")
-OCTA_TOSTR_NUM(uint, "%u")
 OCTA_TOSTR_NUM(long, "%ld")
-OCTA_TOSTR_NUM(ulong, "%lu")
-OCTA_TOSTR_NUM(llong, "%lld")
-OCTA_TOSTR_NUM(ullong, "%llu")
 OCTA_TOSTR_NUM(float, "%f")
 OCTA_TOSTR_NUM(double, "%f")
-OCTA_TOSTR_NUM(ldouble, "%Lf")
+
+OCTA_TOSTR_NUM(octa::uint, "%u")
+OCTA_TOSTR_NUM(octa::ulong, "%lu")
+OCTA_TOSTR_NUM(octa::llong, "%lld")
+OCTA_TOSTR_NUM(octa::ullong, "%llu")
+OCTA_TOSTR_NUM(octa::ldouble, "%Lf")
 
 #undef OCTA_TOSTR_NUM
 

@@ -68,7 +68,7 @@ namespace detail {
 
     template<typename T, bool = HasDifference<T>::value>
     struct PointerDifferenceBase {
-        using Type = ptrdiff_t;
+        using Type = octa::Ptrdiff;
     };
 
     template<typename T> struct PointerDifferenceBase<T, true> {
@@ -82,7 +82,7 @@ namespace detail {
 
     template<typename T>
     struct PointerDifferenceType<T *> {
-        using Type = ptrdiff_t;
+        using Type = octa::Ptrdiff;
     };
 
     template<typename T, typename U>
@@ -284,7 +284,7 @@ public:
         static_assert(!octa::IsPointer<D>::value,
             "Box constructed with null fptr deleter");
     }
-    constexpr Box(Nullptr): p_stor(nullptr, D()) {
+    constexpr Box(octa::Nullptr): p_stor(nullptr, D()) {
         static_assert(!octa::IsPointer<D>::value,
             "Box constructed with null fptr deleter");
     }
@@ -330,7 +330,7 @@ public:
         return *this;
     }
 
-    Box &operator=(Nullptr) {
+    Box &operator=(octa::Nullptr) {
         reset();
         return *this;
     }
@@ -403,7 +403,7 @@ public:
         static_assert(!octa::IsPointer<D>::value,
             "Box constructed with null fptr deleter");
     }
-    constexpr Box(Nullptr): p_stor(nullptr, D()) {
+    constexpr Box(octa::Nullptr): p_stor(nullptr, D()) {
         static_assert(!octa::IsPointer<D>::value,
             "Box constructed with null fptr deleter");
     }
@@ -421,7 +421,7 @@ public:
     > d, octa::EnableIf<octa::detail::SameOrLessCvQualified<U, Pointer>::value,
     Nat> = Nat()): p_stor(p, d) {}
 
-    Box(Nullptr, octa::Conditional<octa::IsReference<D>::value,
+    Box(octa::Nullptr, octa::Conditional<octa::IsReference<D>::value,
         D, AddLvalueReference<const D>
     > d): p_stor(nullptr, d) {}
 
@@ -433,7 +433,7 @@ public:
             "rvalue deleter cannot be a ref");
     }
 
-    Box(Nullptr, octa::RemoveReference<D> &&d):
+    Box(octa::Nullptr, octa::RemoveReference<D> &&d):
     p_stor(nullptr, octa::move(d)) {
         static_assert(!octa::IsReference<D>::value,
             "rvalue deleter cannot be a ref");
@@ -468,14 +468,14 @@ public:
         return *this;
     }
 
-    Box &operator=(Nullptr) {
+    Box &operator=(octa::Nullptr) {
         reset();
         return *this;
     }
 
     ~Box() { reset(); }
 
-    octa::AddLvalueReference<T> operator[](size_t idx) const {
+    octa::AddLvalueReference<T> operator[](octa::Size idx) const {
         return p_stor.p_ptr[idx];
     }
 
@@ -502,7 +502,7 @@ public:
         if (tmp) p_stor.get_deleter()(tmp);
     }
 
-    void reset(Nullptr) {
+    void reset(octa::Nullptr) {
         Pointer tmp = p_stor.p_ptr;
         p_stor.p_ptr = nullptr;
         if (tmp) p_stor.get_deleter()(tmp);
@@ -529,7 +529,7 @@ namespace detail {
         using BoxUnknownSize = octa::Box<T[]>;
     };
 
-    template<typename T, size_t N> struct BoxIf<T[N]> {
+    template<typename T, octa::Size N> struct BoxIf<T[N]> {
         using BoxKnownSize = void;
     };
 }
@@ -540,7 +540,7 @@ typename octa::detail::BoxIf<T>::Box make_box(A &&...args) {
 }
 
 template<typename T>
-typename octa::detail::BoxIf<T>::BoxUnknownSize make_box(size_t n) {
+typename octa::detail::BoxIf<T>::BoxUnknownSize make_box(octa::Size n) {
     return Box<T>(new octa::RemoveExtent<T>[n]());
 }
 
@@ -568,8 +568,8 @@ template<> struct Allocator<const void> {
 };
 
 template<typename T> struct Allocator {
-    using Size = size_t;
-    using Difference = ptrdiff_t;
+    using Size = octa::Size;
+    using Difference = octa::Ptrdiff;
     using Value = T;
     using Reference = T &;
     using ConstReference = const T &;
@@ -588,10 +588,10 @@ template<typename T> struct Allocator {
     Size max_size() const { return Size(~0) / sizeof(T); }
 
     Pointer allocate(Size n, Allocator<void>::ConstPointer = nullptr) {
-        return (Pointer) ::new uchar[n * sizeof(T)];
+        return (Pointer) ::new octa::uchar[n * sizeof(T)];
     }
 
-    void deallocate(Pointer p, Size) { ::delete[] (uchar *) p; }
+    void deallocate(Pointer p, Size) { ::delete[] (octa::uchar *) p; }
 
     template<typename U, typename ...A>
     void construct(U *p, A &&...args) {
@@ -602,8 +602,8 @@ template<typename T> struct Allocator {
 };
 
 template<typename T> struct Allocator<const T> {
-    using Size = size_t;
-    using Difference = ptrdiff_t;
+    using Size = octa::Size;
+    using Difference = octa::Ptrdiff;
     using Value = const T;
     using Reference = const T &;
     using ConstReference = const T &;
@@ -619,10 +619,10 @@ template<typename T> struct Allocator<const T> {
     Size max_size() const { return Size(~0) / sizeof(T); }
 
     Pointer allocate(Size n, Allocator<void>::ConstPointer = nullptr) {
-        return (Pointer) ::new uchar[n * sizeof(T)];
+        return (Pointer) ::new octa::uchar[n * sizeof(T)];
     }
 
-    void deallocate(Pointer p, Size) { ::delete[] (uchar *) p; }
+    void deallocate(Pointer p, Size) { ::delete[] (octa::uchar *) p; }
 
     template<typename U, typename ...A>
     void construct(U *p, A &&...args) {

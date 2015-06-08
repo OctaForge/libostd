@@ -285,7 +285,7 @@ namespace detail {
 }
 
 template<typename B, typename C, typename V, typename R = V &,
-         typename S = size_t, typename D = ptrdiff_t
+         typename S = octa::Size, typename D = octa::Ptrdiff
 > struct InputRange {
     using Category = C;
     using Size = S;
@@ -325,8 +325,8 @@ template<typename B, typename C, typename V, typename R = V &,
     }
 };
 
-template<typename V, typename R = V &, typename S = size_t,
-         typename D = ptrdiff_t
+template<typename V, typename R = V &, typename S = octa::Size,
+         typename D = octa::Ptrdiff
 > struct OutputRange {
     using Category = OutputRangeTag;
     using Size = S;
@@ -541,7 +541,7 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
     PointerRange(const PointerRange &v): p_beg(v.p_beg),
         p_end(v.p_end) {}
     PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
-    PointerRange(T *beg, size_t n): p_beg(beg), p_end(beg + n) {}
+    PointerRange(T *beg, octa::Size n): p_beg(beg), p_end(beg + n) {}
 
     PointerRange &operator=(const PointerRange &v) {
         p_beg = v.p_beg;
@@ -561,8 +561,8 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
         --p_beg; return true;
     }
 
-    size_t pop_front_n(size_t n) {
-        size_t olen = p_end - p_beg;
+    octa::Size pop_front_n(octa::Size n) {
+        octa::Size olen = p_end - p_beg;
         p_beg += n;
         if (p_beg > p_end) {
             p_beg = p_end;
@@ -571,7 +571,7 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
         return n;
     }
 
-    size_t push_front_n(size_t n) {
+    octa::Size push_front_n(octa::Size n) {
         p_beg -= n; return true;
     }
 
@@ -581,7 +581,7 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
         return p_beg == range.p_beg;
     }
 
-    ptrdiff_t distance_front(const PointerRange &range) const {
+    octa::Ptrdiff distance_front(const PointerRange &range) const {
         return range.p_beg - p_beg;
     }
 
@@ -595,8 +595,8 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
         ++p_end; return true;
     }
 
-    size_t pop_back_n(size_t n) {
-        size_t olen = p_end - p_beg;
+    octa::Size pop_back_n(octa::Size n) {
+        octa::Size olen = p_end - p_beg;
         p_end -= n;
         if (p_end < p_beg) {
             p_end = p_beg;
@@ -605,7 +605,7 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
         return n;
     }
 
-    size_t push_back_n(size_t n) {
+    octa::Size push_back_n(octa::Size n) {
         p_end += n; return true;
     }
 
@@ -615,18 +615,18 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
         return p_end == range.p_end;
     }
 
-    ptrdiff_t distance_back(const PointerRange &range) const {
+    octa::Ptrdiff distance_back(const PointerRange &range) const {
         return range.p_end - p_end;
     }
 
     /* satisfy FiniteRandomAccessRange */
-    size_t size() const { return p_end - p_beg; }
+    octa::Size size() const { return p_end - p_beg; }
 
-    PointerRange slice(size_t start, size_t end) const {
+    PointerRange slice(octa::Size start, octa::Size end) const {
         return PointerRange(p_beg + start, p_beg + end);
     }
 
-    T &operator[](size_t i) const { return p_beg[i]; }
+    T &operator[](octa::Size i) const { return p_beg[i]; }
 
     /* satisfy OutputRange */
     void put(const T &v) {
@@ -864,7 +864,7 @@ auto each(const T &r) -> decltype(r.each()) {
     return r.each();
 }
 
-template<typename T, size_t N>
+template<typename T, octa::Size N>
 PointerRange<T> each(T (&array)[N]) {
     return PointerRange<T>(array, N);
 }

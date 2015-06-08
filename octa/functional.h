@@ -98,10 +98,10 @@ template<typename T> struct Hash;
 namespace detail {
     template<typename T> struct HashBase {
         using Argument = T;
-        using Result = size_t;
+        using Result = octa::Size;
 
-        size_t operator()(T v) const {
-            return size_t(v);
+        octa::Size operator()(T v) const {
+            return octa::Size(v);
         }
     };
 }
@@ -110,37 +110,39 @@ namespace detail {
 
 OCTA_HASH_BASIC(bool)
 OCTA_HASH_BASIC(char)
-OCTA_HASH_BASIC(schar)
-OCTA_HASH_BASIC(uchar)
-OCTA_HASH_BASIC(char16_t)
-OCTA_HASH_BASIC(char32_t)
-OCTA_HASH_BASIC(wchar_t)
 OCTA_HASH_BASIC(short)
-OCTA_HASH_BASIC(ushort)
 OCTA_HASH_BASIC(int)
-OCTA_HASH_BASIC(uint)
 OCTA_HASH_BASIC(long)
-OCTA_HASH_BASIC(ulong)
+
+OCTA_HASH_BASIC(octa::schar)
+OCTA_HASH_BASIC(octa::uchar)
+OCTA_HASH_BASIC(octa::ushort)
+OCTA_HASH_BASIC(octa::uint)
+OCTA_HASH_BASIC(octa::ulong)
+
+OCTA_HASH_BASIC(octa::Char16)
+OCTA_HASH_BASIC(octa::Char32)
+OCTA_HASH_BASIC(octa::Wchar)
 
 #undef OCTA_HASH_BASIC
 
 namespace detail {
-    static inline size_t mem_hash(const void *p, size_t l) {
-        const uchar *d = (const uchar *)p;
-        size_t h = 5381;
-        for (size_t i = 0; i < l; ++i) h = ((h << 5) + h) ^ d[i];
+    static inline Size mem_hash(const void *p, octa::Size l) {
+        const octa::uchar *d = (const octa::uchar *)p;
+        octa::Size h = 5381;
+        for (Size i = 0; i < l; ++i) h = ((h << 5) + h) ^ d[i];
         return h;
     }
 
-    template<typename T, size_t = sizeof(T) / sizeof(size_t)>
+    template<typename T, octa::Size = sizeof(T) / sizeof(octa::Size)>
     struct ScalarHash;
 
     template<typename T> struct ScalarHash<T, 0> {
         using Argument = T;
-        using Result = size_t;
+        using Result = octa::Size;
 
-        size_t operator()(T v) const {
-            union { T v; size_t h; } u;
+        octa::Size operator()(T v) const {
+            union { T v; octa::Size h; } u;
             u.h = 0;
             u.v = v;
             return u.h;
@@ -149,10 +151,10 @@ namespace detail {
 
     template<typename T> struct ScalarHash<T, 1> {
         using Argument = T;
-        using Result = size_t;
+        using Result = octa::Size;
 
-        size_t operator()(T v) const {
-            union { T v; size_t h; } u;
+        octa::Size operator()(T v) const {
+            union { T v; octa::Size h; } u;
             u.v = v;
             return u.h;
         }
@@ -160,10 +162,10 @@ namespace detail {
 
     template<typename T> struct ScalarHash<T, 2> {
         using Argument = T;
-        using Result = size_t;
+        using Result = octa::Size;
 
-        size_t operator()(T v) const {
-            union { T v; struct { size_t h1, h2; }; } u;
+        octa::Size operator()(T v) const {
+            union { T v; struct { octa::Size h1, h2; }; } u;
             u.v = v;
             return mem_hash((const void *)&u, sizeof(u));
         }
@@ -171,10 +173,10 @@ namespace detail {
 
     template<typename T> struct ScalarHash<T, 3> {
         using Argument = T;
-        using Result = size_t;
+        using Result = octa::Size;
 
-        size_t operator()(T v) const {
-            union { T v; struct { size_t h1, h2, h3; }; } u;
+        octa::Size operator()(T v) const {
+            union { T v; struct { octa::Size h1, h2, h3; }; } u;
             u.v = v;
             return mem_hash((const void *)&u, sizeof(u));
         }
@@ -182,49 +184,49 @@ namespace detail {
 
     template<typename T> struct ScalarHash<T, 4> {
         using Argument = T;
-        using Result = size_t;
+        using Result = octa::Size;
 
-        size_t operator()(T v) const {
-            union { T v; struct { size_t h1, h2, h3, h4; }; } u;
+        octa::Size operator()(T v) const {
+            union { T v; struct { octa::Size h1, h2, h3, h4; }; } u;
             u.v = v;
             return mem_hash((const void *)&u, sizeof(u));
         }
     };
 } /* namespace detail */
 
-template<> struct Hash<llong>: octa::detail::ScalarHash<llong> {};
-template<> struct Hash<ullong>: octa::detail::ScalarHash<ullong> {};
+template<> struct Hash<octa::llong>: octa::detail::ScalarHash<octa::llong> {};
+template<> struct Hash<octa::ullong>: octa::detail::ScalarHash<octa::ullong> {};
 
 template<> struct Hash<float>: octa::detail::ScalarHash<float> {
-    size_t operator()(float v) const {
+    octa::Size operator()(float v) const {
         if (v == 0) return 0;
         return octa::detail::ScalarHash<float>::operator()(v);
     }
 };
 
 template<> struct Hash<double>: octa::detail::ScalarHash<double> {
-    size_t operator()(double v) const {
+    octa::Size operator()(double v) const {
         if (v == 0) return 0;
         return octa::detail::ScalarHash<double>::operator()(v);
     }
 };
 
-template<> struct Hash<ldouble>: octa::detail::ScalarHash<ldouble> {
-    size_t operator()(ldouble v) const {
+template<> struct Hash<octa::ldouble>: octa::detail::ScalarHash<octa::ldouble> {
+    octa::Size operator()(octa::ldouble v) const {
         if (v == 0) return 0;
 #ifdef __i386__
-        union { ldouble v; struct { size_t h1, h2, h3, h4; }; } u;
+        union { octa::ldouble v; struct { octa::Size h1, h2, h3, h4; }; } u;
         u.h1 = u.h2 = u.h3 = u.h4 = 0;
         u.v = v;
         return (u.h1 ^ u.h2 ^ u.h3 ^ u.h4);
 #else
 #ifdef __x86_64__
-        union { ldouble v; struct { size_t h1, h2; }; } u;
+        union { octa::ldouble v; struct { octa::Size h1, h2; }; } u;
         u.h1 = u.h2 = 0;
         u.v = v;
         return (u.h1 ^ u.h2);
 #else
-        return octa::detail::ScalarHash<ldouble>::operator()(v);
+        return octa::detail::ScalarHash<octa::ldouble>::operator()(v);
 #endif
 #endif
     }
@@ -232,10 +234,10 @@ template<> struct Hash<ldouble>: octa::detail::ScalarHash<ldouble> {
 
 template<typename T> struct Hash<T *> {
     using Argument = T *;
-    using Result = size_t;
+    using Result = octa::Size;
 
-    size_t operator()(T *v) const {
-        union { T *v; size_t h; } u;
+    octa::Size operator()(T *v) const {
+        union { T *v; octa::Size h; } u;
         u.v = v;
         return octa::detail::mem_hash((const void *)&u, sizeof(u));
     }
@@ -591,8 +593,8 @@ namespace detail {
 
 template<typename R, typename ...Args>
 struct Function<R(Args...)>: octa::detail::FunctionBase<R, Args...> {
-    Function(       ) { init_empty(); }
-    Function(Nullptr) { init_empty(); }
+    Function(             ) { init_empty(); }
+    Function(octa::Nullptr) { init_empty(); }
 
     Function(Function &&f) {
         init_empty();
@@ -619,7 +621,7 @@ struct Function<R(Args...)>: octa::detail::FunctionBase<R, Args...> {
     Function(octa::AllocatorArg, const A &) { init_empty(); }
 
     template<typename A>
-    Function(octa::AllocatorArg, const A &, Nullptr) { init_empty(); }
+    Function(octa::AllocatorArg, const A &, octa::Nullptr) { init_empty(); }
 
     template<typename A>
     Function(octa::AllocatorArg, const A &, Function &&f) {
@@ -739,16 +741,16 @@ private:
 };
 
 template<typename T>
-bool operator==(Nullptr, const Function<T> &rhs) { return !rhs; }
+bool operator==(octa::Nullptr, const Function<T> &rhs) { return !rhs; }
 
 template<typename T>
-bool operator==(const Function<T> &lhs, Nullptr) { return !lhs; }
+bool operator==(const Function<T> &lhs, octa::Nullptr) { return !lhs; }
 
 template<typename T>
-bool operator!=(Nullptr, const Function<T> &rhs) { return rhs; }
+bool operator!=(octa::Nullptr, const Function<T> &rhs) { return rhs; }
 
 template<typename T>
-bool operator!=(const Function<T> &lhs, Nullptr) { return lhs; }
+bool operator!=(const Function<T> &lhs, octa::Nullptr) { return lhs; }
 
 namespace detail {
     template<typename F>

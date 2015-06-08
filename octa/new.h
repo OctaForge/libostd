@@ -6,11 +6,11 @@
 #ifndef OCTA_NEW_H
 #define OCTA_NEW_H
 
-#include <stddef.h>
-
 #ifndef OCTA_ALLOW_CXXSTD
-inline void *operator new     (size_t, void *p) { return p; }
-inline void *operator new   [](size_t, void *p) { return p; }
+#include "octa/types.h"
+
+inline void *operator new     (octa::Size, void *p) { return p; }
+inline void *operator new   [](octa::Size, void *p) { return p; }
 inline void  operator delete  (void *, void *)  {}
 inline void  operator delete[](void *, void *)  {}
 #else

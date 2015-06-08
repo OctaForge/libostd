@@ -17,13 +17,13 @@ namespace std {
 template<typename T>
 class initializer_list {
     const T *p_buf;
-    size_t p_len;
+    octa::Size p_len;
 
-    initializer_list(const T *v, size_t n): p_buf(v), p_len(n) {}
+    initializer_list(const T *v, octa::Size n): p_buf(v), p_len(n) {}
 public:
     initializer_list(): p_buf(nullptr), p_len(0) {}
 
-    size_t size() const { return p_len; }
+    octa::Size size() const { return p_len; }
 
     const T *begin() const { return p_buf; }
     const T *end() const { return p_buf + p_len; }

@@ -5,13 +5,15 @@
 
 #include <stdlib.h>
 
-void *operator new(size_t size) {
+#include "octa/types.h"
+
+void *operator new(octa::Size size) {
     void  *p = malloc(size);
     if   (!p) abort();
     return p;
 }
 
-void *operator new[](size_t size) {
+void *operator new[](octa::Size size) {
     void  *p = malloc(size);
     if   (!p) abort();
     return p;

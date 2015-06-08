@@ -14,23 +14,23 @@
 
 namespace octa {
 
-template<typename T, size_t N>
+template<typename T, octa::Size N>
 struct Array {
-    using Size = size_t;
-    using Difference = ptrdiff_t;
+    using Size = octa::Size;
+    using Difference = octa::Ptrdiff;
     using Value = T;
     using Reference = T &;
     using ConstReference = const T &;
     using Pointer = T *;
     using ConstPointer = const T *;
-    using Range = PointerRange<T>;
-    using ConstRange = PointerRange<const T>;
+    using Range = octa::PointerRange<T>;
+    using ConstRange = octa::PointerRange<const T>;
 
-    T &operator[](size_t i) { return p_buf[i]; }
-    const T &operator[](size_t i) const { return p_buf[i]; }
+    T &operator[](Size i) { return p_buf[i]; }
+    const T &operator[](Size i) const { return p_buf[i]; }
 
-    T &at(size_t i) { return p_buf[i]; }
-    const T &at(size_t i) const { return p_buf[i]; }
+    T &at(Size i) { return p_buf[i]; }
+    const T &at(Size i) const { return p_buf[i]; }
 
     T &front() { return p_buf[0]; }
     const T &front() const { return p_buf[0]; }
@@ -38,12 +38,12 @@ struct Array {
     T &back() { return p_buf[(N > 0) ? (N - 1) : 0]; }
     const T &back() const { return p_buf[(N > 0) ? (N - 1) : 0]; }
 
-    size_t size() const { return N; }
+    Size size() const { return N; }
 
     bool empty() const { return N == 0; }
 
-    bool in_range(size_t idx) { return idx < N; }
-    bool in_range(int idx) { return idx >= 0 && size_t(idx) < N; }
+    bool in_range(Size idx) { return idx < N; }
+    bool in_range(int idx) { return idx >= 0 && Size(idx) < N; }
     bool in_range(const T *ptr) {
         return ptr >= &p_buf[0] && ptr < &p_buf[N];
     }
@@ -52,10 +52,10 @@ struct Array {
     const T *data() const { return p_buf; }
 
     Range each() {
-        return octa::PointerRange<T>(p_buf, p_buf + N);
+        return Range(p_buf, p_buf + N);
     }
     ConstRange each() const {
-        return octa::PointerRange<const T>(p_buf, p_buf + N);
+        return ConstRange(p_buf, p_buf + N);
     }
 
     void swap(Array &v) {

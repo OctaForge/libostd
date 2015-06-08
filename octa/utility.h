@@ -74,8 +74,8 @@ template<typename T> void swap(T &a, T &b) {
    octa::detail::swap(a, b);
 }
 
-template<typename T, size_t N> void swap(T (&a)[N], T (&b)[N]) {
-    for (size_t i = 0; i < N; ++i) {
+template<typename T, octa::Size N> void swap(T (&a)[N], T (&b)[N]) {
+    for (octa::Size i = 0; i < N; ++i) {
         octa::swap(a[i], b[i]);
     }
 }

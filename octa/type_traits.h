@@ -80,8 +80,8 @@ namespace detail {
 /* is null pointer */
 
 namespace detail {
-    template<typename> struct IsNullPointerBase         : False {};
-    template<        > struct IsNullPointerBase<Nullptr>:  True {};
+    template<typename> struct IsNullPointerBase               : False {};
+    template<        > struct IsNullPointerBase<octa::Nullptr>:  True {};
 }
 
 template<typename T> struct IsNullPointer:
@@ -94,20 +94,21 @@ namespace detail {
 
     template<> struct IsIntegralBase<bool  >: True {};
     template<> struct IsIntegralBase<char  >: True {};
-    template<> struct IsIntegralBase<uchar >: True {};
-    template<> struct IsIntegralBase<schar >: True {};
     template<> struct IsIntegralBase<short >: True {};
-    template<> struct IsIntegralBase<ushort>: True {};
     template<> struct IsIntegralBase<int   >: True {};
-    template<> struct IsIntegralBase<uint  >: True {};
     template<> struct IsIntegralBase<long  >: True {};
-    template<> struct IsIntegralBase<ulong >: True {};
-    template<> struct IsIntegralBase<llong >: True {};
-    template<> struct IsIntegralBase<ullong>: True {};
 
-    template<> struct IsIntegralBase<char16_t>: True {};
-    template<> struct IsIntegralBase<char32_t>: True {};
-    template<> struct IsIntegralBase< wchar_t>: True {};
+    template<> struct IsIntegralBase<octa::uchar >: True {};
+    template<> struct IsIntegralBase<octa::schar >: True {};
+    template<> struct IsIntegralBase<octa::ushort>: True {};
+    template<> struct IsIntegralBase<octa::uint  >: True {};
+    template<> struct IsIntegralBase<octa::ulong >: True {};
+    template<> struct IsIntegralBase<octa::llong >: True {};
+    template<> struct IsIntegralBase<octa::ullong>: True {};
+
+    template<> struct IsIntegralBase<octa::Char16>: True {};
+    template<> struct IsIntegralBase<octa::Char32>: True {};
+    template<> struct IsIntegralBase<octa::Wchar >: True {};
 }
 
 template<typename T>
@@ -118,9 +119,10 @@ struct IsIntegral: octa::detail::IsIntegralBase<RemoveCv<T>> {};
 namespace detail {
     template<typename T> struct IsFloatingPointBase: False {};
 
-    template<> struct IsFloatingPointBase<float  >: True {};
-    template<> struct IsFloatingPointBase<double >: True {};
-    template<> struct IsFloatingPointBase<ldouble>: True {};
+    template<> struct IsFloatingPointBase<float >: True {};
+    template<> struct IsFloatingPointBase<double>: True {};
+
+    template<> struct IsFloatingPointBase<octa::ldouble>: True {};
 }
 
 template<typename T>
@@ -128,9 +130,9 @@ struct IsFloatingPoint: octa::detail::IsFloatingPointBase<RemoveCv<T>> {};
 
 /* is array */
 
-template<typename            > struct IsArray      : False {};
-template<typename T          > struct IsArray<T[] >:  True {};
-template<typename T, size_t N> struct IsArray<T[N]>:  True {};
+template<typename                > struct IsArray      : False {};
+template<typename T              > struct IsArray<T[] >:  True {};
+template<typename T, octa::Size N> struct IsArray<T[N]>:  True {};
 
 /* is pointer */
 
@@ -412,11 +414,11 @@ namespace detail {
     > {};
 
     /* array types are default constructible if their element type is */
-    template<typename T, size_t N>
+    template<typename T, octa::Size N>
     struct CtibleCore<false, T[N]>: Ctible<octa::RemoveAllExtents<T>> {};
 
     /* otherwise array types are not constructible by this syntax */
-    template<typename T, size_t N, typename ...A>
+    template<typename T, octa::Size N, typename ...A>
     struct CtibleCore<false, T[N], A...>: False {};
 
     /* incomplete array types are not constructible */
@@ -646,30 +648,30 @@ template<typename T        > struct IsSame<T, T>:  True {};
 
 /* extent */
 
-template<typename T, uint I = 0>
-struct Extent: IntegralConstant<size_t, 0> {};
+template<typename T, octa::uint I = 0>
+struct Extent: IntegralConstant<octa::Size, 0> {};
 
 template<typename T>
-struct Extent<T[], 0>: IntegralConstant<size_t, 0> {};
+struct Extent<T[], 0>: IntegralConstant<octa::Size, 0> {};
 
-template<typename T, uint I>
-struct Extent<T[], I>: IntegralConstant<size_t, Extent<T, I - 1>::value> {};
+template<typename T, octa::uint I>
+struct Extent<T[], I>: IntegralConstant<octa::Size, Extent<T, I - 1>::value> {};
 
-template<typename T, size_t N>
-struct Extent<T[N], 0>: IntegralConstant<size_t, N> {};
+template<typename T, octa::Size N>
+struct Extent<T[N], 0>: IntegralConstant<octa::Size, N> {};
 
-template<typename T, size_t N, uint I>
-struct Extent<T[N], I>: IntegralConstant<size_t, Extent<T, I - 1>::value> {};
+template<typename T, octa::Size N, octa::uint I>
+struct Extent<T[N], I>: IntegralConstant<octa::Size, Extent<T, I - 1>::value> {};
 
 /* rank */
 
-template<typename T> struct Rank: IntegralConstant<size_t, 0> {};
+template<typename T> struct Rank: IntegralConstant<octa::Size, 0> {};
 
 template<typename T>
-struct Rank<T[]>: IntegralConstant<size_t, Rank<T>::value + 1> {};
+struct Rank<T[]>: IntegralConstant<octa::Size, Rank<T>::value + 1> {};
 
-template<typename T, size_t N>
-struct Rank<T[N]>: IntegralConstant<size_t, Rank<T>::value + 1> {};
+template<typename T, octa::Size N>
+struct Rank<T[N]>: IntegralConstant<octa::Size, Rank<T>::value + 1> {};
 
 /* remove const, volatile, cv */
 
@@ -825,7 +827,7 @@ namespace detail {
     struct RemoveExtentBase       { using Type = T; };
     template<typename T>
     struct RemoveExtentBase<T[ ]> { using Type = T; };
-    template<typename T, size_t N>
+    template<typename T, octa::Size N>
     struct RemoveExtentBase<T[N]> { using Type = T; };
 }
 
@@ -841,7 +843,7 @@ namespace detail {
         using Type = RemoveAllExtentsBase<T>;
     };
 
-    template<typename T, size_t N> struct RemoveAllExtentsBase<T[N]> {
+    template<typename T, octa::Size N> struct RemoveAllExtentsBase<T[N]> {
         using Type = RemoveAllExtentsBase<T>;
     };
 }
@@ -866,27 +868,27 @@ namespace detail {
         ~TlNat() = delete;
     };
 
-    using Stypes = TypeList<schar,
+    using Stypes = TypeList<octa::schar,
                    TypeList<short,
                    TypeList<int,
                    TypeList<long,
-                   TypeList<llong, TlNat>>>>>;
+                   TypeList<octa::llong, TlNat>>>>>;
 
-    using Utypes = TypeList<uchar,
-                   TypeList<ushort,
-                   TypeList<uint,
-                   TypeList<ulong,
-                   TypeList<ullong, TlNat>>>>>;
+    using Utypes = TypeList<octa::uchar,
+                   TypeList<octa::ushort,
+                   TypeList<octa::uint,
+                   TypeList<octa::ulong,
+                   TypeList<octa::ullong, TlNat>>>>>;
 
-    template<typename T, size_t N, bool = (N <= sizeof(typename T::First))>
+    template<typename T, octa::Size N, bool = (N <= sizeof(typename T::First))>
     struct TypeFindFirst;
 
-    template<typename T, typename U, size_t N>
+    template<typename T, typename U, octa::Size N>
     struct TypeFindFirst<TypeList<T, U>, N, true> {
         using Type = T;
     };
 
-    template<typename T, typename U, size_t N>
+    template<typename T, typename U, octa::Size N>
     struct TypeFindFirst<TypeList<T, U>, N, false> {
         using Type = typename TypeFindFirst<U, N>::Type;
     };
@@ -947,28 +949,30 @@ namespace detail {
     };
 
     template<> struct MakeSigned<bool  , true> {};
-    template<> struct MakeSigned<schar , true> { using Type = schar; };
-    template<> struct MakeSigned<uchar , true> { using Type = schar; };
     template<> struct MakeSigned<short , true> { using Type = short; };
-    template<> struct MakeSigned<ushort, true> { using Type = short; };
     template<> struct MakeSigned<int   , true> { using Type = int; };
-    template<> struct MakeSigned<uint  , true> { using Type = int; };
     template<> struct MakeSigned<long  , true> { using Type = long; };
-    template<> struct MakeSigned<ulong , true> { using Type = long; };
-    template<> struct MakeSigned<llong , true> { using Type = llong; };
-    template<> struct MakeSigned<ullong, true> { using Type = llong; };
+
+    template<> struct MakeSigned<octa::schar , true> { using Type = octa::schar; };
+    template<> struct MakeSigned<octa::uchar , true> { using Type = octa::schar; };
+    template<> struct MakeSigned<octa::ushort, true> { using Type = short;       };
+    template<> struct MakeSigned<octa::uint  , true> { using Type = int;         };
+    template<> struct MakeSigned<octa::ulong , true> { using Type = long;        };
+    template<> struct MakeSigned<octa::llong , true> { using Type = octa::llong; };
+    template<> struct MakeSigned<octa::ullong, true> { using Type = octa::llong; };
 
     template<> struct MakeUnsigned<bool  , true> {};
-    template<> struct MakeUnsigned<schar , true> { using Type = uchar; };
-    template<> struct MakeUnsigned<uchar , true> { using Type = uchar; };
-    template<> struct MakeUnsigned<short , true> { using Type = ushort; };
-    template<> struct MakeUnsigned<ushort, true> { using Type = ushort; };
-    template<> struct MakeUnsigned<int   , true> { using Type = uint; };
-    template<> struct MakeUnsigned<uint  , true> { using Type = uint; };
-    template<> struct MakeUnsigned<long  , true> { using Type = ulong; };
-    template<> struct MakeUnsigned<ulong , true> { using Type = ulong; };
-    template<> struct MakeUnsigned<llong , true> { using Type = ullong; };
-    template<> struct MakeUnsigned<ullong, true> { using Type = ullong; };
+    template<> struct MakeUnsigned<short , true> { using Type = octa::ushort; };
+    template<> struct MakeUnsigned<int   , true> { using Type = octa::uint; };
+    template<> struct MakeUnsigned<long  , true> { using Type = octa::ulong; };
+
+    template<> struct MakeUnsigned<octa::schar , true> { using Type = octa::uchar;  };
+    template<> struct MakeUnsigned<octa::uchar , true> { using Type = octa::uchar;  };
+    template<> struct MakeUnsigned<octa::ushort, true> { using Type = octa::ushort; };
+    template<> struct MakeUnsigned<octa::uint  , true> { using Type = octa::uint;   };
+    template<> struct MakeUnsigned<octa::ulong , true> { using Type = octa::ulong;  };
+    template<> struct MakeUnsigned<octa::llong , true> { using Type = octa::ullong; };
+    template<> struct MakeUnsigned<octa::ullong, true> { using Type = octa::ullong; };
 
     template<typename T> struct MakeSignedBase {
         using Type = typename ApplyCv<T,
@@ -1111,55 +1115,55 @@ using CommonType = typename octa::detail::CommonTypeBase<T, U, V...>::Type;
 /* aligned storage */
 
 namespace detail {
-    template<size_t N> struct AlignedTest {
+    template<octa::Size N> struct AlignedTest {
         union type {
-            uchar data[N];
+            octa::uchar data[N];
             octa::MaxAlign align;
         };
     };
 
-    template<size_t N, size_t A> struct AlignedStorageBase {
+    template<octa::Size N, octa::Size A> struct AlignedStorageBase {
         struct type {
-            alignas(A) uchar data[N];
+            alignas(A) octa::uchar data[N];
         };
     };
 }
 
-template<size_t N, size_t A
+template<octa::Size N, octa::Size A
     = alignof(typename octa::detail::AlignedTest<N>::Type)
 > using AlignedStorage = typename octa::detail::AlignedStorageBase<N, A>::Type;
 
 /* aligned union */
 
 namespace detail {
-    template<size_t ...N> struct AlignMax;
+    template<octa::Size ...N> struct AlignMax;
 
-    template<size_t N> struct AlignMax<N> {
-        static constexpr size_t value = N;
+    template<octa::Size N> struct AlignMax<N> {
+        static constexpr octa::Size value = N;
     };
 
-    template<size_t N1, size_t N2> struct AlignMax<N1, N2> {
-        static constexpr size_t value = (N1 > N2) ? N1 : N2;
+    template<octa::Size N1, octa::Size N2> struct AlignMax<N1, N2> {
+        static constexpr octa::Size value = (N1 > N2) ? N1 : N2;
     };
 
-    template<size_t N1, size_t N2, size_t ...N>
+    template<octa::Size N1, octa::Size N2, octa::Size ...N>
     struct AlignMax<N1, N2, N...> {
-        static constexpr size_t value
+        static constexpr octa::Size value
             = AlignMax<AlignMax<N1, N2>::value, N...>::value;
     };
 
-    template<size_t N, typename ...T> struct AlignedUnionBase {
-        static constexpr size_t alignment_value
+    template<octa::Size N, typename ...T> struct AlignedUnionBase {
+        static constexpr octa::Size alignment_value
             = AlignMax<alignof(T)...>::value;
 
         struct type {
-            alignas(alignment_value) uchar data[AlignMax<N,
+            alignas(alignment_value) octa::uchar data[AlignMax<N,
                 sizeof(T)...>::value];
         };
     };
 } /* namespace detail */
 
-template<size_t N, typename ...T>
+template<octa::Size N, typename ...T>
 using AlignedUnion = typename octa::detail::AlignedUnionBase<N, T...>::Type;
 
 /* underlying type */

@@ -62,12 +62,12 @@ class Vector {
     using VecPair = octa::detail::VectorPair<T, A>;
 
     VecPair p_buf;
-    size_t p_len, p_cap;
+    octa::Size p_len, p_cap;
 
-    void insert_base(size_t idx, size_t n) {
+    void insert_base(octa::Size idx, octa::Size n) {
         if (p_len + n > p_cap) reserve(p_len + n);
         p_len += n;
-        for (size_t i = p_len - 1; i > idx + n - 1; --i) {
+        for (octa::Size i = p_len - 1; i > idx + n - 1; --i) {
             p_buf.p_ptr[i] = octa::move(p_buf.p_ptr[i - n]);
         }
     }
@@ -79,7 +79,7 @@ class Vector {
         octa::RangeSize<R> l = range.size();
         reserve(l);
         p_len = l;
-        for (size_t i = 0; !range.empty(); range.pop_front()) {
+        for (octa::Size i = 0; !range.empty(); range.pop_front()) {
             octa::allocator_construct(p_buf.get_alloc(),
                 &p_buf.p_ptr[i], range.front());
             ++i;
@@ -90,7 +90,7 @@ class Vector {
     void ctor_from_range(R &range, EnableIf<
         !octa::IsFiniteRandomAccessRange<R>::value, bool
     > = true) {
-        size_t i = 0;
+        octa::Size i = 0;
         for (; !range.empty(); range.pop_front()) {
             reserve(i + 1);
             octa::allocator_construct(p_buf.get_alloc(),
@@ -114,20 +114,20 @@ class Vector {
     }
 
 public:
-    using Size = size_t;
-    using Difference = ptrdiff_t;
+    using Size = octa::Size;
+    using Difference = octa::Ptrdiff;
     using Value = T;
     using Reference = T &;
     using ConstReference = const T &;
     using Pointer = T *;
     using ConstPointer = const T *;
-    using Range = PointerRange<T>;
-    using ConstRange = PointerRange<const T>;
+    using Range = octa::PointerRange<T>;
+    using ConstRange = octa::PointerRange<const T>;
     using Allocator = A;
 
     Vector(const A &a = A()): p_buf(nullptr, a), p_len(0), p_cap(0) {}
 
-    explicit Vector(size_t n, const T &val = T(),
+    explicit Vector(Size n, const T &val = T(),
     const A &al = A()): Vector(al) {
         p_buf.p_ptr = octa::allocator_allocate(p_buf.get_alloc(), n);
         p_len = p_cap = n;
@@ -183,10 +183,10 @@ public:
     }
 
     Vector(InitializerList<T> v, const A &a = A()): Vector(a) {
-        size_t l = v.end() - v.begin();
+        Size l = v.end() - v.begin();
         const T *ptr = v.begin();
         reserve(l);
-        for (size_t i = 0; i < l; ++i)
+        for (Size i = 0; i < l; ++i)
             octa::allocator_construct(p_buf.get_alloc(),
                 &p_buf.p_ptr[i], ptr[i]);
         p_len = l;
@@ -232,7 +232,7 @@ public:
 
     Vector &operator=(InitializerList<T> il) {
         clear();
-        size_t ilen = il.end() - il.begin();
+        Size ilen = il.end() - il.begin();
         reserve(ilen);
         if (octa::IsPod<T>()) {
             memcpy(p_buf.p_ptr, il.begin(), ilen);
@@ -254,12 +254,12 @@ public:
         ctor_from_range(range);
     }
 
-    void resize(size_t n, const T &v = T()) {
-        size_t l = p_len;
+    void resize(Size n, const T &v = T()) {
+        Size l = p_len;
         reserve(n);
         p_len = n;
         if (octa::IsPod<T>()) {
-            for (size_t i = l; i < p_len; ++i) {
+            for (Size i = l; i < p_len; ++i) {
                 p_buf.p_ptr[i] = T(v);
             }
         } else {
@@ -270,11 +270,11 @@ public:
         }
     }
 
-    void reserve(size_t n) {
+    void reserve(Size n) {
         if (n <= p_cap) return;
-        size_t oc = p_cap;
+        Size oc = p_cap;
         if (!oc) {
-            p_cap = octa::max(n, size_t(8));
+            p_cap = octa::max(n, Size(8));
         } else {
             while (p_cap < n) p_cap *= 2;
         }
@@ -297,11 +297,11 @@ public:
         p_buf.p_ptr = tmp;
     }
 
-    T &operator[](size_t i) { return p_buf.p_ptr[i]; }
-    const T &operator[](size_t i) const { return p_buf.p_ptr[i]; }
+    T &operator[](Size i) { return p_buf.p_ptr[i]; }
+    const T &operator[](Size i) const { return p_buf.p_ptr[i]; }
 
-    T &at(size_t i) { return p_buf.p_ptr[i]; }
-    const T &at(size_t i) const { return p_buf.p_ptr[i]; }
+    T &at(Size i) { return p_buf.p_ptr[i]; }
+    const T &at(Size i) const { return p_buf.p_ptr[i]; }
 
     T &push(const T &v) {
         if (p_len == p_cap) reserve(p_len + 1);
@@ -342,13 +342,13 @@ public:
     T *data() { return p_buf.p_ptr; }
     const T *data() const { return p_buf.p_ptr; }
 
-    size_t size() const { return p_len; }
-    size_t capacity() const { return p_cap; }
+    Size size() const { return p_len; }
+    Size capacity() const { return p_cap; }
 
     bool empty() const { return (p_len == 0); }
 
-    bool in_range(size_t idx) { return idx < p_len; }
-    bool in_range(int idx) { return idx >= 0 && size_t(idx) < p_len; }
+    bool in_range(Size idx) { return idx < p_len; }
+    bool in_range(int idx) { return idx >= 0 && Size(idx) < p_len; }
     bool in_range(const T *ptr) {
         return ptr >= p_buf.p_ptr && ptr < &p_buf.p_ptr[p_len];
     }
@@ -360,38 +360,38 @@ public:
         return r;
     }
 
-    T *insert(size_t idx, T &&v) {
+    T *insert(Size idx, T &&v) {
         insert_base(idx, 1);
         p_buf.p_ptr[idx] = octa::move(v);
         return &p_buf.p_ptr[idx];
     }
 
-    T *insert(size_t idx, const T &v) {
+    T *insert(Size idx, const T &v) {
         insert_base(idx, 1);
         p_buf.p_ptr[idx] = v;
         return &p_buf.p_ptr[idx];
     }
 
-    T *insert(size_t idx, size_t n, const T &v) {
+    T *insert(Size idx, Size n, const T &v) {
         insert_base(idx, n);
-        for (size_t i = 0; i < n; ++i) {
+        for (Size i = 0; i < n; ++i) {
             p_buf.p_ptr[idx + i] = v;
         }
         return &p_buf.p_ptr[idx];
     }
 
     template<typename U>
-    T *insert_range(size_t idx, U range) {
-        size_t l = range.size();
+    T *insert_range(Size idx, U range) {
+        Size l = range.size();
         insert_base(idx, l);
-        for (size_t i = 0; i < l; ++i) {
+        for (Size i = 0; i < l; ++i) {
             p_buf.p_ptr[idx + i] = range.front();
             range.pop_front();
         }
         return &p_buf.p_ptr[idx];
     }
 
-    T *insert(size_t idx, InitializerList<T> il) {
+    T *insert(Size idx, InitializerList<T> il) {
         return insert_range(idx, octa::each(il));
     }
 

@@ -23,6 +23,12 @@ using llong = long long;
 
 using ldouble = long double;
 
+/* keywords in c++, but aliased */
+
+using Wchar = wchar_t;
+using Char16 = char16_t;
+using Char32 = char32_t;
+
 /* nullptr type */
 
 using Nullptr = decltype(nullptr);
