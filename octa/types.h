@@ -21,12 +21,12 @@ using llong = long long;
 
 using ldouble = long double;
 
-using nullptr_t = decltype(nullptr);
+using Nullptr = decltype(nullptr);
 
 #if defined(__CLANG_MAX_ALIGN_T_DEFINED) || defined(_GCC_MAX_ALIGN_T)
-using ::max_align_t;
+using MaxAlign = ::max_align_t;
 #else
-using max_align_t = long double;
+using MaxAlign = long double;
 #endif
 
 }

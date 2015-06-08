@@ -80,8 +80,8 @@ namespace detail {
 /* is null pointer */
 
 namespace detail {
-    template<typename> struct IsNullPointerBase           : False {};
-    template<        > struct IsNullPointerBase<nullptr_t>:  True {};
+    template<typename> struct IsNullPointerBase         : False {};
+    template<        > struct IsNullPointerBase<Nullptr>:  True {};
 }
 
 template<typename T> struct IsNullPointer:
@@ -1114,7 +1114,7 @@ namespace detail {
     template<size_t N> struct AlignedTest {
         union type {
             uchar data[N];
-            octa::max_align_t align;
+            octa::MaxAlign align;
         };
     };
 

@@ -284,7 +284,7 @@ public:
         static_assert(!octa::IsPointer<D>::value,
             "Box constructed with null fptr deleter");
     }
-    constexpr Box(nullptr_t): p_stor(nullptr, D()) {
+    constexpr Box(Nullptr): p_stor(nullptr, D()) {
         static_assert(!octa::IsPointer<D>::value,
             "Box constructed with null fptr deleter");
     }
@@ -330,7 +330,7 @@ public:
         return *this;
     }
 
-    Box &operator=(nullptr_t) {
+    Box &operator=(Nullptr) {
         reset();
         return *this;
     }
@@ -403,7 +403,7 @@ public:
         static_assert(!octa::IsPointer<D>::value,
             "Box constructed with null fptr deleter");
     }
-    constexpr Box(nullptr_t): p_stor(nullptr, D()) {
+    constexpr Box(Nullptr): p_stor(nullptr, D()) {
         static_assert(!octa::IsPointer<D>::value,
             "Box constructed with null fptr deleter");
     }
@@ -421,7 +421,7 @@ public:
     > d, octa::EnableIf<octa::detail::SameOrLessCvQualified<U, Pointer>::value,
     Nat> = Nat()): p_stor(p, d) {}
 
-    Box(nullptr_t, octa::Conditional<octa::IsReference<D>::value,
+    Box(Nullptr, octa::Conditional<octa::IsReference<D>::value,
         D, AddLvalueReference<const D>
     > d): p_stor(nullptr, d) {}
 
@@ -433,7 +433,7 @@ public:
             "rvalue deleter cannot be a ref");
     }
 
-    Box(nullptr_t, octa::RemoveReference<D> &&d):
+    Box(Nullptr, octa::RemoveReference<D> &&d):
     p_stor(nullptr, octa::move(d)) {
         static_assert(!octa::IsReference<D>::value,
             "rvalue deleter cannot be a ref");
@@ -468,7 +468,7 @@ public:
         return *this;
     }
 
-    Box &operator=(nullptr_t) {
+    Box &operator=(Nullptr) {
         reset();
         return *this;
     }
@@ -502,7 +502,7 @@ public:
         if (tmp) p_stor.get_deleter()(tmp);
     }
 
-    void reset(nullptr_t) {
+    void reset(Nullptr) {
         Pointer tmp = p_stor.p_ptr;
         p_stor.p_ptr = nullptr;
         if (tmp) p_stor.get_deleter()(tmp);

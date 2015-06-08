@@ -591,8 +591,8 @@ namespace detail {
 
 template<typename R, typename ...Args>
 struct Function<R(Args...)>: octa::detail::FunctionBase<R, Args...> {
-    Function(         ) { init_empty(); }
-    Function(nullptr_t) { init_empty(); }
+    Function(       ) { init_empty(); }
+    Function(Nullptr) { init_empty(); }
 
     Function(Function &&f) {
         init_empty();
@@ -619,7 +619,7 @@ struct Function<R(Args...)>: octa::detail::FunctionBase<R, Args...> {
     Function(octa::AllocatorArg, const A &) { init_empty(); }
 
     template<typename A>
-    Function(octa::AllocatorArg, const A &, nullptr_t) { init_empty(); }
+    Function(octa::AllocatorArg, const A &, Nullptr) { init_empty(); }
 
     template<typename A>
     Function(octa::AllocatorArg, const A &, Function &&f) {
@@ -739,16 +739,16 @@ private:
 };
 
 template<typename T>
-bool operator==(nullptr_t, const Function<T> &rhs) { return !rhs; }
+bool operator==(Nullptr, const Function<T> &rhs) { return !rhs; }
 
 template<typename T>
-bool operator==(const Function<T> &lhs, nullptr_t) { return !lhs; }
+bool operator==(const Function<T> &lhs, Nullptr) { return !lhs; }
 
 template<typename T>
-bool operator!=(nullptr_t, const Function<T> &rhs) { return rhs; }
+bool operator!=(Nullptr, const Function<T> &rhs) { return rhs; }
 
 template<typename T>
-bool operator!=(const Function<T> &lhs, nullptr_t) { return lhs; }
+bool operator!=(const Function<T> &lhs, Nullptr) { return lhs; }
 
 namespace detail {
     template<typename F>
