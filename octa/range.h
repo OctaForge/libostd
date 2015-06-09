@@ -636,6 +636,10 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
         *(p_beg++) = octa::move(v);
     }
 
+    /* non-range methods */
+    T *data() { return p_beg; }
+    const T *data() const { return p_beg; }
+
 private:
     T *p_beg, *p_end;
 };

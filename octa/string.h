@@ -16,7 +16,122 @@
 namespace octa {
 static constexpr octa::Size npos = -1;
 
-template<typename T, typename A = octa::Allocator<T>>
+template<typename T, typename A = octa::Allocator<T>> class StringBase;
+
+template<typename T>
+struct StringRangeBase: InputRange<
+    StringRangeBase<T>, FiniteRandomAccessRangeTag, T
+> {
+    StringRangeBase(): p_beg(nullptr), p_end(nullptr) {}
+    StringRangeBase(const StringRangeBase &v): p_beg(v.p_beg),
+        p_end(v.p_end) {}
+    StringRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
+    StringRangeBase(T *beg, octa::Size n): p_beg(beg), p_end(beg + n) {}
+    /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
+    StringRangeBase(T *beg): p_beg(beg), p_end(beg + strlen(beg)) {}
+    StringRangeBase(const StringBase<T> &s): p_beg(s.data()),
+        p_end(s.data() + s.size()) {}
+
+    StringRangeBase &operator=(const StringRangeBase &v) {
+        p_beg = v.p_beg; p_end = v.p_end; return *this;
+    }
+    StringRangeBase &operator=(const StringBase<T> &s) {
+        p_beg = s.data(); p_end = s.data() + s.size(); return *this;
+    }
+    /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
+    StringRangeBase &operator=(T *s) {
+        p_beg = s; p_end = s + strlen(s); return *this;
+    }
+
+    bool empty() const { return p_beg == p_end; }
+
+    bool pop_front() {
+        if (p_beg == p_end) return false;
+        ++p_beg;
+        return true;
+    }
+    bool push_front() { --p_beg; return true; }
+
+    octa::Size pop_front_n(octa::Size n) {
+        octa::Size olen = p_end - p_beg;
+        p_beg += n;
+        if (p_beg > p_end) {
+            p_beg = p_end;
+            return olen;
+        }
+        return n;
+    }
+
+    octa::Size push_front_n(octa::Size n) { p_beg -= n; return true; }
+
+    T &front() const { return *p_beg; }
+
+    bool equals_front(const StringRangeBase &range) const {
+        return p_beg == range.p_beg;
+    }
+
+    octa::Ptrdiff distance_front(const StringRangeBase &range) const {
+        return range.p_beg - p_beg;
+    }
+
+    bool pop_back() {
+        if (p_end == p_beg) return false;
+        --p_end;
+        return true;
+    }
+    bool push_back() { ++p_end; return true; }
+
+    octa::Size pop_back_n(octa::Size n) {
+        octa::Size olen = p_end - p_beg;
+        p_end -= n;
+        if (p_end < p_beg) {
+            p_end = p_beg;
+            return olen;
+        }
+        return n;
+    }
+
+    octa::Size push_back_n(octa::Size n) { p_end += n; return true; }
+
+    T &back() const { return *(p_end - 1); }
+
+    bool equals_back(const StringRangeBase &range) const {
+        return p_end == range.p_end;
+    }
+
+    octa::Ptrdiff distance_back(const StringRangeBase &range) const {
+        return range.p_end - p_end;
+    }
+
+    octa::Size size() const { return p_end - p_beg; }
+
+    StringRangeBase slice(octa::Size start, octa::Size end) const {
+        return StringRangeBase(p_beg + start, p_beg + end);
+    }
+
+    T &operator[](octa::Size i) const { return p_beg[i]; }
+
+    void put(T v) {
+        *(p_beg++) = v;
+    }
+
+    /* non-range methods */
+    T *data() { return p_beg; }
+    const T *data() const { return p_beg; }
+
+    octa::Size to_hash() const {
+        const T *d = data();
+        Size h = 5381, len = size();
+        for (Size i = 0; i < len; ++i)
+            h = ((h << 5) + h) ^ d[i];
+        return h;
+    }
+
+private:
+    T *p_beg, *p_end;
+};
+
+template<typename T, typename A>
 class StringBase {
     octa::Vector<T> p_buf;
 
@@ -32,8 +147,8 @@ public:
     using ConstReference = const T &;
     using Pointer = T *;
     using ConstPointer = const T *;
-    using Range = octa::PointerRange<T>;
-    using ConstRange = octa::PointerRange<const T>;
+    using Range = octa::StringRangeBase<T>;
+    using ConstRange = octa::StringRangeBase<const T>;
     using Allocator = A;
 
     StringBase(const A &a = A()): p_buf(1, '\0', a) {}
@@ -56,6 +171,9 @@ public:
     StringBase(const T *v, const A &a = A()):
         p_buf(ConstRange(v, strlen(v) + 1), a) {}
 
+    StringBase(const T *v, Size n, const A &a = A()):
+        p_buf(ConstRange(v, n), a) {}
+
     template<typename R> StringBase(R range, const A &a = A()):
     p_buf(range, a) {
         terminate();
@@ -73,6 +191,11 @@ public:
     }
     StringBase<T> &operator=(const T *v) {
         p_buf = ConstRange(v, strlen(v) + 1);
+        return *this;
+    }
+    StringBase<T> &operator=(const Range &r) {
+        p_buf = r;
+        terminate();
         return *this;
     }
 
@@ -177,15 +300,13 @@ public:
     }
 
     Size to_hash() const {
-        const T *d = data();
-        Size h = 5381, len = size();
-        for (Size i = 0; i < len; ++i)
-            h = ((h << 5) + h) ^ d[i];
-        return h;
+        return each().to_hash();
     }
 };
 
 using String = StringBase<char>;
+using StringRange = StringRangeBase<char>;
+using ConstStringRange = StringRangeBase<const char>;
 
 template<typename T, typename F>
 String concat(const T v, const String &sep, F func) {
@@ -351,6 +472,14 @@ template<> struct ToString<String> {
     using Result = String;
     String operator()(Argument s) {
         return s;
+    }
+};
+
+template<> struct ToString<StringRange> {
+    using Argument = const StringRange &;
+    using Result = String;
+    String operator()(Argument s) {
+        return String(s);
     }
 };
 

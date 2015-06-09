@@ -79,6 +79,10 @@ class Vector {
         octa::RangeSize<R> l = range.size();
         reserve(l);
         p_len = l;
+        if (octa::IsPod<T>() && octa::IsSame<T, octa::RangeValue<R>>()) {
+            memcpy(p_buf.p_ptr, &range.front(), range.size());
+            return;
+        }
         for (octa::Size i = 0; !range.empty(); range.pop_front()) {
             octa::allocator_construct(p_buf.get_alloc(),
                 &p_buf.p_ptr[i], range.front());
@@ -182,15 +186,20 @@ public:
         v.p_len = v.p_cap = 0;
     }
 
-    Vector(InitializerList<T> v, const A &a = A()): Vector(a) {
-        Size l = v.end() - v.begin();
-        const T *ptr = v.begin();
-        reserve(l);
-        for (Size i = 0; i < l; ++i)
-            octa::allocator_construct(p_buf.get_alloc(),
-                &p_buf.p_ptr[i], ptr[i]);
-        p_len = l;
+    Vector(const T *buf, Size n, const A &a = A()): Vector(a) {
+        reserve(n);
+        if (octa::IsPod<T>()) {
+            memcpy(p_buf.p_ptr, buf, n * sizeof(T));
+        } else {
+            for (Size i = 0; i < n; ++i)
+                octa::allocator_construct(p_buf.get_alloc(),
+                    &p_buf.p_ptr[i], buf[i]);
+        }
+        p_len = n;
     }
+
+    Vector(InitializerList<T> v, const A &a = A()):
+        Vector(v.begin(), v.size(), a) {}
 
     template<typename R> Vector(R range, const A &a = A()):
     Vector(a) {
@@ -252,6 +261,7 @@ public:
     Vector &operator=(R range) {
         clear();
         ctor_from_range(range);
+        return *this;
     }
 
     void resize(Size n, const T &v = T()) {
