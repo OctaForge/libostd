@@ -149,8 +149,6 @@ public:
     using ConstPointer = const T *;
     using Range = octa::StringRangeBase<T>;
     using ConstRange = octa::StringRangeBase<const T>;
-    using ReverseRange = octa::ReverseRange<Range>;
-    using ConstReverseRange = octa::ReverseRange<ConstRange>;
     using Allocator = A;
 
     StringBase(const A &a = A()): p_buf(1, '\0', a) {}
@@ -298,16 +296,6 @@ public:
     }
     ConstRange ceach() const {
         return ConstRange(p_buf.data(), size());
-    }
-
-    ReverseRange reach() {
-        return each().reach();
-    }
-    ConstReverseRange reach() const {
-        return each().reach();
-    }
-    ConstReverseRange creach() const {
-        return ceach().reach();
     }
 
     void swap(StringBase &v) {

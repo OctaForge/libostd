@@ -42,6 +42,8 @@ OCTA_RANGE_TRAIT(Size, Size)
 OCTA_RANGE_TRAIT(Value, Value)
 OCTA_RANGE_TRAIT(Reference, Reference)
 OCTA_RANGE_TRAIT(Difference, Difference)
+OCTA_RANGE_TRAIT(Reverse, Reverse)
+OCTA_RANGE_TRAIT(Movable, Movable)
 
 #undef OCTA_RANGE_TRAIT
 
@@ -301,6 +303,8 @@ template<typename B, typename C, typename V, typename R = V &,
     using Difference = D;
     using Value = V;
     using Reference = R;
+    using Reverse = ReverseRange<B>;
+    using Movable = MoveRange<B>;
 
     octa::detail::RangeIterator<B> begin() const {
         return octa::detail::RangeIterator<B>((const B &)*this);
@@ -329,16 +333,16 @@ template<typename B, typename C, typename V, typename R = V &,
         return B(*((B *)this));
     }
 
-    ReverseRange<B> reach() const {
+    ReverseRange<B> reverse() const {
         return ReverseRange<B>(each());
-    }
-
-    RangeHalf<B> half() const {
-        return RangeHalf<B>(each());
     }
 
     MoveRange<B> movable() const {
         return MoveRange<B>(each());
+    }
+
+    RangeHalf<B> half() const {
+        return RangeHalf<B>(each());
     }
 };
 
@@ -355,21 +359,6 @@ auto each(const T &r) -> decltype(r.each()) {
 template<typename T>
 auto ceach(const T &r) -> decltype(r.each()) {
     return r.each();
-}
-
-template<typename T>
-auto reach(T &r) -> decltype(r.reach()) {
-    return r.reach();
-}
-
-template<typename T>
-auto reach(const T &r) -> decltype(r.reach()) {
-    return r.reach();
-}
-
-template<typename T>
-auto creach(const T &r) -> decltype(r.reach()) {
-    return r.reach();
 }
 
 template<typename V, typename R = V &, typename S = octa::Size,
@@ -767,11 +756,6 @@ private:
 template<typename T, octa::Size N>
 PointerRange<T> each(T (&array)[N]) {
     return PointerRange<T>(array, N);
-}
-
-template<typename T, octa::Size N>
-ReverseRange<PointerRange<T>> reach(T (&array)[N]) {
-    return ReverseRange<PointerRange<T>>(PointerRange<T>(array, N));
 }
 
 template<typename T, typename S>
