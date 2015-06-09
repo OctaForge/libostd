@@ -183,19 +183,19 @@ public:
 
     void clear() { p_buf.clear(); }
 
-    StringBase<T> &operator=(const StringBase &v) {
+    StringBase &operator=(const StringBase &v) {
         p_buf.operator=(v);
         return *this;
     }
-    StringBase<T> &operator=(StringBase &&v) {
+    StringBase &operator=(StringBase &&v) {
         p_buf.operator=(octa::move(v));
         return *this;
     }
-    StringBase<T> &operator=(const T *v) {
+    StringBase &operator=(const T *v) {
         p_buf = ConstRange(v, strlen(v) + 1);
         return *this;
     }
-    StringBase<T> &operator=(const Range &r) {
+    StringBase &operator=(const Range &r) {
         p_buf = r;
         terminate();
         return *this;
@@ -241,13 +241,13 @@ public:
         p_buf.push('\0');
     }
 
-    StringBase<T> &append(const StringBase &s) {
+    StringBase &append(const StringBase &s) {
         p_buf.pop();
         p_buf.insert_range(p_buf.size(), s.p_buf.each());
         return *this;
     }
 
-    StringBase<T> &append(const StringBase &s, octa::Size idx, octa::Size len) {
+    StringBase &append(const StringBase &s, octa::Size idx, octa::Size len) {
         p_buf.pop();
         p_buf.insert_range(p_buf.size(), Range(&s[idx],
             (len == npos) ? (s.size() - idx) : len));
@@ -255,14 +255,14 @@ public:
         return *this;
     }
 
-    StringBase<T> &append(const T *s) {
+    StringBase &append(const T *s) {
         p_buf.pop();
         p_buf.insert_range(p_buf.size(), ConstRange(s,
             strlen(s) + 1));
         return *this;
     }
 
-    StringBase<T> &append(octa::Size n, T c) {
+    StringBase &append(octa::Size n, T c) {
         p_buf.pop();
         for (octa::Size i = 0; i < n; ++i) p_buf.push(c);
         p_buf.push('\0');
@@ -270,20 +270,20 @@ public:
     }
 
     template<typename R>
-    StringBase<T> &append_range(R range) {
+    StringBase &append_range(R range) {
         p_buf.pop();
         p_buf.insert_range(p_buf.size(), range);
         terminate();
         return *this;
     }
 
-    StringBase<T> &operator+=(const StringBase &s) {
+    StringBase &operator+=(const StringBase &s) {
         return append(s);
     }
-    StringBase<T> &operator+=(const T *s) {
+    StringBase &operator+=(const T *s) {
         return append(s);
     }
-    StringBase<T> &operator+=(T c) {
+    StringBase &operator+=(T c) {
         p_buf.pop();
         p_buf.push(c);
         p_buf.push('\0');
