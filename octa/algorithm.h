@@ -45,7 +45,7 @@ namespace detail {
         octa::RangeSize<R> rlen = range.size();
         for (octa::RangeSize<R> i = 1; i < rlen; ++i) {
             octa::RangeSize<R> j = i;
-            octa::RangeReference<R> v = range[i];
+            octa::RangeValue<R> v = range[i];
             while (j > 0 && !compare(range[j - 1], v)) {
                 range[j] = range[j - 1];
                 --j;
@@ -53,13 +53,6 @@ namespace detail {
             range[j] = v;
         }
     }
-
-    template<typename T, typename U>
-    struct UnaryCompare {
-        const T &val;
-        U comp;
-        bool operator()(const T &v) const { return comp(v, val); }
-    };
 
     template<typename R, typename C>
     void hs_sift_down(R range, octa::RangeSize<R> s,
@@ -105,14 +98,18 @@ namespace detail {
             octa::detail::heapsort(range, compare);
             return;
         }
-        octa::RangeReference<R> p = range[range.size() / 2];
-        octa::swap(p, range.back());
-        R r = octa::partition(range,
-            octa::detail::UnaryCompare<decltype(p), C>{ p, compare });
-        R l = range.slice(0, range.size() - r.size());
-        octa::swap(r.front(), r.back());
-        octa::detail::introloop(l, compare, depth - 1);
-        octa::detail::introloop(r, compare, depth - 1);
+        octa::swap(range[range.size() / 2], range.back());
+        octa::RangeSize<R> pi = 0;
+        R pr = range;
+        pr.pop_back();
+        for (; !pr.empty(); pr.pop_front()) {
+            if (compare(pr.front(), range.back()))
+                octa::swap(pr.front(), range[pi++]);
+        }
+        octa::swap(range[pi], range.back());
+        octa::detail::introloop(range.slice(0, pi), compare, depth - 1);
+        octa::detail::introloop(range.slice(pi + 1, range.size()), compare,
+            depth - 1);
     }
 
     template<typename R, typename C>
