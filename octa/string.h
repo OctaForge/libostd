@@ -175,6 +175,14 @@ public:
     void swap(StringBase &v) {
         p_buf.swap(v);
     }
+
+    Size to_hash() const {
+        const T *d = data();
+        Size h = 5381, len = size();
+        for (Size i = 0; i < len; ++i)
+            h = ((h << 5) + h) ^ d[i];
+        return h;
+    }
 };
 
 using String = StringBase<char>;
@@ -259,7 +267,7 @@ template<typename T> struct ToString {
         return ToString<U>()(v);
     }
 
-    String operator()(const T &v) {
+    String operator()(const T &v) const {
         return octa::move(to_str<octa::RemoveCv<
             octa::RemoveReference<T>
         >>(v));

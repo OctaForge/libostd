@@ -93,10 +93,17 @@ template<typename T> BinaryNegate<T> not2(const T &fn) {
 
 /* hash */
 
-template<typename T> struct Hash;
+template<typename T> struct ToHash {
+    using Argument = const T &;
+    using Result = typename T::Size;
+
+    octa::Size operator()(const T &v) const {
+        return v.to_hash();
+    }
+};
 
 namespace detail {
-    template<typename T> struct HashBase {
+    template<typename T> struct ToHashBase {
         using Argument = T;
         using Result = octa::Size;
 
@@ -106,7 +113,7 @@ namespace detail {
     };
 }
 
-#define OCTA_HASH_BASIC(T) template<> struct Hash<T>: octa::detail::HashBase<T> {};
+#define OCTA_HASH_BASIC(T) template<> struct ToHash<T>: octa::detail::ToHashBase<T> {};
 
 OCTA_HASH_BASIC(bool)
 OCTA_HASH_BASIC(char)
@@ -194,24 +201,24 @@ namespace detail {
     };
 } /* namespace detail */
 
-template<> struct Hash<octa::llong>: octa::detail::ScalarHash<octa::llong> {};
-template<> struct Hash<octa::ullong>: octa::detail::ScalarHash<octa::ullong> {};
+template<> struct ToHash<octa::llong>: octa::detail::ScalarHash<octa::llong> {};
+template<> struct ToHash<octa::ullong>: octa::detail::ScalarHash<octa::ullong> {};
 
-template<> struct Hash<float>: octa::detail::ScalarHash<float> {
+template<> struct ToHash<float>: octa::detail::ScalarHash<float> {
     octa::Size operator()(float v) const {
         if (v == 0) return 0;
         return octa::detail::ScalarHash<float>::operator()(v);
     }
 };
 
-template<> struct Hash<double>: octa::detail::ScalarHash<double> {
+template<> struct ToHash<double>: octa::detail::ScalarHash<double> {
     octa::Size operator()(double v) const {
         if (v == 0) return 0;
         return octa::detail::ScalarHash<double>::operator()(v);
     }
 };
 
-template<> struct Hash<octa::ldouble>: octa::detail::ScalarHash<octa::ldouble> {
+template<> struct ToHash<octa::ldouble>: octa::detail::ScalarHash<octa::ldouble> {
     octa::Size operator()(octa::ldouble v) const {
         if (v == 0) return 0;
 #ifdef __i386__
@@ -232,7 +239,7 @@ template<> struct Hash<octa::ldouble>: octa::detail::ScalarHash<octa::ldouble> {
     }
 };
 
-template<typename T> struct Hash<T *> {
+template<typename T> struct ToHash<T *> {
     using Argument = T *;
     using Result = octa::Size;
 
@@ -242,6 +249,12 @@ template<typename T> struct Hash<T *> {
         return octa::detail::mem_hash((const void *)&u, sizeof(u));
     }
 };
+
+template<typename T>
+typename ToHash<octa::RemoveCv<octa::RemoveReference<T>>>::Result
+to_hash(const T &v) {
+    return ToHash<octa::RemoveCv<octa::RemoveReference<T>>>()(v);
+}
 
 /* reference wrapper */
 
