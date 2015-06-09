@@ -42,8 +42,6 @@ OCTA_RANGE_TRAIT(Size, Size)
 OCTA_RANGE_TRAIT(Value, Value)
 OCTA_RANGE_TRAIT(Reference, Reference)
 OCTA_RANGE_TRAIT(Difference, Difference)
-OCTA_RANGE_TRAIT(Reverse, Reverse)
-OCTA_RANGE_TRAIT(Movable, Movable)
 
 #undef OCTA_RANGE_TRAIT
 
@@ -303,8 +301,6 @@ template<typename B, typename C, typename V, typename R = V &,
     using Difference = D;
     using Value = V;
     using Reference = R;
-    using Reverse = ReverseRange<B>;
-    using Movable = MoveRange<B>;
 
     octa::detail::RangeIterator<B> begin() const {
         return octa::detail::RangeIterator<B>((const B &)*this);
