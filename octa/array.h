@@ -25,6 +25,8 @@ struct Array {
     using ConstPointer = const T *;
     using Range = octa::PointerRange<T>;
     using ConstRange = octa::PointerRange<const T>;
+    using ReverseRange = octa::ReverseRange<Range>;
+    using ConstReverseRange = octa::ReverseRange<ConstRange>;
 
     T &operator[](Size i) { return p_buf[i]; }
     const T &operator[](Size i) const { return p_buf[i]; }
@@ -56,6 +58,19 @@ struct Array {
     }
     ConstRange each() const {
         return ConstRange(p_buf, p_buf + N);
+    }
+    ConstRange ceach() const {
+        return ConstRange(p_buf, p_buf + N);
+    }
+
+    ReverseRange reach() {
+        return each().reach();
+    }
+    ConstReverseRange reach() const {
+        return each().reach();
+    }
+    ConstReverseRange creach() const {
+        return ceach().reach();
     }
 
     void swap(Array &v) {

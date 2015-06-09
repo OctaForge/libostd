@@ -284,6 +284,8 @@ namespace detail {
     }
 }
 
+template<typename> struct ReverseRange;
+
 template<typename B, typename C, typename V, typename R = V &,
          typename S = octa::Size, typename D = octa::Ptrdiff
 > struct InputRange {
@@ -320,10 +322,44 @@ template<typename B, typename C, typename V, typename R = V &,
         return B(*((B *)this));
     }
 
+    ReverseRange<B> reach() const {
+        return ReverseRange<B>(each());
+    }
+
     RangeHalf<B> half() const {
         return RangeHalf<B>(*((B *)this));
     }
 };
+
+template<typename T>
+auto each(T &r) -> decltype(r.each()) {
+    return r.each();
+}
+
+template<typename T>
+auto each(const T &r) -> decltype(r.each()) {
+    return r.each();
+}
+
+template<typename T>
+auto ceach(const T &r) -> decltype(r.each()) {
+    return r.each();
+}
+
+template<typename T>
+auto reach(T &r) -> decltype(r.reach()) {
+    return r.reach();
+}
+
+template<typename T>
+auto reach(const T &r) -> decltype(r.reach()) {
+    return r.reach();
+}
+
+template<typename T>
+auto creach(const T &r) -> decltype(r.reach()) {
+    return r.reach();
+}
 
 template<typename V, typename R = V &, typename S = octa::Size,
          typename D = octa::Ptrdiff
@@ -411,11 +447,6 @@ public:
         return ReverseRange<T>(p_range.slice(len - end, len - start));
     }
 };
-
-template<typename T>
-ReverseRange<T> make_reverse_range(const T &it) {
-    return ReverseRange<T>(it);
-}
 
 template<typename T>
 struct MoveRange: InputRange<MoveRange<T>,
@@ -644,6 +675,16 @@ private:
     T *p_beg, *p_end;
 };
 
+template<typename T, octa::Size N>
+PointerRange<T> each(T (&array)[N]) {
+    return PointerRange<T>(array, N);
+}
+
+template<typename T, octa::Size N>
+ReverseRange<PointerRange<T>> reach(T (&array)[N]) {
+    return ReverseRange<PointerRange<T>>(PointerRange<T>(array, N));
+}
+
 template<typename T, typename S>
 struct EnumeratedValue {
     S index;
@@ -856,21 +897,6 @@ public:
 template<typename T>
 ChunksRange<T> chunks(const T &it, RangeSize<T> chs) {
     return ChunksRange<T>(it, chs);
-}
-
-template<typename T>
-auto each(T &r) -> decltype(r.each()) {
-    return r.each();
-}
-
-template<typename T>
-auto each(const T &r) -> decltype(r.each()) {
-    return r.each();
-}
-
-template<typename T, octa::Size N>
-PointerRange<T> each(T (&array)[N]) {
-    return PointerRange<T>(array, N);
 }
 
 // range of

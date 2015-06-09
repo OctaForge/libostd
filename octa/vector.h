@@ -127,6 +127,8 @@ public:
     using ConstPointer = const T *;
     using Range = octa::PointerRange<T>;
     using ConstRange = octa::PointerRange<const T>;
+    using ReverseRange = octa::ReverseRange<Range>;
+    using ConstReverseRange = octa::ReverseRange<ConstRange>;
     using Allocator = A;
 
     Vector(const A &a = A()): p_buf(nullptr, a), p_len(0), p_cap(0) {}
@@ -410,6 +412,19 @@ public:
     }
     ConstRange each() const {
         return ConstRange(p_buf.p_ptr, p_buf.p_ptr + p_len);
+    }
+    ConstRange ceach() const {
+        return ConstRange(p_buf.p_ptr, p_buf.p_ptr + p_len);
+    }
+
+    ReverseRange reach() {
+        return each().reach();
+    }
+    ConstReverseRange reach() const {
+        return each().reach();
+    }
+    ConstReverseRange creach() const {
+        return ceach().reach();
     }
 
     void swap(Vector &v) {

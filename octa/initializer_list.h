@@ -43,6 +43,25 @@ octa::PointerRange<const T> each(std::initializer_list<T> init) {
     return octa::PointerRange<const T>(init.begin(), init.end());
 }
 
+template<typename T>
+octa::PointerRange<const T> ceach(std::initializer_list<T> init) {
+    return octa::PointerRange<const T>(init.begin(), init.end());
+}
+
+template<typename T>
+octa::ReverseRange<octa::PointerRange<const T>>
+reach(std::initializer_list<T> init) {
+    return octa::ReverseRange<octa::PointerRange<const T>>(init.begin(),
+        init.end());
+}
+
+template<typename T>
+octa::ReverseRange<octa::PointerRange<const T>>
+ceach(std::initializer_list<T> init) {
+    return octa::ReverseRange<octa::PointerRange<const T>>(init.begin(),
+        init.end());
+}
+
 }
 
 #endif
