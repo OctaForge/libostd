@@ -45,12 +45,12 @@ namespace detail {
         octa::RangeSize<R> rlen = range.size();
         for (octa::RangeSize<R> i = 1; i < rlen; ++i) {
             octa::RangeSize<R> j = i;
-            octa::RangeValue<R> v = range[i];
+            octa::RangeValue<R> v(octa::move(range[i]));
             while (j > 0 && !compare(range[j - 1], v)) {
                 range[j] = range[j - 1];
                 --j;
             }
-            range[j] = v;
+            range[j] = octa::move(v);
         }
     }
 
