@@ -141,6 +141,8 @@ namespace detail {
 
 // range half
 
+template<typename T> struct HalfRange;
+
 template<typename T>
 struct RangeHalf {
 private:
@@ -247,6 +249,10 @@ public:
         else prev_n(n);
         return *this;
     }
+
+    HalfRange<RangeHalf> each(const RangeHalf &other) const {
+        return HalfRange<RangeHalf>(*this, other);
+    }
 };
 
 template<typename R>
@@ -285,6 +291,7 @@ namespace detail {
 }
 
 template<typename> struct ReverseRange;
+template<typename> struct MoveRange;
 
 template<typename B, typename C, typename V, typename R = V &,
          typename S = octa::Size, typename D = octa::Ptrdiff
@@ -327,7 +334,11 @@ template<typename B, typename C, typename V, typename R = V &,
     }
 
     RangeHalf<B> half() const {
-        return RangeHalf<B>(*((B *)this));
+        return RangeHalf<B>(each());
+    }
+
+    MoveRange<B> movable() const {
+        return MoveRange<B>(each());
     }
 };
 
@@ -369,6 +380,89 @@ template<typename V, typename R = V &, typename S = octa::Size,
     using Difference = D;
     using Value = V;
     using Reference = R;
+};
+
+template<typename T>
+struct HalfRange: InputRange<HalfRange<T>,
+    RangeCategory<T>, RangeValue<T>, RangeReference<T>, RangeSize<T>,
+    RangeDifference<T>
+> {
+private:
+    T p_beg;
+    T p_end;
+public:
+    HalfRange(): p_beg(), p_end() {}
+    HalfRange(const HalfRange &range): p_beg(range.p_beg),
+        p_end(range.p_end) {}
+    HalfRange(HalfRange &&range): p_beg(octa::move(range.p_beg)),
+        p_end(octa::move(range.p_end)) {}
+    HalfRange(const T &beg, const T &end): p_beg(beg),
+        p_end(end) {}
+    HalfRange(T &&beg, T &&end): p_beg(octa::move(beg)),
+        p_end(octa::move(end)) {}
+
+    HalfRange &operator=(const HalfRange &range) {
+        p_beg = range.p_beg;
+        p_end = range.p_end;
+        return *this;
+    }
+
+    HalfRange &operator=(HalfRange &&range) {
+        p_beg = octa::move(range.p_beg);
+        p_end = octa::move(range.p_end);
+        return *this;
+    }
+
+    bool empty() const { return p_beg == p_end; }
+
+    bool pop_front() {
+        if (empty()) return false;
+        return p_beg.next();
+    }
+    bool push_front() {
+        return p_beg.prev();
+    }
+    bool pop_back() {
+        if (empty()) return false;
+        return p_end.prev();
+    }
+    bool push_back() {
+        return p_end.next();
+    }
+
+    RangeReference<T> front() const { return *p_beg; }
+    RangeReference<T> back() const { return *(p_end - 1); }
+
+    bool equals_front(const HalfRange &range) const {
+        return p_beg == range.p_beg;
+    }
+    bool equals_back(const HalfRange &range) const {
+        return p_end == range.p_end;
+    }
+
+    RangeDifference<T> distance_front(const HalfRange &range) const {
+        return range.p_beg - p_beg;
+    }
+    RangeDifference<T> distance_back(const HalfRange &range) const {
+        return range.p_end - p_end;
+    }
+
+    RangeSize<T> size() const { return p_end - p_beg; }
+
+    HalfRange<T> slice(RangeSize<T> start, RangeSize<T> p_end) const {
+        return HalfRange<T>(p_beg + start, p_beg + p_end);
+    }
+
+    RangeReference<T> operator[](RangeSize<T> idx) const {
+        return p_beg[idx];
+    }
+
+    void put(const RangeValue<T> &v) {
+        p_beg.range().put(v);
+    }
+    void put(RangeValue<T> &&v) {
+        p_beg.range().put(octa::move(v));
+    }
 };
 
 template<typename T>
@@ -527,11 +621,6 @@ public:
     void put(const Rval &v) { p_range.put(v); }
     void put(Rval &&v) { p_range.put(octa::move(v)); }
 };
-
-template<typename T>
-MoveRange<T> make_move_range(const T &it) {
-    return MoveRange<T>(it);
-}
 
 template<typename T>
 struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T, T> {
@@ -901,95 +990,6 @@ ChunksRange<T> chunks(const T &it, RangeSize<T> chs) {
 
 // range of
 template<typename T> using RangeOf = decltype(octa::each(octa::declval<T>()));
-
-template<typename T>
-struct HalfRange: InputRange<HalfRange<T>,
-    RangeCategory<T>, RangeValue<T>, RangeReference<T>, RangeSize<T>,
-    RangeDifference<T>
-> {
-private:
-    T p_beg;
-    T p_end;
-public:
-    HalfRange(): p_beg(), p_end() {}
-    HalfRange(const HalfRange &range): p_beg(range.p_beg),
-        p_end(range.p_end) {}
-    HalfRange(HalfRange &&range): p_beg(octa::move(range.p_beg)),
-        p_end(octa::move(range.p_end)) {}
-    HalfRange(const T &beg, const T &end): p_beg(beg),
-        p_end(end) {}
-    HalfRange(T &&beg, T &&end): p_beg(octa::move(beg)),
-        p_end(octa::move(end)) {}
-
-    HalfRange &operator=(const HalfRange &range) {
-        p_beg = range.p_beg;
-        p_end = range.p_end;
-        return *this;
-    }
-
-    HalfRange &operator=(HalfRange &&range) {
-        p_beg = octa::move(range.p_beg);
-        p_end = octa::move(range.p_end);
-        return *this;
-    }
-
-    bool empty() const { return p_beg == p_end; }
-
-    bool pop_front() {
-        if (empty()) return false;
-        return p_beg.next();
-    }
-    bool push_front() {
-        return p_beg.prev();
-    }
-    bool pop_back() {
-        if (empty()) return false;
-        return p_end.prev();
-    }
-    bool push_back() {
-        return p_end.next();
-    }
-
-    RangeReference<T> front() const { return *p_beg; }
-    RangeReference<T> back() const { return *(p_end - 1); }
-
-    bool equals_front(const HalfRange &range) const {
-        return p_beg == range.p_beg;
-    }
-    bool equals_back(const HalfRange &range) const {
-        return p_end == range.p_end;
-    }
-
-    RangeDifference<T> distance_front(const HalfRange &range) const {
-        return range.p_beg - p_beg;
-    }
-    RangeDifference<T> distance_back(const HalfRange &range) const {
-        return range.p_end - p_end;
-    }
-
-    RangeSize<T> size() const { return p_end - p_beg; }
-
-    HalfRange<T> slice(RangeSize<T> start, RangeSize<T> p_end) const {
-        return HalfRange<T>(p_beg + start, p_beg + p_end);
-    }
-
-    RangeReference<T> operator[](RangeSize<T> idx) const {
-        return p_beg[idx];
-    }
-
-    void put(const RangeValue<T> &v) {
-        p_beg.range().put(v);
-    }
-    void put(RangeValue<T> &&v) {
-        p_beg.range().put(octa::move(v));
-    }
-};
-
-template<typename T>
-HalfRange<RangeHalf<T>>
-make_half_range(const RangeHalf<T> &a, const RangeHalf<T> &b) {
-    return HalfRange<RangeHalf<T>>(a, b);
-}
 
 } /* namespace octa */
 
