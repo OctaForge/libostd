@@ -19,16 +19,16 @@
 namespace octa {
 
 namespace detail {
-    template<typename T, typename A, bool = octa::IsEmpty<A>::value>
+    template<typename A, bool = octa::IsEmpty<A>::value>
     struct VectorPair;
 
-    template<typename T, typename A>
-    struct VectorPair<T, A, false> { /* non-empty allocator */
-        T *p_ptr;
-        A  p_a;
+    template<typename A>
+    struct VectorPair<A, false> { /* non-empty allocator */
+        octa::AllocatorPointer<A> p_ptr;
+        A p_a;
 
         template<typename U>
-        VectorPair(T *ptr, U &&a): p_ptr(ptr),
+        VectorPair(octa::AllocatorPointer<A> ptr, U &&a): p_ptr(ptr),
             p_a(octa::forward<U>(a)) {}
 
         A &get_alloc() { return p_a; }
@@ -40,12 +40,12 @@ namespace detail {
         }
     };
 
-    template<typename T, typename A>
-    struct VectorPair<T, A, true>: A { /* empty allocator */
-        T *p_ptr;
+    template<typename A>
+    struct VectorPair<A, true>: A { /* empty allocator */
+        octa::AllocatorPointer<A> p_ptr;
 
         template<typename U>
-        VectorPair(T *ptr, U &&a):
+        VectorPair(octa::AllocatorPointer<A> ptr, U &&a):
             A(octa::forward<U>(a)), p_ptr(ptr) {}
 
         A &get_alloc() { return *this; }
@@ -59,7 +59,7 @@ namespace detail {
 
 template<typename T, typename A = octa::Allocator<T>>
 class Vector {
-    using VecPair = octa::detail::VectorPair<T, A>;
+    using VecPair = octa::detail::VectorPair<A>;
 
     VecPair p_buf;
     octa::Size p_len, p_cap;
