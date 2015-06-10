@@ -125,8 +125,12 @@ public:
     using ConstReference = const T &;
     using Pointer = octa::AllocatorPointer<A>;
     using ConstPointer = octa::AllocatorConstPointer<A>;
-    using Range = octa::PointerRange<T>;
-    using ConstRange = octa::PointerRange<const T>;
+    using Range = octa::PointerRange<Value, Reference, Pointer, Size,
+        Difference
+    >;
+    using ConstRange = octa::PointerRange<const Value, ConstReference,
+        ConstPointer, Size, Difference
+    >;
     using Allocator = A;
 
     Vector(const A &a = A()): p_buf(nullptr, a), p_len(0), p_cap(0) {}
