@@ -23,25 +23,25 @@ struct FiniteRandomAccessRangeTag: RandomAccessRangeTag {};
 
 template<typename T> struct RangeHalf;
 
-#define OCTA_RANGE_TRAIT(Name, TypeName) \
+#define OCTA_RANGE_TRAIT(Name) \
 namespace detail { \
     template<typename T> \
     struct Range##Name##Base { \
-        using Type = typename T::TypeName; \
+        using Type = typename T::Name; \
     }; \
     template<typename T> \
     struct Range##Name##Base<RangeHalf<T>> { \
-        using Type = typename T::TypeName; \
+        using Type = typename T::Name; \
     }; \
 } \
 template<typename T> \
 using Range##Name = typename octa::detail::Range##Name##Base<T>::Type;
 
-OCTA_RANGE_TRAIT(Category, Category)
-OCTA_RANGE_TRAIT(Size, Size)
-OCTA_RANGE_TRAIT(Value, Value)
-OCTA_RANGE_TRAIT(Reference, Reference)
-OCTA_RANGE_TRAIT(Difference, Difference)
+OCTA_RANGE_TRAIT(Category)
+OCTA_RANGE_TRAIT(Size)
+OCTA_RANGE_TRAIT(Value)
+OCTA_RANGE_TRAIT(Reference)
+OCTA_RANGE_TRAIT(Difference)
 
 #undef OCTA_RANGE_TRAIT
 
