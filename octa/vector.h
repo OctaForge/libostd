@@ -370,38 +370,38 @@ public:
         return r;
     }
 
-    Pointer insert(Size idx, T &&v) {
+    Range insert(Size idx, T &&v) {
         insert_base(idx, 1);
         p_buf.p_ptr[idx] = octa::move(v);
-        return &p_buf.p_ptr[idx];
+        return Range(&p_buf.p_ptr[idx], &p_buf.p_ptr[p_len]);
     }
 
-    Pointer insert(Size idx, const T &v) {
+    Range insert(Size idx, const T &v) {
         insert_base(idx, 1);
         p_buf.p_ptr[idx] = v;
-        return &p_buf.p_ptr[idx];
+        return Range(&p_buf.p_ptr[idx], &p_buf.p_ptr[p_len]);
     }
 
-    Pointer insert(Size idx, Size n, const T &v) {
+    Range insert(Size idx, Size n, const T &v) {
         insert_base(idx, n);
         for (Size i = 0; i < n; ++i) {
             p_buf.p_ptr[idx + i] = v;
         }
-        return &p_buf.p_ptr[idx];
+        return Range(&p_buf.p_ptr[idx], &p_buf.p_ptr[p_len]);
     }
 
     template<typename U>
-    Pointer insert_range(Size idx, U range) {
+    Range insert_range(Size idx, U range) {
         Size l = range.size();
         insert_base(idx, l);
         for (Size i = 0; i < l; ++i) {
             p_buf.p_ptr[idx + i] = range.front();
             range.pop_front();
         }
-        return &p_buf.p_ptr[idx];
+        return Range(&p_buf.p_ptr[idx], &p_buf.p_ptr[p_len]);
     }
 
-    Pointer insert(Size idx, InitializerList<T> il) {
+    Range insert(Size idx, InitializerList<T> il) {
         return insert_range(idx, octa::each(il));
     }
 
