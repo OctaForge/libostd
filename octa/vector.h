@@ -108,8 +108,8 @@ class Vector {
         if (octa::IsPod<T>()) {
             memcpy(p_buf.p_ptr, v.p_buf.p_ptr, p_len * sizeof(T));
         } else {
-            T *cur = p_buf.p_ptr, *last = p_buf.p_ptr + p_len;
-            T *vbuf = v.p_buf.p_ptr;
+            Pointer cur = p_buf.p_ptr, last = p_buf.p_ptr + p_len;
+            Pointer vbuf = v.p_buf.p_ptr;
             while (cur != last) {
                 octa::allocator_construct(p_buf.get_alloc(),
                    cur++, *vbuf++);
@@ -135,7 +135,7 @@ public:
     const A &al = A()): Vector(al) {
         p_buf.p_ptr = octa::allocator_allocate(p_buf.get_alloc(), n);
         p_len = p_cap = n;
-        T *cur = p_buf.p_ptr, *last = p_buf.p_ptr + n;
+        Pointer cur = p_buf.p_ptr, last = p_buf.p_ptr + n;
         while (cur != last)
             octa::allocator_construct(p_buf.get_alloc(), cur++, val);
     }
