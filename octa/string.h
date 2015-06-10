@@ -145,8 +145,8 @@ public:
     using Value = T;
     using Reference = T &;
     using ConstReference = const T &;
-    using Pointer = T *;
-    using ConstPointer = const T *;
+    using Pointer = octa::AllocatorPointer<A>;
+    using ConstPointer = octa::AllocatorConstPointer<A>;
     using Range = octa::StringRangeBase<T>;
     using ConstRange = octa::StringRangeBase<const T>;
     using Allocator = A;
@@ -168,10 +168,10 @@ public:
     }
 
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
-    StringBase(const T *v, const A &a = A()):
+    StringBase(ConstPointer v, const A &a = A()):
         p_buf(ConstRange(v, strlen(v) + 1), a) {}
 
-    StringBase(const T *v, Size n, const A &a = A()):
+    StringBase(ConstPointer v, Size n, const A &a = A()):
         p_buf(ConstRange(v, n), a) {}
 
     template<typename R> StringBase(R range, const A &a = A()):
@@ -189,7 +189,7 @@ public:
         p_buf.operator=(octa::move(v));
         return *this;
     }
-    StringBase &operator=(const T *v) {
+    StringBase &operator=(ConstPointer v) {
         p_buf = ConstRange(v, strlen(v) + 1);
         return *this;
     }
@@ -221,8 +221,8 @@ public:
     T &back() { return p_buf[size() - 1]; }
     const T &back() const { return p_buf[size() - 1]; }
 
-    T *data() { return p_buf.data(); }
-    const T *data() const { return p_buf.data(); }
+    Pointer data() { return p_buf.data(); }
+    ConstPointer data() const { return p_buf.data(); }
 
     octa::Size size() const {
         return p_buf.size() - 1;
@@ -253,7 +253,7 @@ public:
         return *this;
     }
 
-    StringBase &append(const T *s) {
+    StringBase &append(ConstPointer s) {
         p_buf.pop();
         p_buf.insert_range(p_buf.size(), ConstRange(s,
             strlen(s) + 1));
@@ -278,7 +278,7 @@ public:
     StringBase &operator+=(const StringBase &s) {
         return append(s);
     }
-    StringBase &operator+=(const T *s) {
+    StringBase &operator+=(ConstPointer s) {
         return append(s);
     }
     StringBase &operator+=(T c) {

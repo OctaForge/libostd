@@ -44,12 +44,12 @@ struct Array {
 
     bool in_range(Size idx) { return idx < N; }
     bool in_range(int idx) { return idx >= 0 && Size(idx) < N; }
-    bool in_range(const T *ptr) {
+    bool in_range(ConstPointer ptr) {
         return ptr >= &p_buf[0] && ptr < &p_buf[N];
     }
 
-    T *data() { return p_buf; }
-    const T *data() const { return p_buf; }
+    Pointer data() { return p_buf; }
+    ConstPointer data() const { return p_buf; }
 
     Range each() {
         return Range(p_buf, p_buf + N);

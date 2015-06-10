@@ -123,8 +123,8 @@ public:
     using Value = T;
     using Reference = T &;
     using ConstReference = const T &;
-    using Pointer = T *;
-    using ConstPointer = const T *;
+    using Pointer = octa::AllocatorPointer<A>;
+    using ConstPointer = octa::AllocatorConstPointer<A>;
     using Range = octa::PointerRange<T>;
     using ConstRange = octa::PointerRange<const T>;
     using Allocator = A;
@@ -169,8 +169,8 @@ public:
             if (octa::IsPod<T>()) {
                 memcpy(p_buf.p_ptr, v.p_buf.p_ptr, p_len * sizeof(T));
             } else {
-                T *cur = p_buf.p_ptr, *last = p_buf.p_ptr + p_len;
-                T *vbuf = v.p_buf.p_ptr;
+                Pointer cur = p_buf.p_ptr, last = p_buf.p_ptr + p_len;
+                Pointer vbuf = v.p_buf.p_ptr;
                 while (cur != last) {
                     octa::allocator_construct(p_buf.get_alloc(), cur++,
                         octa::move(*vbuf++));
@@ -186,7 +186,7 @@ public:
         v.p_len = v.p_cap = 0;
     }
 
-    Vector(const T *buf, Size n, const A &a = A()): Vector(a) {
+    Vector(ConstPointer buf, Size n, const A &a = A()): Vector(a) {
         reserve(n);
         if (octa::IsPod<T>()) {
             memcpy(p_buf.p_ptr, buf, n * sizeof(T));
@@ -213,7 +213,7 @@ public:
 
     void clear() {
         if (p_len > 0 && !octa::IsPod<T>()) {
-            T *cur = p_buf.p_ptr, *last = p_buf.p_ptr + p_len;
+            Pointer cur = p_buf.p_ptr, last = p_buf.p_ptr + p_len;
             while (cur != last)
                 octa::allocator_destroy(p_buf.get_alloc(), cur++);
         }
@@ -246,8 +246,8 @@ public:
         if (octa::IsPod<T>()) {
             memcpy(p_buf.p_ptr, il.begin(), ilen);
         } else {
-            T *tbuf = p_buf.p_ptr, *ibuf = il.begin(),
-                *last = il.end();
+            Pointer tbuf = p_buf.p_ptr, ibuf = il.begin(),
+                last = il.end();
             while (ibuf != last) {
                 octa::allocator_construct(p_buf.get_alloc(),
                     tbuf++, *ibuf++);
@@ -273,8 +273,8 @@ public:
                 p_buf.p_ptr[i] = T(v);
             }
         } else {
-            T *first = p_buf.p_ptr + l;
-            T *last  = p_buf.p_ptr + p_len;
+            Pointer first = p_buf.p_ptr + l;
+            Pointer last  = p_buf.p_ptr + p_len;
             while (first != last)
                 octa::allocator_construct(p_buf.get_alloc(), first++, v);
         }
@@ -288,13 +288,13 @@ public:
         } else {
             while (p_cap < n) p_cap *= 2;
         }
-        T *tmp = octa::allocator_allocate(p_buf.get_alloc(), p_cap);
+        Pointer tmp = octa::allocator_allocate(p_buf.get_alloc(), p_cap);
         if (oc > 0) {
             if (octa::IsPod<T>()) {
                 memcpy(tmp, p_buf.p_ptr, p_len * sizeof(T));
             } else {
-                T *cur = p_buf.p_ptr, *tcur = tmp,
-                    *last = tmp + p_len;
+                Pointer cur = p_buf.p_ptr, tcur = tmp,
+                    last = tmp + p_len;
                 while (tcur != last) {
                     octa::allocator_construct(p_buf.get_alloc(), tcur++,
                         octa::move(*cur));
@@ -349,8 +349,8 @@ public:
     T &back() { return p_buf.p_ptr[p_len - 1]; }
     const T &back() const { return p_buf.p_ptr[p_len - 1]; }
 
-    T *data() { return p_buf.p_ptr; }
-    const T *data() const { return p_buf.p_ptr; }
+    Pointer data() { return p_buf.p_ptr; }
+    ConstPointer data() const { return p_buf.p_ptr; }
 
     Size size() const { return p_len; }
     Size capacity() const { return p_cap; }
@@ -359,30 +359,30 @@ public:
 
     bool in_range(Size idx) { return idx < p_len; }
     bool in_range(int idx) { return idx >= 0 && Size(idx) < p_len; }
-    bool in_range(const T *ptr) {
+    bool in_range(ConstPointer ptr) {
         return ptr >= p_buf.p_ptr && ptr < &p_buf.p_ptr[p_len];
     }
 
-    T *disown() {
-        T *r = p_buf.p_ptr;
+    Pointer disown() {
+        Pointer r = p_buf.p_ptr;
         p_buf.p_ptr = nullptr;
         p_len = p_cap = 0;
         return r;
     }
 
-    T *insert(Size idx, T &&v) {
+    Pointer insert(Size idx, T &&v) {
         insert_base(idx, 1);
         p_buf.p_ptr[idx] = octa::move(v);
         return &p_buf.p_ptr[idx];
     }
 
-    T *insert(Size idx, const T &v) {
+    Pointer insert(Size idx, const T &v) {
         insert_base(idx, 1);
         p_buf.p_ptr[idx] = v;
         return &p_buf.p_ptr[idx];
     }
 
-    T *insert(Size idx, Size n, const T &v) {
+    Pointer insert(Size idx, Size n, const T &v) {
         insert_base(idx, n);
         for (Size i = 0; i < n; ++i) {
             p_buf.p_ptr[idx + i] = v;
@@ -391,7 +391,7 @@ public:
     }
 
     template<typename U>
-    T *insert_range(Size idx, U range) {
+    Pointer insert_range(Size idx, U range) {
         Size l = range.size();
         insert_base(idx, l);
         for (Size i = 0; i < l; ++i) {
@@ -401,7 +401,7 @@ public:
         return &p_buf.p_ptr[idx];
     }
 
-    T *insert(Size idx, InitializerList<T> il) {
+    Pointer insert(Size idx, InitializerList<T> il) {
         return insert_range(idx, octa::each(il));
     }
 

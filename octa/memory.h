@@ -728,7 +728,7 @@ using AllocatorValue = typename AllocatorType<A>::Value;
 
 template<typename A>
 using AllocatorPointer = typename octa::detail::PointerType<
-    AllocatorValue<A>, AllocatorType <A>
+    AllocatorValue<A>, AllocatorType<A>
 >::Type;
 
 template<typename A>
