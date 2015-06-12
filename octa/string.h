@@ -305,6 +305,10 @@ public:
     Size to_hash() const {
         return each().to_hash();
     }
+
+    A get_allocator() const {
+        return p_buf.get_allocator();
+    }
 };
 
 using String = StringBase<char>;

@@ -424,6 +424,10 @@ public:
         octa::swap(p_cap, v.p_cap);
         p_buf.swap(v.p_buf);
     }
+
+    A get_allocator() const {
+        return p_buf.get_alloc();
+    }
 };
 
 } /* namespace octa */
