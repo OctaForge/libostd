@@ -133,7 +133,7 @@ private:
 
 template<typename T, typename A>
 class StringBase {
-    octa::Vector<T> p_buf;
+    octa::Vector<T, A> p_buf;
 
     void terminate() {
         if (p_buf.empty() || (p_buf.back() != '\0')) p_buf.push('\0');
@@ -417,7 +417,7 @@ namespace detail {
             n = 0;
             *(s->data()) = '\0';
         }
-        *(((octa::Size *)s) + 1) = n + 1;
+        *((octa::Size *)s) = n + 1;
     }
 }
 

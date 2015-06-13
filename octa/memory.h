@@ -207,43 +207,6 @@ struct DefaultDelete<T[]> {
 /* box */
 
 namespace detail {
-    template<typename T, typename U, bool = octa::IsEmpty<U>::value>
-    struct BoxPair;
-
-    template<typename T, typename U>
-    struct BoxPair<T, U, false> { /* non-empty deleter */
-        T *p_ptr;
-    private:
-        U  p_del;
-
-    public:
-        template<typename D>
-        BoxPair(T *ptr, D &&dltr): p_ptr(ptr), p_del(octa::forward<D>(dltr)) {}
-
-        U &get_deleter() { return p_del; }
-        const U &get_deleter() const { return p_del; }
-
-        void swap(BoxPair &v) {
-            octa::swap(p_ptr, v.p_ptr);
-            octa::swap(p_del, v.p_del);
-        }
-    };
-
-    template<typename T, typename U>
-    struct BoxPair<T, U, true>: U { /* empty deleter */
-        T *p_ptr;
-
-        template<typename D>
-        BoxPair(T *ptr, D &&dltr): U(octa::forward<D>(dltr)), p_ptr(ptr) {}
-
-        U &get_deleter() { return *this; }
-        const U &get_deleter() const { return *this; }
-
-        void swap(BoxPair &v) {
-            octa::swap(p_ptr, v.p_ptr);
-        }
-    };
-
     template<typename T>
     static int ptr_test(...);
     template<typename T>
@@ -315,7 +278,7 @@ public:
 
     Box &operator=(Box &&u) {
         reset(u.release());
-        p_stor.get_deleter() = octa::forward<D>(u.get_deleter());
+        p_stor.second() = octa::forward<D>(u.get_deleter());
         return *this;
     }
 
@@ -326,7 +289,7 @@ public:
         Box &
     > operator=(Box<TT, DD> &&u) {
         reset(u.release());
-        p_stor.get_deleter() = octa::forward<DD>(u.get_deleter());
+        p_stor.second() = octa::forward<DD>(u.get_deleter());
         return *this;
     }
 
@@ -337,28 +300,28 @@ public:
 
     ~Box() { reset(); }
 
-    octa::AddLvalueReference<T> operator*() const { return *p_stor.p_ptr; }
-    Pointer operator->() const { return p_stor.p_ptr; }
+    octa::AddLvalueReference<T> operator*() const { return *p_stor.first(); }
+    Pointer operator->() const { return p_stor.first(); }
 
     explicit operator bool() const {
-        return p_stor.p_ptr != nullptr;
+        return p_stor.first() != nullptr;
     }
 
-    Pointer get() const { return p_stor.p_ptr; }
+    Pointer get() const { return p_stor.first(); }
 
-    Dref  get_deleter()       { return p_stor.get_deleter(); }
-    Dcref get_deleter() const { return p_stor.get_deleter(); }
+    Dref  get_deleter()       { return p_stor.second(); }
+    Dcref get_deleter() const { return p_stor.second(); }
 
     Pointer release() {
-        Pointer p = p_stor.p_ptr;
-        p_stor.p_ptr = nullptr;
+        Pointer p = p_stor.first();
+        p_stor.first() = nullptr;
         return p;
     }
 
     void reset(Pointer p = nullptr) {
-        Pointer tmp = p_stor.p_ptr;
-        p_stor.p_ptr = p;
-        if (tmp) p_stor.get_deleter()(tmp);
+        Pointer tmp = p_stor.first();
+        p_stor.first() = p;
+        if (tmp) p_stor.second()(tmp);
     }
 
     void swap(Box &u) {
@@ -366,7 +329,7 @@ public:
     }
 
 private:
-    octa::detail::BoxPair<T, D> p_stor;
+    octa::detail::CompressedPair<T *, D> p_stor;
 };
 
 namespace detail {
@@ -452,7 +415,7 @@ public:
 
     Box &operator=(Box &&u) {
         reset(u.release());
-        p_stor.get_deleter() = octa::forward<D>(u.get_deleter());
+        p_stor.second() = octa::forward<D>(u.get_deleter());
         return *this;
     }
 
@@ -464,7 +427,7 @@ public:
         Box &
     > operator=(Box<TT, DD> &&u) {
         reset(u.release());
-        p_stor.get_deleter() = octa::forward<DD>(u.get_deleter());
+        p_stor.second() = octa::forward<DD>(u.get_deleter());
         return *this;
     }
 
@@ -476,36 +439,36 @@ public:
     ~Box() { reset(); }
 
     octa::AddLvalueReference<T> operator[](octa::Size idx) const {
-        return p_stor.p_ptr[idx];
+        return p_stor.first()[idx];
     }
 
     explicit operator bool() const {
-        return p_stor.p_ptr != nullptr;
+        return p_stor.first() != nullptr;
     }
 
-    Pointer get() const { return p_stor.p_ptr; }
+    Pointer get() const { return p_stor.first(); }
 
-    Dref  get_deleter()       { return p_stor.get_deleter(); }
-    Dcref get_deleter() const { return p_stor.get_deleter(); }
+    Dref  get_deleter()       { return p_stor.second(); }
+    Dcref get_deleter() const { return p_stor.second(); }
 
     Pointer release() {
-        Pointer p = p_stor.p_ptr;
-        p_stor.p_ptr = nullptr;
+        Pointer p = p_stor.first();
+        p_stor.first() = nullptr;
         return p;
     }
 
     template<typename U> EnableIf<
         octa::detail::SameOrLessCvQualified<U, Pointer>::value, void
     > reset(U p) {
-        Pointer tmp = p_stor.p_ptr;
-        p_stor.p_ptr = p;
-        if (tmp) p_stor.get_deleter()(tmp);
+        Pointer tmp = p_stor.first();
+        p_stor.first() = p;
+        if (tmp) p_stor.second()(tmp);
     }
 
     void reset(octa::Nullptr) {
-        Pointer tmp = p_stor.p_ptr;
-        p_stor.p_ptr = nullptr;
-        if (tmp) p_stor.get_deleter()(tmp);
+        Pointer tmp = p_stor.first();
+        p_stor.first() = nullptr;
+        if (tmp) p_stor.second()(tmp);
     }
 
     void reset() {
@@ -517,7 +480,7 @@ public:
     }
 
 private:
-    octa::detail::BoxPair<T, D> p_stor;
+    octa::detail::CompressedPair<T *, D> p_stor;
 };
 
 namespace detail {

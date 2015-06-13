@@ -166,6 +166,125 @@ Pair<typename octa::detail::MakePairRet<T>::Type,
     >(forward<T>(a), forward<U>(b));;
 }
 
+namespace detail {
+    template<typename T, typename U,
+        bool = octa::IsSame<octa::RemoveCv<T>, octa::RemoveCv<U>>::value,
+        bool = octa::IsEmpty<T>::value,
+        bool = octa::IsEmpty<U>::value
+    > struct CompressedPairSwitch;
+
+    /* neither empty */
+    template<typename T, typename U, bool Same>
+    struct CompressedPairSwitch<T, U, Same, false, false> { enum { value = 0 }; };
+
+    /* first empty */
+    template<typename T, typename U, bool Same>
+    struct CompressedPairSwitch<T, U, Same, true, false> { enum { value = 1 }; };
+
+    /* second empty */
+    template<typename T, typename U, bool Same>
+    struct CompressedPairSwitch<T, U, Same, false, true> { enum { value = 2 }; };
+
+    /* both empty, not the same */
+    template<typename T, typename U>
+    struct CompressedPairSwitch<T, U, false, true, true> { enum { value = 3 }; };
+
+    /* both empty and same */
+    template<typename T, typename U>
+    struct CompressedPairSwitch<T, U, true, true, true> { enum { value = 1 }; };
+
+    template<typename T, typename U, octa::Size = CompressedPairSwitch<T, U>::value>
+    struct CompressedPairBase;
+
+    template<typename T, typename U>
+    struct CompressedPairBase<T, U, 0> {
+        T p_first;
+        U p_second;
+
+        CompressedPairBase(T a, U b): p_first(octa::forward<T>(a)),
+                                      p_second(octa::forward<U>(b)) {}
+
+        T &first() { return p_first; }
+        const T &first() const { return p_first; }
+
+        U &second() { return p_second; }
+        const U &second() const { return p_second; }
+
+        void swap(CompressedPairBase &v) {
+            octa::swap(p_first, v.p_first);
+            octa::swap(p_second, v.p_second);
+        }
+    };
+
+    template<typename T, typename U>
+    struct CompressedPairBase<T, U, 1>: T {
+        U p_second;
+
+        CompressedPairBase(T a, U b): T(octa::forward<T>(a)),
+                                      p_second(octa::forward<U>(b)) {}
+
+        T &first() { return *this; }
+        const T &first() const { return *this; }
+
+        U &second() { return p_second; }
+        const U &second() const { return p_second; }
+
+        void swap(CompressedPairBase &v) {
+            octa::swap(p_second, v.p_second);
+        }
+    };
+
+    template<typename T, typename U>
+    struct CompressedPairBase<T, U, 2>: U {
+        T p_first;
+
+        CompressedPairBase(T a, U b): U(octa::forward<U>(b)),
+                                      p_first(octa::forward<T>(a)) {}
+
+        T &first() { return p_first; }
+        const T &first() const { return p_first; }
+
+        U &second() { return *this; }
+        const U &second() const { return *this; }
+
+        void swap(CompressedPairBase &v) {
+            octa::swap(p_first, v.p_first);
+        }
+    };
+
+    template<typename T, typename U>
+    struct CompressedPairBase<T, U, 3>: T, U {
+        CompressedPairBase(T a, U b): T(octa::forward<T>(a)),
+                                      U(octa::forward<U>(b)) {}
+
+        T &first() { return *this; }
+        const T &first() const { return *this; }
+
+        U &second() { return *this; }
+        const U &second() const { return *this; }
+
+        void swap(CompressedPairBase &) {}
+    };
+
+    template<typename T, typename U>
+    struct CompressedPair: CompressedPairBase<T, U> {
+        typedef CompressedPairBase<T, U> Base;
+
+        CompressedPair(T a, U b): Base(octa::forward<T>(a),
+                                       octa::forward<U>(b)) {}
+
+        T &first() { return Base::first(); }
+        const T &first() const { return Base::first(); }
+
+        U &second() { return Base::second(); }
+        const U &second() const { return Base::second(); }
+
+        void swap(CompressedPair &v) {
+            Base::swap(v);
+        }
+    };
+} /* namespace detail */
+
 } /* namespace octa */
 
 #endif
