@@ -201,8 +201,9 @@ namespace detail {
         T p_first;
         U p_second;
 
-        CompressedPairBase(T a, U b): p_first(octa::forward<T>(a)),
-                                      p_second(octa::forward<U>(b)) {}
+        template<typename TT, typename UU>
+        CompressedPairBase(TT &&a, UU &&b): p_first(octa::forward<TT>(a)),
+                                            p_second(octa::forward<UU>(b)) {}
 
         T &first() { return p_first; }
         const T &first() const { return p_first; }
@@ -220,8 +221,9 @@ namespace detail {
     struct CompressedPairBase<T, U, 1>: T {
         U p_second;
 
-        CompressedPairBase(T a, U b): T(octa::forward<T>(a)),
-                                      p_second(octa::forward<U>(b)) {}
+        template<typename TT, typename UU>
+        CompressedPairBase(TT &&a, UU &&b): T(octa::forward<TT>(a)),
+                                            p_second(octa::forward<UU>(b)) {}
 
         T &first() { return *this; }
         const T &first() const { return *this; }
@@ -238,8 +240,9 @@ namespace detail {
     struct CompressedPairBase<T, U, 2>: U {
         T p_first;
 
-        CompressedPairBase(T a, U b): U(octa::forward<U>(b)),
-                                      p_first(octa::forward<T>(a)) {}
+        template<typename TT, typename UU>
+        CompressedPairBase(TT &&a, UU &&b): U(octa::forward<UU>(b)),
+                                            p_first(octa::forward<TT>(a)) {}
 
         T &first() { return p_first; }
         const T &first() const { return p_first; }
@@ -254,8 +257,9 @@ namespace detail {
 
     template<typename T, typename U>
     struct CompressedPairBase<T, U, 3>: T, U {
-        CompressedPairBase(T a, U b): T(octa::forward<T>(a)),
-                                      U(octa::forward<U>(b)) {}
+        template<typename TT, typename UU>
+        CompressedPairBase(TT &&a, UU &&b): T(octa::forward<TT>(a)),
+                                            U(octa::forward<UU>(b)) {}
 
         T &first() { return *this; }
         const T &first() const { return *this; }
@@ -270,8 +274,9 @@ namespace detail {
     struct CompressedPair: CompressedPairBase<T, U> {
         typedef CompressedPairBase<T, U> Base;
 
-        CompressedPair(T a, U b): Base(octa::forward<T>(a),
-                                       octa::forward<U>(b)) {}
+        template<typename TT, typename UU>
+        CompressedPair(TT &&a, UU &&b): Base(octa::forward<TT>(a),
+                                             octa::forward<UU>(b)) {}
 
         T &first() { return Base::first(); }
         const T &first() const { return Base::first(); }
