@@ -30,6 +30,10 @@ namespace detail {
             e.first.~K();
             new ((K *)&e.first) K(octa::forward<U>(key));
         }
+        static inline void swap_elem(Element &a, Element &b) {
+            octa::swap(*((K *)&a.first), *((K *)&b.first));
+            octa::swap(*((T *)&a.second), *((T *)&b.second));
+        }
     };
 }
 
@@ -104,6 +108,14 @@ public:
     float load_factor() const { return p_table.load_factor(); }
     float max_load_factor() const { return p_table.max_load_factor(); }
     void max_load_factor(float lf) { p_table.max_load_factor(lf); }
+
+    void rehash(octa::Size count) {
+        p_table.rehash(count);
+    }
+
+    void reserve(octa::Size count) {
+        p_table.reserve(count);
+    }
 
     Range each() { return p_table.each(); }
     ConstRange each() const { return p_table.each(); }

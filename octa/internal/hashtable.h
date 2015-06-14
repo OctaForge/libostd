@@ -136,7 +136,7 @@ namespace detail {
 
         ~Hashtable() {
             octa::allocator_deallocate(get_cpalloc(), p_data.first(), p_size);
-            delete_chunks();
+            delete_chunks(p_chunks);
         }
 
         bool empty() const { return p_len == 0; }
@@ -190,11 +190,11 @@ namespace detail {
             return false;
         }
 
-        void delete_chunks() {
-            for (Chunk *nc; p_chunks; p_chunks = nc) {
-                nc = p_chunks->next;
-                octa::allocator_destroy(get_challoc(), p_chunks);
-                octa::allocator_deallocate(get_challoc(), p_chunks, 1);
+        void delete_chunks(Chunk *chunks) {
+            for (Chunk *nc; chunks; chunks = nc) {
+                nc = chunks->next;
+                octa::allocator_destroy(get_challoc(), chunks);
+                octa::allocator_deallocate(get_challoc(), chunks, 1);
             }
         }
 
@@ -203,7 +203,7 @@ namespace detail {
             memset(p_data.first(), 0, p_size * sizeof(Chain *));
             p_len = 0;
             p_unused = nullptr;
-            delete_chunks();
+            delete_chunks(p_chunks);
         }
 
         template<typename U>
@@ -230,12 +230,44 @@ namespace detail {
             return (insert(h, key) = val);
         }
 
-        float load_factor() const { return p_len / float(p_size); }
+        float load_factor() const { return float(p_len) / p_size; }
         float max_load_factor() const { return p_maxlf; }
         void max_load_factor(float lf) { p_maxlf = lf; }
 
         octa::Size bucket_count() const { return p_size; }
         octa::Size max_bucket_count() const { return Size(~0) / sizeof(Chain); }
+
+        void rehash(octa::Size count) {
+            count = octa::max(count, octa::Size(p_len / max_load_factor()));
+
+            Chain **och = p_data.first();
+            Chain **nch = octa::allocator_allocate(get_cpalloc(), count);
+            memset(nch, 0, count * sizeof(Chain *));
+            p_data.first() = nch;
+
+            Chunk *chunks = p_chunks;
+            octa::Size osize = p_size;
+
+            p_chunks = nullptr;
+            p_unused = nullptr;
+            p_size = count;
+            p_len = 0;
+
+            for (octa::Size i = 0; i < osize; ++i) {
+                for (Chain *oc = och[i]; oc; oc = oc->next) {
+                    octa::Size h = get_hash()(B::get_key(oc->value)) & (count - 1);
+                    Chain *nc = insert(h);
+                    B::swap_elem(oc->value, nc->value);
+                }
+            }
+
+            octa::allocator_deallocate(get_cpalloc(), och, osize);
+            delete_chunks(chunks);
+        }
+
+        void reserve(octa::Size count) {
+            rehash(octa::Size(ceil(count / max_load_factor())));
+        }
 
         Range each() {
             return Range(p_data.first(), bucket_count());

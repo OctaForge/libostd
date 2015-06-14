@@ -307,7 +307,7 @@ public:
     }
 
     void swap(StringBase &v) {
-        p_buf.swap(v);
+        p_buf.swap(v.p_buf);
     }
 
     Size to_hash() const {
