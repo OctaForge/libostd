@@ -41,7 +41,6 @@ namespace detail {
         Chunk *p_chunks;
         Chain *p_unused;
 
-
         using CPA = octa::AllocatorRebind<A, Chain *>;
         using CHA = octa::AllocatorRebind<A, Chunk>;
 
@@ -52,6 +51,8 @@ namespace detail {
 
         DataPair p_data;
 
+        float p_maxlf;
+
         const H &get_hash() const { return p_data.second().second().first(); }
         const C &get_eq() const { return p_data.second().second().second(); }
 
@@ -60,7 +61,8 @@ namespace detail {
 
         Hashtable(octa::Size size, const H &hf, const C &eqf, const A &alloc):
         p_size(size), p_len(0), p_chunks(nullptr), p_unused(nullptr),
-        p_data(nullptr, FAPair(AllocPair(alloc, alloc), FuncPair(hf, eqf))) {
+        p_data(nullptr, FAPair(AllocPair(alloc, alloc), FuncPair(hf, eqf))),
+        p_maxlf(1.0f) {
             p_data.first() = octa::allocator_allocate(get_cpalloc(), size);
             memset(p_data.first(), 0, size * sizeof(Chain *));
         }
@@ -161,9 +163,9 @@ namespace detail {
             return (insert(h, key) = val);
         }
 
-        float load_factor() const {
-            return p_len / float(p_size);
-        }
+        float load_factor() const { return p_len / float(p_size); }
+        float max_load_factor() const { return p_maxlf; }
+        void max_load_factor(float lf) { p_maxlf = lf; }
 
         octa::Size bucket_count() const { return p_size; }
         octa::Size max_bucket_count() const { return Size(~0) / sizeof(Chain); }

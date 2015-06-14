@@ -100,6 +100,8 @@ public:
     }
 
     float load_factor() const { return p_table.load_factor(); }
+    float max_load_factor() const { return p_table.max_load_factor(); }
+    void max_load_factor(float lf) { p_table.max_load_factor(lf); }
 
     void swap(Map &v) {
         octa::swap(p_table, v.p_table);
