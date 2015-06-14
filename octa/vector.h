@@ -321,6 +321,8 @@ public:
     Size size() const { return p_len; }
     Size capacity() const { return p_cap; }
 
+    Size max_size() const { return Size(~0) / sizeof(T); }
+
     bool empty() const { return (p_len == 0); }
 
     bool in_range(Size idx) { return idx < p_len; }

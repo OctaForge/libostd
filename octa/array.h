@@ -39,6 +39,7 @@ struct Array {
     const T &back() const { return p_buf[(N > 0) ? (N - 1) : 0]; }
 
     Size size() const { return N; }
+    Size max_size() const { return Size(~0) / sizeof(T); }
 
     bool empty() const { return N == 0; }
 

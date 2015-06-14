@@ -61,10 +61,12 @@ public:
     Map(octa::Size size = 1 << 10, const H &hf = H(), const C &eqf = C(),
         const A &alloc = A()): p_table(size, hf, eqf, alloc) {}
 
-    bool empty() const { return p_table.p_len == 0; }
-    octa::Size size() const { return p_table.p_len; }
+    bool empty() const { return p_table.empty(); }
+    octa::Size size() const { return p_table.size(); }
+    octa::Size max_size() const { return p_table.max_size(); }
 
-    octa::Size bucket_count() const { return p_table.p_size; }
+    octa::Size bucket_count() const { return p_table.bucket_count(); }
+    octa::Size max_bucket_count() const { return p_table.max_bucket_count(); }
 
     void clear() { p_table.clear(); }
 
@@ -91,6 +93,13 @@ public:
         if (v) return *v;
         return p_table.insert(h, octa::move(key));
     }
+
+    octa::Size erase(const K &key) {
+        if (p_table.remove(key)) return 1;
+        return 0;
+    }
+
+    float load_factor() const { return p_table.load_factor(); }
 
     void swap(Map &v) {
         octa::swap(p_table, v.p_table);

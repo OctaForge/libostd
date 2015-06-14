@@ -70,6 +70,10 @@ namespace detail {
             delete_chunks();
         }
 
+        bool empty() const { return p_len == 0; }
+        octa::Size size() const { return p_len; }
+        Size max_size() const { return Size(~0) / sizeof(E); }
+
         Chain *insert(octa::Size h) {
             if (!p_unused) {
                 Chunk *chunk = octa::allocator_allocate(get_challoc(), 1);
@@ -156,6 +160,13 @@ namespace detail {
             if (found) return *found;
             return (insert(h, key) = val);
         }
+
+        float load_factor() const {
+            return p_len / float(p_size);
+        }
+
+        octa::Size bucket_count() const { return p_size; }
+        octa::Size max_bucket_count() const { return Size(~0) / sizeof(Chain); }
 
         void swap(Hashtable &h) {
             octa::swap(p_size, h.p_size);
