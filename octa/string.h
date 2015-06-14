@@ -344,7 +344,7 @@ static inline bool operator!=(const char *lhs, const String &rhs) {
 }
 
 template<typename T, typename F>
-String concat(const T v, const String &sep, F func) {
+String concat(const T &v, const String &sep, F func) {
     String ret;
     auto range = octa::each(v);
     if (range.empty()) return octa::move(ret);

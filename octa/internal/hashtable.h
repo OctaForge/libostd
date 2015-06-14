@@ -15,7 +15,70 @@
 
 namespace octa {
 
-template<typename T> struct HashRange;
+namespace detail {
+    template<typename T>
+    struct HashChain {
+        T value;
+        HashChain<T> *next;
+    };
+}
+
+template<typename T>
+struct HashRange: octa::InputRange<HashRange<T>, octa::ForwardRangeTag, T> {
+private:
+    using Chain = octa::detail::HashChain<T>;
+
+    Chain **p_chains;
+    Chain *p_node;
+    octa::Size p_num;
+
+    void advance() {
+        while (p_num > 0 && !p_chains[0]) {
+            --p_num;
+            ++p_chains;
+        }
+        if (p_num > 0) {
+            p_node = p_chains[0];
+            --p_num;
+            ++p_chains;
+        } else {
+            p_node = nullptr;
+        }
+    }
+public:
+    HashRange(): p_chains(), p_num(0) {}
+    HashRange(Chain **ch, octa::Size n): p_chains(ch), p_num(n) {
+        advance();
+    }
+    HashRange(const HashRange &v): p_chains(v.p_chains), p_node(v.p_node),
+        p_num(v.p_num) {}
+
+    HashRange &operator=(const HashRange &v) {
+        p_chains = v.p_chains;
+        p_node = v.p_node;
+        p_num = v.p_num;
+        return *this;
+    }
+
+    bool empty() const { return !p_node && p_num <= 0; }
+
+    bool pop_front() {
+        if (empty()) return false;
+        if (p_node->next) {
+            p_node = p_node->next;
+            return true;
+        }
+        p_node = nullptr;
+        advance();
+        return true;
+    }
+
+    bool equals_front(const HashRange &v) const {
+        return p_node == v.p_node;
+    }
+
+    T &front() const { return p_node->value; }
+};
 
 namespace detail {
     template<
@@ -29,10 +92,8 @@ namespace detail {
     > struct Hashtable {
         static constexpr octa::Size CHUNKSIZE = 64;
 
-        struct Chain {
-            E value;
-            Chain *next;
-        };
+        using Chain = octa::detail::HashChain<E>;
+
         struct Chunk {
             Chain chains[CHUNKSIZE];
             Chunk *next;
@@ -195,66 +256,6 @@ namespace detail {
         }
     };
 } /* namespace detail */
-
-template<typename T>
-struct HashRange: octa::InputRange<HashRange<T>, octa::ForwardRangeTag, T> {
-private:
-    struct Chain {
-        T value;
-        Chain *next;
-    };
-
-    Chain **p_chains;
-    Chain *p_node;
-    octa::Size p_num;
-
-    void advance() {
-        while (p_num > 0 && !p_chains[0]) {
-            --p_num;
-            ++p_chains;
-        }
-        if (p_num > 0) {
-            p_node = p_chains[0];
-            --p_num;
-            ++p_chains;
-        } else {
-            p_node = nullptr;
-        }
-    }
-public:
-    HashRange(): p_chains(), p_num(0) {}
-    HashRange(void *ch, octa::Size n): p_chains((Chain **)ch), p_num(n) {
-        advance();
-    }
-    HashRange(const HashRange &v): p_chains(v.p_chains), p_node(v.p_node),
-        p_num(v.p_num) {}
-
-    HashRange &operator=(const HashRange &v) {
-        p_chains = v.p_chains;
-        p_node = v.p_node;
-        p_num = v.p_num;
-        return *this;
-    }
-
-    bool empty() const { return !p_node && p_num <= 0; }
-
-    bool pop_front() {
-        if (empty()) return false;
-        if (p_node->next) {
-            p_node = p_node->next;
-            return true;
-        }
-        p_node = nullptr;
-        advance();
-        return true;
-    }
-
-    bool equals_front(const HashRange &v) const {
-        return p_node == v.p_node;
-    }
-
-    T &front() const { return p_node->value; }
-};
 
 } /* namespace octa */
 
