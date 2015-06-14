@@ -17,7 +17,7 @@ namespace octa {
 
 namespace detail {
     template<typename K, typename T> struct MapBase {
-        typedef octa::Pair<const K, T> Element;
+        using Element = octa::Pair<const K, T>;
 
         static inline const K &get_key(Element &e) {
             return e.first;
@@ -56,6 +56,8 @@ public:
     using Reference = Value &;
     using Pointer = octa::AllocatorPointer<A>;
     using ConstPointer = octa::AllocatorConstPointer<A>;
+    using Range = octa::HashRange<octa::Pair<const K, T>>;
+    using ConstRange = octa::HashRange<const octa::Pair<const K, T>>;
     using Allocator = A;
 
     Map(octa::Size size = 1 << 10, const H &hf = H(), const C &eqf = C(),
@@ -102,6 +104,10 @@ public:
     float load_factor() const { return p_table.load_factor(); }
     float max_load_factor() const { return p_table.max_load_factor(); }
     void max_load_factor(float lf) { p_table.max_load_factor(lf); }
+
+    Range each() { return p_table.each(); }
+    ConstRange each() const { return p_table.each(); }
+    ConstRange ceach() const { return p_table.ceach(); }
 
     void swap(Map &v) {
         octa::swap(p_table, v.p_table);

@@ -11,8 +11,11 @@
 #include "octa/types.h"
 #include "octa/utility.h"
 #include "octa/memory.h"
+#include "octa/range.h"
 
 namespace octa {
+
+template<typename T> struct HashRange;
 
 namespace detail {
     template<
@@ -48,6 +51,9 @@ namespace detail {
         using FuncPair = octa::detail::CompressedPair<H, C>;
         using FAPair = octa::detail::CompressedPair<AllocPair, FuncPair>;
         using DataPair = octa::detail::CompressedPair<Chain **, FAPair>;
+
+        using Range = octa::HashRange<E>;
+        using ConstRange = octa::HashRange<const E>;
 
         DataPair p_data;
 
@@ -170,6 +176,16 @@ namespace detail {
         octa::Size bucket_count() const { return p_size; }
         octa::Size max_bucket_count() const { return Size(~0) / sizeof(Chain); }
 
+        Range each() {
+            return Range(p_data.first(), bucket_count());
+        }
+        ConstRange each() const {
+            return ConstRange(p_data.first(), bucket_count());
+        }
+        ConstRange ceach() const {
+            return ConstRange(p_data.first(), bucket_count());
+        }
+
         void swap(Hashtable &h) {
             octa::swap(p_size, h.p_size);
             octa::swap(p_len, h.p_len);
@@ -179,6 +195,66 @@ namespace detail {
         }
     };
 } /* namespace detail */
+
+template<typename T>
+struct HashRange: octa::InputRange<HashRange<T>, octa::ForwardRangeTag, T> {
+private:
+    struct Chain {
+        T value;
+        Chain *next;
+    };
+
+    Chain **p_chains;
+    Chain *p_node;
+    octa::Size p_num;
+
+    void advance() {
+        while (p_num > 0 && !p_chains[0]) {
+            --p_num;
+            ++p_chains;
+        }
+        if (p_num > 0) {
+            p_node = p_chains[0];
+            --p_num;
+            ++p_chains;
+        } else {
+            p_node = nullptr;
+        }
+    }
+public:
+    HashRange(): p_chains(), p_num(0) {}
+    HashRange(void *ch, octa::Size n): p_chains((Chain **)ch), p_num(n) {
+        advance();
+    }
+    HashRange(const HashRange &v): p_chains(v.p_chains), p_node(v.p_node),
+        p_num(v.p_num) {}
+
+    HashRange &operator=(const HashRange &v) {
+        p_chains = v.p_chains;
+        p_node = v.p_node;
+        p_num = v.p_num;
+        return *this;
+    }
+
+    bool empty() const { return !p_node && p_num <= 0; }
+
+    bool pop_front() {
+        if (empty()) return false;
+        if (p_node->next) {
+            p_node = p_node->next;
+            return true;
+        }
+        p_node = nullptr;
+        advance();
+        return true;
+    }
+
+    bool equals_front(const HashRange &v) const {
+        return p_node == v.p_node;
+    }
+
+    T &front() const { return p_node->value; }
+};
 
 } /* namespace octa */
 
