@@ -143,6 +143,39 @@ namespace detail {
 
 template<typename T> struct HalfRange;
 
+namespace detail {
+    template<typename R, bool = IsBidirectionalRange<typename R::Range>::value>
+    struct RangeAdd;
+
+    template<typename R>
+    struct RangeAdd<R, true> {
+        using Diff = RangeDifference<typename R::Range>;
+
+        static Diff add_n(R &half, Diff n) {
+            if (n < 0) return -half.prev_n(n);
+            return half.next_n(n);
+        }
+        static Diff sub_n(R &half, Diff n) {
+            if (n < 0) return -half.next_n(n);
+            return half.prev_n(n);
+        }
+    };
+
+    template<typename R>
+    struct RangeAdd<R, false> {
+        using Diff = RangeDifference<typename R::Range>;
+
+        static Diff add_n(R &half, Diff n) {
+            if (n < 0) return 0;
+            return half.next_n(n);
+        }
+        static Diff sub_n(R &half, Diff n) {
+            if (n < 0) return 0;
+            return half.prev_n(n);
+        }
+    };
+}
+
 template<typename T>
 struct RangeHalf {
 private:
@@ -175,6 +208,13 @@ public:
     }
     RangeSize<T> prev_n(RangeSize<T> n) {
         return p_range.push_front_n(n);
+    }
+
+    RangeDifference<T> add_n(RangeDifference<T> n) {
+        return octa::detail::RangeAdd<RangeHalf<T>>::add_n(*this, n);
+    }
+    RangeDifference<T> sub_n(RangeDifference<T> n) {
+        return octa::detail::RangeAdd<RangeHalf<T>>::sub_n(*this, n);
     }
 
     RangeReference<T> get() const {
@@ -228,25 +268,21 @@ public:
 
     RangeHalf operator+(RangeDifference<T> n) {
         RangeHalf tmp(*this);
-        if (n < 0) tmp.prev_n(-n);
-        else tmp.next_n(n);
+        tmp.add_n(n);
         return octa::move(tmp);
     }
     RangeHalf operator-(RangeDifference<T> n) {
         RangeHalf tmp(*this);
-        if (n < 0) tmp.next_n(-n);
-        else tmp.prev_n(n);
+        tmp.sub_n(n);
         return octa::move(tmp);
     }
 
     RangeHalf &operator+=(RangeDifference<T> n) {
-        if (n < 0) prev_n(-n);
-        else next_n(n);
+        add_n(n);
         return *this;
     }
     RangeHalf &operator-=(RangeDifference<T> n) {
-        if (n < 0) next_n(-n);
-        else prev_n(n);
+        sub_n(n);
         return *this;
     }
 
@@ -623,7 +659,6 @@ struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T, T> {
     }
 
     bool pop_front() { p_a += p_step; return true; }
-    bool push_front() { p_a -= p_step; return true; }
     T front() const { return p_a; }
 
 private:
@@ -873,13 +908,6 @@ public:
         }
         return false;
     }
-    bool push_front() {
-        if (p_range.push_front()) {
-            ++p_remaining;
-            return true;
-        }
-        return false;
-    }
 
     RangeSize<T> pop_front_n(RangeSize<T> n) {
         RangeSize<T> ret = p_range.pop_front_n(n);
@@ -941,26 +969,8 @@ public:
     }
 
     bool pop_front() { return p_range.pop_front_n(p_chunksize) > 0; }
-    bool push_front() {
-        T tmp = p_range;
-        RangeSize<T> an = tmp.push_front_n(p_chunksize);
-        if (an != p_chunksize) return false;
-        p_range = tmp;
-        return true;
-    }
     RangeSize<T> pop_front_n(RangeSize<T> n) {
         return p_range.pop_front_n(p_chunksize * n) / p_chunksize;
-    }
-    RangeSize<T> push_front_n(RangeSize<T> n) {
-        T tmp = p_range;
-        RangeSize<T> an = tmp.push_front_n(p_chunksize * n);
-        RangeSize<T> pn = an / p_chunksize;
-        if (!pn) return 0;
-        if (pn == n) {
-            p_range = tmp;
-            return pn;
-        }
-        return p_range.push_front_n(p_chunksize * an) / p_chunksize;
     }
 
     TakeRange<T> front() const { return take(p_range, p_chunksize); }

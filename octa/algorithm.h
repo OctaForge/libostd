@@ -554,15 +554,6 @@ public:
         advance_valid();
         return ret;
     }
-    bool push_front() {
-        T tmp = p_range;
-        if (!tmp.push_front()) return false;
-        while (!p_pred(tmp.front()))
-            if (!tmp.push_front())
-                return false;
-        p_range = tmp;
-        return true;
-    }
 
     octa::RangeReference<T> front() const { return p_range.front(); }
 };
