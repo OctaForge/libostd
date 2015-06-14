@@ -26,9 +26,9 @@ namespace detail {
             return e.second;
         }
         template<typename U>
-        static inline void set_key(Element &e, const U &key) {
+        static inline void set_key(Element &e, U &&key) {
             e.first.~K();
-            new ((K *)&e.first) K(key);
+            new ((K *)&e.first) K(octa::forward<U>(key));
         }
     };
 }
@@ -84,6 +84,12 @@ public:
         T *v = p_table.access_base(key, h);
         if (v) return *v;
         return p_table.insert(h, key);
+    }
+    T &operator[](K &&key) {
+        octa::Size h;
+        T *v = p_table.access_base(key, h);
+        if (v) return *v;
+        return p_table.insert(h, octa::move(key));
     }
 
     void swap(Map &v) {

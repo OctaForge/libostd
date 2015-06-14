@@ -90,9 +90,9 @@ namespace detail {
         }
 
         template<typename U>
-        T &insert(octa::Size h, const U &key) {
+        T &insert(octa::Size h, U &&key) {
             Chain *c = insert(h);
-            B::set_key(c->value, key);
+            B::set_key(c->value, octa::forward<U>(key));
             return B::get_data(c->value);
         }
 
