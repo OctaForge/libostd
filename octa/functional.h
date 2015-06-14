@@ -95,7 +95,7 @@ template<typename T> BinaryNegate<T> not2(const T &fn) {
 
 template<typename T> struct ToHash {
     using Argument = const T &;
-    using Result = typename T::Size;
+    using Result = octa::Size;
 
     octa::Size operator()(const T &v) const {
         return v.to_hash();

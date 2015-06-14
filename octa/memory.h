@@ -541,6 +541,9 @@ template<typename T> struct Allocator {
 
     template<typename U> using Rebind = Allocator<U>;
 
+    Allocator() {}
+    template<typename U> Allocator(const Allocator<U> &) {}
+
     Pointer address(Reference v) const {
         return address_of(v);
     };
@@ -574,6 +577,9 @@ template<typename T> struct Allocator<const T> {
     using ConstPointer = const T *;
 
     template<typename U> using Rebind = Allocator<U>;
+
+    Allocator() {}
+    template<typename U> Allocator(const Allocator<U> &) {}
 
     ConstPointer address(ConstReference v) const {
         return address_of(v);

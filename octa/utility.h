@@ -272,7 +272,7 @@ namespace detail {
 
     template<typename T, typename U>
     struct CompressedPair: CompressedPairBase<T, U> {
-        typedef CompressedPairBase<T, U> Base;
+        using Base = CompressedPairBase<T, U>;
 
         template<typename TT, typename UU>
         CompressedPair(TT &&a, UU &&b): Base(octa::forward<TT>(a),

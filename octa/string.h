@@ -288,6 +288,14 @@ public:
         return *this;
     }
 
+    int compare(const StringBase &s) const {
+        return strcmp(p_buf.data(), s.data());
+    }
+
+    int compare(ConstPointer p) const {
+        return strcmp(p_buf.data(), p);
+    }
+
     Range each() {
         return Range(p_buf.data(), size());
     }
@@ -314,6 +322,26 @@ public:
 using String = StringBase<char>;
 using StringRange = StringRangeBase<char>;
 using ConstStringRange = StringRangeBase<const char>;
+
+static inline bool operator==(const String &lhs, const String &rhs) {
+    return !lhs.compare(rhs);
+}
+static inline bool operator==(const String &lhs, const char *rhs) {
+    return !lhs.compare(rhs);
+}
+static inline bool operator==(const char *lhs, const String &rhs) {
+    return !rhs.compare(lhs);
+}
+
+static inline bool operator!=(const String &lhs, const String &rhs) {
+    return !!lhs.compare(rhs);
+}
+static inline bool operator!=(const String &lhs, const char *rhs) {
+    return !!lhs.compare(rhs);
+}
+static inline bool operator!=(const char *lhs, const String &rhs) {
+    return !!rhs.compare(lhs);
+}
 
 template<typename T, typename F>
 String concat(const T v, const String &sep, F func) {
