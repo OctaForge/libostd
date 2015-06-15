@@ -10,6 +10,7 @@
 #include "octa/utility.h"
 #include "octa/memory.h"
 #include "octa/functional.h"
+#include "octa/initializer_list.h"
 
 #include "octa/internal/hashtable.h"
 
@@ -67,12 +68,37 @@ public:
     explicit Map(octa::Size size, const H &hf = H(), const C &eqf = C(),
         const A &alloc = A()): p_table(size, hf, eqf, alloc) {}
 
-    Map(): Map(1 << 10) {}
-    explicit Map(const A &alloc): Map(1 << 10, H(), C(), alloc) {}
+    Map(): Map(octa::Size(1 << 10)) {}
+    explicit Map(const A &alloc): Map(octa::Size(1 << 10), H(), C(), alloc) {}
 
     Map(octa::Size size, const A &alloc): Map(size, H(), C(), alloc) {}
     Map(octa::Size size, const H &hf, const A &alloc): Map(size, hf, C(),
         alloc) {}
+
+    template<typename R>
+    Map(R range, octa::Size size = 1 << 10, const H &hf = H(), const C &eqf = C(),
+    const A &alloc = A()): p_table(size, hf, eqf, alloc) {
+        for (; !range.empty(); range.pop_front())
+            emplace(range.front());
+    }
+
+    template<typename R>
+    Map(R range, octa::Size size, const A &alloc): Map(range, size, H(), C(),
+        alloc) {}
+
+    template<typename R>
+    Map(R range, octa::Size size, const H &hf, const A &alloc):
+        Map(range, size, hf, C(), alloc) {}
+
+    Map(octa::InitializerList<Value> init, octa::Size size = 1 << 10,
+    const H &hf = H(), const C &eqf = C(), const A &alloc = A()):
+        Map(octa::each(init), size, hf, eqf, alloc) {}
+
+    Map(octa::InitializerList<Value> init, octa::Size size, const A &alloc):
+        Map(octa::each(init), size, H(), C(), alloc) {}
+
+    Map(octa::InitializerList<Value> init, octa::Size size, const H &hf,
+        const A &alloc): Map(octa::each(init), size, hf, C(), alloc) {}
 
     bool empty() const { return p_table.empty(); }
     octa::Size size() const { return p_table.size(); }
