@@ -107,6 +107,11 @@ public:
         return p_table.insert(h, octa::move(key));
     }
 
+    template<typename ...Args>
+    octa::Pair<Range, bool> emplace(Args &&...args) {
+        return p_table.emplace(octa::forward<Args>(args)...);
+    }
+
     octa::Size erase(const K &key) {
         if (p_table.remove(key)) return 1;
         return 0;

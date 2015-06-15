@@ -50,6 +50,8 @@ public:
     HashRange(Chain **ch, octa::Size n): p_chains(ch), p_num(n) {
         advance();
     }
+    HashRange(Chain **ch, Chain *node, octa::Size n): p_chains(ch),
+        p_node(node), p_num(n) {}
     HashRange(const HashRange &v): p_chains(v.p_chains), p_node(v.p_node),
         p_num(v.p_num) {}
 
@@ -228,6 +230,27 @@ namespace detail {
             T *found = access_base(key, h);
             if (found) return *found;
             return (insert(h, key) = val);
+        }
+
+        template<typename ...Args>
+        octa::Pair<Range, bool> emplace(Args &&...args) {
+            E elem(octa::forward<Args>(args)...);
+            octa::Size h = get_hash()(B::get_key(elem)) & (p_size - 1);
+            Chain *found = nullptr;
+            bool ins = true;
+            for (Chain *c = p_data.first()[h]; c; c = c->next) {
+                if (get_eq()(B::get_key(elem), B::get_key(c->value))) {
+                    found = c;
+                    ins = false;
+                    break;
+                }
+            }
+            if (!found) {
+                found = insert(h);
+                B::swap_elem(found->value, elem);
+            }
+            return octa::make_pair(Range(&p_data.first()[h + 1], found,
+                bucket_count() - h - 1), ins);
         }
 
         float load_factor() const { return float(p_len) / p_size; }
