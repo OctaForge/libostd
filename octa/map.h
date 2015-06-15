@@ -64,8 +64,15 @@ public:
     using ConstRange = octa::HashRange<const octa::Pair<const K, T>>;
     using Allocator = A;
 
-    Map(octa::Size size = 1 << 10, const H &hf = H(), const C &eqf = C(),
+    explicit Map(octa::Size size, const H &hf = H(), const C &eqf = C(),
         const A &alloc = A()): p_table(size, hf, eqf, alloc) {}
+
+    Map(): Map(1 << 10) {}
+    explicit Map(const A &alloc): Map(1 << 10, H(), C(), alloc) {}
+
+    Map(octa::Size size, const A &alloc): Map(size, H(), C(), alloc) {}
+    Map(octa::Size size, const H &hf, const A &alloc): Map(size, hf, C(),
+        alloc) {}
 
     bool empty() const { return p_table.empty(); }
     octa::Size size() const { return p_table.size(); }
