@@ -26,11 +26,19 @@ template<typename T> struct RangeHalf;
 #define OCTA_RANGE_TRAIT(Name) \
 namespace detail { \
     template<typename T> \
-    struct Range##Name##Base { \
+    struct Range##Name##Test { \
+        template<typename U> static char test(RemoveReference<typename U::Name> *); \
+        template<typename U> static  int test(...); \
+        static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char)); \
+    }; \
+    template<typename T, bool = Range##Name##Test<T>::value> \
+    struct Range##Name##Base {}; \
+    template<typename T> \
+    struct Range##Name##Base<T, true> { \
         using Type = typename T::Name; \
     }; \
     template<typename T> \
-    struct Range##Name##Base<RangeHalf<T>> { \
+    struct Range##Name##Base<RangeHalf<T>, true> { \
         using Type = typename T::Name; \
     }; \
 } \
@@ -45,50 +53,109 @@ OCTA_RANGE_TRAIT(Difference)
 
 #undef OCTA_RANGE_TRAIT
 
+namespace detail {
+    template<typename T>
+    struct IsRangeTest {
+        template<typename U> static char test(typename U::Category *,
+                                              typename U::Size *,
+                                              typename U::Difference *,
+                                              typename U::Value *,
+                                              RemoveReference<
+                                                  typename U::Reference
+                                              > *);
+        template<typename U> static  int test(...);
+        static constexpr bool value
+            = (sizeof(test<T>(0, 0, 0, 0, 0)) == sizeof(char));
+    };
+}
+
 // is input range
 
-template<typename T, bool = octa::IsConvertible<
-    RangeCategory<T>, InputRangeTag
->::value> struct IsInputRange: False {};
+namespace detail {
+    template<typename T, bool = octa::IsConvertible<
+        RangeCategory<T>, InputRangeTag
+    >::value> struct IsInputRangeBase: False {};
+
+    template<typename T>
+    struct IsInputRangeBase<T, true>: True {};
+}
+
+template<typename T, bool = octa::detail::IsRangeTest<T>::value>
+struct IsInputRange: False {};
 
 template<typename T>
-struct IsInputRange<T, true>: True {};
+struct IsInputRange<T, true>: octa::detail::IsInputRangeBase<T>::Type {};
 
 // is forward range
 
-template<typename T, bool = octa::IsConvertible<
-    RangeCategory<T>, ForwardRangeTag
->::value> struct IsForwardRange: False {};
+namespace detail {
+    template<typename T, bool = octa::IsConvertible<
+        RangeCategory<T>, ForwardRangeTag
+    >::value> struct IsForwardRangeBase: False {};
+
+    template<typename T>
+    struct IsForwardRangeBase<T, true>: True {};
+}
+
+template<typename T, bool = octa::detail::IsRangeTest<T>::value>
+struct IsForwardRange: False {};
 
 template<typename T>
-struct IsForwardRange<T, true>: True {};
+struct IsForwardRange<T, true>: octa::detail::IsForwardRangeBase<T>::Type {};
 
 // is bidirectional range
 
-template<typename T, bool = octa::IsConvertible<
-    RangeCategory<T>, BidirectionalRangeTag
->::value> struct IsBidirectionalRange: False {};
+namespace detail {
+    template<typename T, bool = octa::IsConvertible<
+        RangeCategory<T>, BidirectionalRangeTag
+    >::value> struct IsBidirectionalRangeBase: False {};
+
+    template<typename T>
+    struct IsBidirectionalRangeBase<T, true>: True {};
+}
+
+template<typename T, bool = octa::detail::IsRangeTest<T>::value>
+struct IsBidirectionalRange: False {};
 
 template<typename T>
-struct IsBidirectionalRange<T, true>: True {};
+struct IsBidirectionalRange<T, true>:
+    octa::detail::IsBidirectionalRangeBase<T>::Type {};
 
 // is random access range
 
-template<typename T, bool = octa::IsConvertible<
-    RangeCategory<T>, RandomAccessRangeTag
->::value> struct IsRandomAccessRange: False {};
+namespace detail {
+    template<typename T, bool = octa::IsConvertible<
+        RangeCategory<T>, RandomAccessRangeTag
+    >::value> struct IsRandomAccessRangeBase: False {};
+
+    template<typename T>
+    struct IsRandomAccessRangeBase<T, true>: True {};
+}
+
+template<typename T, bool = octa::detail::IsRangeTest<T>::value>
+struct IsRandomAccessRange: False {};
 
 template<typename T>
-struct IsRandomAccessRange<T, true>: True {};
+struct IsRandomAccessRange<T, true>:
+    octa::detail::IsRandomAccessRangeBase<T>::Type {};
 
 // is finite random access range
 
-template<typename T, bool = octa::IsConvertible<
-    RangeCategory<T>, FiniteRandomAccessRangeTag
->::value> struct IsFiniteRandomAccessRange: False {};
+namespace detail {
+    template<typename T, bool = octa::IsConvertible<
+        RangeCategory<T>, FiniteRandomAccessRangeTag
+    >::value> struct IsFiniteRandomAccessRangeBase: False {};
+
+    template<typename T>
+    struct IsFiniteRandomAccessRangeBase<T, true>: True {};
+}
+
+template<typename T, bool = octa::detail::IsRangeTest<T>::value>
+struct IsFiniteRandomAccessRange: False {};
 
 template<typename T>
-struct IsFiniteRandomAccessRange<T, true>: True {};
+struct IsFiniteRandomAccessRange<T, true>:
+    octa::detail::IsFiniteRandomAccessRangeBase<T>::Type {};
 
 // is infinite random access range
 
