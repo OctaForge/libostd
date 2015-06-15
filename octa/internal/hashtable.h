@@ -82,6 +82,36 @@ public:
     T &front() const { return p_node->value; }
 };
 
+template<typename T>
+struct BucketRange: octa::InputRange<BucketRange<T>, octa::ForwardRangeTag, T> {
+private:
+    using Chain = octa::detail::HashChain<T>;
+    Chain *p_node;
+public:
+    BucketRange(): p_node() {}
+    BucketRange(Chain *node): p_node(node) {}
+    BucketRange(const BucketRange &v): p_node(v.p_node) {}
+
+    BucketRange &operator=(const BucketRange &v) {
+        p_node = v.p_node;
+        return *this;
+    }
+
+    bool empty() const { return !p_node; }
+
+    bool pop_front() {
+        if (!p_node) return false;
+        p_node = p_node->next;
+        return true;
+    }
+
+    bool equals_front(const BucketRange &v) const {
+        return p_node == v.p_node;
+    }
+
+    T &front() const { return p_node->value; }
+};
+
 namespace detail {
     template<
         typename B, /* contains methods specific to each ht type */
@@ -117,8 +147,8 @@ namespace detail {
 
         using Range = octa::HashRange<E>;
         using ConstRange = octa::HashRange<const E>;
-        using LocalRange = Range;
-        using ConstLocalRange = ConstRange;
+        using LocalRange = octa::BucketRange<E>;
+        using ConstLocalRange = octa::BucketRange<const E>;
 
         DataPair p_data;
 
@@ -321,15 +351,15 @@ namespace detail {
 
         LocalRange each(octa::Size n) {
             if (n >= p_size) return LocalRange();
-            return LocalRange(nullptr, p_data.first()[n], 0);
+            return LocalRange(p_data.first()[n]);
         }
         ConstLocalRange each(octa::Size n) const {
             if (n >= p_size) return ConstLocalRange();
-            return ConstLocalRange(nullptr, p_data.first()[n], 0);
+            return ConstLocalRange(p_data.first()[n]);
         }
         ConstLocalRange ceach(octa::Size n) const {
             if (n >= p_size) return ConstLocalRange();
-            return ConstLocalRange(nullptr, p_data.first()[n], 0);
+            return ConstLocalRange(p_data.first()[n]);
         }
 
         void swap(Hashtable &h) {

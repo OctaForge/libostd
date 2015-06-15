@@ -63,8 +63,8 @@ public:
     using ConstPointer = octa::AllocatorConstPointer<A>;
     using Range = octa::HashRange<octa::Pair<const K, T>>;
     using ConstRange = octa::HashRange<const octa::Pair<const K, T>>;
-    using LocalRange = Range;
-    using ConstLocalRange = ConstRange;
+    using LocalRange = octa::BucketRange<octa::Pair<const K, T>>;
+    using ConstLocalRange = octa::BucketRange<const octa::Pair<const K, T>>;
     using Allocator = A;
 
     explicit Map(octa::Size size, const H &hf = H(),
