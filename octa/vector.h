@@ -167,8 +167,13 @@ public:
     Vector(InitializerList<T> v, const A &a = A()):
         Vector(v.begin(), v.size(), a) {}
 
-    template<typename R> Vector(R range, const A &a = A()):
-    Vector(a) {
+    template<typename R> Vector(R range, const A &a = A(),
+        octa::EnableIf<
+            octa::IsInputRange<R>::value &&
+            octa::IsConvertible<RangeReference<R>, Value>::value,
+            bool
+        > = true
+    ): Vector(a) {
         ctor_from_range(range);
     }
 
@@ -224,7 +229,11 @@ public:
     }
 
     template<typename R>
-    Vector &operator=(R range) {
+    octa::EnableIf<
+        octa::IsInputRange<R>::value &&
+        octa::IsConvertible<RangeReference<R>, Value>::value,
+        Vector &
+    > operator=(R range) {
         clear();
         ctor_from_range(range);
         return *this;

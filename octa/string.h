@@ -174,8 +174,13 @@ public:
     StringBase(ConstPointer v, Size n, const A &a = A()):
         p_buf(ConstRange(v, n), a) {}
 
-    template<typename R> StringBase(R range, const A &a = A()):
-    p_buf(range, a) {
+    template<typename R> StringBase(R range, const A &a = A(),
+        octa::EnableIf<
+            octa::IsInputRange<R>::value &&
+            octa::IsConvertible<RangeReference<R>, Value>::value,
+            bool
+        > = true
+    ): p_buf(range, a) {
         terminate();
     }
 
@@ -193,7 +198,12 @@ public:
         p_buf = ConstRange(v, strlen(v) + 1);
         return *this;
     }
-    StringBase &operator=(const Range &r) {
+    template<typename R>
+    octa::EnableIf<
+        octa::IsInputRange<R>::value &&
+        octa::IsConvertible<RangeReference<R>, Value>::value,
+        StringBase &
+    > operator=(const R &r) {
         p_buf = r;
         terminate();
         return *this;
