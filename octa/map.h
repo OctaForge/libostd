@@ -63,6 +63,8 @@ public:
     using ConstPointer = octa::AllocatorConstPointer<A>;
     using Range = octa::HashRange<octa::Pair<const K, T>>;
     using ConstRange = octa::HashRange<const octa::Pair<const K, T>>;
+    using LocalRange = Range;
+    using ConstLocalRange = ConstRange;
     using Allocator = A;
 
     explicit Map(octa::Size size, const H &hf = H(),
@@ -114,6 +116,9 @@ public:
     octa::Size bucket_count() const { return p_table.bucket_count(); }
     octa::Size max_bucket_count() const { return p_table.max_bucket_count(); }
 
+    octa::Size bucket(const K &key) const { return p_table.bucket(key); }
+    octa::Size bucket_size(octa::Size n) const { return p_table.bucket_size(n); }
+
     void clear() { p_table.clear(); }
 
     A get_allocator() const {
@@ -150,6 +155,13 @@ public:
         return 0;
     }
 
+    octa::Size count(const K &key) {
+        octa::Size h;
+        T *v = p_table.access_base(key, h);
+        if (v) return 1;
+        return 0;
+    }
+
     float load_factor() const { return p_table.load_factor(); }
     float max_load_factor() const { return p_table.max_load_factor(); }
     void max_load_factor(float lf) { p_table.max_load_factor(lf); }
@@ -165,6 +177,10 @@ public:
     Range each() { return p_table.each(); }
     ConstRange each() const { return p_table.each(); }
     ConstRange ceach() const { return p_table.ceach(); }
+
+    LocalRange each(octa::Size n) { return p_table.each(n); }
+    ConstLocalRange each(octa::Size n) const { return p_table.each(n); }
+    ConstLocalRange ceach(octa::Size n) const { return p_table.each(n); }
 
     void swap(Map &v) {
         octa::swap(p_table, v.p_table);

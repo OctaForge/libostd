@@ -117,6 +117,8 @@ namespace detail {
 
         using Range = octa::HashRange<E>;
         using ConstRange = octa::HashRange<const E>;
+        using LocalRange = Range;
+        using ConstLocalRange = ConstRange;
 
         DataPair p_data;
 
@@ -260,6 +262,21 @@ namespace detail {
         octa::Size bucket_count() const { return p_size; }
         octa::Size max_bucket_count() const { return Size(~0) / sizeof(Chain); }
 
+        template<typename U>
+        octa::Size bucket(const U &key) const {
+            return get_hash()(key) & (p_size - 1);
+        }
+
+        octa::Size bucket_size(octa::Size n) const {
+            octa::Size ret = 0;
+            if (ret >= p_size) return ret;
+            Chain *c = p_data.first()[n];
+            if (!c) return ret;
+            for (; c; c = c->next)
+                ++ret;
+            return ret;
+        }
+
         void rehash(octa::Size count) {
             count = octa::max(count, octa::Size(p_len / max_load_factor()));
 
@@ -300,6 +317,19 @@ namespace detail {
         }
         ConstRange ceach() const {
             return ConstRange(p_data.first(), bucket_count());
+        }
+
+        LocalRange each(octa::Size n) {
+            if (n >= p_size) return LocalRange();
+            return LocalRange(nullptr, p_data.first()[n], 0);
+        }
+        ConstLocalRange each(octa::Size n) const {
+            if (n >= p_size) return ConstLocalRange();
+            return ConstLocalRange(nullptr, p_data.first()[n], 0);
+        }
+        ConstLocalRange ceach(octa::Size n) const {
+            if (n >= p_size) return ConstLocalRange();
+            return ConstLocalRange(nullptr, p_data.first()[n], 0);
         }
 
         void swap(Hashtable &h) {
