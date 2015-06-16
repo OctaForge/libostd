@@ -746,10 +746,13 @@ template<typename T>
 struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> {
 
     PointerRange(): p_beg(nullptr), p_end(nullptr) {}
-    PointerRange(const PointerRange &v): p_beg(v.p_beg),
-        p_end(v.p_end) {}
     PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
     PointerRange(T *beg, octa::Size n): p_beg(beg), p_end(beg + n) {}
+
+    template<typename U>
+    PointerRange(const PointerRange<U> &v, octa::EnableIf<
+        octa::IsConvertible<U *, T *>::value, bool
+    > = true): p_beg(&v[0]), p_end(&v[v.size()]) {}
 
     PointerRange &operator=(const PointerRange &v) {
         p_beg = v.p_beg;
