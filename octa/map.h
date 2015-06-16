@@ -118,6 +118,36 @@ public:
         const A &alloc
     ): Map(octa::each(init), size, hf, C(), alloc) {}
 
+    Map &operator=(const Map &m) {
+        p_table = m.p_table;
+        return *this;
+    }
+
+    Map &operator=(Map &&m) {
+        p_table = octa::move(m.p_table);
+        return *this;
+    }
+
+    template<typename R>
+    octa::EnableIf<
+        octa::IsInputRange<R>::value &&
+        octa::IsConvertible<RangeReference<R>, Value>::value,
+        Map &
+    > operator=(R range) {
+        clear();
+        for (; !range.empty(); range.pop_front())
+            emplace(range.front());
+        return *this;
+    }
+
+    Map &operator=(InitializerList<Value> il) {
+        Value *beg = il.begin(), *end = il.end();
+        clear();
+        while (beg != end)
+            emplace(*beg++);
+        return *this;
+    }
+
     bool empty() const { return p_table.empty(); }
     octa::Size size() const { return p_table.size(); }
     octa::Size max_size() const { return p_table.max_size(); }

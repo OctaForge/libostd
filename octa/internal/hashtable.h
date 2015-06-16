@@ -152,8 +152,16 @@ namespace detail {
 
         A &get_alloc() { return p_data.second().first().first(); }
         const A &get_alloc() const { return p_data.second().first().first(); }
+
         CPA &get_cpalloc() { return p_data.second().first().second().first(); }
+        const CPA &get_cpalloc() const {
+            return p_data.second().first().second().first();
+        }
+
         CHA &get_challoc() { return p_data.second().first().second().second(); }
+        const CHA &get_challoc() const {
+            return p_data.second().first().second().second();
+        }
 
         Hashtable(octa::Size size, const H &hf, const C &eqf, const A &alloc):
         p_size(size), p_len(0), p_chunks(nullptr), p_unused(nullptr),
@@ -228,6 +236,38 @@ namespace detail {
             if (p_size) octa::allocator_deallocate(get_cpalloc(),
                 p_data.first(), p_size);
             delete_chunks(p_chunks);
+        }
+
+        Hashtable &operator=(const Hashtable &ht) {
+            clear();
+            if (octa::AllocatorPropagateOnContainerCopyAssignment<A>::value) {
+                if ((get_cpalloc() != ht.get_cpalloc()) && p_size) {
+                    octa::allocator_deallocate(get_cpalloc(),
+                        p_data.first(), p_size);
+                    p_data.first() = octa::allocator_allocate(get_cpalloc(),
+                        p_size);
+                    memset(p_data.first(), 0, p_size * sizeof(Chain *));
+                }
+                get_alloc() = ht.get_alloc();
+                get_cpalloc() = ht.get_cpalloc();
+                get_challoc() = ht.get_challoc();
+            }
+            for (ConstRange range = ht.each(); !range.empty(); range.pop_front())
+                emplace(range.front());
+            return *this;
+        }
+
+        Hashtable &operator=(Hashtable &&ht) {
+            clear();
+            octa::swap(p_size, ht.p_size);
+            octa::swap(p_len, ht.p_len);
+            octa::swap(p_chunks, ht.p_chunks);
+            octa::swap(p_unused, ht.p_unused);
+            octa::swap(p_data.first(), ht.p_data.first());
+            octa::swap(p_data.second().second(), ht.p_data.second().second());
+            if (octa::AllocatorPropagateOnContainerMoveAssignment<A>::value)
+                octa::swap(p_data.second().first(), ht.p_data.second().first());
+            return *this;
         }
 
         bool empty() const { return p_len == 0; }
@@ -403,10 +443,14 @@ namespace detail {
             return Range(p_data.first(), p_data.first() + bucket_count());
         }
         ConstRange each() const {
-            return ConstRange(p_data.first(), p_data.first() + bucket_count());
+            using Chain = octa::detail::HashChain<const E>;
+            return ConstRange((Chain **)p_data.first(),
+                              (Chain **)(p_data.first() + bucket_count()));
         }
         ConstRange ceach() const {
-            return ConstRange(p_data.first(), p_data.first() + bucket_count());
+            using Chain = octa::detail::HashChain<const E>;
+            return ConstRange((Chain **)p_data.first(),
+                              (Chain **)(p_data.first() + bucket_count()));
         }
 
         LocalRange each(octa::Size n) {
@@ -414,23 +458,25 @@ namespace detail {
             return LocalRange(p_data.first()[n]);
         }
         ConstLocalRange each(octa::Size n) const {
+            using Chain = octa::detail::HashChain<const E>;
             if (n >= p_size) return ConstLocalRange();
-            return ConstLocalRange(p_data.first()[n]);
+            return ConstLocalRange((Chain *)p_data.first()[n]);
         }
         ConstLocalRange ceach(octa::Size n) const {
+            using Chain = octa::detail::HashChain<const E>;
             if (n >= p_size) return ConstLocalRange();
-            return ConstLocalRange(p_data.first()[n]);
+            return ConstLocalRange((Chain *)p_data.first()[n]);
         }
 
-        void swap(Hashtable &h) {
-            octa::swap(p_size, h.p_size);
-            octa::swap(p_len, h.p_len);
-            octa::swap(p_chunks, h.p_chunks);
-            octa::swap(p_unused, h.p_unused);
-            octa::swap(p_data.first(), h.p_data.first());
-            octa::swap(p_data.second().second(), h.p_data.second().second());
+        void swap(Hashtable &ht) {
+            octa::swap(p_size, ht.p_size);
+            octa::swap(p_len, ht.p_len);
+            octa::swap(p_chunks, ht.p_chunks);
+            octa::swap(p_unused, ht.p_unused);
+            octa::swap(p_data.first(), ht.p_data.first());
+            octa::swap(p_data.second().second(), ht.p_data.second().second());
             if (octa::AllocatorPropagateOnContainerSwap<A>::value)
-                octa::swap(p_data.second().first(), h.p_data.second().first());
+                octa::swap(p_data.second().first(), ht.p_data.second().first());
         }
     };
 } /* namespace detail */
