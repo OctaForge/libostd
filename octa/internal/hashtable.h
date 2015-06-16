@@ -28,49 +28,41 @@ struct HashRange: octa::InputRange<HashRange<T>, octa::ForwardRangeTag, T> {
 private:
     using Chain = octa::detail::HashChain<T>;
 
-    Chain **p_chains;
+    Chain **p_beg;
+    Chain **p_end;
     Chain *p_node;
-    octa::Size p_num;
 
     void advance() {
-        while (p_num > 0 && !p_chains[0]) {
-            --p_num;
-            ++p_chains;
-        }
-        if (p_num > 0) {
-            p_node = p_chains[0];
-            --p_num;
-            ++p_chains;
-        } else {
-            p_node = nullptr;
+        while ((p_beg != p_end) && !p_beg[0])
+            ++p_beg;
+        if (p_beg != p_end) {
+            p_node = p_beg[0];
+            ++p_beg;
         }
     }
 public:
-    HashRange(): p_chains(), p_num(0) {}
-    HashRange(Chain **ch, octa::Size n): p_chains(ch), p_num(n) {
+    HashRange(): p_beg(), p_end(), p_node() {}
+    HashRange(const HashRange &v): p_beg(v.p_beg), p_end(v.p_end),
+        p_node(v.p_node) {}
+    HashRange(Chain **beg, Chain **end): p_beg(beg), p_end(end), p_node() {
         advance();
     }
-    HashRange(Chain **ch, Chain *node, octa::Size n): p_chains(ch),
-        p_node(node), p_num(n) {}
-    HashRange(const HashRange &v): p_chains(v.p_chains), p_node(v.p_node),
-        p_num(v.p_num) {}
+    HashRange(Chain **beg, Chain **end, Chain *node): p_beg(beg), p_end(end),
+        p_node(node) {}
 
     HashRange &operator=(const HashRange &v) {
-        p_chains = v.p_chains;
+        p_beg = v.p_beg;
+        p_end = v.p_end;
         p_node = v.p_node;
-        p_num = v.p_num;
         return *this;
     }
 
-    bool empty() const { return !p_node && p_num <= 0; }
+    bool empty() const { return !p_node; }
 
     bool pop_front() {
-        if (empty()) return false;
-        if (p_node->next) {
-            p_node = p_node->next;
-            return true;
-        }
-        p_node = nullptr;
+        if (!p_node) return false;
+        p_node = p_node->next;
+        if (p_node) return true;
         advance();
         return true;
     }
@@ -281,8 +273,9 @@ namespace detail {
                 found = insert(h);
                 B::swap_elem(found->value, elem);
             }
-            return octa::make_pair(Range(&p_data.first()[h + 1], found,
-                bucket_count() - h - 1), ins);
+            Chain **hch = p_data.first();
+            return octa::make_pair(Range(hch + h + 1, hch + bucket_count(),
+                found), ins);
         }
 
         float load_factor() const { return float(p_len) / p_size; }
@@ -340,13 +333,13 @@ namespace detail {
         }
 
         Range each() {
-            return Range(p_data.first(), bucket_count());
+            return Range(p_data.first(), p_data.first() + bucket_count());
         }
         ConstRange each() const {
-            return ConstRange(p_data.first(), bucket_count());
+            return ConstRange(p_data.first(), p_data.first() + bucket_count());
         }
         ConstRange ceach() const {
-            return ConstRange(p_data.first(), bucket_count());
+            return ConstRange(p_data.first(), p_data.first() + bucket_count());
         }
 
         LocalRange each(octa::Size n) {
