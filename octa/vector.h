@@ -192,6 +192,11 @@ public:
     Vector &operator=(const Vector &v) {
         if (this == &v) return *this;
         clear();
+        if (octa::AllocatorPropagateOnContainerCopyAssignment<A>::value) {
+            octa::allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
+            p_cap = 0;
+            p_buf.second() = v.p_buf.second();
+        }
         reserve(v.p_cap);
         p_len = v.p_len;
         copy_contents(v);
@@ -201,6 +206,8 @@ public:
     Vector &operator=(Vector &&v) {
         clear();
         octa::allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
+        if (octa::AllocatorPropagateOnContainerMoveAssignment<A>::value)
+            p_buf.second() = v.p_buf.second();
         p_len = v.p_len;
         p_cap = v.p_cap;
         p_buf.~VecPair();

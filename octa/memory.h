@@ -800,7 +800,7 @@ namespace detail {
 } /* namespace detail */
 
 template<typename A>
-using PropagateOnContainerCopyAssignment
+using AllocatorPropagateOnContainerCopyAssignment
     = typename octa::detail::PropagateOnContainerCopyAssignmentBase<A>::Type;
 
 /* allocator propagate on container move assignment */
@@ -827,7 +827,7 @@ namespace detail {
 } /* namespace detail */
 
 template<typename A>
-using PropagateOnContainerMoveAssignment
+using AllocatorPropagateOnContainerMoveAssignment
     = typename octa::detail::PropagateOnContainerMoveAssignmentBase<A>::Type;
 
 /* allocator propagate on container swap */
@@ -853,7 +853,7 @@ namespace detail {
 } /* namespace detail */
 
 template<typename A>
-using PropagateOnContainerSwap
+using AllocatorPropagateOnContainerSwap
     = typename octa::detail::PropagateOnContainerSwapBase<A>::Type;
 
 /* allocator is always equal */
@@ -878,7 +878,7 @@ namespace detail {
 } /* namespace detail */
 
 template<typename A>
-using IsAlwaysEqual = typename octa::detail::IsAlwaysEqualBase<A>::Type;
+using AllocatorIsAlwaysEqual = typename octa::detail::IsAlwaysEqualBase<A>::Type;
 
 /* allocator allocate */
 
