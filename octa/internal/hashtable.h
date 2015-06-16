@@ -427,7 +427,10 @@ namespace detail {
             octa::swap(p_len, h.p_len);
             octa::swap(p_chunks, h.p_chunks);
             octa::swap(p_unused, h.p_unused);
-            octa::swap(p_data, h.p_data);
+            octa::swap(p_data.first(), h.p_data.first());
+            octa::swap(p_data.second().second(), h.p_data.second().second());
+            if (octa::AllocatorPropagateOnContainerSwap<A>::value)
+                octa::swap(p_data.second().first(), h.p_data.second().first());
         }
     };
 } /* namespace detail */
