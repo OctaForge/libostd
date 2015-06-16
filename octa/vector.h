@@ -127,9 +127,8 @@ public:
         v.p_len = v.p_cap = 0;
     }
 
-    Vector(Vector &&v, const A &a) {
-        if (a != v.a) {
-            p_buf.second() = a;
+    Vector(Vector &&v, const A &a): p_buf(nullptr, a) {
+        if (!(a == v.p_buf.second())) {
             reserve(v.p_cap);
             p_len = v.p_len;
             if (octa::IsPod<T>()) {
@@ -144,8 +143,7 @@ public:
             }
             return;
         }
-        new (&p_buf) VecPair(v.p_buf.first(),
-            octa::move(v.p_buf.second()));
+        p_buf.first() = v.p_buf.first();
         p_len = v.p_len;
         p_cap = v.p_cap;
         v.p_buf.first() = nullptr;

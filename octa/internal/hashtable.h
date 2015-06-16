@@ -151,6 +151,7 @@ namespace detail {
         const C &get_eq() const { return p_data.second().second().second(); }
 
         A &get_alloc() { return p_data.second().first().first(); }
+        const A &get_alloc() const { return p_data.second().first().first(); }
         CPA &get_cpalloc() { return p_data.second().first().second().first(); }
         CHA &get_challoc() { return p_data.second().first().second().second(); }
 
@@ -159,12 +160,73 @@ namespace detail {
         p_data(nullptr, FAPair(AllocPair(alloc, CoreAllocPair(alloc, alloc)),
             FuncPair(hf, eqf))),
         p_maxlf(1.0f) {
+            if (!size) return;
             p_data.first() = octa::allocator_allocate(get_cpalloc(), size);
             memset(p_data.first(), 0, size * sizeof(Chain *));
         }
 
+        Hashtable(const Hashtable &ht, const A &alloc): p_size(ht.p_size),
+        p_len(0), p_chunks(nullptr), p_unused(nullptr),
+        p_data(nullptr, FAPair(AllocPair(alloc, CoreAllocPair(alloc, alloc)),
+            FuncPair(ht.get_hash(), ht.get_eq()))),
+        p_maxlf(ht.p_maxlf) {
+            if (!p_size) return;
+            p_data.first() = octa::allocator_allocate(get_cpalloc(), p_size);
+            memset(p_data.first(), 0, p_size * sizeof(Chain *));
+            Chain **och = ht.p_data.first();
+            for (octa::Size h = 0; h < p_size; ++h) {
+                Chain *oc = och[h];
+                for (; oc; oc = oc->next) {
+                    Chain *nc = insert(h);
+                    octa::allocator_destroy(get_alloc(), &nc->value);
+                    octa::allocator_construct(get_alloc(), &nc->value, oc->value);
+                }
+            }
+        }
+
+        Hashtable(Hashtable &&ht): p_size(ht.p_size), p_len(ht.p_len),
+        p_chunks(ht.p_chunks), p_unused(ht.p_unused),
+        p_data(octa::move(ht.p_data)), p_maxlf(ht.p_maxlf) {
+            ht.p_size = ht.p_len = 0;
+            ht.p_chunks = nullptr;
+            ht.p_unused = nullptr;
+            ht.p_data.first() = nullptr;
+        }
+
+        Hashtable(Hashtable &&ht, const A &alloc): p_data(nullptr,
+            FAPair(AllocPair(alloc, CoreAllocPair(alloc, alloc)),
+                FuncPair(ht.get_hash(), ht.get_eq()))) {
+            p_size = ht.p_size;
+            if (alloc == ht.get_alloc()) {
+                p_len = ht.p_len;
+                p_chunks = ht.p_chunks;
+                p_unused = ht.p_unused;
+                p_data.first() = ht.p_data.first();
+                p_maxlf = ht.p_maxlf;
+                ht.p_size = ht.p_len = 0;
+                ht.p_chunks = nullptr;
+                ht.p_unused = nullptr;
+                ht.p_data.first() = nullptr;
+                return;
+            }
+            p_len = 0;
+            p_chunks = nullptr;
+            p_unused = nullptr;
+            p_data.first() = octa::allocator_allocate(get_cpalloc(), p_size);
+            memset(p_data.first(), 0, p_size * sizeof(Chain *));
+            Chain **och = ht.p_data.first();
+            for (octa::Size h = 0; h < p_size; ++h) {
+                Chain *oc = och[h];
+                for (; oc; oc = oc->next) {
+                    Chain *nc = insert(h);
+                    B::swap_elem(oc->value, nc->value);
+                }
+            }
+        }
+
         ~Hashtable() {
-            octa::allocator_deallocate(get_cpalloc(), p_data.first(), p_size);
+            if (p_size) octa::allocator_deallocate(get_cpalloc(),
+                p_data.first(), p_size);
             delete_chunks(p_chunks);
         }
 
@@ -304,7 +366,8 @@ namespace detail {
         }
 
         void rehash(octa::Size count) {
-            count = octa::max(count, octa::Size(p_len / max_load_factor()));
+            octa::Size fbcount = octa::Size(p_len / max_load_factor());
+            if (fbcount > count) count = fbcount;
 
             Chain **och = p_data.first();
             Chain **nch = octa::allocator_allocate(get_cpalloc(), count);
@@ -327,7 +390,8 @@ namespace detail {
                 }
             }
 
-            octa::allocator_deallocate(get_cpalloc(), och, osize);
+            if (och && osize) octa::allocator_deallocate(get_cpalloc(),
+                och, osize);
             delete_chunks(chunks);
         }
 

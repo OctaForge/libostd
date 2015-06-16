@@ -78,6 +78,14 @@ public:
     Map(octa::Size size, const A &alloc): Map(size, H(), C(), alloc) {}
     Map(octa::Size size, const H &hf, const A &alloc): Map(size, hf, C(), alloc) {}
 
+    Map(const Map &m): p_table(m.p_table,
+        octa::allocator_container_copy(m.p_table.get_alloc())) {}
+
+    Map(const Map &m, const A &alloc): p_table(m.p_table, alloc) {}
+
+    Map(Map &&m): p_table(octa::move(m.p_table)) {}
+    Map(Map &&m, const A &alloc): p_table(octa::move(m.p_table), alloc) {}
+
     template<typename R>
     Map(R range, octa::Size size = 1 << 10, const H &hf = H(),
         const C &eqf = C(), const A &alloc = A(),
@@ -123,7 +131,7 @@ public:
     void clear() { p_table.clear(); }
 
     A get_allocator() const {
-        return p_table.get_challoc();
+        return p_table.get_alloc();
     }
 
     T &at(const K &key) {
