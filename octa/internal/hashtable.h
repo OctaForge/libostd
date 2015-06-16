@@ -387,6 +387,35 @@ namespace detail {
             return octa::move(ret);
         }
 
+        template<typename U>
+        bool find(const U &key, octa::Size &h, Chain *&oc) const {
+            if (!p_size) return false;
+            h = get_hash()(key) & (p_size - 1);
+            for (Chain *c = p_data.first()[h]; c; c = c->next) {
+                if (get_eq()(key, B::get_key(c->value))) {
+                    oc = c;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        template<typename U>
+        Range find(const U &key) {
+            octa::Size h;
+            Chain *c;
+            if (find(key, h, c)) return each_from(c, h);
+            return Range();
+        }
+
+        template<typename U>
+        ConstRange find(const U &key) const {
+            octa::Size h;
+            Chain *c;
+            if (find(key, h, c)) return each_from(c, h);
+            return ConstRange();
+        }
+
         float load_factor() const { return float(p_len) / p_size; }
         float max_load_factor() const { return p_maxlf; }
         void max_load_factor(float lf) { p_maxlf = lf; }
@@ -484,6 +513,16 @@ namespace detail {
             using Chain = octa::detail::HashChain<const E>;
             if (n >= p_size) return ConstLocalRange();
             return ConstLocalRange((Chain *)p_data.first()[n]);
+        }
+
+        Range each_from(Chain *c, octa::Size h) {
+            return Range(p_data.first() + h + 1,
+                p_data.first() + bucket_count(), c);
+        }
+        ConstRange each_from(Chain *c, octa::Size h) const {
+            using RChain = octa::detail::HashChain<const E>;
+            return Range((RChain *)(p_data.first() + h + 1),
+                         (RChain *)(p_data.first() + bucket_count()), c);
         }
 
         void swap(Hashtable &ht) {

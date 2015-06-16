@@ -191,6 +191,9 @@ public:
         return 0;
     }
 
+    Range find(const Key &key) { return p_table.find(key); }
+    ConstRange find(const Key &key) const { return p_table.find(key); }
+
     float load_factor() const { return p_table.load_factor(); }
     float max_load_factor() const { return p_table.max_load_factor(); }
     void max_load_factor(float lf) { p_table.max_load_factor(lf); }
