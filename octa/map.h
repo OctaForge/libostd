@@ -17,7 +17,7 @@
 namespace octa {
 
 namespace detail {
-    template<typename K, typename T> struct MapBase {
+    template<typename K, typename T, typename A> struct MapBase {
         using Element = octa::Pair<const K, T>;
 
         static inline const K &get_key(Element &e) {
@@ -27,9 +27,10 @@ namespace detail {
             return e.second;
         }
         template<typename U>
-        static inline void set_key(Element &e, U &&key) {
-            e.first.~K();
-            new ((K *)&e.first) K(octa::forward<U>(key));
+        static inline void set_key(Element &e, U &&key, A &alloc) {
+            octa::allocator_destroy(alloc, &e);
+            octa::allocator_construct(alloc, &e, octa::forward<U>(key),
+                octa::move(T()));
         }
         static inline void swap_elem(Element &a, Element &b) {
             octa::swap(*((K *)&a.first), *((K *)&b.first));
@@ -46,7 +47,7 @@ template<
 > struct Map {
 private:
     using Base = octa::detail::Hashtable<
-        octa::detail::MapBase<K, T>, octa::Pair<const K, T>, K, T, H, C, A
+        octa::detail::MapBase<K, T, A>, octa::Pair<const K, T>, K, T, H, C, A
     >;
     Base p_table;
 public:

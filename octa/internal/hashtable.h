@@ -18,8 +18,8 @@ namespace octa {
 namespace detail {
     template<typename T>
     struct HashChain {
-        T value;
         HashChain<T> *next;
+        T value;
     };
 }
 
@@ -132,7 +132,8 @@ namespace detail {
         using CPA = octa::AllocatorRebind<A, Chain *>;
         using CHA = octa::AllocatorRebind<A, Chunk>;
 
-        using AllocPair = octa::detail::CompressedPair<CPA, CHA>;
+        using CoreAllocPair = octa::detail::CompressedPair<CPA, CHA>;
+        using AllocPair = octa::detail::CompressedPair<A, CoreAllocPair>;
         using FuncPair = octa::detail::CompressedPair<H, C>;
         using FAPair = octa::detail::CompressedPair<AllocPair, FuncPair>;
         using DataPair = octa::detail::CompressedPair<Chain **, FAPair>;
@@ -149,12 +150,14 @@ namespace detail {
         const H &get_hash() const { return p_data.second().second().first(); }
         const C &get_eq() const { return p_data.second().second().second(); }
 
-        CPA &get_cpalloc() { return p_data.second().first().first(); }
-        CHA &get_challoc() { return p_data.second().first().second(); }
+        A &get_alloc() { return p_data.second().first().first(); }
+        CPA &get_cpalloc() { return p_data.second().first().second().first(); }
+        CHA &get_challoc() { return p_data.second().first().second().second(); }
 
         Hashtable(octa::Size size, const H &hf, const C &eqf, const A &alloc):
         p_size(size), p_len(0), p_chunks(nullptr), p_unused(nullptr),
-        p_data(nullptr, FAPair(AllocPair(alloc, alloc), FuncPair(hf, eqf))),
+        p_data(nullptr, FAPair(AllocPair(alloc, CoreAllocPair(alloc, alloc)),
+            FuncPair(hf, eqf))),
         p_maxlf(1.0f) {
             p_data.first() = octa::allocator_allocate(get_cpalloc(), size);
             memset(p_data.first(), 0, size * sizeof(Chain *));
@@ -191,7 +194,7 @@ namespace detail {
         template<typename U>
         T &insert(octa::Size h, U &&key) {
             Chain *c = insert(h);
-            B::set_key(c->value, octa::forward<U>(key));
+            B::set_key(c->value, octa::forward<U>(key), get_alloc());
             return B::get_data(c->value);
         }
 
@@ -203,8 +206,8 @@ namespace detail {
             while (c) {
                 if (get_eq()(key, B::get_key(c->value))) {
                     *p = c->next;
-                    c->value.~E();
-                    new (&c->value) E;
+                    octa::allocator_destroy(get_alloc(), &c->value);
+                    octa::allocator_construct(get_alloc(), &c->value);
                     c->next = p_unused;
                     p_unused = c;
                     --p_len;
