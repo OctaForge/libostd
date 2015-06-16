@@ -521,8 +521,9 @@ namespace detail {
         }
         ConstRange each_from(Chain *c, octa::Size h) const {
             using RChain = octa::detail::HashChain<const E>;
-            return Range((RChain *)(p_data.first() + h + 1),
-                         (RChain *)(p_data.first() + bucket_count()), c);
+            return ConstRange((RChain **)(p_data.first() + h + 1),
+                              (RChain **)(p_data.first() + bucket_count()),
+                              (RChain *)c);
         }
 
         void swap(Hashtable &ht) {
