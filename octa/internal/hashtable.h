@@ -418,25 +418,21 @@ namespace detail {
             memset(nch, 0, count * sizeof(Chain *));
             p_data.first() = nch;
 
-            Chunk *chunks = p_chunks;
             octa::Size osize = p_size;
-
-            p_chunks = nullptr;
-            p_unused = nullptr;
             p_size = count;
-            p_len = 0;
 
             for (octa::Size i = 0; i < osize; ++i) {
-                for (Chain *oc = och[i]; oc; oc = oc->next) {
-                    octa::Size h = get_hash()(B::get_key(oc->value)) & (count - 1);
-                    Chain *nc = insert(h);
-                    B::swap_elem(oc->value, nc->value);
+                for (Chain *oc = och[i]; oc;) {
+                    octa::Size h = get_hash()(B::get_key(oc->value)) & (p_size - 1);
+                    Chain *nxc = oc->next;
+                    oc->next = nch[h];
+                    nch[h] = oc;
+                    oc = nxc;
                 }
             }
 
             if (och && osize) octa::allocator_deallocate(get_cpalloc(),
                 och, osize);
-            delete_chunks(chunks);
         }
 
         void rehash_up() {
