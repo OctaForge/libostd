@@ -50,6 +50,22 @@ private:
         octa::detail::MapBase<K, T, A>, octa::Pair<const K, T>, K, T, H, C, A
     >;
     Base p_table;
+
+    template<typename R>
+    octa::Size estimate_rsize(const R &range,
+        octa::EnableIf<octa::IsFiniteRandomAccessRange<R>::value, bool> = true
+    ) {
+        return range.size();
+    }
+
+    template<typename R>
+    octa::Size estimate_rsize(const R &,
+        octa::EnableIf<!octa::IsFiniteRandomAccessRange<R>::value, bool> = true
+    ) {
+        /* we have no idea how big the range actually is */
+        return 16;
+    }
+
 public:
 
     using Key = K;
@@ -72,8 +88,8 @@ public:
         const C &eqf = C(), const A &alloc = A()
     ): p_table(size, hf, eqf, alloc) {}
 
-    Map(): Map(octa::Size(1 << 10)) {}
-    explicit Map(const A &alloc): Map(octa::Size(1 << 10), H(), C(), alloc) {}
+    Map(): Map(0) {}
+    explicit Map(const A &alloc): Map(0, H(), C(), alloc) {}
 
     Map(octa::Size size, const A &alloc): Map(size, H(), C(), alloc) {}
     Map(octa::Size size, const H &hf, const A &alloc): Map(size, hf, C(), alloc) {}
@@ -87,16 +103,17 @@ public:
     Map(Map &&m, const A &alloc): p_table(octa::move(m.p_table), alloc) {}
 
     template<typename R>
-    Map(R range, octa::Size size = 1 << 10, const H &hf = H(),
+    Map(R range, octa::Size size = 0, const H &hf = H(),
         const C &eqf = C(), const A &alloc = A(),
         octa::EnableIf<
             octa::IsInputRange<R>::value &&
             octa::IsConvertible<RangeReference<R>, Value>::value,
             bool
         > = true
-    ): p_table(size, hf, eqf, alloc) {
+    ): p_table(size ? size : estimate_rsize(range), hf, eqf, alloc) {
         for (; !range.empty(); range.pop_front())
             emplace(range.front());
+        p_table.rehash_up();
     }
 
     template<typename R>
@@ -107,7 +124,7 @@ public:
     Map(R range, octa::Size size, const H &hf, const A &alloc)
     : Map(range, size, hf, C(), alloc) {}
 
-    Map(octa::InitializerList<Value> init, octa::Size size = 1 << 10,
+    Map(octa::InitializerList<Value> init, octa::Size size = 0,
         const H &hf = H(), const C &eqf = C(), const A &alloc = A()
     ): Map(octa::each(init), size, hf, eqf, alloc) {}
 
@@ -135,14 +152,17 @@ public:
         Map &
     > operator=(R range) {
         clear();
+        p_table.reserve_at_least(estimate_rsize(range));
         for (; !range.empty(); range.pop_front())
             emplace(range.front());
+        p_table.rehash_up();
         return *this;
     }
 
     Map &operator=(InitializerList<Value> il) {
-        Value *beg = il.begin(), *end = il.end();
+        const Value *beg = il.begin(), *end = il.end();
         clear();
+        p_table.reserve_at_least(end - beg);
         while (beg != end)
             emplace(*beg++);
         return *this;
@@ -175,12 +195,14 @@ public:
         octa::Size h;
         T *v = p_table.access_base(key, h);
         if (v) return *v;
+        p_table.rehash_ahead(1);
         return p_table.insert(h, key);
     }
     T &operator[](K &&key) {
         octa::Size h;
         T *v = p_table.access_base(key, h);
         if (v) return *v;
+        p_table.rehash_ahead(1);
         return p_table.insert(h, octa::move(key));
     }
 

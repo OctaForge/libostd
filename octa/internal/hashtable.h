@@ -339,6 +339,7 @@ namespace detail {
 
         template<typename U>
         T *access_base(const U &key, octa::Size &h) const {
+            if (!p_size) return NULL;
             h = get_hash()(key) & (p_size - 1);
             for (Chain *c = p_data.first()[h]; c; c = c->next) {
                 if (get_eq()(key, B::get_key(c->value)))
@@ -363,6 +364,7 @@ namespace detail {
 
         template<typename ...Args>
         octa::Pair<Range, bool> emplace(Args &&...args) {
+            rehash_ahead(1);
             E elem(octa::forward<Args>(args)...);
             octa::Size h = get_hash()(B::get_key(elem)) & (p_size - 1);
             Chain *found = nullptr;
@@ -379,8 +381,10 @@ namespace detail {
                 B::swap_elem(found->value, elem);
             }
             Chain **hch = p_data.first();
-            return octa::make_pair(Range(hch + h + 1, hch + bucket_count(),
+            auto ret = octa::make_pair(Range(hch + h + 1, hch + bucket_count(),
                 found), ins);
+            rehash_up();
+            return octa::move(ret);
         }
 
         float load_factor() const { return float(p_len) / p_size; }
@@ -435,8 +439,26 @@ namespace detail {
             delete_chunks(chunks);
         }
 
+        void rehash_up() {
+            if (load_factor() <= max_load_factor()) return;
+            rehash(octa::Size(size() / max_load_factor()) * 2);
+        }
+
         void reserve(octa::Size count) {
             rehash(octa::Size(ceil(count / max_load_factor())));
+        }
+
+        void reserve_at_least(octa::Size count) {
+            octa::Size nc = octa::Size(ceil(count / max_load_factor()));
+            if (p_size > nc) return;
+            rehash(nc);
+        }
+
+        void rehash_ahead(octa::Size n) {
+            if (!bucket_count())
+                reserve(n);
+            else if ((float(size() + n) / bucket_count()) > max_load_factor())
+                rehash(octa::Size((size() + 1) / max_load_factor()) * 2);
         }
 
         Range each() {
