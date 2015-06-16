@@ -168,10 +168,10 @@ public:
     }
 
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
-    StringBase(ConstPointer v, const A &a = A()):
+    StringBase(const Value *v, const A &a = A()):
         p_buf(ConstRange(v, strlen(v) + 1), a) {}
 
-    StringBase(ConstPointer v, Size n, const A &a = A()):
+    StringBase(const Value *v, Size n, const A &a = A()):
         p_buf(ConstRange(v, n), a) {}
 
     template<typename R> StringBase(R range, const A &a = A(),
@@ -194,7 +194,7 @@ public:
         p_buf.operator=(octa::move(v));
         return *this;
     }
-    StringBase &operator=(ConstPointer v) {
+    StringBase &operator=(const Value *v) {
         p_buf = ConstRange(v, strlen(v) + 1);
         return *this;
     }
@@ -231,8 +231,8 @@ public:
     T &back() { return p_buf[size() - 1]; }
     const T &back() const { return p_buf[size() - 1]; }
 
-    Pointer data() { return p_buf.data(); }
-    ConstPointer data() const { return p_buf.data(); }
+    Value *data() { return p_buf.data(); }
+    const Value *data() const { return p_buf.data(); }
 
     octa::Size size() const {
         return p_buf.size() - 1;
@@ -263,7 +263,7 @@ public:
         return *this;
     }
 
-    StringBase &append(ConstPointer s) {
+    StringBase &append(const Value *s) {
         p_buf.pop();
         p_buf.insert_range(p_buf.size(), ConstRange(s,
             strlen(s) + 1));
@@ -288,7 +288,7 @@ public:
     StringBase &operator+=(const StringBase &s) {
         return append(s);
     }
-    StringBase &operator+=(ConstPointer s) {
+    StringBase &operator+=(const Value *s) {
         return append(s);
     }
     StringBase &operator+=(T c) {
@@ -302,7 +302,7 @@ public:
         return strcmp(p_buf.data(), s.data());
     }
 
-    int compare(ConstPointer p) const {
+    int compare(const Value *p) const {
         return strcmp(p_buf.data(), p);
     }
 

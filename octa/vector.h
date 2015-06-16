@@ -89,12 +89,8 @@ public:
     using ConstReference = const T &;
     using Pointer = octa::AllocatorPointer<A>;
     using ConstPointer = octa::AllocatorConstPointer<A>;
-    using Range = octa::PointerRange<Value, Reference, Pointer, Size,
-        Difference
-    >;
-    using ConstRange = octa::PointerRange<const Value, ConstReference,
-        ConstPointer, Size, Difference
-    >;
+    using Range = octa::PointerRange<T>;
+    using ConstRange = octa::PointerRange<const T>;
     using Allocator = A;
 
     Vector(const A &a = A()): p_len(0), p_cap(0), p_buf(nullptr, a) {}
@@ -150,7 +146,7 @@ public:
         v.p_len = v.p_cap = 0;
     }
 
-    Vector(ConstPointer buf, Size n, const A &a = A()): Vector(a) {
+    Vector(const Value *buf, Size n, const A &a = A()): Vector(a) {
         reserve(n);
         if (octa::IsPod<T>()) {
             memcpy(p_buf.first(), buf, n * sizeof(T));
@@ -331,8 +327,8 @@ public:
     T &back() { return p_buf.first()[p_len - 1]; }
     const T &back() const { return p_buf.first()[p_len - 1]; }
 
-    Pointer data() { return p_buf.first(); }
-    ConstPointer data() const { return p_buf.first(); }
+    Value *data() { return (Value *)p_buf.first(); }
+    const Value *data() const { return (const Value *)p_buf.first(); }
 
     Size size() const { return p_len; }
     Size capacity() const { return p_cap; }
@@ -343,15 +339,15 @@ public:
 
     bool in_range(Size idx) { return idx < p_len; }
     bool in_range(int idx) { return idx >= 0 && Size(idx) < p_len; }
-    bool in_range(ConstPointer ptr) {
+    bool in_range(const Value *ptr) {
         return ptr >= p_buf.first() && ptr < &p_buf.first()[p_len];
     }
 
-    Pointer disown() {
+    Value *disown() {
         Pointer r = p_buf.first();
         p_buf.first() = nullptr;
         p_len = p_cap = 0;
-        return r;
+        return (Value *)r;
     }
 
     Range insert(Size idx, T &&v) {
