@@ -128,7 +128,7 @@ public:
     }
 
     Vector(Vector &&v, const A &a): p_buf(nullptr, a) {
-        if (!(a == v.p_buf.second())) {
+        if (a != v.p_buf.second()) {
             reserve(v.p_cap);
             p_len = v.p_len;
             if (octa::IsPod<T>()) {
@@ -193,8 +193,10 @@ public:
         if (this == &v) return *this;
         clear();
         if (octa::AllocatorPropagateOnContainerCopyAssignment<A>::value) {
-            octa::allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
-            p_cap = 0;
+            if (p_buf.second() != v.p_buf.second()) {
+                octa::allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
+                p_cap = 0;
+            }
             p_buf.second() = v.p_buf.second();
         }
         reserve(v.p_cap);
@@ -400,7 +402,9 @@ public:
     void swap(Vector &v) {
         octa::swap(p_len, v.p_len);
         octa::swap(p_cap, v.p_cap);
-        p_buf.swap(v.p_buf);
+        octa::swap(p_buf.first(), v.p_buf.first());
+        if (octa::AllocatorPropagateOnContainerSwap<A>::value)
+            octa::swap(p_buf.second(), v.p_buf.second());
     }
 
     A get_allocator() const {
