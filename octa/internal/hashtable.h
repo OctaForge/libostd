@@ -21,6 +21,21 @@ namespace detail {
         HashChain<T> *next;
         T value;
     };
+
+    template<typename R>
+    static inline octa::Size estimate_hrsize(const R &range,
+        octa::EnableIf<octa::IsFiniteRandomAccessRange<R>::value, bool> = true
+    ) {
+        return range.size();
+    }
+
+    template<typename R>
+    static inline octa::Size estimate_hrsize(const R &,
+        octa::EnableIf<!octa::IsFiniteRandomAccessRange<R>::value, bool> = true
+    ) {
+        /* we have no idea how big the range actually is */
+        return 16;
+    }
 }
 
 template<typename T>

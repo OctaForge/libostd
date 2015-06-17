@@ -51,21 +51,6 @@ private:
     >;
     Base p_table;
 
-    template<typename R>
-    octa::Size estimate_rsize(const R &range,
-        octa::EnableIf<octa::IsFiniteRandomAccessRange<R>::value, bool> = true
-    ) {
-        return range.size();
-    }
-
-    template<typename R>
-    octa::Size estimate_rsize(const R &,
-        octa::EnableIf<!octa::IsFiniteRandomAccessRange<R>::value, bool> = true
-    ) {
-        /* we have no idea how big the range actually is */
-        return 16;
-    }
-
 public:
 
     using Key = K;
@@ -110,7 +95,8 @@ public:
             octa::IsConvertible<RangeReference<R>, Value>::value,
             bool
         > = true
-    ): p_table(size ? size : estimate_rsize(range), hf, eqf, alloc) {
+    ): p_table(size ? size : octa::detail::estimate_hrsize(range),
+               hf, eqf, alloc) {
         for (; !range.empty(); range.pop_front())
             emplace(range.front());
         p_table.rehash_up();
@@ -152,7 +138,7 @@ public:
         Map &
     > operator=(R range) {
         clear();
-        p_table.reserve_at_least(estimate_rsize(range));
+        p_table.reserve_at_least(octa::detail::estimate_hrsize(range));
         for (; !range.empty(); range.pop_front())
             emplace(range.front());
         p_table.rehash_up();
@@ -260,21 +246,6 @@ private:
     >;
     Base p_table;
 
-    template<typename R>
-    octa::Size estimate_rsize(const R &range,
-        octa::EnableIf<octa::IsFiniteRandomAccessRange<R>::value, bool> = true
-    ) {
-        return range.size();
-    }
-
-    template<typename R>
-    octa::Size estimate_rsize(const R &,
-        octa::EnableIf<!octa::IsFiniteRandomAccessRange<R>::value, bool> = true
-    ) {
-        /* we have no idea how big the range actually is */
-        return 16;
-    }
-
 public:
 
     using Key = K;
@@ -322,7 +293,8 @@ public:
             octa::IsConvertible<RangeReference<R>, Value>::value,
             bool
         > = true
-    ): p_table(size ? size : estimate_rsize(range), hf, eqf, alloc) {
+    ): p_table(size ? size : octa::detail::estimate_hrsize(range),
+               hf, eqf, alloc) {
         for (; !range.empty(); range.pop_front())
             emplace(range.front());
         p_table.rehash_up();
@@ -364,7 +336,7 @@ public:
         Multimap &
     > operator=(R range) {
         clear();
-        p_table.reserve_at_least(estimate_rsize(range));
+        p_table.reserve_at_least(octa::detail::estimate_hrsize(range));
         for (; !range.empty(); range.pop_front())
             emplace(range.front());
         p_table.rehash_up();
