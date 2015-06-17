@@ -328,8 +328,8 @@ namespace detail {
             return B::get_data(c->value);
         }
 
-        template<bool multi, typename U>
-        octa::Size remove(const U &key) {
+        template<bool multi>
+        octa::Size remove(const K &key) {
             if (!p_len) return 0;
             octa::Size olen = p_len;
             octa::Size h = get_hash()(key) & (p_size - 1);
@@ -351,8 +351,8 @@ namespace detail {
             return olen - p_len;
         }
 
-        template<bool multi, typename U>
-        octa::Size count(const U &key) {
+        template<bool multi>
+        octa::Size count(const K &key) {
             if (!p_len) return 0;
             octa::Size h = get_hash()(key) & (p_size - 1);
             octa::Size ret = 0;
@@ -380,8 +380,7 @@ namespace detail {
             delete_chunks(p_chunks);
         }
 
-        template<typename U>
-        T *access_base(const U &key, octa::Size &h) const {
+        T *access_base(const K &key, octa::Size &h) const {
             if (!p_size) return NULL;
             h = get_hash()(key) & (p_size - 1);
             for (Chain *c = p_data.first()[h]; c; c = c->next) {
@@ -391,14 +390,12 @@ namespace detail {
             return NULL;
         }
 
-        template<typename U>
-        T *access(const U &key) const {
+        T *access(const K &key) const {
             octa::Size h;
             return access_base(key, h);
         }
 
-        template<typename U, typename V>
-        T &access(const U &key, const V &val) {
+        T &access(const K &key, const T &val) {
             octa::Size h;
             T *found = access_base(key, h);
             if (found) return *found;
@@ -440,8 +437,7 @@ namespace detail {
                 ch), true);
         }
 
-        template<typename U>
-        bool find(const U &key, octa::Size &h, Chain *&oc) const {
+        bool find(const K &key, octa::Size &h, Chain *&oc) const {
             if (!p_size) return false;
             h = get_hash()(key) & (p_size - 1);
             for (Chain *c = p_data.first()[h]; c; c = c->next) {
@@ -453,16 +449,14 @@ namespace detail {
             return false;
         }
 
-        template<typename U>
-        Range find(const U &key) {
+        Range find(const K &key) {
             octa::Size h;
             Chain *c;
             if (find(key, h, c)) return each_from(c, h);
             return Range();
         }
 
-        template<typename U>
-        ConstRange find(const U &key) const {
+        ConstRange find(const K &key) const {
             octa::Size h;
             Chain *c;
             if (find(key, h, c)) return each_from(c, h);
@@ -476,8 +470,7 @@ namespace detail {
         octa::Size bucket_count() const { return p_size; }
         octa::Size max_bucket_count() const { return Size(~0) / sizeof(Chain); }
 
-        template<typename U>
-        octa::Size bucket(const U &key) const {
+        octa::Size bucket(const K &key) const {
             return get_hash()(key) & (p_size - 1);
         }
 

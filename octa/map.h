@@ -52,7 +52,6 @@ private:
     Base p_table;
 
 public:
-
     using Key = K;
     using Mapped = T;
     using Size = octa::Size;
@@ -247,7 +246,6 @@ private:
     Base p_table;
 
 public:
-
     using Key = K;
     using Mapped = T;
     using Size = octa::Size;

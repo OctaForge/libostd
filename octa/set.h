@@ -43,7 +43,6 @@ private:
     Base p_table;
 
 public:
-
     using Key = T;
     using Size = octa::Size;
     using Difference = octa::Ptrdiff;
@@ -214,7 +213,6 @@ private:
     Base p_table;
 
 public:
-
     using Key = T;
     using Size = octa::Size;
     using Difference = octa::Ptrdiff;
