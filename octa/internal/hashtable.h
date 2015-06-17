@@ -313,25 +313,40 @@ namespace detail {
             return B::get_data(c->value);
         }
 
-        template<typename U>
-        bool remove(const U &key) {
+        template<bool multi, typename U>
+        octa::Size remove(const U &key) {
+            if (!p_len) return 0;
+            octa::Size olen = p_len;
             octa::Size h = get_hash()(key) & (p_size - 1);
-            Chain *c = p_data.first()[h];
-            Chain **p = &c;
+            Chain **p = &p_data.first()[h], *c = *p;
             while (c) {
                 if (get_eq()(key, B::get_key(c->value))) {
+                    --p_len;
                     *p = c->next;
-                    octa::allocator_destroy(get_alloc(), &c->value);
-                    octa::allocator_construct(get_alloc(), &c->value);
                     c->next = p_unused;
                     p_unused = c;
-                    --p_len;
-                    return true;
+                    octa::allocator_destroy(get_alloc(), &c->value);
+                    octa::allocator_construct(get_alloc(), &c->value);
+                    if (!multi) return 1;
+                } else {
+                    p = &c->next;
                 }
-                c = c->next;
-                p = &c;
+                c = *p;
             }
-            return false;
+            return olen - p_len;
+        }
+
+        template<bool multi, typename U>
+        octa::Size count(const U &key) {
+            if (!p_len) return 0;
+            octa::Size h = get_hash()(key) & (p_size - 1);
+            octa::Size ret = 0;
+            for (Chain *c = p_data.first()[h]; c; c = c->next)
+                if (get_eq()(key, B::get_key(c->value))) {
+                    ++ret;
+                    if (!multi) break;
+                }
+            return ret;
         }
 
         void delete_chunks(Chunk *chunks) {
@@ -394,10 +409,20 @@ namespace detail {
                 B::swap_elem(found->value, elem);
             }
             Chain **hch = p_data.first();
-            auto ret = octa::make_pair(Range(hch + h + 1, hch + bucket_count(),
+            return octa::make_pair(Range(hch + h + 1, hch + bucket_count(),
                 found), ins);
-            rehash_up();
-            return octa::move(ret);
+        }
+
+        template<typename ...Args>
+        octa::Pair<Range, bool> emplace_multi(Args &&...args) {
+            rehash_ahead(1);
+            E elem(octa::forward<Args>(args)...);
+            octa::Size h = get_hash()(B::get_key(elem)) & (p_size - 1);
+            Chain *ch = insert(h);
+            B::swap_elem(ch->value, elem);
+            Chain **hch = p_data.first();
+            return octa::make_pair(Range(hch + h + 1, hch + bucket_count(),
+                ch), true);
         }
 
         template<typename U>
