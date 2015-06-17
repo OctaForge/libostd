@@ -52,7 +52,8 @@ public:
 
     template<typename U>
     HashRange(const HashRange<U> &v, octa::EnableIf<
-        octa::IsSame<RemoveCv<T>, RemoveCv<U>>::value, bool
+        octa::IsSame<RemoveCv<T>, RemoveCv<U>>::value &&
+        octa::IsConvertible<U *, T *>::value, bool
     > = true): p_beg(*((Chain ***)&v)), p_end(*(((Chain ***)&v) + 1)),
         p_node(*(((Chain **)&v) + 2)) {}
 
@@ -92,7 +93,8 @@ public:
 
     template<typename U>
     BucketRange(const BucketRange<U> &v, octa::EnableIf<
-        octa::IsSame<RemoveCv<T>, RemoveCv<U>>::value, bool
+        octa::IsSame<RemoveCv<T>, RemoveCv<U>>::value &&
+        octa::IsConvertible<U *, T *>::value, bool
     > = true): p_node(*((Chain **)&v)) {}
 
     BucketRange &operator=(const BucketRange &v) {
