@@ -50,6 +50,12 @@ public:
     HashRange(Chain **beg, Chain **end, Chain *node): p_beg(beg), p_end(end),
         p_node(node) {}
 
+    template<typename U>
+    HashRange(const HashRange<U> &v, octa::EnableIf<
+        octa::IsConvertible<U, T>::value, bool
+    > = true): p_beg(*((Chain ***)&v)), p_end(*(((Chain ***)&v) + 1)),
+        p_node(*(((Chain **)&v) + 2)) {}
+
     HashRange &operator=(const HashRange &v) {
         p_beg = v.p_beg;
         p_end = v.p_end;
@@ -83,6 +89,11 @@ public:
     BucketRange(): p_node() {}
     BucketRange(Chain *node): p_node(node) {}
     BucketRange(const BucketRange &v): p_node(v.p_node) {}
+
+    template<typename U>
+    BucketRange(const BucketRange<U> &v, octa::EnableIf<
+        octa::IsConvertible<U, T>::value, bool
+    > = true): p_node(*((Chain **)&v)) {}
 
     BucketRange &operator=(const BucketRange &v) {
         p_node = v.p_node;
