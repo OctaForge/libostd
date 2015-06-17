@@ -23,14 +23,17 @@ struct StringRangeBase: InputRange<
     StringRangeBase<T>, FiniteRandomAccessRangeTag, T
 > {
     StringRangeBase(): p_beg(nullptr), p_end(nullptr) {}
-    StringRangeBase(const StringRangeBase &v): p_beg(v.p_beg),
-        p_end(v.p_end) {}
     StringRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
     StringRangeBase(T *beg, octa::Size n): p_beg(beg), p_end(beg + n) {}
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     StringRangeBase(T *beg): p_beg(beg), p_end(beg + strlen(beg)) {}
     StringRangeBase(const StringBase<T> &s): p_beg(s.data()),
         p_end(s.data() + s.size()) {}
+
+    template<typename U>
+    StringRangeBase(const StringRangeBase<U> &v, octa::EnableIf<
+        octa::IsConvertible<U *, T *>::value, bool
+    > = true): p_beg(&v[0]), p_end(&v[v.size()]) {}
 
     StringRangeBase &operator=(const StringRangeBase &v) {
         p_beg = v.p_beg; p_end = v.p_end; return *this;
