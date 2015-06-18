@@ -37,6 +37,138 @@ namespace detail {
             octa::swap(*((T *)&a.second), *((T *)&b.second));
         }
     };
+
+    template<
+        typename K, typename T, typename H,
+        typename C, typename A, bool IsMultihash
+    > struct MapImpl: octa::detail::Hashtable<
+        octa::detail::MapBase<K, T, A>, octa::Pair<const K, T>,
+        K, T, H, C, A, IsMultihash
+    > {
+    private:
+        using Base = octa::detail::Hashtable<
+            octa::detail::MapBase<K, T, A>, octa::Pair<const K, T>,
+            K, T, H, C, A, IsMultihash
+        >;
+
+    public:
+        using Key = K;
+        using Mapped = T;
+        using Size = octa::Size;
+        using Difference = octa::Ptrdiff;
+        using Hasher = H;
+        using KeyEqual = C;
+        using Value = octa::Pair<const K, T>;
+        using Reference = Value &;
+        using Pointer = octa::AllocatorPointer<A>;
+        using ConstPointer = octa::AllocatorConstPointer<A>;
+        using Range = octa::HashRange<octa::Pair<const K, T>>;
+        using ConstRange = octa::HashRange<const octa::Pair<const K, T>>;
+        using LocalRange = octa::BucketRange<octa::Pair<const K, T>>;
+        using ConstLocalRange = octa::BucketRange<const octa::Pair<const K, T>>;
+        using Allocator = A;
+
+        explicit MapImpl(octa::Size size, const H &hf = H(),
+            const C &eqf = C(), const A &alloc = A()
+        ): Base(size, hf, eqf, alloc) {}
+
+        MapImpl(): MapImpl(0) {}
+        explicit MapImpl(const A &alloc): MapImpl(0, H(), C(), alloc) {}
+
+        MapImpl(octa::Size size, const A &alloc):
+            MapImpl(size, H(), C(), alloc) {}
+        MapImpl(octa::Size size, const H &hf, const A &alloc):
+            MapImpl(size, hf, C(), alloc) {}
+
+        MapImpl(const MapImpl &m): Base(m,
+            octa::allocator_container_copy(m.get_alloc())) {}
+
+        MapImpl(const MapImpl &m, const A &alloc): Base(m, alloc) {}
+
+        MapImpl(MapImpl &&m): Base(octa::move(m)) {}
+        MapImpl(MapImpl &&m, const A &alloc): Base(octa::move(m), alloc) {}
+
+        template<typename R>
+        MapImpl(R range, octa::Size size = 0, const H &hf = H(),
+            const C &eqf = C(), const A &alloc = A(),
+            octa::EnableIf<
+                octa::IsInputRange<R>::value &&
+                octa::IsConvertible<RangeReference<R>, Value>::value,
+                bool
+            > = true
+        ): Base(size ? size : octa::detail::estimate_hrsize(range),
+                   hf, eqf, alloc) {
+            for (; !range.empty(); range.pop_front())
+                Base::emplace(range.front());
+            Base::rehash_up();
+        }
+
+        template<typename R>
+        MapImpl(R range, octa::Size size, const A &alloc)
+        : MapImpl(range, size, H(), C(), alloc) {}
+
+        template<typename R>
+        MapImpl(R range, octa::Size size, const H &hf, const A &alloc)
+        : MapImpl(range, size, hf, C(), alloc) {}
+
+        MapImpl(octa::InitializerList<Value> init, octa::Size size = 0,
+            const H &hf = H(), const C &eqf = C(), const A &alloc = A()
+        ): MapImpl(octa::each(init), size, hf, eqf, alloc) {}
+
+        MapImpl(octa::InitializerList<Value> init, octa::Size size, const A &alloc)
+        : MapImpl(octa::each(init), size, H(), C(), alloc) {}
+
+        MapImpl(octa::InitializerList<Value> init, octa::Size size, const H &hf,
+            const A &alloc
+        ): MapImpl(octa::each(init), size, hf, C(), alloc) {}
+
+        MapImpl &operator=(const MapImpl &m) {
+            Base::operator=(m);
+            return *this;
+        }
+
+        MapImpl &operator=(MapImpl &&m) {
+            Base::operator=(octa::move(m));
+            return *this;
+        }
+
+        template<typename R>
+        octa::EnableIf<
+            octa::IsInputRange<R>::value &&
+            octa::IsConvertible<RangeReference<R>, Value>::value,
+            MapImpl &
+        > operator=(R range) {
+            Base::assign_range(range);
+            return *this;
+        }
+
+        MapImpl &operator=(InitializerList<Value> il) {
+            Base::assign_init(il);
+            return *this;
+        }
+
+        T &at(const K &key) {
+            static_assert(!IsMultihash, "at() only allowed on regular maps");
+            return Base::access(key);
+        }
+        const T &at(const K &key) const {
+            static_assert(!IsMultihash, "at() only allowed on regular maps");
+            return Base::access(key);
+        }
+
+        T &operator[](const K &key) {
+            static_assert(!IsMultihash, "operator[] only allowed on regular maps");
+            return Base::access_or_insert(key);
+        }
+        T &operator[](K &&key) {
+            static_assert(!IsMultihash, "operator[] only allowed on regular maps");
+            return Base::access_or_insert(octa::move(key));
+        }
+
+        void swap(MapImpl &v) {
+            Base::swap(v);
+        }
+    };
 }
 
 template<
@@ -44,362 +176,15 @@ template<
     typename H = octa::ToHash<K>,
     typename C = octa::Equal<K>,
     typename A = octa::Allocator<octa::Pair<const K, T>>
-> struct Map {
-private:
-    using Base = octa::detail::Hashtable<
-        octa::detail::MapBase<K, T, A>, octa::Pair<const K, T>,
-        K, T, H, C, A, false
-    >;
-    Base p_table;
-
-public:
-    using Key = K;
-    using Mapped = T;
-    using Size = octa::Size;
-    using Difference = octa::Ptrdiff;
-    using Hasher = H;
-    using KeyEqual = C;
-    using Value = octa::Pair<const K, T>;
-    using Reference = Value &;
-    using Pointer = octa::AllocatorPointer<A>;
-    using ConstPointer = octa::AllocatorConstPointer<A>;
-    using Range = octa::HashRange<octa::Pair<const K, T>>;
-    using ConstRange = octa::HashRange<const octa::Pair<const K, T>>;
-    using LocalRange = octa::BucketRange<octa::Pair<const K, T>>;
-    using ConstLocalRange = octa::BucketRange<const octa::Pair<const K, T>>;
-    using Allocator = A;
-
-    explicit Map(octa::Size size, const H &hf = H(),
-        const C &eqf = C(), const A &alloc = A()
-    ): p_table(size, hf, eqf, alloc) {}
-
-    Map(): Map(0) {}
-    explicit Map(const A &alloc): Map(0, H(), C(), alloc) {}
-
-    Map(octa::Size size, const A &alloc): Map(size, H(), C(), alloc) {}
-    Map(octa::Size size, const H &hf, const A &alloc): Map(size, hf, C(), alloc) {}
-
-    Map(const Map &m): p_table(m.p_table,
-        octa::allocator_container_copy(m.p_table.get_alloc())) {}
-
-    Map(const Map &m, const A &alloc): p_table(m.p_table, alloc) {}
-
-    Map(Map &&m): p_table(octa::move(m.p_table)) {}
-    Map(Map &&m, const A &alloc): p_table(octa::move(m.p_table), alloc) {}
-
-    template<typename R>
-    Map(R range, octa::Size size = 0, const H &hf = H(),
-        const C &eqf = C(), const A &alloc = A(),
-        octa::EnableIf<
-            octa::IsInputRange<R>::value &&
-            octa::IsConvertible<RangeReference<R>, Value>::value,
-            bool
-        > = true
-    ): p_table(size ? size : octa::detail::estimate_hrsize(range),
-               hf, eqf, alloc) {
-        for (; !range.empty(); range.pop_front())
-            emplace(range.front());
-        p_table.rehash_up();
-    }
-
-    template<typename R>
-    Map(R range, octa::Size size, const A &alloc)
-    : Map(range, size, H(), C(), alloc) {}
-
-    template<typename R>
-    Map(R range, octa::Size size, const H &hf, const A &alloc)
-    : Map(range, size, hf, C(), alloc) {}
-
-    Map(octa::InitializerList<Value> init, octa::Size size = 0,
-        const H &hf = H(), const C &eqf = C(), const A &alloc = A()
-    ): Map(octa::each(init), size, hf, eqf, alloc) {}
-
-    Map(octa::InitializerList<Value> init, octa::Size size, const A &alloc)
-    : Map(octa::each(init), size, H(), C(), alloc) {}
-
-    Map(octa::InitializerList<Value> init, octa::Size size, const H &hf,
-        const A &alloc
-    ): Map(octa::each(init), size, hf, C(), alloc) {}
-
-    Map &operator=(const Map &m) {
-        p_table = m.p_table;
-        return *this;
-    }
-
-    Map &operator=(Map &&m) {
-        p_table = octa::move(m.p_table);
-        return *this;
-    }
-
-    template<typename R>
-    octa::EnableIf<
-        octa::IsInputRange<R>::value &&
-        octa::IsConvertible<RangeReference<R>, Value>::value,
-        Map &
-    > operator=(R range) {
-        clear();
-        p_table.reserve_at_least(octa::detail::estimate_hrsize(range));
-        for (; !range.empty(); range.pop_front())
-            emplace(range.front());
-        p_table.rehash_up();
-        return *this;
-    }
-
-    Map &operator=(InitializerList<Value> il) {
-        const Value *beg = il.begin(), *end = il.end();
-        clear();
-        p_table.reserve_at_least(end - beg);
-        while (beg != end)
-            emplace(*beg++);
-        return *this;
-    }
-
-    bool empty() const { return p_table.empty(); }
-    octa::Size size() const { return p_table.size(); }
-    octa::Size max_size() const { return p_table.max_size(); }
-
-    octa::Size bucket_count() const { return p_table.bucket_count(); }
-    octa::Size max_bucket_count() const { return p_table.max_bucket_count(); }
-
-    octa::Size bucket(const K &key) const { return p_table.bucket(key); }
-    octa::Size bucket_size(octa::Size n) const { return p_table.bucket_size(n); }
-
-    void clear() { p_table.clear(); }
-
-    A get_allocator() const {
-        return p_table.get_alloc();
-    }
-
-    T &at(const K &key) {
-        return p_table.access(key);
-    }
-    const T &at(const K &key) const {
-        return p_table.access(key);
-    }
-
-    T &operator[](const K &key) {
-        return p_table.access_or_insert(key);
-    }
-    T &operator[](K &&key) {
-        return p_table.access_or_insert(octa::move(key));
-    }
-
-    template<typename ...Args>
-    octa::Pair<Range, bool> emplace(Args &&...args) {
-        return p_table.emplace(octa::forward<Args>(args)...);
-    }
-
-    octa::Size erase(const K &key) {
-        return p_table.remove(key);
-    }
-
-    octa::Size count(const K &key) {
-        return p_table.count(key);
-    }
-
-    Range find(const K &key) { return p_table.find(key); }
-    ConstRange find(const K &key) const { return p_table.find(key); }
-
-    float load_factor() const { return p_table.load_factor(); }
-    float max_load_factor() const { return p_table.max_load_factor(); }
-    void max_load_factor(float lf) { p_table.max_load_factor(lf); }
-
-    void rehash(octa::Size count) {
-        p_table.rehash(count);
-    }
-
-    void reserve(octa::Size count) {
-        p_table.reserve(count);
-    }
-
-    Range each() { return p_table.each(); }
-    ConstRange each() const { return p_table.each(); }
-    ConstRange ceach() const { return p_table.ceach(); }
-
-    LocalRange each(octa::Size n) { return p_table.each(n); }
-    ConstLocalRange each(octa::Size n) const { return p_table.each(n); }
-    ConstLocalRange ceach(octa::Size n) const { return p_table.each(n); }
-
-    void swap(Map &v) {
-        octa::swap(p_table, v.p_table);
-    }
-};
+> using Map = octa::detail::MapImpl<K, T, H, C, A, false>;
 
 template<
     typename K, typename T,
     typename H = octa::ToHash<K>,
     typename C = octa::Equal<K>,
     typename A = octa::Allocator<octa::Pair<const K, T>>
-> struct Multimap {
-private:
-    using Base = octa::detail::Hashtable<
-        octa::detail::MapBase<K, T, A>, octa::Pair<const K, T>,
-        K, T, H, C, A, true
-    >;
-    Base p_table;
+> using Multimap = octa::detail::MapImpl<K, T, H, C, A, true>;
 
-public:
-    using Key = K;
-    using Mapped = T;
-    using Size = octa::Size;
-    using Difference = octa::Ptrdiff;
-    using Hasher = H;
-    using KeyEqual = C;
-    using Value = octa::Pair<const K, T>;
-    using Reference = Value &;
-    using Pointer = octa::AllocatorPointer<A>;
-    using ConstPointer = octa::AllocatorConstPointer<A>;
-    using Range = octa::HashRange<octa::Pair<const K, T>>;
-    using ConstRange = octa::HashRange<const octa::Pair<const K, T>>;
-    using LocalRange = octa::BucketRange<octa::Pair<const K, T>>;
-    using ConstLocalRange = octa::BucketRange<const octa::Pair<const K, T>>;
-    using Allocator = A;
-
-    explicit Multimap(octa::Size size, const H &hf = H(),
-        const C &eqf = C(), const A &alloc = A()
-    ): p_table(size, hf, eqf, alloc) {}
-
-    Multimap(): Multimap(0) {}
-    explicit Multimap(const A &alloc): Multimap(0, H(), C(), alloc) {}
-
-    Multimap(octa::Size size, const A &alloc):
-        Multimap(size, H(), C(), alloc) {}
-    Multimap(octa::Size size, const H &hf, const A &alloc):
-        Multimap(size, hf, C(), alloc) {}
-
-    Multimap(const Multimap &m): p_table(m.p_table,
-        octa::allocator_container_copy(m.p_table.get_alloc())) {}
-
-    Multimap(const Multimap &m, const A &alloc): p_table(m.p_table, alloc) {}
-
-    Multimap(Multimap &&m): p_table(octa::move(m.p_table)) {}
-    Multimap(Multimap &&m, const A &alloc):
-        p_table(octa::move(m.p_table), alloc) {}
-
-    template<typename R>
-    Multimap(R range, octa::Size size = 0, const H &hf = H(),
-        const C &eqf = C(), const A &alloc = A(),
-        octa::EnableIf<
-            octa::IsInputRange<R>::value &&
-            octa::IsConvertible<RangeReference<R>, Value>::value,
-            bool
-        > = true
-    ): p_table(size ? size : octa::detail::estimate_hrsize(range),
-               hf, eqf, alloc) {
-        for (; !range.empty(); range.pop_front())
-            emplace(range.front());
-        p_table.rehash_up();
-    }
-
-    template<typename R>
-    Multimap(R range, octa::Size size, const A &alloc)
-    : Multimap(range, size, H(), C(), alloc) {}
-
-    template<typename R>
-    Multimap(R range, octa::Size size, const H &hf, const A &alloc)
-    : Multimap(range, size, hf, C(), alloc) {}
-
-    Multimap(octa::InitializerList<Value> init, octa::Size size = 0,
-        const H &hf = H(), const C &eqf = C(), const A &alloc = A()
-    ): Multimap(octa::each(init), size, hf, eqf, alloc) {}
-
-    Multimap(octa::InitializerList<Value> init, octa::Size size, const A &alloc)
-    : Multimap(octa::each(init), size, H(), C(), alloc) {}
-
-    Multimap(octa::InitializerList<Value> init, octa::Size size, const H &hf,
-        const A &alloc
-    ): Multimap(octa::each(init), size, hf, C(), alloc) {}
-
-    Multimap &operator=(const Multimap &m) {
-        p_table = m.p_table;
-        return *this;
-    }
-
-    Multimap &operator=(Multimap &&m) {
-        p_table = octa::move(m.p_table);
-        return *this;
-    }
-
-    template<typename R>
-    octa::EnableIf<
-        octa::IsInputRange<R>::value &&
-        octa::IsConvertible<RangeReference<R>, Value>::value,
-        Multimap &
-    > operator=(R range) {
-        clear();
-        p_table.reserve_at_least(octa::detail::estimate_hrsize(range));
-        for (; !range.empty(); range.pop_front())
-            emplace(range.front());
-        p_table.rehash_up();
-        return *this;
-    }
-
-    Multimap &operator=(InitializerList<Value> il) {
-        const Value *beg = il.begin(), *end = il.end();
-        clear();
-        p_table.reserve_at_least(end - beg);
-        while (beg != end)
-            emplace(*beg++);
-        return *this;
-    }
-
-    bool empty() const { return p_table.empty(); }
-    octa::Size size() const { return p_table.size(); }
-    octa::Size max_size() const { return p_table.max_size(); }
-
-    octa::Size bucket_count() const { return p_table.bucket_count(); }
-    octa::Size max_bucket_count() const { return p_table.max_bucket_count(); }
-
-    octa::Size bucket(const K &key) const { return p_table.bucket(key); }
-    octa::Size bucket_size(octa::Size n) const { return p_table.bucket_size(n); }
-
-    void clear() { p_table.clear(); }
-
-    A get_allocator() const {
-        return p_table.get_alloc();
-    }
-
-    template<typename ...Args>
-    octa::Pair<Range, bool> emplace(Args &&...args) {
-        return p_table.emplace(octa::forward<Args>(args)...);
-    }
-
-    octa::Size erase(const K &key) {
-        return p_table.remove(key);
-    }
-
-    octa::Size count(const K &key) {
-        return p_table.count(key);
-    }
-
-    Range find(const K &key) { return p_table.find(key); }
-    ConstRange find(const K &key) const { return p_table.find(key); }
-
-    float load_factor() const { return p_table.load_factor(); }
-    float max_load_factor() const { return p_table.max_load_factor(); }
-    void max_load_factor(float lf) { p_table.max_load_factor(lf); }
-
-    void rehash(octa::Size count) {
-        p_table.rehash(count);
-    }
-
-    void reserve(octa::Size count) {
-        p_table.reserve(count);
-    }
-
-    Range each() { return p_table.each(); }
-    ConstRange each() const { return p_table.each(); }
-    ConstRange ceach() const { return p_table.ceach(); }
-
-    LocalRange each(octa::Size n) { return p_table.each(n); }
-    ConstLocalRange each(octa::Size n) const { return p_table.each(n); }
-    ConstLocalRange ceach(octa::Size n) const { return p_table.each(n); }
-
-    void swap(Multimap &v) {
-        octa::swap(p_table, v.p_table);
-    }
-};
-
-} /* namespace detail */
+} /* namespace octa */
 
 #endif
