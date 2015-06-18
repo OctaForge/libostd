@@ -140,7 +140,8 @@ namespace detail {
         typename T, /* value type */
         typename H, /* hash func */
         typename C, /* equality check */
-        typename A  /* allocator */
+        typename A, /* allocator */
+        bool Multihash
     > struct Hashtable {
         static constexpr octa::Size CHUNKSIZE = 64;
 
@@ -328,7 +329,6 @@ namespace detail {
             return B::get_data(c->value);
         }
 
-        template<bool multi>
         octa::Size remove(const K &key) {
             if (!p_len) return 0;
             octa::Size olen = p_len;
@@ -342,7 +342,7 @@ namespace detail {
                     p_unused = c;
                     octa::allocator_destroy(get_alloc(), &c->value);
                     octa::allocator_construct(get_alloc(), &c->value);
-                    if (!multi) return 1;
+                    if (!Multihash) return 1;
                 } else {
                     p = &c->next;
                 }
@@ -351,7 +351,6 @@ namespace detail {
             return olen - p_len;
         }
 
-        template<bool multi>
         octa::Size count(const K &key) {
             if (!p_len) return 0;
             octa::Size h = get_hash()(key) & (p_size - 1);
@@ -359,7 +358,7 @@ namespace detail {
             for (Chain *c = p_data.first()[h]; c; c = c->next)
                 if (get_eq()(key, B::get_key(c->value))) {
                     ++ret;
-                    if (!multi) break;
+                    if (!Multihash) break;
                 }
             return ret;
         }
@@ -407,6 +406,14 @@ namespace detail {
             rehash_ahead(1);
             E elem(octa::forward<Args>(args)...);
             octa::Size h = get_hash()(B::get_key(elem)) & (p_size - 1);
+            if (Multihash) {
+                /* multihash: always insert */
+                Chain *ch = insert(h);
+                B::swap_elem(ch->value, elem);
+                Chain **hch = p_data.first();
+                return octa::make_pair(Range(hch + h + 1, hch + bucket_count(),
+                    ch), true);
+            }
             Chain *found = nullptr;
             bool ins = true;
             for (Chain *c = p_data.first()[h]; c; c = c->next) {
@@ -423,18 +430,6 @@ namespace detail {
             Chain **hch = p_data.first();
             return octa::make_pair(Range(hch + h + 1, hch + bucket_count(),
                 found), ins);
-        }
-
-        template<typename ...Args>
-        octa::Pair<Range, bool> emplace_multi(Args &&...args) {
-            rehash_ahead(1);
-            E elem(octa::forward<Args>(args)...);
-            octa::Size h = get_hash()(B::get_key(elem)) & (p_size - 1);
-            Chain *ch = insert(h);
-            B::swap_elem(ch->value, elem);
-            Chain **hch = p_data.first();
-            return octa::make_pair(Range(hch + h + 1, hch + bucket_count(),
-                ch), true);
         }
 
         bool find(const K &key, octa::Size &h, Chain *&oc) const {

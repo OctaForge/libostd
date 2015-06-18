@@ -47,7 +47,8 @@ template<
 > struct Map {
 private:
     using Base = octa::detail::Hashtable<
-        octa::detail::MapBase<K, T, A>, octa::Pair<const K, T>, K, T, H, C, A
+        octa::detail::MapBase<K, T, A>, octa::Pair<const K, T>,
+        K, T, H, C, A, false
     >;
     Base p_table;
 
@@ -197,11 +198,11 @@ public:
     }
 
     octa::Size erase(const K &key) {
-        return p_table.remove<false>(key);
+        return p_table.remove(key);
     }
 
     octa::Size count(const K &key) {
-        return p_table.count<false>(key);
+        return p_table.count(key);
     }
 
     Range find(const K &key) { return p_table.find(key); }
@@ -241,7 +242,7 @@ template<
 private:
     using Base = octa::detail::Hashtable<
         octa::detail::MapBase<K, T, A>, octa::Pair<const K, T>,
-        K, T, H, C, A
+        K, T, H, C, A, true
     >;
     Base p_table;
 
@@ -368,15 +369,15 @@ public:
 
     template<typename ...Args>
     octa::Pair<Range, bool> emplace(Args &&...args) {
-        return p_table.emplace_multi(octa::forward<Args>(args)...);
+        return p_table.emplace(octa::forward<Args>(args)...);
     }
 
     octa::Size erase(const K &key) {
-        return p_table.remove<true>(key);
+        return p_table.remove(key);
     }
 
     octa::Size count(const K &key) {
-        return p_table.count<true>(key);
+        return p_table.count(key);
     }
 
     Range find(const K &key) { return p_table.find(key); }
