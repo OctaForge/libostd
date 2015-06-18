@@ -171,25 +171,17 @@ public:
     }
 
     T &at(const K &key) {
-        return *p_table.access(key);
+        return p_table.access(key);
     }
     const T &at(const K &key) const {
-        return *p_table.access(key);
+        return p_table.access(key);
     }
 
     T &operator[](const K &key) {
-        octa::Size h;
-        T *v = p_table.access_base(key, h);
-        if (v) return *v;
-        p_table.rehash_ahead(1);
-        return p_table.insert(h, key);
+        return p_table.access_or_insert(key);
     }
     T &operator[](K &&key) {
-        octa::Size h;
-        T *v = p_table.access_base(key, h);
-        if (v) return *v;
-        p_table.rehash_ahead(1);
-        return p_table.insert(h, octa::move(key));
+        return p_table.access_or_insert(octa::move(key));
     }
 
     template<typename ...Args>

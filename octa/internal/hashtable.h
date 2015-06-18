@@ -143,6 +143,7 @@ namespace detail {
         typename A, /* allocator */
         bool Multihash
     > struct Hashtable {
+private:
         static constexpr octa::Size CHUNKSIZE = 64;
 
         using Chain = octa::detail::HashChain<E>;
@@ -176,6 +177,7 @@ namespace detail {
 
         float p_maxlf;
 
+public:
         const H &get_hash() const { return p_data.second().second().first(); }
         const C &get_eq() const { return p_data.second().second().second(); }
 
@@ -329,6 +331,22 @@ namespace detail {
             return B::get_data(c->value);
         }
 
+        T &access_or_insert(const K &key) {
+            octa::Size h;
+            T *v = access_base(key, h);
+            if (v) return *v;
+            rehash_ahead(1);
+            return insert(h, key);
+        }
+
+        T &access_or_insert(K &&key) {
+            octa::Size h;
+            T *v = access_base(key, h);
+            if (v) return *v;
+            rehash_ahead(1);
+            return insert(h, octa::move(key));
+        }
+
         octa::Size remove(const K &key) {
             if (!p_len) return 0;
             octa::Size olen = p_len;
@@ -389,16 +407,9 @@ namespace detail {
             return NULL;
         }
 
-        T *access(const K &key) const {
+        T &access(const K &key) const {
             octa::Size h;
-            return access_base(key, h);
-        }
-
-        T &access(const K &key, const T &val) {
-            octa::Size h;
-            T *found = access_base(key, h);
-            if (found) return *found;
-            return (insert(h, key) = val);
+            return *access_base(key, h);
         }
 
         template<typename ...Args>
