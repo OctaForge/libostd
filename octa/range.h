@@ -744,7 +744,6 @@ NumberRange<T> range(T v) {
 
 template<typename T>
 struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> {
-
     PointerRange(): p_beg(nullptr), p_end(nullptr) {}
     PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
     PointerRange(T *beg, octa::Size n): p_beg(beg), p_end(beg + n) {}
@@ -976,11 +975,6 @@ public:
     RangeSize<T> pop_front_n(RangeSize<T> n) {
         RangeSize<T> ret = p_range.pop_front_n(n);
         p_remaining -= ret;
-        return ret;
-    }
-    RangeSize<T> push_front_n(RangeSize<T> n) {
-        RangeSize<T> ret = p_range.push_front_n(n);
-        p_remaining += ret;
         return ret;
     }
 
