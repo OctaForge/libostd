@@ -983,10 +983,6 @@ public:
     bool equals_front(const TakeRange &r) const {
         return p_range.equals_front(r.p_range);
     }
-
-    RangeDifference<T> distance_front(const TakeRange &r) const {
-        return p_range.distance_front(r.p_range);
-    }
 };
 
 template<typename T>
