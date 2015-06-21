@@ -333,12 +333,12 @@ public:
         return octa::move(tmp);
     }
 
-    RangeHalf operator+(RangeDifference<T> n) {
+    RangeHalf operator+(RangeDifference<T> n) const {
         RangeHalf tmp(*this);
         tmp.add_n(n);
         return octa::move(tmp);
     }
-    RangeHalf operator-(RangeDifference<T> n) {
+    RangeHalf operator-(RangeDifference<T> n) const {
         RangeHalf tmp(*this);
         tmp.sub_n(n);
         return octa::move(tmp);
