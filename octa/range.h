@@ -37,10 +37,6 @@ namespace detail { \
     struct Range##Name##Base<T, true> { \
         using Type = typename T::Name; \
     }; \
-    template<typename T> \
-    struct Range##Name##Base<RangeHalf<T>, true> { \
-        using Type = typename T::Name; \
-    }; \
 } \
 template<typename T> \
 using Range##Name = typename octa::detail::Range##Name##Base<T>::Type;
@@ -265,8 +261,6 @@ public:
         return *this;
     }
 
-    T range() const { return p_range; }
-
     bool next() { return p_range.pop_front(); }
     bool prev() { return p_range.push_front(); }
 
@@ -352,6 +346,8 @@ public:
         sub_n(n);
         return *this;
     }
+
+    T each() const { return p_range; }
 
     HalfRange<RangeHalf> each(const RangeHalf &other) const {
         return HalfRange<RangeHalf>(*this, other);
