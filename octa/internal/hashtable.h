@@ -42,6 +42,9 @@ namespace detail {
 template<typename T>
 struct HashRange: octa::InputRange<HashRange<T>, octa::ForwardRangeTag, T> {
 private:
+    template<typename U>
+    friend struct HashRange;
+
     using Chain = octa::detail::HashChain<T>;
 
     Chain **p_beg;
@@ -70,8 +73,8 @@ public:
     HashRange(const HashRange<U> &v, octa::EnableIf<
         octa::IsSame<RemoveCv<T>, RemoveCv<U>>::value &&
         octa::IsConvertible<U *, T *>::value, bool
-    > = true): p_beg(*((Chain ***)&v)), p_end(*(((Chain ***)&v) + 1)),
-        p_node(*(((Chain **)&v) + 2)) {}
+    > = true): p_beg((Chain **)v.p_beg), p_end((Chain **)v.p_end),
+        p_node((Chain *)v.p_node) {}
 
     HashRange &operator=(const HashRange &v) {
         p_beg = v.p_beg;
@@ -100,6 +103,9 @@ public:
 template<typename T>
 struct BucketRange: octa::InputRange<BucketRange<T>, octa::ForwardRangeTag, T> {
 private:
+    template<typename U>
+    friend struct BucketRange;
+
     using Chain = octa::detail::HashChain<T>;
     Chain *p_node;
 public:
@@ -111,7 +117,7 @@ public:
     BucketRange(const BucketRange<U> &v, octa::EnableIf<
         octa::IsSame<RemoveCv<T>, RemoveCv<U>>::value &&
         octa::IsConvertible<U *, T *>::value, bool
-    > = true): p_node(*((Chain **)&v)) {}
+    > = true): p_node((Chain *)v.p_node) {}
 
     BucketRange &operator=(const BucketRange &v) {
         p_node = v.p_node;
