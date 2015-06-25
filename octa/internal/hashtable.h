@@ -258,7 +258,7 @@ protected:
         }
 
         T &access_or_insert(const K &key) {
-            octa::Size h;
+            octa::Size h = 0;
             T *v = access_base(key, h);
             if (v) return *v;
             rehash_ahead(1);
@@ -266,7 +266,7 @@ protected:
         }
 
         T &access_or_insert(K &&key) {
-            octa::Size h;
+            octa::Size h = 0;
             T *v = access_base(key, h);
             if (v) return *v;
             rehash_ahead(1);
@@ -540,14 +540,14 @@ public:
         }
 
         Range find(const K &key) {
-            octa::Size h;
+            octa::Size h = 0;
             Chain *c;
             if (find(key, h, c)) return each_from(c, h);
             return Range();
         }
 
         ConstRange find(const K &key) const {
-            octa::Size h;
+            octa::Size h = 0;
             Chain *c;
             if (find(key, h, c)) return each_from(c, h);
             return ConstRange();
