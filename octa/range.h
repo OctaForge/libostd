@@ -319,7 +319,7 @@ public:
     RangeHalf operator++(int) {
         RangeHalf tmp(*this);
         next();
-        return octa::move(tmp);
+        return tmp;
     }
 
     RangeHalf &operator--() {
@@ -329,18 +329,18 @@ public:
     RangeHalf operator--(int) {
         RangeHalf tmp(*this);
         prev();
-        return octa::move(tmp);
+        return tmp;
     }
 
     RangeHalf operator+(RangeDifference<T> n) const {
         RangeHalf tmp(*this);
         tmp.add_n(n);
-        return octa::move(tmp);
+        return tmp;
     }
     RangeHalf operator-(RangeDifference<T> n) const {
         RangeHalf tmp(*this);
         tmp.sub_n(n);
-        return octa::move(tmp);
+        return tmp;
     }
 
     RangeHalf &operator+=(RangeDifference<T> n) {

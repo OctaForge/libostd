@@ -360,28 +360,28 @@ template<typename T, typename F>
 String concat(const T &v, const String &sep, F func) {
     String ret;
     auto range = octa::each(v);
-    if (range.empty()) return octa::move(ret);
+    if (range.empty()) return ret;
     for (;;) {
         ret += func(range.front());
         range.pop_front();
         if (range.empty()) break;
         ret += sep;
     }
-    return octa::move(ret);
+    return ret;
 }
 
 template<typename T>
 String concat(const T &v, const String &sep = " ") {
     String ret;
     auto range = octa::each(v);
-    if (range.empty()) return octa::move(ret);
+    if (range.empty()) return ret;
     for (;;) {
         ret += range.front();
         range.pop_front();
         if (range.empty()) break;
         ret += sep;
     }
-    return octa::move(ret);
+    return ret;
 }
 
 template<typename T, typename F>
@@ -425,7 +425,7 @@ template<typename T> struct ToString {
             decltype(octa::each(v))
         >>());
         ret += "}";
-        return octa::move(ret);
+        return ret;
     }
 
     template<typename U>
@@ -437,9 +437,9 @@ template<typename T> struct ToString {
     }
 
     String operator()(const T &v) const {
-        return octa::move(to_str<octa::RemoveCv<
+        return to_str<octa::RemoveCv<
             octa::RemoveReference<T>
-        >>(v));
+        >>(v);
     }
 };
 
@@ -476,7 +476,7 @@ template<> struct ToString<char> {
     String operator()(char c) {
         String ret;
         ret.push(c);
-        return octa::move(ret);
+        return ret;
     }
 };
 
@@ -487,7 +487,7 @@ template<> struct ToString<T> { \
     String operator()(T v) { \
         String ret; \
         octa::detail::str_printf((octa::Vector<char> *)&ret, fmt, v); \
-        return octa::move(ret); \
+        return ret; \
     } \
 };
 
@@ -511,7 +511,7 @@ template<typename T> struct ToString<T *> {
     String operator()(Argument v) {
         String ret;
         octa::detail::str_printf((octa::Vector<char> *)&ret, "%p", v);
-        return octa::move(ret);
+        return ret;
     }
 };
 
@@ -542,19 +542,19 @@ template<typename T, typename U> struct ToString<octa::Pair<T, U>> {
         ret += ToString<octa::RemoveCv<octa::RemoveReference<U>>>()
             (v.second);
         ret += "}";
-        return octa::move(ret);
+        return ret;
     }
 };
 
 template<typename T>
 String to_string(const T &v) {
-    return octa::move(ToString<octa::RemoveCv<octa::RemoveReference<T>>>
-        ()(v));
+    return ToString<octa::RemoveCv<octa::RemoveReference<T>>>
+        ()(v);
 }
 
 template<typename T>
 String to_string(std::initializer_list<T> init) {
-    return octa::move(ToString<std::initializer_list<T>>()(init));
+    return ToString<std::initializer_list<T>>()(init);
 }
 
 } /* namespace octa */
