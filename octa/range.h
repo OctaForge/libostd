@@ -247,8 +247,13 @@ public:
     using Range = T;
 
     RangeHalf(): p_range() {}
+
     RangeHalf(const T &range): p_range(range) {}
-    RangeHalf(const RangeHalf &half): p_range(half.p_range) {}
+
+    template<typename U> RangeHalf(const RangeHalf<U> &half,
+        octa::EnableIf<octa::IsConvertible<U, T>::value, bool> = true
+    ): p_range(half.p_range) {}
+
     RangeHalf(RangeHalf &&half): p_range(octa::move(half.p_range)) {}
 
     RangeHalf &operator=(const RangeHalf &half) {
