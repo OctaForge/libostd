@@ -54,10 +54,7 @@ private:
     void advance() {
         while ((p_beg != p_end) && !p_beg[0])
             ++p_beg;
-        if (p_beg != p_end) {
-            p_node = p_beg[0];
-            ++p_beg;
-        }
+        if (p_beg != p_end) p_node = p_beg[0];
     }
 public:
     HashRange(): p_beg(), p_end(), p_node() {}
@@ -89,6 +86,7 @@ public:
         if (!p_node) return false;
         p_node = p_node->next;
         if (p_node) return true;
+        ++p_beg;
         advance();
         return true;
     }
