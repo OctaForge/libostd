@@ -27,9 +27,7 @@ enum class StreamSeek {
 
 struct StreamRange;
 
-struct Stream: InputRange<
-    Stream, octa::InputRangeTag, char, char, octa::Size, StreamOffset
-> {
+struct Stream {
     using Offset = StreamOffset;
 
     virtual ~Stream() {}
