@@ -108,7 +108,7 @@ namespace detail {
 
 struct FileStream: Stream {
     FileStream(): p_f() {}
-    FileStream(const FileStream &s): p_f(s.p_f) {}
+    FileStream(const FileStream &s) = delete;
 
     FileStream(const octa::String &path, StreamMode mode): p_f() {
         open(path, mode);
