@@ -25,8 +25,8 @@ enum class StreamSeek {
     set = SEEK_SET
 };
 
-template<typename T> struct Stream: InputRange<
-    Stream<T>, octa::InputRangeTag, T, T, octa::Size, StreamOffset
+struct Stream: InputRange<
+    Stream, octa::InputRangeTag, char, char, octa::Size, StreamOffset
 > {
     using Offset = StreamOffset;
 
@@ -51,8 +51,8 @@ template<typename T> struct Stream: InputRange<
 
     virtual bool flush() { return true; }
 
-    virtual octa::Size read(T *, octa::Size) { return 0; }
-    virtual octa::Size write(const T *, octa::Size) { return 0; }
+    virtual octa::Size read(char *, octa::Size) { return 0; }
+    virtual octa::Size write(const char *, octa::Size) { return 0; }
 
     /* range interface */
 
@@ -60,13 +60,13 @@ template<typename T> struct Stream: InputRange<
 
     bool pop_front() {
         if (empty()) return false;
-        T val;
-        return read(&val, 1) == sizeof(T);
+        char val;
+        return !!read(&val, 1);
     }
 
-    T front() const {
+    char front() const {
         Stream *f = (Stream *)this;
-        T val;
+        char val;
         f->seek(-f->read(&val, 1), StreamSeek::cur);
         return val;
     }
@@ -75,7 +75,7 @@ template<typename T> struct Stream: InputRange<
         return s.tell() == tell();
     }
 
-    void put(const T &val) {
+    void put(const char &val) {
         write(&val, 1);
     }
 };
@@ -91,7 +91,7 @@ namespace detail {
     };
 }
 
-template<typename T> struct FileStream: Stream<T> {
+struct FileStream: Stream {
     FileStream(): p_f(), p_owned(false) {}
     FileStream(const FileStream &s): p_f(s.p_f), p_owned(false) {}
 
@@ -127,12 +127,12 @@ template<typename T> struct FileStream: Stream<T> {
 
     bool flush() { return !fflush(p_f); }
 
-    octa::Size read(T *buf, octa::Size count) {
-        return fread((void *)buf, 1, count * sizeof(T), p_f);
+    octa::Size read(char *buf, octa::Size count) {
+        return fread(buf, 1, count, p_f);
     }
 
-    octa::Size write(const T *buf, octa::Size count) {
-        return fwrite((const void *)buf, 1, count * sizeof(T), p_f);
+    octa::Size write(const char *buf, octa::Size count) {
+        return fwrite(buf, 1, count, p_f);
     }
 
 private:
