@@ -25,6 +25,8 @@ enum class StreamSeek {
     set = SEEK_SET
 };
 
+struct StreamRange;
+
 struct Stream: InputRange<
     Stream, octa::InputRangeTag, char, char, octa::Size, StreamOffset
 > {
@@ -54,31 +56,44 @@ struct Stream: InputRange<
     virtual octa::Size read(char *, octa::Size) { return 0; }
     virtual octa::Size write(const char *, octa::Size) { return 0; }
 
-    /* range interface */
+    StreamRange iter();
+};
 
-    bool empty() const { return end(); }
+struct StreamRange: InputRange<
+    Stream, octa::InputRangeTag, char, char, octa::Size, StreamOffset
+> {
+    StreamRange(Stream &s): p_stream(&s) {}
+    StreamRange(const StreamRange &r): p_stream(r.p_stream) {}
+
+    bool empty() const { return p_stream->end(); }
 
     bool pop_front() {
         if (empty()) return false;
         char val;
-        return !!read(&val, 1);
+        return !!p_stream->read(&val, 1);
     }
 
     char front() const {
-        Stream *f = (Stream *)this;
         char val;
-        f->seek(-f->read(&val, 1), StreamSeek::cur);
+        p_stream->seek(-p_stream->read(&val, 1), StreamSeek::cur);
         return val;
     }
 
-    virtual bool equals_front(const Stream &s) const {
-        return s.tell() == tell();
+    virtual bool equals_front(const StreamRange &s) const {
+        return p_stream->tell() == s.p_stream->tell();
     }
 
     void put(const char &val) {
-        write(&val, 1);
+        p_stream->write(&val, 1);
     }
+
+private:
+    Stream *p_stream;
 };
+
+inline StreamRange Stream::iter() {
+    return StreamRange(*this);
+}
 
 enum class StreamMode {
     read, write, append,
@@ -92,24 +107,23 @@ namespace detail {
 }
 
 struct FileStream: Stream {
-    FileStream(): p_f(), p_owned(false) {}
-    FileStream(const FileStream &s): p_f(s.p_f), p_owned(false) {}
+    FileStream(): p_f() {}
+    FileStream(const FileStream &s): p_f(s.p_f) {}
 
-    FileStream(const octa::String &path, StreamMode mode): p_f(), p_owned(false) {
+    FileStream(const octa::String &path, StreamMode mode): p_f() {
         open(path, mode);
     }
 
     ~FileStream() { close(); }
 
     bool open(const octa::String &path, StreamMode mode) {
-        if (p_f && !p_owned) return false;
+        if (p_f) return false;
         p_f = fopen(path.data(), octa::detail::filemodes[octa::Size(mode)]);
-        p_owned = true;
         return p_f != nullptr;
     }
 
     void close() {
-        if (p_owned && p_f) fclose(p_f);
+        if (p_f) fclose(p_f);
         p_f = nullptr;
     }
 
@@ -137,7 +151,6 @@ struct FileStream: Stream {
 
 private:
     FILE *p_f;
-    bool p_owned;
 };
 
 }
