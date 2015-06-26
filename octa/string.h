@@ -165,7 +165,7 @@ public:
 
     StringBase(const StringBase &s, octa::Size pos, octa::Size len = npos,
     const A &a = A()):
-        p_buf(s.p_buf.each().slice(pos,
+        p_buf(s.p_buf.iter().slice(pos,
             (len == npos) ? s.p_buf.size() : (pos + len)), a) {
         terminate();
     }
@@ -254,7 +254,7 @@ public:
 
     StringBase &append(const StringBase &s) {
         p_buf.pop();
-        p_buf.insert_range(p_buf.size(), s.p_buf.each());
+        p_buf.insert_range(p_buf.size(), s.p_buf.iter());
         return *this;
     }
 
@@ -309,13 +309,13 @@ public:
         return strcmp(p_buf.data(), p);
     }
 
-    Range each() {
+    Range iter() {
         return Range(p_buf.data(), size());
     }
-    ConstRange each() const {
+    ConstRange iter() const {
         return ConstRange(p_buf.data(), size());
     }
-    ConstRange ceach() const {
+    ConstRange citer() const {
         return ConstRange(p_buf.data(), size());
     }
 
@@ -324,7 +324,7 @@ public:
     }
 
     Size to_hash() const {
-        return each().to_hash();
+        return iter().to_hash();
     }
 
     A get_allocator() const {
@@ -359,7 +359,7 @@ static inline bool operator!=(const char *lhs, const String &rhs) {
 template<typename T, typename F>
 String concat(const T &v, const String &sep, F func) {
     String ret;
-    auto range = octa::each(v);
+    auto range = octa::iter(v);
     if (range.empty()) return ret;
     for (;;) {
         ret += func(range.front());
@@ -373,7 +373,7 @@ String concat(const T &v, const String &sep, F func) {
 template<typename T>
 String concat(const T &v, const String &sep = " ") {
     String ret;
-    auto range = octa::each(v);
+    auto range = octa::iter(v);
     if (range.empty()) return ret;
     for (;;) {
         ret += range.front();
@@ -386,12 +386,12 @@ String concat(const T &v, const String &sep = " ") {
 
 template<typename T, typename F>
 String concat(std::initializer_list<T> v, const String &sep, F func) {
-    return concat(octa::each(v), sep, func);
+    return concat(octa::iter(v), sep, func);
 }
 
 template<typename T>
 String concat(std::initializer_list<T> v, const String &sep = " ") {
-    return concat(octa::each(v), sep);
+    return concat(octa::iter(v), sep);
 }
 
 namespace detail {
@@ -421,8 +421,8 @@ template<typename T> struct ToString {
             !octa::IsScalar<U>::value, bool> = true
     ) {
         String ret("{");
-        ret += concat(octa::each(v), ", ", ToString<octa::RangeReference<
-            decltype(octa::each(v))
+        ret += concat(octa::iter(v), ", ", ToString<octa::RangeReference<
+            decltype(octa::iter(v))
         >>());
         ret += "}";
         return ret;

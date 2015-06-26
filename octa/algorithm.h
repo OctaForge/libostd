@@ -185,21 +185,21 @@ inline R max_element(R range, C compare) {
 
 template<typename T>
 inline T min(std::initializer_list<T> il) {
-    return octa::min_element(octa::each(il)).front();
+    return octa::min_element(octa::iter(il)).front();
 }
 template<typename T, typename C>
 inline T min(std::initializer_list<T> il, C compare) {
-    return octa::min_element(octa::each(il), compare).front();
+    return octa::min_element(octa::iter(il), compare).front();
 }
 
 template<typename T>
 inline T max(std::initializer_list<T> il) {
-    return octa::max_element(octa::each(il)).front();
+    return octa::max_element(octa::iter(il)).front();
 }
 
 template<typename T, typename C>
 inline T max(std::initializer_list<T> il, C compare) {
-    return octa::max_element(octa::each(il), compare).front();
+    return octa::max_element(octa::iter(il), compare).front();
 }
 
 /* clamp */

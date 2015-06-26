@@ -99,14 +99,14 @@ namespace detail {
 
         SetImpl(octa::InitializerList<Value> init, octa::Size size = 0,
             const H &hf = H(), const C &eqf = C(), const A &alloc = A()
-        ): SetImpl(octa::each(init), size, hf, eqf, alloc) {}
+        ): SetImpl(octa::iter(init), size, hf, eqf, alloc) {}
 
         SetImpl(octa::InitializerList<Value> init, octa::Size size, const A &alloc)
-        : SetImpl(octa::each(init), size, H(), C(), alloc) {}
+        : SetImpl(octa::iter(init), size, H(), C(), alloc) {}
 
         SetImpl(octa::InitializerList<Value> init, octa::Size size, const H &hf,
             const A &alloc
-        ): SetImpl(octa::each(init), size, hf, C(), alloc) {}
+        ): SetImpl(octa::iter(init), size, hf, C(), alloc) {}
 
         SetImpl &operator=(const SetImpl &m) {
             Base::operator=(m);

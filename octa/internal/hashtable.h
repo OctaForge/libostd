@@ -182,11 +182,11 @@ private:
 
         float p_maxlf;
 
-        Range each_from(Chain *c, octa::Size h) {
+        Range iter_from(Chain *c, octa::Size h) {
             return Range(p_data.first() + h + 1,
                 p_data.first() + bucket_count(), c);
         }
-        ConstRange each_from(Chain *c, octa::Size h) const {
+        ConstRange iter_from(Chain *c, octa::Size h) const {
             using RChain = octa::detail::HashChain<const E>;
             return ConstRange((RChain **)(p_data.first() + h + 1),
                               (RChain **)(p_data.first() + bucket_count()),
@@ -394,7 +394,7 @@ protected:
                 get_cpalloc() = ht.get_cpalloc();
                 get_challoc() = ht.get_challoc();
             }
-            for (ConstRange range = ht.each(); !range.empty(); range.pop_front())
+            for (ConstRange range = ht.iter(); !range.empty(); range.pop_front())
                 emplace(range.front());
             return *this;
         }
@@ -542,14 +542,14 @@ public:
         Range find(const K &key) {
             octa::Size h = 0;
             Chain *c;
-            if (find(key, h, c)) return each_from(c, h);
+            if (find(key, h, c)) return iter_from(c, h);
             return Range();
         }
 
         ConstRange find(const K &key) const {
             octa::Size h = 0;
             Chain *c;
-            if (find(key, h, c)) return each_from(c, h);
+            if (find(key, h, c)) return iter_from(c, h);
             return ConstRange();
         }
 
@@ -587,30 +587,30 @@ public:
             rehash(octa::Size(ceil(count / max_load_factor())));
         }
 
-        Range each() {
+        Range iter() {
             return Range(p_data.first(), p_data.first() + bucket_count());
         }
-        ConstRange each() const {
+        ConstRange iter() const {
             using Chain = octa::detail::HashChain<const E>;
             return ConstRange((Chain **)p_data.first(),
                               (Chain **)(p_data.first() + bucket_count()));
         }
-        ConstRange ceach() const {
+        ConstRange citer() const {
             using Chain = octa::detail::HashChain<const E>;
             return ConstRange((Chain **)p_data.first(),
                               (Chain **)(p_data.first() + bucket_count()));
         }
 
-        LocalRange each(octa::Size n) {
+        LocalRange iter(octa::Size n) {
             if (n >= p_size) return LocalRange();
             return LocalRange(p_data.first()[n]);
         }
-        ConstLocalRange each(octa::Size n) const {
+        ConstLocalRange iter(octa::Size n) const {
             using Chain = octa::detail::HashChain<const E>;
             if (n >= p_size) return ConstLocalRange();
             return ConstLocalRange((Chain *)p_data.first()[n]);
         }
-        ConstLocalRange ceach(octa::Size n) const {
+        ConstLocalRange citer(octa::Size n) const {
             using Chain = octa::detail::HashChain<const E>;
             if (n >= p_size) return ConstLocalRange();
             return ConstLocalRange((Chain *)p_data.first()[n]);

@@ -52,18 +52,18 @@ struct Array {
     Pointer data() { return p_buf; }
     ConstPointer data() const { return p_buf; }
 
-    Range each() {
+    Range iter() {
         return Range(p_buf, p_buf + N);
     }
-    ConstRange each() const {
+    ConstRange iter() const {
         return ConstRange(p_buf, p_buf + N);
     }
-    ConstRange ceach() const {
+    ConstRange citer() const {
         return ConstRange(p_buf, p_buf + N);
     }
 
     void swap(Array &v) {
-        octa::swap_ranges(each(), v.each());
+        octa::swap_ranges(iter(), v.iter());
     }
 
     T p_buf[(N > 0) ? N : 1];

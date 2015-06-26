@@ -27,7 +27,7 @@ int main() {
 
     assert(x.data()[0] == x[0]);
 
-    auto r = x.each();
+    auto r = x.iter();
     assert(r.front() == 2);
     assert(r.back() == 32);
 

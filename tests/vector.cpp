@@ -69,12 +69,12 @@ int main() {
     assert(z[3] == 5);
     assert(z.size() == 11);
 
-    auto r = z.each();
+    auto r = z.iter();
     assert(r.front() == 5);
     assert(r.back() == 5);
     assert(r[2] == 4);
 
-    auto r2 = each(z);
+    auto r2 = iter(z);
     assert(r.front() == r2.front());
 
     Vector<int> w;

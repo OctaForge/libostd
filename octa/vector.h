@@ -382,16 +382,16 @@ public:
     }
 
     Range insert(Size idx, InitializerList<T> il) {
-        return insert_range(idx, octa::each(il));
+        return insert_range(idx, octa::iter(il));
     }
 
-    Range each() {
+    Range iter() {
         return Range(p_buf.first(), p_buf.first() + p_len);
     }
-    ConstRange each() const {
+    ConstRange iter() const {
         return ConstRange(p_buf.first(), p_buf.first() + p_len);
     }
-    ConstRange ceach() const {
+    ConstRange citer() const {
         return ConstRange(p_buf.first(), p_buf.first() + p_len);
     }
 

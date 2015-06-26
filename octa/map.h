@@ -113,14 +113,14 @@ namespace detail {
 
         MapImpl(octa::InitializerList<Value> init, octa::Size size = 0,
             const H &hf = H(), const C &eqf = C(), const A &alloc = A()
-        ): MapImpl(octa::each(init), size, hf, eqf, alloc) {}
+        ): MapImpl(octa::iter(init), size, hf, eqf, alloc) {}
 
         MapImpl(octa::InitializerList<Value> init, octa::Size size, const A &alloc)
-        : MapImpl(octa::each(init), size, H(), C(), alloc) {}
+        : MapImpl(octa::iter(init), size, H(), C(), alloc) {}
 
         MapImpl(octa::InitializerList<Value> init, octa::Size size, const H &hf,
             const A &alloc
-        ): MapImpl(octa::each(init), size, hf, C(), alloc) {}
+        ): MapImpl(octa::iter(init), size, hf, C(), alloc) {}
 
         MapImpl &operator=(const MapImpl &m) {
             Base::operator=(m);

@@ -352,9 +352,9 @@ public:
         return *this;
     }
 
-    T each() const { return p_range; }
+    T iter() const { return p_range; }
 
-    HalfRange<RangeHalf> each(const RangeHalf &other) const {
+    HalfRange<RangeHalf> iter(const RangeHalf &other) const {
         return HalfRange<RangeHalf>(*this, other);
     }
 };
@@ -429,36 +429,36 @@ template<typename B, typename C, typename V, typename R = V &,
         return octa::detail::push_back_n<B>(*((B *)this), n);
     }
 
-    B each() const {
+    B iter() const {
         return B(*((B *)this));
     }
 
     ReverseRange<B> reverse() const {
-        return ReverseRange<B>(each());
+        return ReverseRange<B>(iter());
     }
 
     MoveRange<B> movable() const {
-        return MoveRange<B>(each());
+        return MoveRange<B>(iter());
     }
 
     RangeHalf<B> half() const {
-        return RangeHalf<B>(each());
+        return RangeHalf<B>(iter());
     }
 };
 
 template<typename T>
-auto each(T &r) -> decltype(r.each()) {
-    return r.each();
+auto iter(T &r) -> decltype(r.iter()) {
+    return r.iter();
 }
 
 template<typename T>
-auto each(const T &r) -> decltype(r.each()) {
-    return r.each();
+auto iter(const T &r) -> decltype(r.iter()) {
+    return r.iter();
 }
 
 template<typename T>
-auto ceach(const T &r) -> decltype(r.each()) {
-    return r.each();
+auto citer(const T &r) -> decltype(r.iter()) {
+    return r.iter();
 }
 
 template<typename V, typename R = V &, typename S = octa::Size,
@@ -852,7 +852,7 @@ private:
 };
 
 template<typename T, octa::Size N>
-PointerRange<T> each(T (&array)[N]) {
+PointerRange<T> iter(T (&array)[N]) {
     return PointerRange<T>(array, N);
 }
 
@@ -1037,7 +1037,7 @@ ChunksRange<T> chunks(const T &it, RangeSize<T> chs) {
 }
 
 // range of
-template<typename T> using RangeOf = decltype(octa::each(octa::declval<T>()));
+template<typename T> using RangeOf = decltype(octa::iter(octa::declval<T>()));
 
 } /* namespace octa */
 
