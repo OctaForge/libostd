@@ -52,8 +52,8 @@ struct Stream {
 
     virtual bool flush() { return true; }
 
-    virtual octa::Size read(char *, octa::Size) { return 0; }
-    virtual octa::Size write(const char *, octa::Size) { return 0; }
+    virtual octa::Size read(void *, octa::Size) { return 0; }
+    virtual octa::Size write(const void *, octa::Size) { return 0; }
 
     template<typename T = char>
     StreamRange<T> iter();
@@ -63,6 +63,7 @@ template<typename T>
 struct StreamRange<T, true>: InputRange<
     Stream, octa::InputRangeTag, T, T, octa::Size, StreamOffset
 > {
+    StreamRange(): p_stream() {}
     StreamRange(Stream &s): p_stream(&s) {}
     StreamRange(const StreamRange &r): p_stream(r.p_stream) {}
 
@@ -143,11 +144,11 @@ struct FileStream: Stream {
 
     bool flush() { return !fflush(p_f); }
 
-    octa::Size read(char *buf, octa::Size count) {
+    octa::Size read(void *buf, octa::Size count) {
         return fread(buf, 1, count, p_f);
     }
 
-    octa::Size write(const char *buf, octa::Size count) {
+    octa::Size write(const void *buf, octa::Size count) {
         return fwrite(buf, 1, count, p_f);
     }
 
