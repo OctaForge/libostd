@@ -102,7 +102,7 @@ template<typename T>
 struct EndianSwap<T, 2, true> {
     using Argument = T;
     using Result = T;
-    T operator()(T v) {
+    T operator()(T v) const {
         union { T iv; uint16_t sv; } u;
         u.iv = v;
         u.sv = octa::endian_swap16(u.sv);
@@ -114,7 +114,7 @@ template<typename T>
 struct EndianSwap<T, 4, true> {
     using Argument = T;
     using Result = T;
-    T operator()(T v) {
+    T operator()(T v) const {
         union { T iv; uint32_t sv; } u;
         u.iv = v;
         u.sv = octa::endian_swap32(u.sv);
@@ -126,7 +126,7 @@ template<typename T>
 struct EndianSwap<T, 8, true> {
     using Argument = T;
     using Result = T;
-    T operator()(T v) {
+    T operator()(T v) const {
         union { T iv; uint64_t sv; } u;
         u.iv = v;
         u.sv = octa::endian_swap64(u.sv);
@@ -146,19 +146,19 @@ namespace detail {
     struct EndianSame<T, 2, true> {
         using Argument = T;
         using Result = T;
-        T operator()(T v) { return v; }
+        T operator()(T v) const { return v; }
     };
     template<typename T>
     struct EndianSame<T, 4, true> {
         using Argument = T;
         using Result = T;
-        T operator()(T v) { return v; }
+        T operator()(T v) const { return v; }
     };
     template<typename T>
     struct EndianSame<T, 8, true> {
         using Argument = T;
         using Result = T;
-        T operator()(T v) { return v; }
+        T operator()(T v) const { return v; }
     };
 }
 
