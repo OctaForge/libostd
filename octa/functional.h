@@ -6,6 +6,7 @@
 #ifndef OCTA_FUNCTIONAL_H
 #define OCTA_FUNCTIONAL_H
 
+#include "octa/platform.h"
 #include "octa/new.h"
 #include "octa/memory.h"
 #include "octa/utility.h"
@@ -90,6 +91,87 @@ template<typename T> UnaryNegate<T> not1(const T &fn) {
 template<typename T> BinaryNegate<T> not2(const T &fn) {
     return BinaryNegate<T>(fn);
 }
+
+/* endian swap */
+
+template<typename T, octa::Size N = sizeof(T),
+    bool IsNum = octa::IsArithmetic<T>::value
+> struct EndianSwap;
+
+template<typename T>
+struct EndianSwap<T, 2, true> {
+    using Argument = T;
+    using Result = T;
+    T operator()(T v) {
+        union { T iv; uint16_t sv; } u;
+        u.iv = v;
+        u.sv = octa::endian_swap16(u.sv);
+        return u.iv;
+    }
+};
+
+template<typename T>
+struct EndianSwap<T, 4, true> {
+    using Argument = T;
+    using Result = T;
+    T operator()(T v) {
+        union { T iv; uint32_t sv; } u;
+        u.iv = v;
+        u.sv = octa::endian_swap32(u.sv);
+        return u.iv;
+    }
+};
+
+template<typename T>
+struct EndianSwap<T, 8, true> {
+    using Argument = T;
+    using Result = T;
+    T operator()(T v) {
+        union { T iv; uint64_t sv; } u;
+        u.iv = v;
+        u.sv = octa::endian_swap64(u.sv);
+        return u.iv;
+    }
+};
+
+template<typename T>
+T endian_swap(T x) { return EndianSwap<T>()(x); }
+
+namespace detail {
+    template<typename T, octa::Size N = sizeof(T),
+        bool IsNum = octa::IsArithmetic<T>::value
+    > struct EndianSame;
+
+    template<typename T>
+    struct EndianSame<T, 2, true> {
+        using Argument = T;
+        using Result = T;
+        T operator()(T v) { return v; }
+    };
+    template<typename T>
+    struct EndianSame<T, 4, true> {
+        using Argument = T;
+        using Result = T;
+        T operator()(T v) { return v; }
+    };
+    template<typename T>
+    struct EndianSame<T, 8, true> {
+        using Argument = T;
+        using Result = T;
+        T operator()(T v) { return v; }
+    };
+}
+
+#if OCTA_BYTE_ORDER == OCTA_ENDIAN_LIL
+template<typename T> struct EndianSwapLil: octa::detail::EndianSame<T> {};
+template<typename T> struct EndianSwapBig: EndianSwap<T> {};
+#else
+template<typename T> struct EndianSwapLil: EndianSwap<T> {};
+template<typename T> struct EndianSwapBig: octa::detail::EndianSame<T> {};
+#endif
+
+template<typename T> T endian_swap_lil(T x) { return EndianSwapLil<T>()(x); }
+template<typename T> T endian_swap_big(T x) { return EndianSwapBig<T>()(x); }
 
 /* hash */
 
