@@ -163,15 +163,15 @@ namespace detail {
 }
 
 #if OCTA_BYTE_ORDER == OCTA_ENDIAN_LIL
-template<typename T> struct EndianSwapLil: octa::detail::EndianSame<T> {};
-template<typename T> struct EndianSwapBig: EndianSwap<T> {};
+template<typename T> struct FromLilEndian: octa::detail::EndianSame<T> {};
+template<typename T> struct FromBigEndian: EndianSwap<T> {};
 #else
-template<typename T> struct EndianSwapLil: EndianSwap<T> {};
-template<typename T> struct EndianSwapBig: octa::detail::EndianSame<T> {};
+template<typename T> struct FromLilEndian: EndianSwap<T> {};
+template<typename T> struct FromBigEndian: octa::detail::EndianSame<T> {};
 #endif
 
-template<typename T> T endian_swap_lil(T x) { return EndianSwapLil<T>()(x); }
-template<typename T> T endian_swap_big(T x) { return EndianSwapBig<T>()(x); }
+template<typename T> T from_lil_endian(T x) { return FromLilEndian<T>()(x); }
+template<typename T> T from_big_endian(T x) { return FromBigEndian<T>()(x); }
 
 /* hash */
 
