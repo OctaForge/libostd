@@ -6,6 +6,8 @@
 #ifndef OCTA_PLATFORM_H
 #define OCTA_PLATFORM_H
 
+#include <stdint.h>
+
 #if defined(WIN32) || defined(_WIN32) || (defined(__WIN32) && !defined(__CYGWIN__))
 #  define OCTA_PLATFORM_WIN32 1
 #  if defined(WIN64) || defined(_WIN64)
@@ -68,5 +70,51 @@
 #    define OCTA_BYTE_ORDER OCTA_ENDIAN_LIL
 #  endif
 #endif
+
+namespace octa {
+
+#if defined(OCTA_TOOLCHAIN_GNU)
+
+/* using gcc/clang builtins */
+static inline uint16_t endian_swap16(uint16_t x) {
+    return __builtin_bswap16(x);
+}
+static inline uint32_t endian_swap32(uint32_t x) {
+    return __builtin_bswap32(x);
+}
+static inline uint64_t endian_swap64(uint64_t x) {
+    return __builtin_bswap64(x);
+}
+
+#elif defined(OCTA_TOOLCHAIN_MSVC)
+
+/* using msvc builtins */
+static inline uint16_t endian_swap16(uint16_t x) {
+    return _byteswap_ushort(x);
+}
+static inline uint32_t endian_swap32(uint32_t x) {
+    /* win64 is llp64 */
+    return _byteswap_ulong(x);
+}
+static inline uint64_t endian_swap64(uint64_t x) {
+    return _byteswap_uint64(x);
+}
+
+#else
+
+/* fallback */
+static inline uint16_t endian_swap16(uint16_t x) {
+    return (x << 8) | (x >> 8);
+}
+static inline uint32_t endian_swap32(uint32_t x) {
+    return (x << 24) | (x >> 24) | ((x >> 8) & 0xFF00) | ((x << 8) & 0xFF0000);
+}
+static inline uint64_t endian_swap64(uint64_t x) {
+    return endian_swap32(uint32_t(x >> 32)) | (uint64_t(endian_swap32(uint32_t(x))) << 32);
+}
+
+#endif
+
+}
 
 #endif
