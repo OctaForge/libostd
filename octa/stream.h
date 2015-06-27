@@ -41,7 +41,7 @@ struct Stream {
         Offset p = tell();
         if ((p < 0) || !seek(0, StreamSeek::end)) return -1;
         Offset e = tell();
-        return (p == e) || (seek(p, StreamSeek::set) ? e : -1);
+        return ((p == e) || seek(p, StreamSeek::set)) ? e : -1;
     }
 
     virtual bool seek(Offset, StreamSeek = StreamSeek::set) {
@@ -63,11 +63,13 @@ template<typename T>
 struct StreamRange<T, true>: InputRange<
     StreamRange<T>, octa::InputRangeTag, T, T, octa::Size, StreamOffset
 > {
-    StreamRange(): p_stream() {}
-    StreamRange(Stream &s): p_stream(&s) {}
-    StreamRange(const StreamRange &r): p_stream(r.p_stream) {}
+    StreamRange(): p_stream(), p_size(0) {}
+    StreamRange(Stream &s): p_stream(&s), p_size(s.size()) {}
+    StreamRange(const StreamRange &r): p_stream(r.p_stream), p_size(r.p_size) {}
 
-    bool empty() const { return p_stream->end(); }
+    bool empty() const {
+        return p_stream->tell() == p_size;
+    }
 
     bool pop_front() {
         if (empty()) return false;
@@ -86,11 +88,12 @@ struct StreamRange<T, true>: InputRange<
     }
 
     void put(T val) {
-        p_stream->write(&val, sizeof(T));
+        p_size += p_stream->write(&val, sizeof(T));
     }
 
 private:
     Stream *p_stream;
+    StreamOffset p_size;
 };
 
 template<typename T>
