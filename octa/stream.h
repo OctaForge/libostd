@@ -25,6 +25,7 @@ enum class StreamSeek {
     set = SEEK_SET
 };
 
+template<typename T = char, bool = octa::IsPod<T>::value>
 struct StreamRange;
 
 struct Stream {
@@ -54,11 +55,13 @@ struct Stream {
     virtual octa::Size read(char *, octa::Size) { return 0; }
     virtual octa::Size write(const char *, octa::Size) { return 0; }
 
-    StreamRange iter();
+    template<typename T = char>
+    StreamRange<T> iter();
 };
 
-struct StreamRange: InputRange<
-    Stream, octa::InputRangeTag, char, char, octa::Size, StreamOffset
+template<typename T>
+struct StreamRange<T, true>: InputRange<
+    Stream, octa::InputRangeTag, T, T, octa::Size, StreamOffset
 > {
     StreamRange(Stream &s): p_stream(&s) {}
     StreamRange(const StreamRange &r): p_stream(r.p_stream) {}
@@ -67,13 +70,13 @@ struct StreamRange: InputRange<
 
     bool pop_front() {
         if (empty()) return false;
-        char val;
-        return !!p_stream->read(&val, 1);
+        T val;
+        return !!p_stream->read(&val, sizeof(T));
     }
 
-    char front() const {
-        char val;
-        p_stream->seek(-p_stream->read(&val, 1), StreamSeek::cur);
+    T front() const {
+        T val;
+        p_stream->seek(-p_stream->read(&val, sizeof(T)), StreamSeek::cur);
         return val;
     }
 
@@ -81,16 +84,17 @@ struct StreamRange: InputRange<
         return p_stream->tell() == s.p_stream->tell();
     }
 
-    void put(const char &val) {
-        p_stream->write(&val, 1);
+    void put(T val) {
+        p_stream->write(&val, sizeof(T));
     }
 
 private:
     Stream *p_stream;
 };
 
-inline StreamRange Stream::iter() {
-    return StreamRange(*this);
+template<typename T>
+inline StreamRange<T> Stream::iter() {
+    return StreamRange<T>(*this);
 }
 
 enum class StreamMode {
