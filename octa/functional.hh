@@ -176,7 +176,7 @@ template<typename T> T from_big_endian(T x) { return FromBigEndian<T>()(x); }
 /* hash */
 
 template<typename T> struct ToHash {
-    using Argument = const T &;
+    using Argument = T;
     using Result = octa::Size;
 
     octa::Size operator()(const T &v) const {
