@@ -288,8 +288,14 @@ public:
     T &operator[](Size i) { return p_buf.first()[i]; }
     const T &operator[](Size i) const { return p_buf.first()[i]; }
 
-    T &at(Size i) { return p_buf.first()[i]; }
-    const T &at(Size i) const { return p_buf.first()[i]; }
+    T *at(Size i) {
+        if (!in_range(i)) return nullptr;
+        return &p_buf.first()[i];
+    }
+    const T *at(Size i) const {
+        if (!in_range(i)) return nullptr;
+        return &p_buf.first()[i];
+    }
 
     T &push(const T &v) {
         if (p_len == p_cap) reserve(p_len + 1);
