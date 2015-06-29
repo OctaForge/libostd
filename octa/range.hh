@@ -250,9 +250,9 @@ public:
 
     RangeHalf(const T &range): p_range(range) {}
 
-    template<typename U> RangeHalf(const RangeHalf<U> &half,
-        octa::EnableIf<octa::IsConvertible<U, T>::value, bool> = true
-    ): p_range(half.p_range) {}
+    template<typename U, typename = octa::EnableIf<
+        octa::IsConvertible<U, T>::value
+    >> RangeHalf(const RangeHalf<U> &half): p_range(half.p_range) {}
 
     RangeHalf(RangeHalf &&half): p_range(octa::move(half.p_range)) {}
 
@@ -749,10 +749,10 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
     PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
     PointerRange(T *beg, octa::Size n): p_beg(beg), p_end(beg + n) {}
 
-    template<typename U>
-    PointerRange(const PointerRange<U> &v, octa::EnableIf<
-        octa::IsConvertible<U *, T *>::value, bool
-    > = true): p_beg(&v[0]), p_end(&v[v.size()]) {}
+    template<typename U, typename = octa::EnableIf<
+        octa::IsConvertible<U *, T *>::value
+    >> PointerRange(const PointerRange<U> &v):
+        p_beg(&v[0]), p_end(&v[v.size()]) {}
 
     PointerRange &operator=(const PointerRange &v) {
         p_beg = v.p_beg;
