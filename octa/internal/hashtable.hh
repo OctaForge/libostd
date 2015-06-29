@@ -8,11 +8,11 @@
 
 #include <string.h>
 
-#include "octa/types.h"
-#include "octa/utility.h"
-#include "octa/memory.h"
-#include "octa/range.h"
-#include "octa/initializer_list.h"
+#include "octa/types.hh"
+#include "octa/utility.hh"
+#include "octa/memory.hh"
+#include "octa/range.hh"
+#include "octa/initializer_list.hh"
 
 namespace octa {
 
