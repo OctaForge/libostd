@@ -8,6 +8,7 @@
 
 #include <stddef.h>
 
+#include "octa/new.hh"
 #include "octa/types.hh"
 #include "octa/utility.hh"
 #include "octa/type_traits.hh"
@@ -188,17 +189,24 @@ namespace detail {
     template<typename T>
     struct RangeIterator {
         RangeIterator(): p_range() {}
-        explicit RangeIterator(const T &range): p_range(range) {}
+        explicit RangeIterator(const T &range) {
+            ::new(&get_ref()) T(range);
+        }
+        explicit RangeIterator(T &&range) {
+            ::new(&get_ref()) T(octa::move(range));
+        }
         RangeIterator &operator++() {
-            p_range.pop_front();
+            get_ref().pop_front();
             return *this;
         }
         RangeReference<T> operator*() const {
-            return p_range.front();
+            return get_ref().front();
         }
-        bool operator!=(RangeIterator) const { return !p_range.empty(); }
+        bool operator!=(RangeIterator) const { return !get_ref().empty(); }
     private:
-        T p_range;
+        T &get_ref() { return *((T *)&p_range); }
+        const T &get_ref() const { return *((T *)&p_range); }
+        octa::AlignedStorage<sizeof(T), alignof(T)> p_range;
     };
 }
 
