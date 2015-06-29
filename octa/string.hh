@@ -22,7 +22,7 @@ template<typename T>
 struct StringRangeBase: InputRange<
     StringRangeBase<T>, FiniteRandomAccessRangeTag, T
 > {
-    StringRangeBase(): p_beg(nullptr), p_end(nullptr) {}
+    StringRangeBase() = delete;
     StringRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
     StringRangeBase(T *beg, octa::Size n): p_beg(beg), p_end(beg + n) {}
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */

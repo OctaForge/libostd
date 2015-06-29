@@ -63,7 +63,7 @@ template<typename T>
 struct StreamRange<T, true>: InputRange<
     StreamRange<T>, octa::InputRangeTag, T, T, octa::Size, StreamOffset
 > {
-    StreamRange(): p_stream(), p_size(0) {}
+    StreamRange() = delete;
     StreamRange(Stream &s): p_stream(&s), p_size(s.size()) {}
     StreamRange(const StreamRange &r): p_stream(r.p_stream), p_size(r.p_size) {}
 

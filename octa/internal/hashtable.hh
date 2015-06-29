@@ -57,7 +57,7 @@ private:
         if (p_beg != p_end) p_node = p_beg[0];
     }
 public:
-    HashRange(): p_beg(), p_end(), p_node() {}
+    HashRange() = delete;
     HashRange(const HashRange &v): p_beg(v.p_beg), p_end(v.p_end),
         p_node(v.p_node) {}
     HashRange(Chain **beg, Chain **end): p_beg(beg), p_end(end), p_node() {
@@ -107,7 +107,7 @@ private:
     using Chain = octa::detail::HashChain<T>;
     Chain *p_node;
 public:
-    BucketRange(): p_node() {}
+    BucketRange() = delete;
     BucketRange(Chain *node): p_node(node) {}
     BucketRange(const BucketRange &v): p_node(v.p_node) {}
 
