@@ -84,14 +84,11 @@ struct FileStream: Stream {
 
     bool flush() { return !fflush(p_f); }
 
-    using Stream::read;
-    using Stream::write;
-
-    octa::Size read(void *buf, octa::Size count) {
+    octa::Size read_bytes(void *buf, octa::Size count) {
         return fread(buf, 1, count, p_f);
     }
 
-    octa::Size write(const void *buf, octa::Size count) {
+    octa::Size write_bytes(const void *buf, octa::Size count) {
         return fwrite(buf, 1, count, p_f);
     }
 
@@ -144,8 +141,7 @@ static inline void writeln(const octa::String &s) {
 
 template<typename T>
 static inline void writeln(const T &v) {
-    octa::write(v);
-    putc('\n', ::stdout);
+    octa::writeln(octa::to_string(v));
 }
 
 template<typename T, typename ...A>

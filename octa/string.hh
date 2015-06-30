@@ -486,12 +486,14 @@ template<> struct ToString<T> { \
     } \
 };
 
+OCTA_TOSTR_NUM(octa::sbyte, "%d")
 OCTA_TOSTR_NUM(int, "%d")
 OCTA_TOSTR_NUM(int &, "%d")
 OCTA_TOSTR_NUM(long, "%ld")
 OCTA_TOSTR_NUM(float, "%f")
 OCTA_TOSTR_NUM(double, "%f")
 
+OCTA_TOSTR_NUM(octa::byte, "%u")
 OCTA_TOSTR_NUM(octa::uint, "%u")
 OCTA_TOSTR_NUM(octa::ulong, "%lu")
 OCTA_TOSTR_NUM(octa::llong, "%lld")

@@ -203,8 +203,8 @@ OCTA_HASH_BASIC(short)
 OCTA_HASH_BASIC(int)
 OCTA_HASH_BASIC(long)
 
-OCTA_HASH_BASIC(octa::schar)
-OCTA_HASH_BASIC(octa::uchar)
+OCTA_HASH_BASIC(octa::sbyte)
+OCTA_HASH_BASIC(octa::byte)
 OCTA_HASH_BASIC(octa::ushort)
 OCTA_HASH_BASIC(octa::uint)
 OCTA_HASH_BASIC(octa::ulong)
@@ -217,7 +217,7 @@ OCTA_HASH_BASIC(octa::Wchar)
 
 namespace detail {
     static inline Size mem_hash(const void *p, octa::Size l) {
-        const octa::uchar *d = (const octa::uchar *)p;
+        const octa::byte *d = (const octa::byte *)p;
         octa::Size h = 5381;
         for (Size i = 0; i < l; ++i) h = ((h << 5) + h) ^ d[i];
         return h;
