@@ -6,13 +6,13 @@
 #ifndef OCTA_STREAM_HH
 #define OCTA_STREAM_HH
 
-#include <stdio.h>
 #include <sys/types.h>
 
 #include "octa/types.hh"
 #include "octa/range.hh"
-#include "octa/string.hh"
 #include "octa/type_traits.hh"
+#include "octa/string.hh"
+#include "octa/utility.hh"
 
 namespace octa {
 
@@ -55,8 +55,56 @@ struct Stream {
     virtual octa::Size read(void *, octa::Size) { return 0; }
     virtual octa::Size write(const void *, octa::Size) { return 0; }
 
+    virtual int read() {
+        octa::uchar c;
+        return (read(&c, 1) == 1) ? c : -1;
+    }
+
+    virtual bool write(int c) {
+        octa::uchar wc = octa::uchar(c);
+        return write(&wc, 1) == 1;
+    }
+
+    virtual bool write(const char *s) {
+        octa::Size len = strlen(s);
+        return write(s, len) == len;
+    }
+
+    virtual bool write(const octa::String &s) {
+        return write(s.data(), s.size()) == s.size();
+    }
+
+    virtual bool writeln(const octa::String &s) {
+        return write(s) && write('\n');
+    }
+
+    virtual bool writeln(const char *s) {
+        return write(s) && write('\n');
+    }
+
     template<typename T = char>
     StreamRange<T> iter();
+
+    template<typename T> octa::Size put(const T *v, octa::Size count) {
+        return write(v, count * sizeof(T)) / sizeof(T);
+    }
+
+    template<typename T> bool put(T v) {
+        return write(&v, sizeof(T)) == sizeof(T);
+    }
+
+    template<typename T> octa::Size get(T *v, octa::Size count) {
+        return read(v, count * sizeof(T)) / sizeof(T);
+    }
+
+    template<typename T> bool get(T &v) {
+        return read(&v, sizeof(T)) == sizeof(T);
+    }
+
+    template<typename T> T get() {
+        T r;
+        return get(r) ? r : T();
+    }
 };
 
 template<typename T>
@@ -83,7 +131,7 @@ struct StreamRange<T, true>: InputRange<
         return val;
     }
 
-    virtual bool equals_front(const StreamRange &s) const {
+    bool equals_front(const StreamRange &s) const {
         return p_stream->tell() == s.p_stream->tell();
     }
 
@@ -100,64 +148,6 @@ template<typename T>
 inline StreamRange<T> Stream::iter() {
     return StreamRange<T>(*this);
 }
-
-enum class StreamMode {
-    read, write, append,
-    update = 1 << 2
-};
-
-namespace detail {
-    static const char *filemodes[] = {
-        "rb", "wb", "ab", nullptr, "rb+", "wb+", "ab+"
-    };
-}
-
-struct FileStream: Stream {
-    FileStream(): p_f() {}
-    FileStream(const FileStream &s) = delete;
-
-    FileStream(const octa::String &path, StreamMode mode): p_f() {
-        open(path, mode);
-    }
-
-    ~FileStream() { close(); }
-
-    bool open(const octa::String &path, StreamMode mode) {
-        if (p_f) return false;
-        p_f = fopen(path.data(), octa::detail::filemodes[octa::Size(mode)]);
-        return p_f != nullptr;
-    }
-
-    void close() {
-        if (p_f) fclose(p_f);
-        p_f = nullptr;
-    }
-
-    bool end() const {
-        return feof(p_f) != 0;
-    }
-
-    bool seek(StreamOffset pos, StreamSeek whence = StreamSeek::set) {
-        return fseeko(p_f, pos, int(whence)) >= 0;
-    }
-
-    StreamOffset tell() const {
-        return ftello(p_f);
-    }
-
-    bool flush() { return !fflush(p_f); }
-
-    octa::Size read(void *buf, octa::Size count) {
-        return fread(buf, 1, count, p_f);
-    }
-
-    octa::Size write(const void *buf, octa::Size count) {
-        return fwrite(buf, 1, count, p_f);
-    }
-
-private:
-    FILE *p_f;
-};
 
 }
 
