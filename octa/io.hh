@@ -121,6 +121,17 @@ static inline void write(const octa::String &s) {
     fwrite(s.data(), 1, s.size(), ::stdout);
 }
 
+template<typename T>
+static inline void write(const T &v) {
+    octa::write(octa::to_string(v));
+}
+
+template<typename T, typename ...A>
+static inline void write(const T &v, const A &...args) {
+    octa::write(v);
+    write(args...);
+}
+
 static inline void writeln(const char *s) {
     octa::write(s);
     putc('\n', ::stdout);
@@ -128,6 +139,19 @@ static inline void writeln(const char *s) {
 
 static inline void writeln(const octa::String &s) {
     octa::write(s);
+    putc('\n', ::stdout);
+}
+
+template<typename T>
+static inline void writeln(const T &v) {
+    octa::write(v);
+    putc('\n', ::stdout);
+}
+
+template<typename T, typename ...A>
+static inline void writeln(const T &v, const A &...args) {
+    octa::write(v);
+    write(args...);
     putc('\n', ::stdout);
 }
 
