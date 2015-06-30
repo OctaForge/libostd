@@ -6,6 +6,8 @@
 #ifndef OCTA_FUNCTIONAL_HH
 #define OCTA_FUNCTIONAL_HH
 
+#include <string.h>
+
 #include "octa/platform.hh"
 #include "octa/new.hh"
 #include "octa/memory.hh"
@@ -321,21 +323,32 @@ template<> struct ToHash<octa::ldouble>: octa::detail::ScalarHash<octa::ldouble>
     }
 };
 
-template<typename T> struct ToHash<T *> {
-    using Argument = T *;
-    using Result = octa::Size;
+namespace detail {
+    template<typename T, bool = octa::IsSame<octa::RemoveConst<T>, char>::value>
+    struct ToHashPtr {
+        using Argument = T *;
+        using Result = octa::Size;
+        octa::Size operator()(T *v) const {
+            union { T *v; octa::Size h; } u;
+            u.v = v;
+            return octa::detail::mem_hash((const void *)&u, sizeof(u));
+        }
+    };
 
-    octa::Size operator()(T *v) const {
-        union { T *v; octa::Size h; } u;
-        u.v = v;
-        return octa::detail::mem_hash((const void *)&u, sizeof(u));
-    }
-};
+    template<typename T> struct ToHashPtr<T, true> {
+        using Argument = T *;
+        using Result = octa::Size;
+        octa::Size operator()(T *v) const {
+            return octa::detail::mem_hash(v, strlen(v));
+        }
+    };
+}
+
+template<typename T> struct ToHash<T *>: octa::detail::ToHashPtr<T> {};
 
 template<typename T>
-typename ToHash<octa::RemoveCv<octa::RemoveReference<T>>>::Result
-to_hash(const T &v) {
-    return ToHash<octa::RemoveCv<octa::RemoveReference<T>>>()(v);
+typename ToHash<T>::Result to_hash(const T &v) {
+    return ToHash<T>()(v);
 }
 
 /* reference wrapper */
