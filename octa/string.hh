@@ -118,9 +118,10 @@ struct StringRangeBase: InputRange<
 
     T &operator[](octa::Size i) const { return p_beg[i]; }
 
-    void put(T v) {
-        if (empty()) return;
+    bool put(T v) {
+        if (empty()) return false;
         *(p_beg++) = v;
+        return true;
     }
 
     /* non-range methods */

@@ -166,7 +166,7 @@ struct IsInfiniteRandomAccessRange: IntegralConstant<bool,
 namespace detail {
     template<typename T, typename P>
     struct OutputRangeTest {
-        template<typename U, void (U::*)(P)> struct Test {};
+        template<typename U, bool (U::*)(P)> struct Test {};
         template<typename U> static char test(Test<U, &U::put> *);
         template<typename U> static  int test(...);
         static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
@@ -559,11 +559,11 @@ public:
         return p_beg[idx];
     }
 
-    void put(const RangeValue<Rtype> &v) {
-        p_beg.range().put(v);
+    bool put(const RangeValue<Rtype> &v) {
+        return p_beg.range().put(v);
     }
-    void put(RangeValue<Rtype> &&v) {
-        p_beg.range().put(octa::move(v));
+    bool put(RangeValue<Rtype> &&v) {
+        return p_beg.range().put(octa::move(v));
     }
 };
 
@@ -714,8 +714,8 @@ public:
         return MoveRange<T>(p_range.slice(start, end));
     }
 
-    void put(const Rval &v) { p_range.put(v); }
-    void put(Rval &&v) { p_range.put(octa::move(v)); }
+    bool put(const Rval &v) { return p_range.put(v); }
+    bool put(Rval &&v) { return p_range.put(octa::move(v)); }
 };
 
 template<typename T>
@@ -847,11 +847,15 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
     T &operator[](octa::Size i) const { return p_beg[i]; }
 
     /* satisfy OutputRange */
-    void put(const T &v) {
+    bool put(const T &v) {
+        if (empty()) return false;
         *(p_beg++) = v;
+        return true;
     }
-    void put(T &&v) {
+    bool put(T &&v) {
+        if (empty()) return false;
         *(p_beg++) = octa::move(v);
+        return true;
     }
 
 private:

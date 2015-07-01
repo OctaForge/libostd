@@ -40,7 +40,13 @@ namespace detail {
         FormatOutRange(const FormatOutRange &r): buf(r.buf), idx(r.idx) {}
         char *buf;
         octa::Size idx;
-        void put(char v) { if (idx < N) buf[idx++] = v; }
+        bool put(char v) {
+            if (idx < N) {
+                buf[idx++] = v;
+                return true;
+            }
+            return false;
+        }
     };
 }
 
@@ -198,8 +204,10 @@ struct StreamRange<T, true>: InputRange<
         return p_stream->tell() == s.p_stream->tell();
     }
 
-    void put(T val) {
-        p_size += p_stream->write_bytes(&val, sizeof(T));
+    bool put(T val) {
+        octa::Size v = p_stream->write_bytes(&val, sizeof(T));
+        p_size += v;
+        return (v == sizeof(T));
     }
 
 private:
