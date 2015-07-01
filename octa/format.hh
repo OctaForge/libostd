@@ -16,42 +16,43 @@
 
 namespace octa {
 
-template<typename R>
-static inline void write_val(R &writer, const char *val) {
-    while (*val) writer.put(*val++);
-}
-
-template<typename R>
-static inline void write_val(R &writer, const octa::String &val) {
-    for (octa::Size i = 0; i < val.size(); ++i) writer.put(val[i]);
-}
-
-template<typename R>
-static inline void write_val(R &writer, char val) {
-    writer.put(val);
-}
-
-template<typename R, typename T>
-static inline void write_val(R &writer, const T &val) {
-    write_val(writer, octa::to_string(val));
-}
-
-template<typename R, typename T, typename ...A>
-static inline void write_idx(R &writer, octa::Size idx, const T &v) {
-    if (idx) assert(false && "not enough format args");
-    write_val(writer, v);
-}
-
-template<typename R, typename T, typename ...A>
-static inline void write_idx(R &writer, octa::Size idx, const T &v,
-                             A &&...args) {
-    if (idx) {
-        write_idx(writer, idx - 1, octa::forward<A>(args)...);
-        return;
+namespace detail {
+    template<typename R>
+    static inline void write_val(R &writer, const char *val) {
+        while (*val) writer.put(*val++);
     }
-    write_val(writer, v);
-}
 
+    template<typename R>
+    static inline void write_val(R &writer, const octa::String &val) {
+        for (octa::Size i = 0; i < val.size(); ++i) writer.put(val[i]);
+    }
+
+    template<typename R>
+    static inline void write_val(R &writer, char val) {
+        writer.put(val);
+    }
+
+    template<typename R, typename T>
+    static inline void write_val(R &writer, const T &val) {
+        write_val(writer, octa::to_string(val));
+    }
+
+    template<typename R, typename T, typename ...A>
+    static inline void write_idx(R &writer, octa::Size idx, const T &v) {
+        if (idx) assert(false && "not enough format args");
+        write_val(writer, v);
+    }
+
+    template<typename R, typename T, typename ...A>
+    static inline void write_idx(R &writer, octa::Size idx, const T &v,
+                                 A &&...args) {
+        if (idx) {
+            write_idx(writer, idx - 1, octa::forward<A>(args)...);
+            return;
+        }
+        write_val(writer, v);
+    }
+} /* namespace detail */
 
 template<typename R, typename ...A>
 static inline octa::Size formatted_write(R writer, const char *fmt,
@@ -69,7 +70,8 @@ static inline octa::Size formatted_write(R writer, const char *fmt,
             } else ++argidx;
             ++fmt;
             retn = octa::max(needidx, retn);
-            write_idx(writer, needidx, octa::forward<A>(args)...);
+            octa::detail::write_idx(writer, needidx,
+                octa::forward<A>(args)...);
             continue;
         }
         writer.put(*fmt++);
