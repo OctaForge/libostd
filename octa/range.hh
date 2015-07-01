@@ -452,6 +452,28 @@ template<typename B, typename C, typename V, typename R = V &,
     RangeHalf<B> half() const {
         return RangeHalf<B>(iter());
     }
+
+    Size put_n(const Value *p, Size n) {
+        B &r = *((B *)this);
+        Size on = n;
+        for (; n && r.put(p++); --n);
+        return (on - n);
+    }
+
+    template<typename OR>
+    Size get_n(OR orange, Size n) {
+        B &r = *((B *)this);
+        Size on = n;
+        for (; n && !r.empty() && orange.put(r.front()); --n);
+        return (on - n);
+    }
+
+    Size get_n(Value *p, Size n) {
+        B &r = *((B *)this);
+        Size on = n;
+        for (; n && !r.empty(); --n) *p++ = r.front();
+        return (on - n);
+    }
 };
 
 template<typename T>
@@ -469,14 +491,21 @@ auto citer(const T &r) -> decltype(r.iter()) {
     return r.iter();
 }
 
-template<typename V, typename R = V &, typename S = octa::Size,
-         typename D = octa::Ptrdiff
+template<typename B, typename V, typename R = V &,
+         typename S = octa::Size, typename D = octa::Ptrdiff
 > struct OutputRange {
     using Category = OutputRangeTag;
     using Size = S;
     using Difference = D;
     using Value = V;
     using Reference = R;
+
+    Size put_n(const Value *p, Size n) {
+        B &r = *((B *)this);
+        Size on = n;
+        while (n--) if (!r.put(p++)) break;
+        return (on - n);
+    }
 };
 
 template<typename T>
@@ -856,6 +885,30 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
         if (empty()) return false;
         *(p_beg++) = octa::move(v);
         return true;
+    }
+
+    octa::Size put_n(const T *p, octa::Size n) {
+        octa::Size ret = size();
+        if (n < ret) ret = n;
+        if (octa::IsPod<T>()) {
+            memcpy(p_beg, p, ret * sizeof(T));
+            p_beg += ret;
+            return ret;
+        }
+        for (octa::Size i = ret; i; --i)
+            *p_beg++ = *p++;
+        return ret;
+    }
+
+    template<typename R>
+    octa::Size get_n(R orange, octa::Size n) {
+        octa::Size c = size();
+        if (n < c) c = n;
+        return orange.put_n(p_beg, c);
+    }
+
+    octa::Size get_n(T *p, octa::Size n) {
+        return get_n(PointerRange(p, n), n);
     }
 
 private:

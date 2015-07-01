@@ -35,7 +35,7 @@ struct StreamRange;
 
 namespace detail {
     template<octa::Size N>
-    struct FormatOutRange: octa::OutputRange<char> {
+    struct FormatOutRange: octa::OutputRange<FormatOutRange<N>, char> {
         FormatOutRange(char *buf): buf(buf), idx(0) {}
         FormatOutRange(const FormatOutRange &r): buf(r.buf), idx(r.idx) {}
         char *buf;
@@ -208,6 +208,19 @@ struct StreamRange<T, true>: InputRange<
         octa::Size v = p_stream->write_bytes(&val, sizeof(T));
         p_size += v;
         return (v == sizeof(T));
+    }
+
+    octa::Size put_n(const T *p, octa::Size n) {
+        return p_stream->put(p, n);
+    }
+
+    template<typename R>
+    octa::Size get_n(R orange, octa::Size n) {
+        return orange.put_n()
+    }
+
+    octa::Size get_n(T *p, octa::Size n) {
+        return p_stream->get(p, n);
     }
 
 private:
