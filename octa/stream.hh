@@ -214,12 +214,7 @@ struct StreamRange<T, true>: InputRange<
         return p_stream->put(p, n);
     }
 
-    template<typename R>
-    octa::Size get_n(R orange, octa::Size n) {
-        return orange.put_n()
-    }
-
-    octa::Size get_n(T *p, octa::Size n) {
+    octa::Size get_n(octa::RemoveCv<T> *p, octa::Size n) {
         return p_stream->get(p, n);
     }
 

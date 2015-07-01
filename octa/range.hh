@@ -460,15 +460,16 @@ template<typename B, typename C, typename V, typename R = V &,
         return (on - n);
     }
 
-    template<typename OR>
-    Size get_n(OR orange, Size n) {
+    template<typename OR,
+        typename = octa::EnableIf<octa::IsOutputRange<OR>::value
+    >> Size get_n(OR orange, Size n) {
         B &r = *((B *)this);
         Size on = n;
         for (; n && !r.empty() && orange.put(r.front()); --n);
         return (on - n);
     }
 
-    Size get_n(Value *p, Size n) {
+    Size get_n(octa::RemoveCv<Value> *p, Size n) {
         B &r = *((B *)this);
         Size on = n;
         for (; n && !r.empty(); --n) *p++ = r.front();
@@ -900,14 +901,15 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
         return ret;
     }
 
-    template<typename R>
-    octa::Size get_n(R orange, octa::Size n) {
+    template<typename R,
+        typename = octa::EnableIf<octa::IsOutputRange<R>::value
+    >> octa::Size get_n(R orange, octa::Size n) {
         octa::Size c = size();
         if (n < c) c = n;
         return orange.put_n(p_beg, c);
     }
 
-    octa::Size get_n(T *p, octa::Size n) {
+    octa::Size get_n(octa::RemoveCv<T> *p, octa::Size n) {
         return get_n(PointerRange(p, n), n);
     }
 
