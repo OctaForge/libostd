@@ -151,6 +151,6 @@ static inline void writeln(const T &v, const A &...args) {
     putc('\n', ::stdout);
 }
 
-}
+} /* namespace octa */
 
 #endif

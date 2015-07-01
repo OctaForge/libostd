@@ -115,6 +115,7 @@ struct StringRangeBase: InputRange<
     T &operator[](octa::Size i) const { return p_beg[i]; }
 
     void put(T v) {
+        if (empty()) return;
         *(p_beg++) = v;
     }
 
@@ -155,6 +156,9 @@ public:
     using Allocator = A;
 
     StringBase(const A &a = A()): p_buf(1, '\0', a) {}
+
+    StringBase(Size n, const T &val = T(), const A &al = A()):
+        p_buf(n + 1, val, al) {}
 
     StringBase(const StringBase &s): p_buf(s.p_buf) {}
     StringBase(const StringBase &s, const A &a):
