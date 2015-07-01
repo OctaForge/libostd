@@ -45,7 +45,7 @@ class Vector {
         octa::RangeSize<R> l = range.size();
         reserve(l);
         p_len = l;
-        range.get_n(p_buf.first(), l);
+        range.copy(p_buf.first(), l);
     }
 
     template<typename R>

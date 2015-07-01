@@ -214,7 +214,7 @@ struct StreamRange<T, true>: InputRange<
         return p_stream->put(p, n);
     }
 
-    octa::Size get_n(octa::RemoveCv<T> *p, octa::Size n = -1) {
+    octa::Size copy(octa::RemoveCv<T> *p, octa::Size n = -1) {
         if (n == octa::Size(-1)) {
             n = p_stream->size() / sizeof(T);
         }
