@@ -248,6 +248,11 @@ public:
         return p_buf.capacity() - 1;
     }
 
+    octa::Size length() const {
+        /* TODO: unicode */
+        return size();
+    }
+
     bool empty() const { return (size() == 0); }
 
     void push(T v) {
