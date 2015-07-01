@@ -13,6 +13,7 @@
 #include "octa/type_traits.hh"
 #include "octa/string.hh"
 #include "octa/utility.hh"
+#include "octa/format.hh"
 
 namespace octa {
 
@@ -27,6 +28,17 @@ enum class StreamSeek {
 
 template<typename T = char, bool = octa::IsPod<T>::value>
 struct StreamRange;
+
+namespace detail {
+    template<octa::Size N>
+    struct FormatOutRange: octa::OutputRange<char> {
+        FormatOutRange(char *buf): buf(buf), idx(0) {}
+        FormatOutRange(const FormatOutRange &r): buf(r.buf), idx(r.idx) {}
+        char *buf;
+        octa::Size idx;
+        void put(char v) { if (idx < N) buf[idx++] = v; }
+    };
+}
 
 struct Stream {
     using Offset = StreamOffset;
@@ -84,20 +96,49 @@ struct Stream {
     }
 
     virtual bool writeln(const octa::String &s) {
-        return write(s) && write('\n');
+        return write(s) && putchar('\n');
     }
 
     virtual bool writeln(const char *s) {
-        return write(s) && write('\n');
+        return write(s) && putchar('\n');
     }
 
     template<typename T> bool writeln(const T &v) {
-        return writeln(octa::to_string(v));
+        return write(v) && putchar('\n');
     }
 
     template<typename T, typename ...A>
     bool writeln(const T &v, const A &...args) {
-        return write(v) && write(args...) && write('\n');
+        return write(v) && write(args...) && putchar('\n');
+    }
+
+    template<typename ...A>
+    bool writef(const char *fmt, const A &...args) {
+        char buf[512];
+        octa::Size need = octa::formatted_write(octa::detail::FormatOutRange<
+            sizeof(buf)>(buf), fmt, args...);
+        if (need < sizeof(buf))
+            return write_bytes(buf, need) == need;
+        octa::String s;
+        s.reserve(need);
+        s[need] = '\0';
+        octa::formatted_write(s.iter(), fmt, args...);
+        return write_bytes(s.data(), need) == need;
+    }
+
+    template<typename ...A>
+    bool writef(const octa::String &fmt, const A &...args) {
+        return writef(fmt.data(), args...);
+    }
+
+    template<typename ...A>
+    bool writefln(const char *fmt, const A &...args) {
+        return writef(fmt, args...) && putchar('\n');
+    }
+
+    template<typename ...A>
+    bool writefln(const octa::String &fmt, const A &...args) {
+        return writefln(fmt.data(), args...);
     }
 
     template<typename T = char>

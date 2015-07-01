@@ -517,25 +517,25 @@ template<typename T> struct ToString<T *> {
 };
 
 template<> struct ToString<String> {
-    using Argument = const String &;
+    using Argument = String;
     using Result = String;
-    String operator()(Argument s) {
+    String operator()(const Argument &s) {
         return s;
     }
 };
 
 template<> struct ToString<StringRange> {
-    using Argument = const StringRange &;
+    using Argument = StringRange;
     using Result = String;
-    String operator()(Argument s) {
+    String operator()(const Argument &s) {
         return String(s);
     }
 };
 
 template<typename T, typename U> struct ToString<octa::Pair<T, U>> {
-    using Argument = const octa::Pair<T, U> &;
+    using Argument = octa::Pair<T, U>;
     using Result = String;
-    String operator()(Argument v) {
+    String operator()(const Argument &v) {
         String ret("{");
         ret += ToString<octa::RemoveCv<octa::RemoveReference<T>>>()
             (v.first);

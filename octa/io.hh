@@ -152,49 +152,36 @@ static inline void writeln(const T &v, const A &...args) {
     putc('\n', ::stdout);
 }
 
-namespace detail {
-    struct FormatOutRange: octa::OutputRange<char> {
-        FormatOutRange(): needed(0) {}
-        octa::Size needed;
-        char buf[512];
-        void put(char v) {
-            if (needed < sizeof(buf))
-                buf[needed] = v;
-            ++needed;
-        }
-    };
-}
-
 template<typename ...A>
-static inline void writef(const char *fmt, A &&...args) {
-    octa::detail::FormatOutRange writer1;
-    octa::formatted_write<octa::detail::FormatOutRange &>(writer1, fmt,
-        octa::forward<A>(args)...);
-    if (writer1.needed < sizeof(writer1.buf)) {
-        fwrite(writer1.buf, 1, writer1.needed, ::stdout);
+static inline void writef(const char *fmt, const A &...args) {
+    char buf[512];
+    octa::Size need = octa::formatted_write(octa::detail::FormatOutRange<
+        sizeof(buf)>(buf), fmt, args...);
+    if (need < sizeof(buf)) {
+        fwrite(buf, 1, need, ::stdout);
         return;
     }
     octa::String s;
-    s.reserve(writer1.needed);
-    s[writer1.needed] = '\0';
-    octa::formatted_write(s.iter(), fmt, octa::forward<A>(args)...);
-    fwrite(s.data(), 1, writer1.needed, ::stdout);
+    s.reserve(need);
+    s[need] = '\0';
+    octa::formatted_write(s.iter(), fmt, args...);
+    fwrite(s.data(), 1, need, ::stdout);
 }
 
 template<typename ...A>
-static inline void writef(const octa::String &fmt, A &&...args) {
-    writef(fmt.data(), octa::forward<A>(args)...);
+static inline void writef(const octa::String &fmt, const A &...args) {
+    writef(fmt.data(), args...);
 }
 
 template<typename ...A>
-static inline void writefln(const char *fmt, A &&...args) {
-    writef(fmt, octa::forward<A>(args)...);
+static inline void writefln(const char *fmt, const A &...args) {
+    writef(fmt, args...);
     putc('\n', ::stdout);
 }
 
 template<typename ...A>
-static inline void writefln(const octa::String &fmt, A &&...args) {
-    writef(fmt, octa::forward<A>(args)...);
+static inline void writefln(const octa::String &fmt, const A &...args) {
+    writef(fmt, args...);
     putc('\n', ::stdout);
 }
 

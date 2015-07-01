@@ -303,13 +303,29 @@ struct IsPolymorphic: IntegralConstant<bool, __is_polymorphic(T)> {};
 
 /* is signed */
 
+namespace detail {
+    template<typename T>
+    struct IsSignedBase: IntegralConstant<bool, T(-1) < T(0)> {};
+}
+
+template<typename T, bool = octa::IsArithmetic<T>::value>
+struct IsSigned: False {};
+
 template<typename T>
-struct IsSigned: IntegralConstant<bool, T(-1) < T(0)> {};
+struct IsSigned<T, true>: octa::detail::IsSignedBase<T> {};
 
 /* is unsigned */
 
+namespace detail {
+    template<typename T>
+    struct IsUnsignedBase: IntegralConstant<bool, T(0) < T(-1)> {};
+}
+
+template<typename T, bool = octa::IsArithmetic<T>::value>
+struct IsUnsigned: False {};
+
 template<typename T>
-struct IsUnsigned: IntegralConstant<bool, T(0) < T(-1)> {};
+struct IsUnsigned<T, true>: octa::detail::IsUnsignedBase<T> {};
 
 /* is standard layout */
 
