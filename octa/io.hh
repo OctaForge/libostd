@@ -10,6 +10,7 @@
 
 #include "octa/string.hh"
 #include "octa/stream.hh"
+#include "octa/format.hh"
 
 namespace octa {
 
@@ -148,6 +149,52 @@ template<typename T, typename ...A>
 static inline void writeln(const T &v, const A &...args) {
     octa::write(v);
     write(args...);
+    putc('\n', ::stdout);
+}
+
+namespace detail {
+    struct FormatOutRange: octa::OutputRange<char> {
+        FormatOutRange(): needed(0) {}
+        octa::Size needed;
+        char buf[512];
+        void put(char v) {
+            if (needed < sizeof(buf))
+                buf[needed] = v;
+            ++needed;
+        }
+    };
+}
+
+template<typename ...A>
+static inline void writef(const char *fmt, A &&...args) {
+    octa::detail::FormatOutRange writer1;
+    octa::formatted_write<octa::detail::FormatOutRange &>(writer1, fmt,
+        octa::forward<A>(args)...);
+    if (writer1.needed < sizeof(writer1.buf)) {
+        fwrite(writer1.buf, 1, writer1.needed, ::stdout);
+        return;
+    }
+    octa::String s;
+    s.reserve(writer1.needed);
+    s[writer1.needed] = '\0';
+    octa::formatted_write(s.iter(), fmt, octa::forward<A>(args)...);
+    fwrite(s.data(), 1, writer1.needed, ::stdout);
+}
+
+template<typename ...A>
+static inline void writef(const octa::String &fmt, A &&...args) {
+    writef(fmt.data(), octa::forward<A>(args)...);
+}
+
+template<typename ...A>
+static inline void writefln(const char *fmt, A &&...args) {
+    writef(fmt, octa::forward<A>(args)...);
+    putc('\n', ::stdout);
+}
+
+template<typename ...A>
+static inline void writefln(const octa::String &fmt, A &&...args) {
+    writef(fmt, octa::forward<A>(args)...);
     putc('\n', ::stdout);
 }
 
