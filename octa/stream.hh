@@ -8,6 +8,7 @@
 
 #include <sys/types.h>
 
+#include "octa/platform.hh"
 #include "octa/types.hh"
 #include "octa/range.hh"
 #include "octa/type_traits.hh"
@@ -17,8 +18,11 @@
 
 namespace octa {
 
-/* off_t is POSIX - will also work on windows with mingw/clang, but FIXME */
+#ifndef OCTA_PLATFORM_WIN32
 using StreamOffset = off_t;
+#else
+using StreamOffset = __int64;
+#endif
 
 enum class StreamSeek {
     cur = SEEK_CUR,
