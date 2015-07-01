@@ -120,21 +120,24 @@ static inline octa::Size formatted_write(R writer, octa::Size &fmtn,
                                          const char *fmt, const A &...args) {
     octa::Size argidx = 0, written = 0, retn = 0;
     while (*fmt) {
-        if (*fmt == '{') {
+        if (*fmt == '%') {
+            ++fmt;
+            if (*fmt == '%') goto plain;
             octa::Size needidx = argidx;
-            if (*++fmt != '}') {
+            if (*fmt != 's') {
                 char idx[8] = { '\0' };
                 for (octa::Size i = 0; isdigit(*fmt); ++i)
                     idx[i] = *fmt++;
-                assert((*fmt == '}') && "malformed format string"); 
+                assert((*fmt++ == '$') && "malformed format string");
                 needidx = atoi(idx);
             } else ++argidx;
-            ++fmt;
+            assert((*fmt++ == 's') && "malformed format string");
             retn = octa::max(needidx, retn);
             written += octa::detail::write_idx(writer, needidx,
                 args...);
             continue;
         }
+    plain:
         writer.put(*fmt++);
         ++written;
     }
