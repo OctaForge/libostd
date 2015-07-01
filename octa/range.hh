@@ -466,14 +466,20 @@ template<typename B, typename C, typename V, typename R = V &,
     >> Size get_n(OR orange, Size n = -1) {
         B &r = *((B *)this);
         Size on = n;
-        for (; n && !r.empty() && orange.put(r.front()); --n);
+        for (; n && !r.empty(); --n) {
+            orange.put(r.front());
+            r.pop_front();
+        }
         return (on - n);
     }
 
     Size get_n(octa::RemoveCv<Value> *p, Size n = -1) {
         B &r = *((B *)this);
         Size on = n;
-        for (; n && !r.empty(); --n) *p++ = r.front();
+        for (; n && !r.empty(); --n) {
+            *p++ = r.front();
+            r.pop_front();
+        }
         return (on - n);
     }
 };
