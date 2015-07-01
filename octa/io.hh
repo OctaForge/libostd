@@ -33,7 +33,12 @@ struct FileStream: Stream {
         s.p_owned = false;
     }
 
-    FileStream(const octa::String &path, StreamMode mode): p_f() {
+    FileStream(const char *path, StreamMode mode): p_f() {
+        open(path, mode);
+    }
+
+    template<typename A>
+    FileStream(const octa::AnyString<A> &path, StreamMode mode): p_f() {
         open(path, mode);
     }
 
@@ -48,11 +53,16 @@ struct FileStream: Stream {
         return *this;
     }
 
-    bool open(const octa::String &path, StreamMode mode) {
+    bool open(const char *path, StreamMode mode) {
         if (p_f) return false;
-        p_f = fopen(path.data(), octa::detail::filemodes[octa::Size(mode)]);
+        p_f = fopen(path, octa::detail::filemodes[octa::Size(mode)]);
         p_owned = true;
         return is_open();
+    }
+
+    template<typename A>
+    bool open(const octa::AnyString<A> &path, StreamMode mode) {
+        return open(path.data(), mode);
     }
 
     bool open(FILE *f) {
@@ -115,7 +125,8 @@ static inline void write(const char *s) {
     fputs(s, ::stdout);
 }
 
-static inline void write(const octa::String &s) {
+template<typename A>
+static inline void write(const octa::AnyString<A> &s) {
     fwrite(s.data(), 1, s.size(), ::stdout);
 }
 
@@ -135,7 +146,8 @@ static inline void writeln(const char *s) {
     putc('\n', ::stdout);
 }
 
-static inline void writeln(const octa::String &s) {
+template<typename A>
+static inline void writeln(const octa::AnyString<A> &s) {
     octa::write(s);
     putc('\n', ::stdout);
 }
@@ -168,8 +180,9 @@ static inline void writef(const char *fmt, const A &...args) {
     fwrite(s.data(), 1, need, ::stdout);
 }
 
-template<typename ...A>
-static inline void writef(const octa::String &fmt, const A &...args) {
+template<typename AL, typename ...A>
+static inline void writef(const octa::AnyString<AL> &fmt,
+                          const A &...args) {
     writef(fmt.data(), args...);
 }
 
@@ -179,8 +192,9 @@ static inline void writefln(const char *fmt, const A &...args) {
     putc('\n', ::stdout);
 }
 
-template<typename ...A>
-static inline void writefln(const octa::String &fmt, const A &...args) {
+template<typename AL, typename ...A>
+static inline void writefln(const octa::AnyString<AL> &fmt,
+                            const A &...args) {
     writef(fmt, args...);
     putc('\n', ::stdout);
 }

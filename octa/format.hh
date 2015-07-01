@@ -31,8 +31,9 @@ namespace detail {
 
     /* OctaSTD string */
 
-    template<typename R>
-    static inline octa::Size write_val(R &writer, const octa::String &val) {
+    template<typename R, typename A>
+    static inline octa::Size
+    write_val(R &writer, const octa::AnyString<A> &val) {
         for (octa::Size i = 0; i < val.size(); ++i) writer.put(val[i]);
         return val.size();
     }
@@ -141,8 +142,9 @@ static inline octa::Size formatted_write(R writer, octa::Size &fmtn,
     return written;
 }
 
-template<typename R, typename ...A>
-octa::Size formatted_write(R writer, octa::Size &fmtn, const octa::String &fmt,
+template<typename R, typename AL, typename ...A>
+octa::Size formatted_write(R writer, octa::Size &fmtn,
+                           const octa::AnyString<AL> &fmt,
                            const A &...args) {
     return formatted_write(writer, fmtn, fmt.data(), args...);
 }
@@ -153,8 +155,8 @@ octa::Size formatted_write(R writer, const char *fmt, const A &...args) {
     return formatted_write(writer, fmtn, fmt, args...);
 }
 
-template<typename R, typename ...A>
-octa::Size formatted_write(R writer, const octa::String &fmt,
+template<typename R, typename AL, typename ...A>
+octa::Size formatted_write(R writer, const octa::AnyString<AL> &fmt,
                            const A &...args) {
     octa::Size fmtn = 0;
     return formatted_write(writer, fmtn, fmt.data(), args...);

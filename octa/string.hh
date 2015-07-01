@@ -27,7 +27,9 @@ struct StringRangeBase: InputRange<
     StringRangeBase(T *beg, octa::Size n): p_beg(beg), p_end(beg + n) {}
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     StringRangeBase(T *beg): p_beg(beg), p_end(beg + strlen(beg)) {}
-    StringRangeBase(const StringBase<T> &s): p_beg(s.data()),
+
+    template<typename A>
+    StringRangeBase(const StringBase<T, A> &s): p_beg(s.data()),
         p_end(s.data() + s.size()) {}
 
     template<typename U, typename = octa::EnableIf<
@@ -38,7 +40,9 @@ struct StringRangeBase: InputRange<
     StringRangeBase &operator=(const StringRangeBase &v) {
         p_beg = v.p_beg; p_end = v.p_end; return *this;
     }
-    StringRangeBase &operator=(const StringBase<T> &s) {
+
+    template<typename A>
+    StringRangeBase &operator=(const StringBase<T, A> &s) {
         p_beg = s.data(); p_end = s.data() + s.size(); return *this;
     }
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
@@ -335,29 +339,44 @@ using String = StringBase<char>;
 using StringRange = StringRangeBase<char>;
 using ConstStringRange = StringRangeBase<const char>;
 
-static inline bool operator==(const String &lhs, const String &rhs) {
+template<typename A> using AnyString = StringBase<char, A>;
+
+template<typename T, typename A>
+static inline bool operator==(const StringBase<T, A> &lhs,
+                              const StringBase<T, A> &rhs) {
     return !lhs.compare(rhs);
 }
-static inline bool operator==(const String &lhs, const char *rhs) {
+template<typename T, typename A>
+static inline bool operator==(const StringBase<T, A> &lhs,
+                              const char *rhs) {
     return !lhs.compare(rhs);
 }
-static inline bool operator==(const char *lhs, const String &rhs) {
+template<typename T, typename A>
+static inline bool operator==(const char *lhs,
+                              const StringBase<T, A> &rhs) {
     return !rhs.compare(lhs);
 }
 
-static inline bool operator!=(const String &lhs, const String &rhs) {
+template<typename T, typename A>
+static inline bool operator!=(const StringBase<T, A> &lhs,
+                              const StringBase<T, A> &rhs) {
     return !!lhs.compare(rhs);
 }
-static inline bool operator!=(const String &lhs, const char *rhs) {
+template<typename T, typename A>
+static inline bool operator!=(const StringBase<T, A> &lhs,
+                              const char *rhs) {
     return !!lhs.compare(rhs);
 }
-static inline bool operator!=(const char *lhs, const String &rhs) {
+template<typename T, typename A>
+static inline bool operator!=(const char *lhs,
+                              const StringBase<T, A> &rhs) {
     return !!rhs.compare(lhs);
 }
 
-template<typename T, typename F>
-String concat(const T &v, const String &sep, F func) {
-    String ret;
+template<typename T, typename F, typename S = const char *,
+         typename A = typename String::Allocator>
+AnyString<A> concat(const T &v, const S &sep, F func) {
+    AnyString<A> ret;
     auto range = octa::iter(v);
     if (range.empty()) return ret;
     for (;;) {
@@ -369,9 +388,10 @@ String concat(const T &v, const String &sep, F func) {
     return ret;
 }
 
-template<typename T>
-String concat(const T &v, const String &sep = " ") {
-    String ret;
+template<typename T, typename S = const char *,
+         typename A = typename String::Allocator>
+AnyString<A> concat(const T &v, const S &sep = " ") {
+    AnyString<A> ret;
     auto range = octa::iter(v);
     if (range.empty()) return ret;
     for (;;) {
@@ -383,13 +403,15 @@ String concat(const T &v, const String &sep = " ") {
     return ret;
 }
 
-template<typename T, typename F>
-String concat(std::initializer_list<T> v, const String &sep, F func) {
+template<typename T, typename F, typename S = const char *,
+         typename A = typename String::Allocator>
+AnyString<A> concat(std::initializer_list<T> v, const S &sep, F func) {
     return concat(octa::iter(v), sep, func);
 }
 
-template<typename T>
-String concat(std::initializer_list<T> v, const String &sep = " ") {
+template<typename T, typename S = const char *,
+         typename A = typename String::Allocator>
+AnyString<A> concat(std::initializer_list<T> v, const S &sep = " ") {
     return concat(octa::iter(v), sep);
 }
 
