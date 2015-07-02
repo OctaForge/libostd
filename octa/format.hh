@@ -49,6 +49,34 @@ namespace detail {
     }
 }
 
+namespace detail {
+    static constexpr const bool fmt_specs[] = {
+        /* uppercase spec set */
+        1, 0, 0, 0, /* A B C D */
+        1, 1, 1, 0, /* E F G H */
+        0, 0, 0, 0, /* I J K L */
+        0, 0, 0, 0, /* M N O P */
+        0, 0, 0, 0, /* Q R S T */
+        0, 0, 0, 1, /* U V W X */
+        0, 0,       /* Y Z */
+
+        /* ascii filler */
+        0, 0, 0, 0, 0, 0,
+
+        /* lowercase spec set */
+        1, 1, 1, 1, /* a b c d */
+        1, 1, 1, 0, /* e f g h */
+        0, 0, 0, 0, /* i j k l */
+        0, 0, 1, 0, /* m n o p */
+        0, 0, 1, 0, /* q r s t */
+        0, 0, 0, 1, /* u v w x */
+        0, 0,       /* y z */
+
+        /* ascii filler */
+        0, 0, 0, 0, 0
+    };
+}
+
 struct FormatSpec {
     FormatSpec(): p_fmt(nullptr) {}
     FormatSpec(const char *fmt): p_fmt(fmt) {}
@@ -99,6 +127,7 @@ struct FormatSpec {
     }
 
 private:
+
     bool read_spec() {
         octa::Size ndig = octa::detail::read_digits(p_fmt, p_buf);
 
@@ -161,8 +190,10 @@ private:
 
     fmtchar:
         spec = *p_fmt++;
-        if (spec != 's') return false;
-        return true;
+        /* make sure we're testing on a signed byte - our mapping only
+         * tests values up to 127 */
+        octa::sbyte sp = spec;
+        return (sp >= 65) && octa::detail::fmt_specs[sp - 65];
     }
 
     const char *p_fmt;
