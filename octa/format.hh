@@ -16,160 +16,23 @@
 
 namespace octa {
 
+enum FormatFlags {
+    FMT_FLAG_DASH  = 1 << 0,
+    FMT_FLAG_ZERO  = 1 << 1,
+    FMT_FLAG_SPACE = 1 << 2,
+    FMT_FLAG_PLUS  = 1 << 3,
+    FMT_FLAG_HASH  = 1 << 4
+};
+
 namespace detail {
-    enum FormatFlags {
-        FMT_LEFT_JUSTIFY  = 1 << 0,
-        FMT_LEADING_SIGN  = 1 << 1,
-        FMT_FORMAT_NUMBER = 1 << 2,
-        FMT_LEADING_ZEROS = 1 << 3,
-        FMT_LEADING_SPACE = 1 << 4
-    };
-
-    struct ArgParams {
-        int flags;
-        int width;
-        int precision;
-
-        template<typename R>
-        octa::Size write_ws(R &writer, octa::Size n, bool left) const {
-            if (left == bool(flags & FMT_LEFT_JUSTIFY)) return 0;
-            int w = (int(n) > width) ? 0 : (width - int(n));
-            octa::Size ret = w;
-            for (; w--; writer.put(' '));
-            return ret;
-        }
-    };
-
-    /* C string */
-
-    template<typename R>
-    static inline octa::Size write_val(R &writer, const ArgParams &fl,
-                                       const char *val) {
-        octa::Size n = strlen(val);
-        octa::Size r = n;
-        r += fl.write_ws(writer, n, true);
-        while (*val) writer.put(*val++);
-        r += fl.write_ws(writer, n, false);
-        return r;
-    }
-
-    /* OctaSTD string */
-
-    template<typename R, typename A>
-    static inline octa::Size
-    write_val(R &writer, const ArgParams &fl, const octa::AnyString<A> &val) {
-        octa::Size n = val.size();
-        octa::Size r = n;
-        r += fl.write_ws(writer, n, true);
-        for (octa::Size i = 0; i < n; ++i) writer.put(val[i]);
-        r += fl.write_ws(writer, n, false);
-        return n;
-    }
-
-    /* A character */
-
-    template<typename R>
-    static inline octa::Size write_val(R &writer, const ArgParams &fl,
-                                       char val) {
-        octa::Size r = 1;
-        r += fl.write_ws(writer, 1, true);
-        writer.put(val);
-        r += fl.write_ws(writer, 1, false);
-        return r;
-    }
-
-    /* boolean */
-
-    template<typename R>
-    static inline octa::Size write_val(R &writer, const ArgParams &fl,
-                                       bool val) {
-        write_val(writer, fl, val ? "true" : "false");
-        return 1;
-    }
-
-    /* Integer helpers */
-
-    template<typename R>
-    static inline octa::Size write_u(R &writer, const ArgParams &,
-                                     octa::Uintmax val) {
-        char buf[20];
-        octa::Size n = 0;
-        for (; val; val /= 10) buf[n++] = '0' + val % 10;
-        for (int i = int(n - 1); i >= 0; --i) {
-            writer.put(buf[i]);
-        }
-        return n;
-    }
-
-    template<typename R>
-    static inline octa::Size write_i(R &writer, const ArgParams &fl,
-                                     octa::Intmax val) {
-        octa::Uintmax uv;
-        int neg = 0;
-        if (val < 0) {
-            uv = -val;
-            writer.put('-');
-            neg = 1;
-        } else uv = val;
-        return octa::detail::write_u(writer, fl, uv) + neg;
-    }
-
-    template<typename R, typename T, bool = octa::IsIntegral<T>::value,
-                                     bool = octa::IsSigned<T>::value>
-    struct WriteIntVal {
-        static inline octa::Size write(R &writer, const ArgParams &fl,
-                                       const T &val) {
-            return octa::detail::write_val(writer, fl,
-                                           octa::to_string(val));
-        }
-    };
-
-    template<typename R, typename T> struct WriteIntVal<R, T, true, true> {
-        static inline octa::Size write(R &writer, const ArgParams &fl, T val) {
-            return octa::detail::write_i(writer, fl, val);
-        }
-    };
-
-    template<typename R, typename T> struct WriteIntVal<R, T, true, false> {
-        static inline octa::Size write(R &writer, const ArgParams &fl, T val) {
-            return octa::detail::write_u(writer, fl, val);
-        }
-    };
-
-    /* Integers or generic value */
-
-    template<typename R, typename T>
-    static inline octa::Size write_val(R &writer, const ArgParams &fl,
-                                       const T &val) {
-        return octa::detail::WriteIntVal<R, T>::write(writer, fl, val);
-    }
-
-    /* Writer entry point */
-
-    template<typename R, typename T>
-    static inline octa::Size write_idx(R &writer, octa::Size idx,
-                                       const ArgParams &fl, const T &v) {
-        if (idx) assert(false && "not enough format args");
-        return octa::detail::write_val(writer, fl, v);
-    }
-
-    template<typename R, typename T, typename ...A>
-    static inline octa::Size write_idx(R &writer, octa::Size idx,
-                                       const ArgParams &fl, const T &v,
-                                       const A &...args) {
-        if (idx) return octa::detail::write_idx(writer, idx - 1, fl,
-            args...);
-        return octa::detail::write_val(writer, fl, v);
-    }
-
     static inline int parse_fmt_flags(const char *&fmt, int ret) {
         while (*fmt) {
             switch (*fmt) {
-            case '-': ret |= FMT_LEFT_JUSTIFY; ++fmt; break;
-            case '+': ret |= FMT_LEADING_SIGN; ++fmt; break;
-            case '#': ret |= FMT_FORMAT_NUMBER; ++fmt; break;
-            case '0': ret |= FMT_LEADING_ZEROS; ++fmt; break;
-            case ' ': ret |= FMT_LEADING_SPACE; ++fmt; break;
+            case '-': ret |= FMT_FLAG_DASH; ++fmt; break;
+            case '+': ret |= FMT_FLAG_PLUS; ++fmt; break;
+            case '#': ret |= FMT_FLAG_HASH; ++fmt; break;
+            case '0': ret |= FMT_FLAG_ZERO; ++fmt; break;
+            case ' ': ret |= FMT_FLAG_SPACE; ++fmt; break;
             default: goto retflags;
             }
         }
@@ -184,6 +47,243 @@ namespace detail {
         *buf = '\0';
         return ret;
     }
+}
+
+struct FormatSpec {
+    FormatSpec(): p_fmt(nullptr) {}
+    FormatSpec(const char *fmt): p_fmt(fmt) {}
+
+    int width = 0;
+    int precision = 0;
+
+    bool has_width = false;
+    bool has_precision = false;
+
+    bool arg_width = false;
+    bool arg_precision = false;
+
+    int flags = 0;
+
+    char spec = '\0';
+
+    octa::byte index = 0;
+
+    template<typename R>
+    bool read_until_spec(R &writer, octa::Size *wret) {
+        octa::Size written = 0;
+        if (!p_fmt) return false;
+        while (*p_fmt) {
+            if (*p_fmt == '%') {
+                ++p_fmt;
+                if (*p_fmt == '%') goto plain;
+                bool r = read_spec();
+                if (wret) *wret = written;
+                return r;
+            }
+        plain:
+            ++written;
+            writer.put(*p_fmt++);
+        }
+        if (wret) *wret = 0;
+        return false;
+    }
+
+    template<typename R>
+    void write_ws(R &writer, octa::Size n, bool left) const {
+        if (left == bool(flags & FMT_FLAG_DASH)) return;
+        for (int w = width - int(n); --w >= 0; writer.put(' '));
+    }
+
+    const char *rest() const {
+        return p_fmt;
+    }
+
+private:
+    bool read_spec() {
+        octa::Size ndig = octa::detail::read_digits(p_fmt, p_buf);
+
+        bool havepos = false;
+        index = 0;
+        /* parse index */
+        if (*p_fmt == '$') {
+            if (ndig <= 0) return false; /* no pos given */
+            int idx = atoi(p_buf);
+            if (idx <= 0 || idx > 255) return false; /* bad index */
+            index = octa::byte(idx);
+            ++p_fmt;
+            havepos = true;
+        }
+
+        /* parse flags */
+        flags = 0;
+        octa::Size skipd = 0;
+        if (havepos || !ndig) {
+            flags = octa::detail::parse_fmt_flags(p_fmt, 0);
+        } else {
+            for (octa::Size i = 0; i < ndig; ++i) {
+                if (p_buf[i] != '0') break;
+                ++skipd;
+            }
+            if (skipd) flags = FMT_FLAG_ZERO;
+            if (skipd == ndig)
+                flags = octa::detail::parse_fmt_flags(p_fmt, flags);
+        }
+
+        /* parse width */
+        width = 0;
+        has_width = false;
+        arg_width = false;
+        if (!havepos && ndig && (ndig - skipd)) {
+            width = atoi(p_buf + skipd);
+            has_width = true;
+        } else if (octa::detail::read_digits(p_fmt, p_buf)) {
+            width = atoi(p_buf);
+            has_width = true;
+        } else if (*p_fmt == '*') {
+            arg_width = true;
+            ++p_fmt;
+        }
+
+        /* parse precision */
+        precision = 0;
+        has_precision = false;
+        arg_precision = false;
+        if (*p_fmt != '.') goto fmtchar;
+        ++p_fmt;
+
+        if (octa::detail::read_digits(p_fmt, p_buf)) {
+            precision = atoi(p_buf);
+            has_precision = true;
+        } else if (*p_fmt == '*') {
+            arg_precision = true;
+            ++p_fmt;
+        } else return false;
+
+    fmtchar:
+        spec = *p_fmt++;
+        if (spec != 's') return false;
+        return true;
+    }
+
+    const char *p_fmt;
+    char p_buf[32];
+};
+
+namespace detail {
+    /* C string */
+
+    template<typename R>
+    static inline octa::Size write_val(R &writer, const FormatSpec &fl,
+                                       const char *val) {
+        octa::Size n = strlen(val);
+        fl.write_ws(writer, n, true);
+        writer.put_n(val, n);
+        fl.write_ws(writer, n, false);
+        return n;
+    }
+
+    /* OctaSTD string */
+
+    template<typename R, typename A>
+    static inline octa::Size
+    write_val(R &writer, const FormatSpec &fl, const octa::AnyString<A> &val) {
+        octa::Size n = val.size();
+        fl.write_ws(writer, n, true);
+        writer.put_n(val.data(), n);
+        fl.write_ws(writer, n, false);
+        return n;
+    }
+
+    /* A character */
+
+    template<typename R>
+    static inline octa::Size write_val(R &writer, const FormatSpec &fl,
+                                       char val) {
+        fl.write_ws(writer, 1, true);
+        writer.put(val);
+        fl.write_ws(writer, 1, false);
+        return 1;
+    }
+
+    /* boolean */
+
+    template<typename R>
+    static inline octa::Size write_val(R &writer, const FormatSpec &fl,
+                                       bool val) {
+        return write_val(writer, fl, ("false\0true") + (6 * val));
+    }
+
+    /* Integer helpers */
+
+    template<typename R>
+    static inline octa::Size write_u(R &writer, const FormatSpec &fl,
+                                     bool neg, octa::Uintmax val) {
+        char buf[20];
+        octa::Size n = 0;
+        for (; val; val /= 10) buf[n++] = '0' + val % 10;
+        bool lsgn = !!(fl.flags & FMT_FLAG_PLUS);
+        bool lsp = !!(fl.flags & FMT_FLAG_SPACE);
+        bool sign = !!(neg + lsgn + lsp);
+        fl.write_ws(writer, n + sign, true);
+        if (sign) writer.put(neg ? '-' : *((" \0+") + lsgn * 2));
+        for (int i = int(n - 1); i >= 0; --i) {
+            writer.put(buf[i]);
+        }
+        fl.write_ws(writer, n + sign, false);
+        return n + sign;
+    }
+
+    template<typename R, typename T, bool = octa::IsIntegral<T>::value,
+                                     bool = octa::IsSigned<T>::value>
+    struct WriteIntVal {
+        static inline octa::Size write(R &writer, const FormatSpec &fl,
+                                       const T &val) {
+            return octa::detail::write_val(writer, fl,
+                                           octa::to_string(val));
+        }
+    };
+
+    template<typename R, typename T> struct WriteIntVal<R, T, true, true> {
+        static inline octa::Size write(R &writer, const FormatSpec &fl, T val) {
+            return octa::detail::write_u(writer, fl, val < 0,
+                (val < 0) ? -val : val);
+        }
+    };
+
+    template<typename R, typename T> struct WriteIntVal<R, T, true, false> {
+        static inline octa::Size write(R &writer, const FormatSpec &fl, T val) {
+            return octa::detail::write_u(writer, fl, false, val);
+        }
+    };
+
+    /* Integers or generic value */
+
+    template<typename R, typename T>
+    static inline octa::Size write_val(R &writer, const FormatSpec &fl,
+                                       const T &val) {
+        return octa::detail::WriteIntVal<R, T>::write(writer, fl, val);
+    }
+
+    /* Writer entry point */
+
+    template<typename R, typename T>
+    static inline octa::Size write_idx(R &writer, octa::Size idx,
+                                       const FormatSpec &fl, const T &v) {
+        if (idx) {
+            assert(false && "not enough format args");
+            return -1;
+        }
+        return octa::detail::write_val(writer, fl, v);
+    }
+
+    template<typename R, typename T, typename ...A>
+    static inline octa::Size write_idx(R &writer, octa::Size idx,
+                                       const FormatSpec &fl, const T &v,
+                                       const A &...args) {
+        if (idx) return octa::detail::write_idx(writer, idx - 1, fl,
+            args...);
+        return octa::detail::write_val(writer, fl, v);
+    }
 
     template<typename T>
     static inline int conv_idx_num(const T &v, octa::EnableIf<
@@ -197,12 +297,15 @@ namespace detail {
         !octa::IsIntegral<T>::value, bool
     > = true) {
         assert(false && "argument is not an integer");
-        return 0;
+        return -2;
     }
 
     template<typename T>
     static inline int read_idx_num(octa::Size idx, const T &v) {
-        if (idx) assert(false && "not enough format args");
+        if (idx) {
+            assert(false && "not enough format args");
+            return -2;
+        }
         return conv_idx_num(v);
     }
 
@@ -217,110 +320,16 @@ namespace detail {
 template<typename R, typename ...A>
 static inline octa::Size formatted_write(R writer, octa::Size &fmtn,
                                          const char *fmt, const A &...args) {
-    char buf[32];
-    octa::Size argidx = 0, written = 0, retn = 0;
-    while (*fmt) {
-        if (*fmt == '%') {
-            ++fmt;
-            if (*fmt == '%') {
-                goto plain;
-            }
-            /* read digits: can be position, flags or width */
-            octa::Size ndig = octa::detail::read_digits(fmt, buf);
-
-            /* try if it's arg position */
-            octa::Size argpos = argidx;
-            bool havepos = false;
-            if (*fmt == '$') {
-                assert((ndig > 0) && "no arg position given");
-                if (ndig > 0) argpos = atoi(buf);
-                ++fmt;
-                havepos = true;
-            } else ++argidx;
-
-            /* try and parse flags */
-            int flags = 0;
-            octa::Size skipd = 0;
-            if (havepos || !ndig) {
-                flags = octa::detail::parse_fmt_flags(fmt, 0);
-            } else {
-                for (octa::Size i = 0; i < ndig; ++i) {
-                    if (buf[i] != '0') break;
-                    ++skipd;
-                }
-                if (skipd) flags = octa::detail::FMT_LEADING_ZEROS;
-                if (skipd == ndig)
-                    flags = octa::detail::parse_fmt_flags(fmt, flags);
-            }
-
-            /* try and parse width */
-            int width = 0;
-            if (!havepos && ndig && (ndig - skipd))
-                width = atoi(buf + skipd);
-            else if (octa::detail::read_digits(fmt, buf))
-                width = atoi(buf);
-            else if (*fmt == '*') {
-                width = -1;
-                ++fmt;
-            }
-
-            /* precision */
-            int precision = 0;
-            if (*fmt != '.') goto fmtchar;
-            ++fmt;
-            if (octa::detail::read_digits(fmt, buf))
-                precision = atoi(buf);
-            else if (*fmt == '*') {
-                precision = -1;
-                ++fmt;
-            } else assert(false && "no precision given");
-
-            /* expand precision and width */
-            if (width < 0 || precision < 0) {
-                bool both = width < 0 && precision < 0;
-                if (havepos) {
-                    if (argpos < (both ? 2 : 1)) {
-                        if (width < 0) width = 0;
-                        if (precision < 0) precision = 0;
-                        assert(false && "invalid width argument");
-                    } else if (width < 0) {
-                        if (precision < 0) {
-                            width = octa::detail::read_idx_num(
-                                argpos - 2, args...);
-                            precision =octa::detail::read_idx_num(
-                                argpos - 1, args...);
-                        } else width = octa::detail::read_idx_num(
-                            argpos - 1, args...);
-                    } else precision = octa::detail::read_idx_num(
-                        argpos - 1, args...);
-                } else {
-                    if (width < 0) {
-                        width = octa::detail::read_idx_num(argpos++,
-                            args...);
-                        ++argidx;
-                    }
-                    if (precision < 0) {
-                        precision = octa::detail::read_idx_num(argpos++,
-                            args...);
-                        ++argidx;
-                    }
-                }
-            }
-
-        fmtchar:
-            /* parse needed position */
-            assert((*fmt == 's') && "malformed format string");
-            ++fmt;
-            retn = octa::max(argpos, retn);
-            octa::detail::ArgParams afl = { flags, width, precision };
-            written += octa::detail::write_idx(writer, argpos, afl, args...);
-            continue;
-        }
-    plain:
-        writer.put(*fmt++);
-        ++written;
+    octa::Size argidx = 1, written = 0, retn = 0, twr = 0;
+    FormatSpec spec(fmt);
+    while (spec.read_until_spec(writer, &twr)) {
+        written += twr;
+        octa::Size argpos = spec.index;
+        if (!argpos) argpos = argidx++;
+        octa::Size wl = octa::detail::write_idx(writer, argpos - 1, spec, args...);
+        written += octa::max(spec.width, int(wl));
     }
-    fmtn = retn + 1;
+    fmtn = retn;
     return written;
 }
 
