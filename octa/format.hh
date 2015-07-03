@@ -303,6 +303,7 @@ namespace detail {
                 assert(false && "cannot format strings with the given spec");
                 return -1;
             }
+            if (this->precision) n = this->precision;
             octa::Ptrdiff r = n;
             r += this->write_ws(writer, n, true);
             writer.put_n(val, n);
