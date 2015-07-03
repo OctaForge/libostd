@@ -50,30 +50,59 @@ namespace detail {
 }
 
 namespace detail {
+    /* 0 .. not allowed
+     * 1 .. floating point
+     * 2 .. character
+     * 3 .. binary
+     * 4 .. octal
+     * 5 .. decimal
+     * 6 .. hexadecimal
+     * 7 .. string
+     */
     static constexpr const octa::byte fmt_specs[] = {
         /* uppercase spec set */
-        2, 0, 0, 0, /* A B C D */
-        2, 2, 2, 0, /* E F G H */
+        1, 3, 0, 0, /* A B C D */
+        1, 1, 1, 0, /* E F G H */
         0, 0, 0, 0, /* I J K L */
         0, 0, 0, 0, /* M N O P */
         0, 0, 0, 0, /* Q R S T */
-        0, 0, 0, 1, /* U V W X */
+        0, 0, 0, 6, /* U V W X */
         0, 0,       /* Y Z */
 
         /* ascii filler */
         0, 0, 0, 0, 0, 0,
 
         /* lowercase spec set */
-        2, 1, 1, 1, /* a b c d */
-        2, 2, 2, 0, /* e f g h */
+        1, 3, 2, 5, /* a b c d */
+        1, 1, 1, 0, /* e f g h */
         0, 0, 0, 0, /* i j k l */
-        0, 0, 1, 0, /* m n o p */
-        0, 0, 1, 0, /* q r s t */
-        0, 0, 0, 1, /* u v w x */
+        0, 0, 4, 0, /* m n o p */
+        0, 0, 7, 0, /* q r s t */
+        0, 0, 0, 6, /* u v w x */
         0, 0,       /* y z */
 
         /* ascii filler */
         0, 0, 0, 0, 0
+    };
+
+    static constexpr const int fmt_bases[] = {
+        0, 0, 0, 2, 8, 10, 16, 0
+    };
+
+    static constexpr const char fmt_digits[2][16] = {
+        {
+            '0', '1', '2', '3', '4', '5', '6', '7',
+            '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+        },
+        {
+            '0', '1', '2', '3', '4', '5', '6', '7',
+            '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+        }
+    };
+
+    static constexpr const char *fmt_intpfx[2][4] = {
+        { "0B", "0", "", "0X" },
+        { "0b", "0", "", "0x" }
     };
 }
 
@@ -117,10 +146,11 @@ struct FormatSpec {
     }
 
     template<typename R>
-    octa::Size write_ws(R &writer, octa::Size n, bool left) const {
+    octa::Size write_ws(R &writer, octa::Size n,
+                        bool left, char c = ' ') const {
         if (left == bool(flags & FMT_FLAG_DASH)) return 0;
         int r = width - int(n);
-        for (int w = width - int(n); --w >= 0; writer.put(' '));
+        for (int w = width - int(n); --w >= 0; writer.put(c));
         if (r < 0) return 0;
         return r;
     }
@@ -217,22 +247,49 @@ private:
 
 namespace detail {
     template<typename R, typename T>
-    static inline octa::Size write_u(R &writer, const FormatSpec *fl,
-                                     bool neg, T val) {
+    static inline octa::Ptrdiff write_u(R &writer, const FormatSpec *fl,
+                                        bool neg, T val) {
         char buf[20];
+        octa::Ptrdiff r = 0;
         octa::Size n = 0;
-        octa::Size nws = 0;
-        for (; val; val /= 10) buf[n++] = '0' + val % 10;
-        bool lsgn = !!(fl->flags & FMT_FLAG_PLUS);
-        bool lsp = !!(fl->flags & FMT_FLAG_SPACE);
-        bool sign = !!(neg + lsgn + lsp);
-        nws += fl->write_ws(writer, n + sign, true);
+
+        char spec = fl->spec;
+        if (spec == 's') spec = 'd';
+        octa::byte specn = octa::detail::fmt_specs[spec - 65];
+        if (specn <= 2) {
+            assert(false && "cannot format integers with the given spec");
+            return -1;
+        }
+
+        int base = octa::detail::fmt_bases[specn];
+        for (; val; val /= base)
+            buf[n++] = octa::detail::fmt_digits[spec >= 'a'][val % base];
+        r = n;
+
+        bool lsgn = fl->flags & FMT_FLAG_PLUS;
+        bool lsp  = fl->flags & FMT_FLAG_SPACE;
+        bool zero = fl->flags & FMT_FLAG_ZERO;
+        bool sign = neg + lsgn + lsp;
+        r += sign;
+
+        const char *pfx = nullptr;
+        int pfxlen = 0;
+        if (fl->flags & FMT_FLAG_HASH && spec != 'd') {
+            pfx = octa::detail::fmt_intpfx[spec >= 'a'][specn - 3];
+            pfxlen = strlen(pfx);
+            r += pfxlen;
+        }
+
+        if (!zero) r += fl->write_ws(writer, n + pfxlen + sign, true, ' ');
         if (sign) writer.put(neg ? '-' : *((" \0+") + lsgn * 2));
+        writer.put_n(pfx, pfxlen);
+        if (zero) r += fl->write_ws(writer, n + pfxlen + sign, true, '0');
+
         for (int i = int(n - 1); i >= 0; --i) {
             writer.put(buf[i]);
         }
-        nws += fl->write_ws(writer, n + sign, false);
-        return n + sign + nws;
+        r += fl->write_ws(writer, n + sign + pfxlen, false);
+        return r;
     }
 
     struct WriteSpec: octa::FormatSpec {
@@ -242,6 +299,10 @@ namespace detail {
         /* C string */
         template<typename R>
         octa::Ptrdiff write(R &writer, const char *val) {
+            if (this->spec != 's') {
+                assert(false && "cannot format strings with the given spec");
+                return -1;
+            }
             octa::Size n = strlen(val);
             octa::Ptrdiff r = n;
             r += this->write_ws(writer, n, true);
@@ -253,6 +314,10 @@ namespace detail {
         /* OctaSTD string */
         template<typename R, typename A>
         octa::Ptrdiff write(R &writer, const octa::AnyString<A> &val) {
+            if (this->spec != 's') {
+                assert(false && "cannot format strings with the given spec");
+                return -1;
+            }
             octa::Size n = val.size();
             octa::Ptrdiff r = n;
             r += this->write_ws(writer, n, true);
@@ -264,6 +329,10 @@ namespace detail {
         /* character */
         template<typename R>
         octa::Ptrdiff write(R &writer, char val) {
+            if (this->spec != 's' && this->spec != 'c') {
+                assert(false && "cannot print chars with the given spec");
+                return -1;
+            }
             octa::Ptrdiff r = 1;
             r += this->write_ws(writer, 1, true);
             writer.put(val);
@@ -274,7 +343,10 @@ namespace detail {
         /* bool */
         template<typename R>
         octa::Ptrdiff write(R &writer, bool val) {
-            return write(writer, ("false\0true") + (6 * val));
+            if (this->spec == 's')
+                return write(writer, ("false\0true") + (6 * val));
+            else
+                return write(writer, int(val));
         }
 
         /* signed integers */
@@ -302,14 +374,20 @@ namespace detail {
         > = true) {
             char buf[16], rbuf[128];
             char fmtspec[Long + 1];
-            if (octa::detail::fmt_specs[this->spec - 65] > 1)
-                fmtspec[Long] = this->spec;
-            else
-                fmtspec[Long] = 'g';
+
+            fmtspec[Long] = this->spec;
+            octa::byte specn = octa::detail::fmt_specs[this->spec - 65];
+            if (specn != 1 && specn != 7) {
+                assert(false && "canot format floats with the given spec");
+                return -1;
+            }
+            if (specn == 7) fmtspec[Long] = 'g';
             if (Long) fmtspec[0] = 'L';
+
             this->build_spec(buf, fmtspec, sizeof(fmtspec));
-            octa::Ptrdiff ret = snprintf(rbuf, sizeof(rbuf), buf, this->width,
-                this->has_precision ? this->precision : 6, val);
+            octa::Ptrdiff ret = snprintf(rbuf, sizeof(rbuf), buf,
+                this->width, this->has_precision ? this->precision : 6, val);
+
             char *dbuf = nullptr;
             if (octa::Size(ret) >= sizeof(rbuf)) {
                 /* this should typically never happen */
@@ -327,6 +405,7 @@ namespace detail {
         octa::Ptrdiff write(R &writer, const T &val, octa::EnableIf<
             !octa::IsArithmetic<T>::value, bool
         > = true) {
+            if (this->spec != 's') return -1;
             return write(writer, octa::to_string(val));
         }
 

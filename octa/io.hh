@@ -199,9 +199,10 @@ namespace detail {
 template<typename ...A>
 static inline void writef(const char *fmt, const A &...args) {
     char buf[512];
-    octa::Size need = octa::formatted_write(octa::detail::FormatOutRange<
+    octa::Ptrdiff need = octa::formatted_write(octa::detail::FormatOutRange<
         sizeof(buf)>(buf), fmt, args...);
-    if (need < sizeof(buf)) {
+    if (need < 0) return;
+    else if (octa::Size(need) < sizeof(buf)) {
         fwrite(buf, 1, need, ::stdout);
         return;
     }
