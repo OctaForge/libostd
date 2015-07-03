@@ -50,10 +50,10 @@ namespace detail {
 }
 
 namespace detail {
-    static constexpr const bool fmt_specs[] = {
+    static constexpr const octa::byte fmt_specs[] = {
         /* uppercase spec set */
-        1, 0, 0, 0, /* A B C D */
-        1, 1, 1, 0, /* E F G H */
+        2, 0, 0, 0, /* A B C D */
+        2, 2, 2, 0, /* E F G H */
         0, 0, 0, 0, /* I J K L */
         0, 0, 0, 0, /* M N O P */
         0, 0, 0, 0, /* Q R S T */
@@ -64,8 +64,8 @@ namespace detail {
         0, 0, 0, 0, 0, 0,
 
         /* lowercase spec set */
-        1, 1, 1, 1, /* a b c d */
-        1, 1, 1, 0, /* e f g h */
+        2, 1, 1, 1, /* a b c d */
+        2, 2, 2, 0, /* e f g h */
         0, 0, 0, 0, /* i j k l */
         0, 0, 1, 0, /* m n o p */
         0, 0, 1, 0, /* q r s t */
@@ -112,18 +112,33 @@ struct FormatSpec {
             ++written;
             writer.put(*p_fmt++);
         }
-        if (wret) *wret = 0;
+        if (wret) *wret = written;
         return false;
     }
 
     template<typename R>
-    void write_ws(R &writer, octa::Size n, bool left) const {
-        if (left == bool(flags & FMT_FLAG_DASH)) return;
+    octa::Size write_ws(R &writer, octa::Size n, bool left) const {
+        if (left == bool(flags & FMT_FLAG_DASH)) return 0;
+        int r = width - int(n);
         for (int w = width - int(n); --w >= 0; writer.put(' '));
+        if (r < 0) return 0;
+        return r;
     }
 
     const char *rest() const {
         return p_fmt;
+    }
+
+    void build_spec(char *buf, const char *spec, octa::Size specn) {
+        *buf++ = '%';
+        if (flags & FMT_FLAG_DASH ) *buf++ = '-';
+        if (flags & FMT_FLAG_ZERO ) *buf++ = '0';
+        if (flags & FMT_FLAG_SPACE) *buf++ = ' ';
+        if (flags & FMT_FLAG_PLUS ) *buf++ = '+';
+        if (flags & FMT_FLAG_HASH ) *buf++ = '#';
+        memcpy(buf, "*.*", 3);
+        memcpy(buf + 3, spec, specn);
+        *(buf += specn + 3) = '\0';
     }
 
 private:
@@ -193,7 +208,7 @@ private:
         /* make sure we're testing on a signed byte - our mapping only
          * tests values up to 127 */
         octa::sbyte sp = spec;
-        return (sp >= 65) && octa::detail::fmt_specs[sp - 65];
+        return (sp >= 65) && (octa::detail::fmt_specs[sp - 65] != 0);
     }
 
     const char *p_fmt;
@@ -201,186 +216,184 @@ private:
 };
 
 namespace detail {
-    /* C string */
-
-    template<typename R>
-    static inline octa::Size write_val(R &writer, const FormatSpec &fl,
-                                       const char *val) {
-        octa::Size n = strlen(val);
-        fl.write_ws(writer, n, true);
-        writer.put_n(val, n);
-        fl.write_ws(writer, n, false);
-        return n;
-    }
-
-    /* OctaSTD string */
-
-    template<typename R, typename A>
-    static inline octa::Size
-    write_val(R &writer, const FormatSpec &fl, const octa::AnyString<A> &val) {
-        octa::Size n = val.size();
-        fl.write_ws(writer, n, true);
-        writer.put_n(val.data(), n);
-        fl.write_ws(writer, n, false);
-        return n;
-    }
-
-    /* A character */
-
-    template<typename R>
-    static inline octa::Size write_val(R &writer, const FormatSpec &fl,
-                                       char val) {
-        fl.write_ws(writer, 1, true);
-        writer.put(val);
-        fl.write_ws(writer, 1, false);
-        return 1;
-    }
-
-    /* boolean */
-
-    template<typename R>
-    static inline octa::Size write_val(R &writer, const FormatSpec &fl,
-                                       bool val) {
-        return write_val(writer, fl, ("false\0true") + (6 * val));
-    }
-
-    /* Integer helpers */
-
     template<typename R, typename T>
-    static inline octa::Size write_u(R &writer, const FormatSpec &fl,
+    static inline octa::Size write_u(R &writer, const FormatSpec *fl,
                                      bool neg, T val) {
         char buf[20];
         octa::Size n = 0;
+        octa::Size nws = 0;
         for (; val; val /= 10) buf[n++] = '0' + val % 10;
-        bool lsgn = !!(fl.flags & FMT_FLAG_PLUS);
-        bool lsp = !!(fl.flags & FMT_FLAG_SPACE);
+        bool lsgn = !!(fl->flags & FMT_FLAG_PLUS);
+        bool lsp = !!(fl->flags & FMT_FLAG_SPACE);
         bool sign = !!(neg + lsgn + lsp);
-        fl.write_ws(writer, n + sign, true);
+        nws += fl->write_ws(writer, n + sign, true);
         if (sign) writer.put(neg ? '-' : *((" \0+") + lsgn * 2));
         for (int i = int(n - 1); i >= 0; --i) {
             writer.put(buf[i]);
         }
-        fl.write_ws(writer, n + sign, false);
-        return n + sign;
+        nws += fl->write_ws(writer, n + sign, false);
+        return n + sign + nws;
     }
 
-    template<typename R, typename T, bool = octa::IsIntegral<T>::value,
-                                     bool = octa::IsSigned<T>::value>
-    struct WriteIntVal {
-        static inline octa::Size write(R &writer, const FormatSpec &fl,
-                                       const T &val) {
-            return octa::detail::write_val(writer, fl,
-                                           octa::to_string(val));
-        }
-    };
+    struct WriteSpec: octa::FormatSpec {
+        WriteSpec(): octa::FormatSpec() {}
+        WriteSpec(const char *fmt): octa::FormatSpec(fmt) {}
 
-    template<typename R, typename T> struct WriteIntVal<R, T, true, true> {
-        static inline octa::Size write(R &writer, const FormatSpec &fl, T val) {
+        /* C string */
+        template<typename R>
+        octa::Ptrdiff write(R &writer, const char *val) {
+            octa::Size n = strlen(val);
+            octa::Ptrdiff r = n;
+            r += this->write_ws(writer, n, true);
+            writer.put_n(val, n);
+            r += this->write_ws(writer, n, false);
+            return r;
+        }
+
+        /* OctaSTD string */
+        template<typename R, typename A>
+        octa::Ptrdiff write(R &writer, const octa::AnyString<A> &val) {
+            octa::Size n = val.size();
+            octa::Ptrdiff r = n;
+            r += this->write_ws(writer, n, true);
+            writer.put_n(val.data(), n);
+            r += this->write_ws(writer, n, false);
+            return r;
+        }
+
+        /* character */
+        template<typename R>
+        octa::Ptrdiff write(R &writer, char val) {
+            octa::Ptrdiff r = 1;
+            r += this->write_ws(writer, 1, true);
+            writer.put(val);
+            r += this->write_ws(writer, 1, false);
+            return r;
+        }
+
+        /* bool */
+        template<typename R>
+        octa::Ptrdiff write(R &writer, bool val) {
+            return write(writer, ("false\0true") + (6 * val));
+        }
+
+        /* signed integers */
+        template<typename R, typename T>
+        octa::Ptrdiff write(R &writer, T val, octa::EnableIf<
+            octa::IsIntegral<T>::value && octa::IsSigned<T>::value, bool
+        > = true) {
             using UT = octa::MakeUnsigned<T>;
-            return octa::detail::write_u(writer, fl, val < 0,
+            return octa::detail::write_u(writer, this, val < 0,
                 (val < 0) ? UT(-val) : UT(val));
         }
-    };
 
-    template<typename R, typename T> struct WriteIntVal<R, T, true, false> {
-        static inline octa::Size write(R &writer, const FormatSpec &fl, T val) {
-            return octa::detail::write_u(writer, fl, false, val);
+        /* unsigned integers */
+        template<typename R, typename T>
+        octa::Ptrdiff write(R &writer, T val, octa::EnableIf<
+            octa::IsIntegral<T>::value && octa::IsUnsigned<T>::value, bool
+        > = true) {
+            return octa::detail::write_u(writer, this, false, val);
+        }
+
+        template<typename R, typename T,
+            bool Long = octa::IsSame<T, octa::ldouble>::value
+        > octa::Ptrdiff write(R &writer, T val, octa::EnableIf<
+            octa::IsFloatingPoint<T>::value, bool
+        > = true) {
+            char buf[16], rbuf[128];
+            char fmtspec[Long + 1];
+            if (octa::detail::fmt_specs[this->spec - 65] > 1)
+                fmtspec[Long] = this->spec;
+            else
+                fmtspec[Long] = 'g';
+            if (Long) fmtspec[0] = 'L';
+            this->build_spec(buf, fmtspec, sizeof(fmtspec));
+            octa::Ptrdiff ret = snprintf(rbuf, sizeof(rbuf), buf, this->width,
+                this->has_precision ? this->precision : 6, val);
+            char *dbuf = nullptr;
+            if (octa::Size(ret) >= sizeof(rbuf)) {
+                /* this should typically never happen */
+                dbuf = (char *)malloc(ret + 1);
+                ret = snprintf(dbuf, ret + 1, buf, this->width,
+                    this->has_precision ? this->precision : 6, val);
+                writer.put_n(dbuf, ret);
+                free(dbuf);
+            } else writer.put_n(rbuf, ret);
+            return ret;
+        }
+
+        /* generic value */
+        template<typename R, typename T>
+        octa::Ptrdiff write(R &writer, const T &val, octa::EnableIf<
+            !octa::IsArithmetic<T>::value, bool
+        > = true) {
+            return write(writer, octa::to_string(val));
+        }
+
+        /* actual writer */
+        template<typename R, typename T>
+        octa::Ptrdiff write_arg(R &writer, octa::Size idx, const T &val) {
+            if (idx) {
+                assert(false && "not enough format args");
+                return -1;
+            }
+            return write(writer, val);
+        }
+
+        template<typename R, typename T, typename ...A>
+        octa::Ptrdiff write_arg(R &writer, octa::Size idx, const T &val,
+                             const A &...args) {
+            if (idx) return write_arg(writer, idx - 1, args...);
+            return write(writer, val);
         }
     };
-
-    /* Integers or generic value */
-
-    template<typename R, typename T>
-    static inline octa::Size write_val(R &writer, const FormatSpec &fl,
-                                       const T &val) {
-        return octa::detail::WriteIntVal<R, T>::write(writer, fl, val);
-    }
-
-    /* Writer entry point */
-
-    template<typename R, typename T>
-    static inline octa::Size write_idx(R &writer, octa::Size idx,
-                                       const FormatSpec &fl, const T &v) {
-        if (idx) {
-            assert(false && "not enough format args");
-            return -1;
-        }
-        return octa::detail::write_val(writer, fl, v);
-    }
-
-    template<typename R, typename T, typename ...A>
-    static inline octa::Size write_idx(R &writer, octa::Size idx,
-                                       const FormatSpec &fl, const T &v,
-                                       const A &...args) {
-        if (idx) return octa::detail::write_idx(writer, idx - 1, fl,
-            args...);
-        return octa::detail::write_val(writer, fl, v);
-    }
-
-    template<typename T>
-    static inline int conv_idx_num(const T &v, octa::EnableIf<
-        octa::IsIntegral<T>::value, bool
-    > = true) {
-        return int(v);
-    }
-
-    template<typename T>
-    static inline int conv_idx_num(const T &, octa::EnableIf<
-        !octa::IsIntegral<T>::value, bool
-    > = true) {
-        assert(false && "argument is not an integer");
-        return -2;
-    }
-
-    template<typename T>
-    static inline int read_idx_num(octa::Size idx, const T &v) {
-        if (idx) {
-            assert(false && "not enough format args");
-            return -2;
-        }
-        return conv_idx_num(v);
-    }
-
-    template<typename T, typename ...A>
-    static inline int read_idx_num(octa::Size idx, const T &v, const A &...args) {
-        if (idx) return octa::detail::read_idx_num(idx - 1, args...);
-        return conv_idx_num(v);
-    }
-
 } /* namespace detail */
 
 template<typename R, typename ...A>
-static inline octa::Size formatted_write(R writer, octa::Size &fmtn,
-                                         const char *fmt, const A &...args) {
-    octa::Size argidx = 1, written = 0, retn = 0, twr = 0;
-    FormatSpec spec(fmt);
+static inline octa::Ptrdiff formatted_write(R writer, octa::Size &fmtn,
+                                            const char *fmt, const A &...args) {
+    octa::Size argidx = 1, retn = 0, twr = 0;
+    octa::Ptrdiff written = 0;
+    octa::detail::WriteSpec spec(fmt);
     while (spec.read_until_spec(writer, &twr)) {
         written += twr;
         octa::Size argpos = spec.index;
         if (!argpos) argpos = argidx++;
-        octa::Size wl = octa::detail::write_idx(writer, argpos - 1, spec, args...);
-        written += octa::max(spec.width, int(wl));
+        octa::Ptrdiff sw = spec.write_arg(writer, argpos - 1, args...);
+        if (sw < 0) return sw;
+        written += sw;
     }
+    written += twr;
     fmtn = retn;
     return written;
 }
 
+template<typename R, typename ...A>
+static inline octa::Ptrdiff formatted_write(R writer, octa::Size &fmtn,
+                                            const char *fmt) {
+    octa::Size written = 0;
+    octa::detail::WriteSpec spec(fmt);
+    if (spec.read_until_spec(writer, &written)) return -1;
+    fmtn = 0;
+    return written;
+}
+
 template<typename R, typename AL, typename ...A>
-octa::Size formatted_write(R writer, octa::Size &fmtn,
-                           const octa::AnyString<AL> &fmt,
-                           const A &...args) {
+octa::Ptrdiff formatted_write(R writer, octa::Size &fmtn,
+                              const octa::AnyString<AL> &fmt,
+                              const A &...args) {
     return formatted_write(writer, fmtn, fmt.data(), args...);
 }
 
 template<typename R, typename ...A>
-octa::Size formatted_write(R writer, const char *fmt, const A &...args) {
+octa::Ptrdiff formatted_write(R writer, const char *fmt, const A &...args) {
     octa::Size fmtn = 0;
     return formatted_write(writer, fmtn, fmt, args...);
 }
 
 template<typename R, typename AL, typename ...A>
-octa::Size formatted_write(R writer, const octa::AnyString<AL> &fmt,
-                           const A &...args) {
+octa::Ptrdiff formatted_write(R writer, const octa::AnyString<AL> &fmt,
+                              const A &...args) {
     octa::Size fmtn = 0;
     return formatted_write(writer, fmtn, fmt.data(), args...);
 }

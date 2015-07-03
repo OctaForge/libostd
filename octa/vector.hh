@@ -392,6 +392,10 @@ public:
         return ConstRange(p_buf.first(), p_buf.first() + p_len);
     }
 
+    Range iter_cap() {
+        return Range(p_buf.first(), p_buf.first() + p_cap);
+    }
+
     void swap(Vector &v) {
         octa::swap(p_len, v.p_len);
         octa::swap(p_cap, v.p_cap);

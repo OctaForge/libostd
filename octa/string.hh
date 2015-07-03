@@ -328,6 +328,10 @@ public:
         return ConstRange(p_buf.data(), size());
     }
 
+    Range iter_cap() {
+        return Range(p_buf.data(), capacity());
+    }
+
     void swap(StringBase &v) {
         p_buf.swap(v.p_buf);
     }

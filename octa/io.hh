@@ -185,6 +185,17 @@ static inline void writeln(const T &v, const A &...args) {
     putc('\n', ::stdout);
 }
 
+namespace detail {
+    struct UnsafeWritefRange: octa::OutputRange<UnsafeWritefRange, char> {
+        UnsafeWritefRange(char *p): p_ptr(p) {}
+        bool put(char c) {
+            *p_ptr++ = c;
+            return true;
+        }
+        char *p_ptr;
+    };
+}
+
 template<typename ...A>
 static inline void writef(const char *fmt, const A &...args) {
     char buf[512];
@@ -194,10 +205,10 @@ static inline void writef(const char *fmt, const A &...args) {
         fwrite(buf, 1, need, ::stdout);
         return;
     }
-    octa::String s;
+    octa::Vector<char> s;
     s.reserve(need);
-    s[need] = '\0';
-    octa::formatted_write(s.iter(), fmt, args...);
+    octa::formatted_write(octa::detail::UnsafeWritefRange(s.data()), fmt,
+        args...);
     fwrite(s.data(), 1, need, ::stdout);
 }
 

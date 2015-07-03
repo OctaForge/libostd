@@ -7,6 +7,7 @@
 #define OCTA_RANGE_HH
 
 #include <stddef.h>
+#include <string.h>
 
 #include "octa/new.hh"
 #include "octa/types.hh"
