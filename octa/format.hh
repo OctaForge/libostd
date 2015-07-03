@@ -374,7 +374,7 @@ namespace detail {
             fmtspec[Long] = this->spec;
             octa::byte specn = octa::detail::fmt_specs[this->spec - 65];
             if (specn != 1 && specn != 7) {
-                assert(false && "canot format floats with the given spec");
+                assert(false && "cannot format floats with the given spec");
                 return -1;
             }
             if (specn == 7) fmtspec[Long] = 'g';
@@ -411,7 +411,10 @@ namespace detail {
         octa::Ptrdiff write(R &writer, const T &val, octa::EnableIf<
             !octa::IsArithmetic<T>::value, bool
         > = true) {
-            if (this->spec != 's') return -1;
+            if (this->spec != 's') {
+                assert(false && "custom objects need '%s' format");
+                return -1;
+            }
             return write(writer, octa::to_string(val));
         }
 
