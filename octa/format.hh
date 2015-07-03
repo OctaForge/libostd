@@ -298,12 +298,11 @@ namespace detail {
 
         /* C string */
         template<typename R>
-        octa::Ptrdiff write(R &writer, const char *val) {
+        octa::Ptrdiff write(R &writer, const char *val, octa::Size n) {
             if (this->spec != 's') {
                 assert(false && "cannot format strings with the given spec");
                 return -1;
             }
-            octa::Size n = strlen(val);
             octa::Ptrdiff r = n;
             r += this->write_ws(writer, n, true);
             writer.put_n(val, n);
@@ -311,19 +310,15 @@ namespace detail {
             return r;
         }
 
+        template<typename R>
+        octa::Ptrdiff write(R &writer, const char *val) {
+            return write(writer, val, strlen(val));
+        }
+
         /* OctaSTD string */
         template<typename R, typename A>
         octa::Ptrdiff write(R &writer, const octa::AnyString<A> &val) {
-            if (this->spec != 's') {
-                assert(false && "cannot format strings with the given spec");
-                return -1;
-            }
-            octa::Size n = val.size();
-            octa::Ptrdiff r = n;
-            r += this->write_ws(writer, n, true);
-            writer.put_n(val.data(), n);
-            r += this->write_ws(writer, n, false);
-            return r;
+            return write(writer, val.data(), val.size());
         }
 
         /* character */
