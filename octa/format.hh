@@ -214,7 +214,7 @@ private:
             width = atoi(p_buf);
             has_width = true;
         } else if (*p_fmt == '*') {
-            arg_width = true;
+            arg_width = has_width = true;
             ++p_fmt;
         }
 
@@ -229,7 +229,7 @@ private:
             precision = atoi(p_buf);
             has_precision = true;
         } else if (*p_fmt == '*') {
-            arg_precision = true;
+            arg_precision = has_precision = true;
             ++p_fmt;
         } else return false;
 
@@ -436,6 +436,38 @@ namespace detail {
             return write(writer, val);
         }
     };
+
+    /* retrieve width/precision */
+    template<typename T>
+    bool convert_arg_param(const T &val, int &param, octa::EnableIf<
+        octa::IsIntegral<T>::value, bool
+    > = true) {
+        param = int(val);
+        return true;
+    }
+
+    template<typename T>
+    bool convert_arg_param(const T &, int &, octa::EnableIf<
+        !octa::IsIntegral<T>::value, bool
+    > = true) {
+        assert(false && "invalid argument for width/precision");
+        return false;
+    }
+
+    template<typename T>
+    bool get_arg_param(octa::Size idx, int &param, const T &val) {
+        if (idx) {
+            assert(false && "not enough format args");
+            return false;
+        }
+        return convert_arg_param(val, param);
+    }
+    template<typename T, typename ...A>
+    int get_arg_param(octa::Size idx, int &param, const T &val,
+                      const A &...args) {
+        if (idx) return get_arg_param(idx - 1, param, args...);
+        return convert_arg_param(val, param);
+    }
 } /* namespace detail */
 
 template<typename R, typename ...A>
@@ -447,7 +479,41 @@ static inline octa::Ptrdiff formatted_write(R writer, octa::Size &fmtn,
     while (spec.read_until_spec(writer, &twr)) {
         written += twr;
         octa::Size argpos = spec.index;
-        if (!argpos) argpos = argidx++;
+        if (!argpos) {
+            argpos = argidx++;
+            if (spec.arg_width) {
+                spec.arg_width = false;
+                if (!octa::detail::get_arg_param(argpos - 1, spec.width, args...))
+                    return -1;
+                argpos = argidx++;
+            }
+            if (spec.arg_precision) {
+                spec.arg_precision = false;
+                if (!octa::detail::get_arg_param(argpos - 1, spec.precision, args...))
+                    return -1;
+                argpos = argidx++;
+            }
+        } else {
+            bool argprec = spec.arg_precision;
+            if (argprec) {
+                if (argpos <= 1) {
+                    assert(false && "argument precision not given");
+                    return -1;
+                }
+                spec.arg_precision = false;
+                if (!octa::detail::get_arg_param(argpos - 2, spec.precision, args...))
+                    return -1;
+            }
+            if (spec.arg_width) {
+                if (argpos <= (argprec + 1)) {
+                    assert(false && "argument width not given");
+                    return -1;
+                }
+                spec.arg_width = false;
+                if (!octa::detail::get_arg_param(argpos - 2 - argprec, spec.width, args...))
+                    return -1;
+            }
+        }
         octa::Ptrdiff sw = spec.write_arg(writer, argpos - 1, args...);
         if (sw < 0) return sw;
         written += sw;
