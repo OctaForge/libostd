@@ -246,9 +246,9 @@ namespace detail {
 
     /* Integer helpers */
 
-    template<typename R>
+    template<typename R, typename T>
     static inline octa::Size write_u(R &writer, const FormatSpec &fl,
-                                     bool neg, octa::Uintmax val) {
+                                     bool neg, T val) {
         char buf[20];
         octa::Size n = 0;
         for (; val; val /= 10) buf[n++] = '0' + val % 10;
@@ -276,8 +276,9 @@ namespace detail {
 
     template<typename R, typename T> struct WriteIntVal<R, T, true, true> {
         static inline octa::Size write(R &writer, const FormatSpec &fl, T val) {
+            using UT = octa::MakeUnsigned<T>;
             return octa::detail::write_u(writer, fl, val < 0,
-                (val < 0) ? -val : val);
+                (val < 0) ? UT(-val) : UT(val));
         }
     };
 
