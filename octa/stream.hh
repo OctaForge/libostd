@@ -125,14 +125,14 @@ struct Stream {
     template<typename ...A>
     bool writef(const char *fmt, const A &...args) {
         char buf[512];
-        octa::Size need = octa::formatted_write(octa::detail::FormatOutRange<
+        octa::Size need = octa::format(octa::detail::FormatOutRange<
             sizeof(buf)>(buf), fmt, args...);
         if (need < sizeof(buf))
             return write_bytes(buf, need) == need;
         octa::String s;
         s.reserve(need);
         s[need] = '\0';
-        octa::formatted_write(s.iter(), fmt, args...);
+        octa::format(s.iter(), fmt, args...);
         return write_bytes(s.data(), need) == need;
     }
 

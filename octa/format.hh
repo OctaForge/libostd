@@ -470,8 +470,8 @@ namespace detail {
 } /* namespace detail */
 
 template<typename R, typename ...A>
-static inline octa::Ptrdiff formatted_write(R writer, octa::Size &fmtn,
-                                            const char *fmt, const A &...args) {
+static inline octa::Ptrdiff format(R writer, octa::Size &fmtn,
+                                   const char *fmt, const A &...args) {
     octa::Size argidx = 1, retn = 0, twr = 0;
     octa::Ptrdiff written = 0;
     octa::detail::WriteSpec spec(fmt);
@@ -523,8 +523,8 @@ static inline octa::Ptrdiff formatted_write(R writer, octa::Size &fmtn,
 }
 
 template<typename R, typename ...A>
-static inline octa::Ptrdiff formatted_write(R writer, octa::Size &fmtn,
-                                            const char *fmt) {
+static inline octa::Ptrdiff format(R writer, octa::Size &fmtn,
+                                   const char *fmt) {
     octa::Size written = 0;
     octa::detail::WriteSpec spec(fmt);
     if (spec.read_until_spec(writer, &written)) return -1;
@@ -533,23 +533,23 @@ static inline octa::Ptrdiff formatted_write(R writer, octa::Size &fmtn,
 }
 
 template<typename R, typename AL, typename ...A>
-octa::Ptrdiff formatted_write(R writer, octa::Size &fmtn,
-                              const octa::AnyString<AL> &fmt,
-                              const A &...args) {
-    return formatted_write(writer, fmtn, fmt.data(), args...);
+octa::Ptrdiff format(R writer, octa::Size &fmtn,
+                     const octa::AnyString<AL> &fmt,
+                     const A &...args) {
+    return format(writer, fmtn, fmt.data(), args...);
 }
 
 template<typename R, typename ...A>
-octa::Ptrdiff formatted_write(R writer, const char *fmt, const A &...args) {
+octa::Ptrdiff format(R writer, const char *fmt, const A &...args) {
     octa::Size fmtn = 0;
-    return formatted_write(writer, fmtn, fmt, args...);
+    return format(writer, fmtn, fmt, args...);
 }
 
 template<typename R, typename AL, typename ...A>
-octa::Ptrdiff formatted_write(R writer, const octa::AnyString<AL> &fmt,
-                              const A &...args) {
+octa::Ptrdiff format(R writer, const octa::AnyString<AL> &fmt,
+                     const A &...args) {
     octa::Size fmtn = 0;
-    return formatted_write(writer, fmtn, fmt.data(), args...);
+    return format(writer, fmtn, fmt.data(), args...);
 }
 
 } /* namespace octa */

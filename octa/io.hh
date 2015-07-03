@@ -199,7 +199,7 @@ namespace detail {
 template<typename ...A>
 static inline void writef(const char *fmt, const A &...args) {
     char buf[512];
-    octa::Ptrdiff need = octa::formatted_write(octa::detail::FormatOutRange<
+    octa::Ptrdiff need = octa::format(octa::detail::FormatOutRange<
         sizeof(buf)>(buf), fmt, args...);
     if (need < 0) return;
     else if (octa::Size(need) < sizeof(buf)) {
@@ -208,8 +208,7 @@ static inline void writef(const char *fmt, const A &...args) {
     }
     octa::Vector<char> s;
     s.reserve(need);
-    octa::formatted_write(octa::detail::UnsafeWritefRange(s.data()), fmt,
-        args...);
+    octa::format(octa::detail::UnsafeWritefRange(s.data()), fmt, args...);
     fwrite(s.data(), 1, need, ::stdout);
 }
 
