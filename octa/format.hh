@@ -276,7 +276,7 @@ namespace detail {
         int pfxlen = 0;
         if (fl->flags & FMT_FLAG_HASH && spec != 'd') {
             pfx = octa::detail::fmt_intpfx[spec >= 'a'][specn - 3];
-            pfxlen = strlen(pfx);
+            pfxlen = !!pfx[1] + 1;
             r += pfxlen;
         }
 
@@ -398,6 +398,16 @@ namespace detail {
                 free(dbuf);
             } else writer.put_n(rbuf, ret);
             return ret;
+        }
+
+        /* pointer value */
+        template<typename R, typename T>
+        octa::Ptrdiff write(R &writer, T *val) {
+            if (this->spec == 's') {
+                this->spec = 'x';
+                this->flags |= FMT_FLAG_HASH;
+            }
+            return write(writer, octa::Size(val));
         }
 
         /* generic value */
