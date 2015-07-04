@@ -295,6 +295,13 @@ public:
         return p_buf.first()[p_len++];
     }
 
+    T &push(T &&v) {
+        if (p_len == p_cap) reserve(p_len + 1);
+        octa::allocator_construct(p_buf.second(),
+            &p_buf.first()[p_len], octa::move(v));
+        return p_buf.first()[p_len++];
+    }
+
     T &push() {
         if (p_len == p_cap) reserve(p_len + 1);
         octa::allocator_construct(p_buf.second(), &p_buf.first()[p_len]);

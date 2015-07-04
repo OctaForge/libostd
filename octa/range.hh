@@ -1117,6 +1117,67 @@ ChunksRange<T> chunks(const T &it, RangeSize<T> chs) {
     return ChunksRange<T>(it, chs);
 }
 
+template<typename T>
+struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value> {
+    AppenderRange(): p_data() {}
+    AppenderRange(const T &v): p_data(v) {}
+    AppenderRange(T &&v): p_data(octa::move(v)) {}
+    AppenderRange(const AppenderRange &v): p_data(v.p_data) {}
+    AppenderRange(AppenderRange &&v): p_data(octa::move(v.p_data)) {}
+
+    AppenderRange &operator=(const AppenderRange &v) {
+        p_data = v.p_data;
+        return *this;
+    }
+
+    AppenderRange &operator=(AppenderRange &&v) {
+        p_data = octa::move(v.p_data);
+        return *this;
+    }
+
+    AppenderRange &operator=(const T &v) {
+        p_data = v;
+        return *this;
+    }
+
+    AppenderRange &operator=(T &&v) {
+        p_data = octa::move(v);
+        return *this;
+    }
+
+    void clear() { p_data.clear(); }
+
+    void reserve(typename T::Size cap) { p_data.reserve(cap); }
+    void resize(typename T::Size len) { p_data.resize(len); }
+
+    typename T::Size size() const { return p_data.size(); }
+    typename T::Size capacity() const { return p_data.capacity(); }
+
+    bool put(const typename T::Value &v) {
+        p_data.push(v);
+        return true;
+    }
+
+    bool put(typename T::Value &&v) {
+        p_data.push(octa::move(v));
+        return true;
+    }
+
+    T &get() { return p_data; }
+private:
+    T p_data;
+};
+
+template<typename T>
+AppenderRange<T> appender() {
+    return AppenderRange<T>();
+}
+
+template<typename T>
+AppenderRange<T> appender(T &&v) {
+    return AppenderRange<T>(octa::forward<T>(v));
+}
+
 // range of
 template<typename T> using RangeOf = decltype(octa::iter(octa::declval<T>()));
 

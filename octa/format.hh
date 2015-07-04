@@ -894,26 +894,26 @@ namespace detail {
 } /* namespace detail */
 
 template<typename R, typename ...A>
-static inline octa::Ptrdiff format(R writer, octa::Size &fmtn,
+static inline octa::Ptrdiff format(R &&writer, octa::Size &fmtn,
                                    const char *fmt, const A &...args) {
     return octa::detail::format_impl(writer, fmtn, false, fmt, args...);
 }
 
 template<typename R, typename AL, typename ...A>
-octa::Ptrdiff format(R writer, octa::Size &fmtn,
+octa::Ptrdiff format(R &&writer, octa::Size &fmtn,
                      const octa::AnyString<AL> &fmt,
                      const A &...args) {
     return format(writer, fmtn, fmt.data(), args...);
 }
 
 template<typename R, typename ...A>
-octa::Ptrdiff format(R writer, const char *fmt, const A &...args) {
+octa::Ptrdiff format(R &&writer, const char *fmt, const A &...args) {
     octa::Size fmtn = 0;
     return format(writer, fmtn, fmt, args...);
 }
 
 template<typename R, typename AL, typename ...A>
-octa::Ptrdiff format(R writer, const octa::AnyString<AL> &fmt,
+octa::Ptrdiff format(R &&writer, const octa::AnyString<AL> &fmt,
                      const A &...args) {
     octa::Size fmtn = 0;
     return format(writer, fmtn, fmt.data(), args...);
