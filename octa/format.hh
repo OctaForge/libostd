@@ -457,10 +457,10 @@ namespace detail {
                                      bool escape, const char *fmt,
                                      const A &...args);
 
-    template<typename T,
-        typename = decltype(octa::iter(octa::declval<T>()))
-    > static octa::True test_fmt_range(int);
-    template<typename> static octa::False test_fmt_range(...);
+    template<typename T, typename = octa::RangeOf<T>>
+    static octa::True test_fmt_range(int);
+    template<typename>
+    static octa::False test_fmt_range(...);
 
     template<typename T>
     using FmtRangeTest = decltype(test_fmt_range<T>(0));
