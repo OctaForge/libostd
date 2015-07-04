@@ -133,6 +133,7 @@ struct FormatSpec {
     octa::Size  nested_sep_len = 0;
 
     bool is_nested = false;
+    bool nested_escape = false;
 
     template<typename R>
     bool read_until_spec(R &writer, octa::Size *wret) {
@@ -196,7 +197,9 @@ private:
     }
 
     bool read_spec_range() {
-        p_fmt++;
+        nested_escape = (*p_fmt != '-');
+        if (!nested_escape) ++p_fmt;
+        ++p_fmt;
         const char *begin_inner = p_fmt;
         if (!read_until_dummy()) {
             is_nested = false;
@@ -252,7 +255,7 @@ private:
     }
 
     bool read_spec() {
-        if (*p_fmt == '(') {
+        if ((*p_fmt == '(') || ((*p_fmt == '-') && (*(p_fmt + 1) == '('))) {
             return read_spec_range();
         }
         octa::Size ndig = octa::detail::read_digits(p_fmt, p_buf);
@@ -269,7 +272,8 @@ private:
             havepos = true;
         }
 
-        if (havepos && (*p_fmt == '(')) {
+        if (havepos && ((*p_fmt == '(') || ((*p_fmt == '-') &&
+                                            (*(p_fmt + 1) == '(')))) {
             return read_spec_range();
         }
 
@@ -380,7 +384,7 @@ namespace detail {
 
     template<typename R, typename ...A>
     static octa::Ptrdiff format_impl(R &writer, octa::Size &fmtn,
-                                     const char *fmt,
+                                     bool escape, const char *fmt,
                                      const A &...args);
 
     template<typename T,
@@ -393,16 +397,18 @@ namespace detail {
 
     template<typename R, typename T>
     static inline octa::Ptrdiff format_ritem(R &writer, octa::Size &fmtn,
+                                             bool esc,
                                              const char *fmt,
                                              const T &item) {
-        return format_impl(writer, fmtn, fmt, item);
+        return format_impl(writer, fmtn, esc, fmt, item);
     }
 
     template<typename R, typename T, typename U>
     static inline octa::Ptrdiff format_ritem(R &writer, octa::Size &fmtn,
+                                             bool esc,
                                              const char *fmt,
                                              const octa::Pair<T, U> &pair) {
-        return format_impl(writer, fmtn, fmt, pair.first, pair.second);
+        return format_impl(writer, fmtn, esc, fmt, pair.first, pair.second);
     }
 
     template<typename R, typename T>
@@ -420,8 +426,8 @@ namespace detail {
         octa::Ptrdiff ret = 0;
         octa::Size fmtn = 0;
         /* test first item */
-        octa::Ptrdiff fret = format_ritem(writer, fmtn, fl->rest(),
-            range.front());
+        octa::Ptrdiff fret = format_ritem(writer, fmtn, fl->nested_escape,
+            fl->rest(), range.front());
         if (fret < 0) return fret;
         ret += fret;
         range.pop_front();
@@ -431,7 +437,8 @@ namespace detail {
             if (v != seplen)
                 return -1;
             ret += seplen;
-            fret = format_ritem(writer, fmtn, fl->rest(), range.front());
+            fret = format_ritem(writer, fmtn, fl->nested_escape,
+                fl->rest(), range.front());
             if (fret < 0) return fret;
             ret += fret;
         }
@@ -458,6 +465,43 @@ namespace detail {
     template<typename T>
     using FmtTostrTest = decltype(test_fmt_tostr<T>(0));
 
+    /* non-printable escapes up to 0x20 (space) */
+    static constexpr const char *fmt_escapes[] = {
+        "\\0"  , "\\x01", "\\x02", "\\x03", "\\x04", "\\x05",
+        "\\x06", "\\a"  , "\\b"  , "\\t"  , "\\n"  , "\\v"  ,
+        "\\f"  , "\\r"  , "\\x0E", "\\x0F", "\\x10", "\\x11",
+        "\\x12", "\\x13", "\\x14", "\\x15", "\\x16", "\\x17",
+        "\\x18", "\\x19", "\\x1A", "\\x1B", "\\x1C", "\\x1D",
+        "\\x1E", "\\x1F",
+        /* we want to escape double quotes... */
+        nullptr, nullptr, "\\\"", nullptr, nullptr, nullptr,
+        nullptr, "\\\'"
+    };
+
+    static inline const char *escape_fmt_char(char v, char quote) {
+        if ((v >= 0 && v < 0x20) || (v == quote)) {
+            return fmt_escapes[octa::Size(v)];
+        } else if (v == 0x7F) {
+            return "\\x7F";
+        }
+        return nullptr;
+    }
+
+    static inline octa::String escape_fmt_str(const char *val) {
+        octa::String ret;
+        ret.push('"');
+        while (*val) {
+            const char *esc = escape_fmt_char(*val, '"');
+            if (esc)
+                ret.append(esc);
+            else
+                ret.push(*val);
+            ++val;
+        }
+        ret.push('"');
+        return ret;
+    }
+
     struct WriteSpec: octa::FormatSpec {
         WriteSpec(): octa::FormatSpec() {}
         WriteSpec(const char *fmt): octa::FormatSpec(fmt) {}
@@ -465,9 +509,14 @@ namespace detail {
         /* C string */
         template<typename R>
         octa::Ptrdiff write(R &writer, const char *val, octa::Size n) {
-            if (this->spec != 's') {
-                assert(false && "cannot format strings with the given spec");
-                return -1;
+            if (this->nested_escape) {
+                octa::String esc = escape_fmt_str(val);
+                bool nescape = this->nested_escape;
+                this->nested_escape = false;
+                octa::Ptrdiff r = write(writer, (const char *)esc.data(),
+                    esc.size());
+                this->nested_escape = nescape;
+                return r;
             }
             if (this->precision) n = this->precision;
             octa::Ptrdiff r = n;
@@ -479,12 +528,20 @@ namespace detail {
 
         template<typename R>
         octa::Ptrdiff write(R &writer, const char *val) {
+            if (this->spec != 's') {
+                assert(false && "cannot print strings with the given spec");
+                return -1;
+            }
             return write(writer, val, strlen(val));
         }
 
         /* OctaSTD string */
         template<typename R, typename A>
         octa::Ptrdiff write(R &writer, const octa::AnyString<A> &val) {
+            if (this->spec != 's') {
+                assert(false && "cannot print strings with the given spec");
+                return -1;
+            }
             return write(writer, val.data(), val.size());
         }
 
@@ -495,10 +552,30 @@ namespace detail {
                 assert(false && "cannot print chars with the given spec");
                 return -1;
             }
-            octa::Ptrdiff r = 1;
-            r += this->write_ws(writer, 1, true);
-            writer.put(val);
-            r += this->write_ws(writer, 1, false);
+            if (this->nested_escape) {
+                const char *esc = escape_fmt_char(val, '\'');
+                if (esc) {
+                    char buf[6];
+                    buf[0] = '\'';
+                    octa::Size elen = strlen(esc);
+                    memcpy(buf + 1, esc, elen);
+                    buf[elen + 1] = '\'';
+                    bool nescape = this->nested_escape;
+                    this->nested_escape = false;
+                    octa::Ptrdiff r = write(writer, (const char *)buf,
+                        elen + 2);
+                    this->nested_escape = nescape;
+                    return r;
+                }
+            }
+            octa::Ptrdiff r = 1 + this->nested_escape * 2;
+            r += this->write_ws(writer, 1 + this->nested_escape * 2, true);
+            if (this->nested_escape) {
+                writer.put('\'');
+                writer.put(val);
+                writer.put('\'');
+            } else writer.put(val);
+            r += this->write_ws(writer, 1 + this->nested_escape * 2, false);
             return r;
         }
 
@@ -666,11 +743,13 @@ namespace detail {
 
     template<typename R, typename ...A>
     static inline octa::Ptrdiff format_impl(R &writer, octa::Size &fmtn,
+                                            bool escape,
                                             const char *fmt,
                                             const A &...args) {
         octa::Size argidx = 1, retn = 0, twr = 0;
         octa::Ptrdiff written = 0;
         octa::detail::WriteSpec spec(fmt);
+        spec.nested_escape = escape;
         while (spec.read_until_spec(writer, &twr)) {
             written += twr;
             octa::Size argpos = spec.index;
@@ -681,6 +760,7 @@ namespace detail {
                 memcpy(new_fmt, spec.nested, spec.nested_len);
                 new_fmt[spec.nested_len] = '\0';
                 octa::detail::WriteSpec nspec(new_fmt);
+                nspec.nested_escape = spec.nested_escape;
                 octa::Ptrdiff sw = nspec.write_range(writer, argpos - 1,
                     spec.nested_sep, spec.nested_sep_len, args...);
                 if (sw < 0) return sw;
@@ -733,7 +813,7 @@ namespace detail {
 
     template<typename R, typename ...A>
     static inline octa::Ptrdiff format_impl(R &writer, octa::Size &fmtn,
-                                            const char *fmt) {
+                                            bool, const char *fmt) {
         octa::Size written = 0;
         octa::detail::WriteSpec spec(fmt);
         if (spec.read_until_spec(writer, &written)) return -1;
@@ -745,7 +825,7 @@ namespace detail {
 template<typename R, typename ...A>
 static inline octa::Ptrdiff format(R writer, octa::Size &fmtn,
                                    const char *fmt, const A &...args) {
-    return octa::detail::format_impl(writer, fmtn, fmt, args...);
+    return octa::detail::format_impl(writer, fmtn, false, fmt, args...);
 }
 
 template<typename R, typename AL, typename ...A>
