@@ -202,12 +202,18 @@ private:
             is_nested = false;
             return false;
         }
+        /* skip to the last spec in case multiple specs are present */
+        const char *curfmt = p_fmt;
+        while (read_until_dummy()) {
+            curfmt = p_fmt;
+        }
+        p_fmt = curfmt;
         /* find delimiter or ending */
         const char *begin_delim = p_fmt;
         const char *p = strchr(begin_delim, '%');
         for (; p; p = strchr(p, '%')) {
             ++p;
-            /* found actual delimiter start... */
+            /* escape, skip */
             if (*p == '%') {
                 ++p;
                 continue;
@@ -222,6 +228,7 @@ private:
                 is_nested = true;
                 return true;
             }
+            /* found actual delimiter start... */
             if (*p == '|') {
                 nested = begin_inner;
                 nested_len = p - begin_inner - 1;
