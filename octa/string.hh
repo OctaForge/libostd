@@ -452,9 +452,13 @@ template<typename T> struct ToString {
             !octa::IsScalar<U>::value, bool> = true
     ) {
         String ret("{");
-        ret += concat(octa::iter(v), ", ", ToString<octa::RangeReference<
-            decltype(octa::iter(v))
-        >>());
+        ret += concat(octa::iter(v), ", ", ToString<
+            octa::RemoveCv<
+                octa::RemoveReference<
+                    octa::RangeReference<decltype(octa::iter(v))>
+                >
+            >
+        >());
         ret += "}";
         return ret;
     }
@@ -468,9 +472,7 @@ template<typename T> struct ToString {
     }
 
     String operator()(const T &v) const {
-        return to_str<octa::RemoveCv<
-            octa::RemoveReference<T>
-        >>(v);
+        return to_str(v);
     }
 };
 
@@ -569,20 +571,17 @@ template<typename T, typename U> struct ToString<octa::Pair<T, U>> {
     using Result = String;
     String operator()(const Argument &v) {
         String ret("{");
-        ret += ToString<octa::RemoveCv<octa::RemoveReference<T>>>()
-            (v.first);
+        ret += ToString<T>()(v.first);
         ret += ", ";
-        ret += ToString<octa::RemoveCv<octa::RemoveReference<U>>>()
-            (v.second);
+        ret += ToString<U>()(v.second);
         ret += "}";
         return ret;
     }
 };
 
-template<typename T>
+template<typename T, typename = decltype(ToString<T>()(octa::declval<T>()))>
 String to_string(const T &v) {
-    return ToString<octa::RemoveCv<octa::RemoveReference<T>>>
-        ()(v);
+    return ToString<T>()(v);
 }
 
 template<typename T>

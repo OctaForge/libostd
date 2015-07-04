@@ -13,6 +13,7 @@
 
 #include "octa/algorithm.hh"
 #include "octa/string.hh"
+#include "octa/utility.hh"
 
 namespace octa {
 
@@ -383,6 +384,20 @@ namespace detail {
     template<typename T>
     using FmtRangeTest = decltype(test_fmt_range<T>(0));
 
+    template<typename R, typename ...A>
+    static inline octa::Ptrdiff format_ritem(R &writer, octa::Size &fmtn,
+                                             const char *fmt,
+                                             const A &...args) {
+        return format_impl(writer, fmtn, fmt, args...);
+    }
+
+    template<typename R, typename T, typename U>
+    static inline octa::Ptrdiff format_ritem(R &writer, octa::Size &fmtn,
+                                             const char *fmt,
+                                             const octa::Pair<T, U> &pair) {
+        return format_impl(writer, fmtn, fmt, pair.first, pair.second);
+    }
+
     template<typename R, typename T>
     static inline octa::Ptrdiff write_range(R &writer,
                                             const FormatSpec *fl,
@@ -398,7 +413,7 @@ namespace detail {
         octa::Ptrdiff ret = 0;
         octa::Size fmtn = 0;
         /* test first item */
-        octa::Ptrdiff fret = format_impl(writer, fmtn, fl->rest(),
+        octa::Ptrdiff fret = format_ritem(writer, fmtn, fl->rest(),
             range.front());
         if (fret < 0) return fret;
         ret += fret;
@@ -409,7 +424,7 @@ namespace detail {
             if (v != seplen)
                 return -1;
             ret += seplen;
-            fret = format_impl(writer, fmtn, fl->rest(), range.front());
+            fret = format_ritem(writer, fmtn, fl->rest(), range.front());
             if (fret < 0) return fret;
             ret += fret;
         }
@@ -427,6 +442,14 @@ namespace detail {
         assert(false && "invalid value for ranged format");
         return -1;
     }
+
+    template<typename T,
+        typename = decltype(octa::to_string(octa::declval<T>()))
+    > static octa::True test_fmt_tostr(int);
+    template<typename> static octa::False test_fmt_tostr(...);
+
+    template<typename T>
+    using FmtTostrTest = decltype(test_fmt_tostr<T>(0));
 
     struct WriteSpec: octa::FormatSpec {
         WriteSpec(): octa::FormatSpec() {}
@@ -545,13 +568,22 @@ namespace detail {
         /* generic value */
         template<typename R, typename T>
         octa::Ptrdiff write(R &writer, const T &val, octa::EnableIf<
-            !octa::IsArithmetic<T>::value, bool
+            !octa::IsArithmetic<T>::value && FmtTostrTest<T>::value, bool
         > = true) {
             if (this->spec != 's') {
                 assert(false && "custom objects need '%s' format");
                 return -1;
             }
             return write(writer, octa::to_string(val));
+        }
+
+        /* generic failure case */
+        template<typename R, typename T>
+        octa::Ptrdiff write(R &, const T &, octa::EnableIf<
+            !octa::IsArithmetic<T>::value && !FmtTostrTest<T>::value, bool
+        > = true) {
+            assert(false && "value cannot be formatted");
+            return -1;
         }
 
         /* actual writer */
@@ -693,8 +725,8 @@ namespace detail {
     }
 
     template<typename R, typename ...A>
-    static inline octa::Ptrdiff format(R &writer, octa::Size &fmtn,
-                                       const char *fmt) {
+    static inline octa::Ptrdiff format_impl(R &writer, octa::Size &fmtn,
+                                            const char *fmt) {
         octa::Size written = 0;
         octa::detail::WriteSpec spec(fmt);
         if (spec.read_until_spec(writer, &written)) return -1;
