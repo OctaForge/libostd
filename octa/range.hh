@@ -512,7 +512,7 @@ template<typename B, typename V, typename R = V &,
     Size put_n(const Value *p, Size n) {
         B &r = *((B *)this);
         Size on = n;
-        while (n--) if (!r.put(*p++)) break;
+        for (; n && r.put(*p++); --n);
         return (on - n);
     }
 };

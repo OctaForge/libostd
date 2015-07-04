@@ -339,6 +339,7 @@ namespace detail {
         }
 
         int base = octa::detail::fmt_bases[specn];
+        if (!val) buf[n++] = '0';
         for (; val; val /= base)
             buf[n++] = octa::detail::fmt_digits[spec >= 'a'][val % base];
         r = n;
@@ -367,6 +368,64 @@ namespace detail {
         }
         r += fl->write_ws(writer, n + sign + pfxlen, false);
         return r;
+    }
+
+    template<typename R, typename ...A>
+    static octa::Ptrdiff format_impl(R &writer, octa::Size &fmtn,
+                                     const char *fmt,
+                                     const A &...args);
+
+    template<typename T,
+        typename = decltype(octa::iter(octa::declval<T>()))
+    > static octa::True test_fmt_range(int);
+    template<typename> static octa::False test_fmt_range(...);
+
+    template<typename T>
+    using FmtRangeTest = decltype(test_fmt_range<T>(0));
+
+    template<typename R, typename T>
+    static inline octa::Ptrdiff write_range(R &writer,
+                                            const FormatSpec *fl,
+                                            const char *sep,
+                                            octa::Size seplen,
+                                            const T &val,
+                                            octa::EnableIf<
+                                                FmtRangeTest<T>::value,
+                                                bool
+                                            > = true) {
+        T range(octa::iter(val));
+        if (range.empty()) return 0;
+        octa::Ptrdiff ret = 0;
+        octa::Size fmtn = 0;
+        /* test first item */
+        octa::Ptrdiff fret = format_impl(writer, fmtn, fl->rest(),
+            range.front());
+        if (fret < 0) return fret;
+        ret += fret;
+        range.pop_front();
+        /* write the rest (if any) */
+        for (; !range.empty(); range.pop_front()) {
+            auto v = writer.put_n(sep, seplen);
+            if (v != seplen)
+                return -1;
+            ret += seplen;
+            fret = format_impl(writer, fmtn, fl->rest(), range.front());
+            if (fret < 0) return fret;
+            ret += fret;
+        }
+        return ret;
+    }
+
+    template<typename R, typename T>
+    static inline octa::Ptrdiff write_range(R &, const FormatSpec *,
+                                            const char *, octa::Size,
+                                            const T &,
+                                            octa::EnableIf<
+                                                !FmtRangeTest<T>::value,
+                                                bool
+                                            > = true) {
+        assert(false && "invalid value for ranged format");
+        return -1;
     }
 
     struct WriteSpec: octa::FormatSpec {
@@ -511,6 +570,27 @@ namespace detail {
             if (idx) return write_arg(writer, idx - 1, args...);
             return write(writer, val);
         }
+
+        /* range writer */
+        template<typename R, typename T>
+        octa::Ptrdiff write_range(R &writer, octa::Size idx,
+                                  const char *sep, octa::Size seplen,
+                                  const T &val) {
+            if (idx) {
+                assert(false && "not enough format args");
+                return -1;
+            }
+            return octa::detail::write_range(writer, this, sep, seplen, val);
+        }
+
+        template<typename R, typename T, typename ...A>
+        octa::Ptrdiff write_range(R &writer, octa::Size idx,
+                                  const char *sep, octa::Size seplen,
+                                  const T &val,
+                                  const A &...args) {
+            if (idx) return write_range(writer, idx - 1, sep, seplen, args...);
+            return octa::detail::write_range(writer, this, sep, seplen, val);
+        }
     };
 
     /* retrieve width/precision */
@@ -555,6 +635,19 @@ namespace detail {
         while (spec.read_until_spec(writer, &twr)) {
             written += twr;
             octa::Size argpos = spec.index;
+            if (spec.is_nested) {
+                if (!argpos) argpos = argidx++;
+                /* FIXME: figure out a better way */
+                char new_fmt[256];
+                memcpy(new_fmt, spec.nested, spec.nested_len);
+                new_fmt[spec.nested_len] = '\0';
+                octa::detail::WriteSpec nspec(new_fmt);
+                octa::Ptrdiff sw = nspec.write_range(writer, argpos - 1,
+                    spec.nested_sep, spec.nested_sep_len, args...);
+                if (sw < 0) return sw;
+                written += sw;
+                continue;
+            }
             if (!argpos) {
                 argpos = argidx++;
                 if (spec.arg_width) {
