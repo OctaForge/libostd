@@ -544,69 +544,76 @@ namespace detail {
         if (idx) return get_arg_param(idx - 1, param, args...);
         return convert_arg_param(val, param);
     }
+
+    template<typename R, typename ...A>
+    static inline octa::Ptrdiff format_impl(R &writer, octa::Size &fmtn,
+                                            const char *fmt,
+                                            const A &...args) {
+        octa::Size argidx = 1, retn = 0, twr = 0;
+        octa::Ptrdiff written = 0;
+        octa::detail::WriteSpec spec(fmt);
+        while (spec.read_until_spec(writer, &twr)) {
+            written += twr;
+            octa::Size argpos = spec.index;
+            if (!argpos) {
+                argpos = argidx++;
+                if (spec.arg_width) {
+                    spec.arg_width = false;
+                    if (!get_arg_param(argpos - 1, spec.width, args...))
+                        return -1;
+                    argpos = argidx++;
+                }
+                if (spec.arg_precision) {
+                    spec.arg_precision = false;
+                    if (!get_arg_param(argpos - 1, spec.precision, args...))
+                        return -1;
+                    argpos = argidx++;
+                }
+            } else {
+                bool argprec = spec.arg_precision;
+                if (argprec) {
+                    if (argpos <= 1) {
+                        assert(false && "argument precision not given");
+                        return -1;
+                    }
+                    spec.arg_precision = false;
+                    if (!get_arg_param(argpos - 2, spec.precision, args...))
+                        return -1;
+                }
+                if (spec.arg_width) {
+                    if (argpos <= (argprec + 1)) {
+                        assert(false && "argument width not given");
+                        return -1;
+                    }
+                    spec.arg_width = false;
+                    if (!get_arg_param(argpos - 2 - argprec, spec.width, args...))
+                        return -1;
+                }
+            }
+            octa::Ptrdiff sw = spec.write_arg(writer, argpos - 1, args...);
+            if (sw < 0) return sw;
+            written += sw;
+        }
+        written += twr;
+        fmtn = retn;
+        return written;
+    }
+
+    template<typename R, typename ...A>
+    static inline octa::Ptrdiff format(R &writer, octa::Size &fmtn,
+                                       const char *fmt) {
+        octa::Size written = 0;
+        octa::detail::WriteSpec spec(fmt);
+        if (spec.read_until_spec(writer, &written)) return -1;
+        fmtn = 0;
+        return written;
+    }
 } /* namespace detail */
 
 template<typename R, typename ...A>
 static inline octa::Ptrdiff format(R writer, octa::Size &fmtn,
                                    const char *fmt, const A &...args) {
-    octa::Size argidx = 1, retn = 0, twr = 0;
-    octa::Ptrdiff written = 0;
-    octa::detail::WriteSpec spec(fmt);
-    while (spec.read_until_spec(writer, &twr)) {
-        written += twr;
-        octa::Size argpos = spec.index;
-        if (!argpos) {
-            argpos = argidx++;
-            if (spec.arg_width) {
-                spec.arg_width = false;
-                if (!octa::detail::get_arg_param(argpos - 1, spec.width, args...))
-                    return -1;
-                argpos = argidx++;
-            }
-            if (spec.arg_precision) {
-                spec.arg_precision = false;
-                if (!octa::detail::get_arg_param(argpos - 1, spec.precision, args...))
-                    return -1;
-                argpos = argidx++;
-            }
-        } else {
-            bool argprec = spec.arg_precision;
-            if (argprec) {
-                if (argpos <= 1) {
-                    assert(false && "argument precision not given");
-                    return -1;
-                }
-                spec.arg_precision = false;
-                if (!octa::detail::get_arg_param(argpos - 2, spec.precision, args...))
-                    return -1;
-            }
-            if (spec.arg_width) {
-                if (argpos <= (argprec + 1)) {
-                    assert(false && "argument width not given");
-                    return -1;
-                }
-                spec.arg_width = false;
-                if (!octa::detail::get_arg_param(argpos - 2 - argprec, spec.width, args...))
-                    return -1;
-            }
-        }
-        octa::Ptrdiff sw = spec.write_arg(writer, argpos - 1, args...);
-        if (sw < 0) return sw;
-        written += sw;
-    }
-    written += twr;
-    fmtn = retn;
-    return written;
-}
-
-template<typename R, typename ...A>
-static inline octa::Ptrdiff format(R writer, octa::Size &fmtn,
-                                   const char *fmt) {
-    octa::Size written = 0;
-    octa::detail::WriteSpec spec(fmt);
-    if (spec.read_until_spec(writer, &written)) return -1;
-    fmtn = 0;
-    return written;
+    return octa::detail::format_impl(writer, fmtn, fmt, args...);
 }
 
 template<typename R, typename AL, typename ...A>
