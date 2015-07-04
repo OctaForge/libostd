@@ -384,11 +384,11 @@ namespace detail {
     template<typename T>
     using FmtRangeTest = decltype(test_fmt_range<T>(0));
 
-    template<typename R, typename ...A>
+    template<typename R, typename T>
     static inline octa::Ptrdiff format_ritem(R &writer, octa::Size &fmtn,
                                              const char *fmt,
-                                             const A &...args) {
-        return format_impl(writer, fmtn, fmt, args...);
+                                             const T &item) {
+        return format_impl(writer, fmtn, fmt, item);
     }
 
     template<typename R, typename T, typename U>
