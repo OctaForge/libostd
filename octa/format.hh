@@ -393,7 +393,7 @@ namespace detail {
                                                 FmtRangeTest<T>::value,
                                                 bool
                                             > = true) {
-        T range(octa::iter(val));
+        auto range = octa::iter(val);
         if (range.empty()) return 0;
         octa::Ptrdiff ret = 0;
         octa::Size fmtn = 0;
@@ -414,6 +414,19 @@ namespace detail {
             ret += fret;
         }
         return ret;
+    }
+
+    template<typename R, typename T, octa::Size N>
+    static inline octa::Ptrdiff write_range(R &writer,
+                                            const FormatSpec *fl,
+                                            const char *sep,
+                                            octa::Size seplen,
+                                            const T (&arr)[N],
+                                            octa::EnableIf<
+                                                !FmtRangeTest<T>::value,
+                                                bool
+                                            > = true) {
+        return write_range(writer, fl, sep, seplen, octa::iter(arr));
     }
 
     template<typename R, typename T>
