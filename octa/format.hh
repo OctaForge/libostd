@@ -125,6 +125,12 @@ struct FormatSpec {
 
     octa::byte index = 0;
 
+    const char *nested = nullptr;
+    octa::Size  nested_len = 0;
+
+    const char *nested_sep = nullptr;
+    octa::Size  nested_sep_len = 0;
+
     template<typename R>
     bool read_until_spec(R &writer, octa::Size *wret) {
         octa::Size written = 0;
@@ -173,7 +179,65 @@ struct FormatSpec {
 
 private:
 
+    bool read_until_dummy() {
+        while (*p_fmt) {
+            if (*p_fmt == '%') {
+                ++p_fmt;
+                if (*p_fmt == '%') goto plain;
+                return read_spec();
+            }
+        plain:
+            ++p_fmt;
+        }
+        return false;
+    }
+
+    bool read_spec_range() {
+        p_fmt++;
+        const char *begin_inner = p_fmt;
+        if (!read_until_dummy()) return false;
+        /* find delimiter or ending */
+        const char *begin_delim = p_fmt;
+        const char *p = strchr(begin_delim, '%');
+        for (; p; p = strchr(p, '%')) {
+            ++p;
+            /* found actual delimiter start... */
+            if (*p == '%') {
+                ++p;
+                continue;
+            }
+            /* found end, in that case delimiter is after spec */
+            if (*p == ')') {
+                nested = begin_inner;
+                nested_len = begin_delim - begin_inner;
+                nested_sep = begin_delim;
+                nested_sep_len = p - nested_sep - 1;
+                p_fmt = ++p;
+                return true;
+            }
+            if (*p == '|') {
+                nested = begin_inner;
+                nested_len = p - begin_inner - 1;
+                ++p;
+                nested_sep = p;
+                for (p = strchr(p, '%'); p; p = strchr(p, '%')) {
+                    ++p;
+                    if (*p == ')') {
+                        nested_sep_len = p - nested_sep - 1;
+                        p_fmt = ++p;
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        return false;
+    }
+
     bool read_spec() {
+        if (*p_fmt == '(') {
+            return read_spec_range();
+        }
         octa::Size ndig = octa::detail::read_digits(p_fmt, p_buf);
 
         bool havepos = false;
