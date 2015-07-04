@@ -59,28 +59,29 @@ namespace detail {
      * 5 .. decimal
      * 6 .. hexadecimal
      * 7 .. string
+     * 8 .. custom object
      */
     static constexpr const octa::byte fmt_specs[] = {
         /* uppercase spec set */
-        1, 3, 0, 0, /* A B C D */
-        1, 1, 1, 0, /* E F G H */
-        0, 0, 0, 0, /* I J K L */
-        0, 0, 0, 0, /* M N O P */
-        0, 0, 0, 0, /* Q R S T */
-        0, 0, 0, 6, /* U V W X */
-        0, 0,       /* Y Z */
+        1, 3, 8, 8, /* A B C D */
+        1, 1, 1, 8, /* E F G H */
+        8, 8, 8, 8, /* I J K L */
+        8, 8, 8, 8, /* M N O P */
+        8, 8, 8, 8, /* Q R S T */
+        8, 8, 8, 6, /* U V W X */
+        8, 8,       /* Y Z */
 
         /* ascii filler */
         0, 0, 0, 0, 0, 0,
 
         /* lowercase spec set */
         1, 3, 2, 5, /* a b c d */
-        1, 1, 1, 0, /* e f g h */
-        0, 0, 0, 0, /* i j k l */
-        0, 0, 4, 0, /* m n o p */
-        0, 0, 7, 0, /* q r s t */
-        0, 0, 0, 6, /* u v w x */
-        0, 0,       /* y z */
+        1, 1, 1, 8, /* e f g h */
+        8, 8, 8, 8, /* i j k l */
+        8, 8, 4, 8, /* m n o p */
+        8, 8, 7, 8, /* q r s t */
+        8, 8, 8, 6, /* u v w x */
+        8, 8,       /* y z */
 
         /* ascii filler */
         0, 0, 0, 0, 0
@@ -345,7 +346,7 @@ namespace detail {
         char spec = fl->spec;
         if (spec == 's') spec = 'd';
         octa::byte specn = octa::detail::fmt_specs[spec - 65];
-        if (specn <= 2) {
+        if (specn <= 2 || specn > 7) {
             assert(false && "cannot format integers with the given spec");
             return -1;
         }
@@ -502,6 +503,37 @@ namespace detail {
         return ret;
     }
 
+    template<typename R>
+    struct FmtWriteRange: octa::OutputRange<FmtWriteRange<R>, char> {
+        FmtWriteRange() = delete;
+        FmtWriteRange(R &out): p_out(out), p_written(0) {}
+        bool put(char v) {
+            bool ret = p_out.put(v);
+            p_written += ret;
+            return ret;
+        }
+        octa::Size put_n(const char *v, octa::Size n) {
+            octa::Size ret = p_out.put_n(v, n);
+            p_written += ret;
+            return ret;
+        }
+        octa::Size get_written() const { return p_written; }
+    private:
+        R &p_out;
+        octa::Size p_written;
+    };
+
+    template<typename T, typename U>
+    struct FmtTofmtTest {
+        template<typename TT, typename UU,
+            bool (TT::*)(UU &, const FormatSpec &) const
+        > struct Test {};
+        template<typename TT, typename UU>
+        static char test(Test<TT, UU, &TT::template to_format<UU>> *);
+        template<typename, typename> static int test(...);
+        static constexpr bool value = (sizeof(test<T, U>(0)) == sizeof(char));
+    };
+
     struct WriteSpec: octa::FormatSpec {
         WriteSpec(): octa::FormatSpec() {}
         WriteSpec(const char *fmt): octa::FormatSpec(fmt) {}
@@ -652,13 +684,24 @@ namespace detail {
         /* generic value */
         template<typename R, typename T>
         octa::Ptrdiff write(R &writer, const T &val, octa::EnableIf<
-            !octa::IsArithmetic<T>::value && FmtTostrTest<T>::value, bool
+            !octa::IsArithmetic<T>::value && FmtTostrTest<T>::value &&
+            !FmtTofmtTest<T, FmtWriteRange<R>>::value, bool
         > = true) {
             if (this->spec != 's') {
                 assert(false && "custom objects need '%s' format");
                 return -1;
             }
             return write(writer, octa::to_string(val));
+        }
+
+        /* custom format case */
+        template<typename R, typename T>
+        octa::Ptrdiff write(R &writer, const T &val, octa::EnableIf<
+            FmtTofmtTest<T, FmtWriteRange<R>>::value, bool
+        > = true) {
+            FmtWriteRange<R> sink(writer);
+            if (!val.to_format(sink, *this)) return -1;
+            return sink.get_written();
         }
 
         /* generic failure case */
