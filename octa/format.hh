@@ -416,19 +416,6 @@ namespace detail {
         return ret;
     }
 
-    template<typename R, typename T, octa::Size N>
-    static inline octa::Ptrdiff write_range(R &writer,
-                                            const FormatSpec *fl,
-                                            const char *sep,
-                                            octa::Size seplen,
-                                            const T (&arr)[N],
-                                            octa::EnableIf<
-                                                !FmtRangeTest<T>::value,
-                                                bool
-                                            > = true) {
-        return write_range(writer, fl, sep, seplen, octa::iter(arr));
-    }
-
     template<typename R, typename T>
     static inline octa::Ptrdiff write_range(R &, const FormatSpec *,
                                             const char *, octa::Size,

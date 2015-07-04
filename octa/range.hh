@@ -932,6 +932,11 @@ PointerRange<T> iter(T (&array)[N]) {
     return PointerRange<T>(array, N);
 }
 
+template<typename T, octa::Size N>
+PointerRange<const T> iter(const T (&array)[N]) {
+    return PointerRange<const T>(array, N);
+}
+
 template<typename T, typename S>
 struct EnumeratedValue {
     S index;
