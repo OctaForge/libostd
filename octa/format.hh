@@ -131,6 +131,8 @@ struct FormatSpec {
     const char *nested_sep = nullptr;
     octa::Size  nested_sep_len = 0;
 
+    bool is_nested = false;
+
     template<typename R>
     bool read_until_spec(R &writer, octa::Size *wret) {
         octa::Size written = 0;
@@ -195,7 +197,10 @@ private:
     bool read_spec_range() {
         p_fmt++;
         const char *begin_inner = p_fmt;
-        if (!read_until_dummy()) return false;
+        if (!read_until_dummy()) {
+            is_nested = false;
+            return false;
+        }
         /* find delimiter or ending */
         const char *begin_delim = p_fmt;
         const char *p = strchr(begin_delim, '%');
@@ -213,6 +218,7 @@ private:
                 nested_sep = begin_delim;
                 nested_sep_len = p - nested_sep - 1;
                 p_fmt = ++p;
+                is_nested = true;
                 return true;
             }
             if (*p == '|') {
@@ -225,12 +231,15 @@ private:
                     if (*p == ')') {
                         nested_sep_len = p - nested_sep - 1;
                         p_fmt = ++p;
+                        is_nested = true;
                         return true;
                     }
                 }
+                is_nested = false;
                 return false;
             }
         }
+        is_nested = false;
         return false;
     }
 
@@ -250,6 +259,10 @@ private:
             index = octa::byte(idx);
             ++p_fmt;
             havepos = true;
+        }
+
+        if (havepos && (*p_fmt == '(')) {
+            return read_spec_range();
         }
 
         /* parse flags */
