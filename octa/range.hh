@@ -1118,7 +1118,8 @@ ChunksRange<T> chunks(const T &it, RangeSize<T> chs) {
 }
 
 template<typename T>
-struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value> {
+struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value,
+    typename T::Reference, typename T::Size, typename T::Difference> {
     AppenderRange(): p_data() {}
     AppenderRange(const T &v): p_data(v) {}
     AppenderRange(T &&v): p_data(octa::move(v)) {}
@@ -1153,7 +1154,7 @@ struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value> {
     typename T::Size size() const { return p_data.size(); }
     typename T::Size capacity() const { return p_data.capacity(); }
 
-    bool put(const typename T::Value &v) {
+    bool put(typename T::ConstReference v) {
         p_data.push(v);
         return true;
     }
