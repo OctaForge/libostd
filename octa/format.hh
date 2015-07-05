@@ -48,9 +48,7 @@ namespace detail {
         *buf = '\0';
         return ret;
     }
-}
 
-namespace detail {
     /* 0 .. not allowed
      * 1 .. floating point
      * 2 .. character
@@ -141,7 +139,7 @@ namespace detail {
 }
 
 struct FormatSpec {
-    FormatSpec(): p_fmt(nullptr) {}
+    FormatSpec(): p_nested_escape(false), p_fmt(nullptr) {}
     FormatSpec(const char *fmt, bool escape = false):
         p_nested_escape(escape), p_fmt(fmt) {}
 
