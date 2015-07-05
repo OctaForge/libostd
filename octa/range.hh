@@ -464,7 +464,7 @@ template<typename B, typename C, typename V, typename R = V &,
 
     template<typename OR,
         typename = octa::EnableIf<octa::IsOutputRange<OR>::value
-    >> Size copy(OR orange, Size n = -1) {
+    >> Size copy(OR &&orange, Size n = -1) {
         B r(*((B *)this));
         Size on = n;
         for (; n && !r.empty(); --n) {
@@ -911,7 +911,7 @@ struct PointerRange: InputRange<PointerRange<T>, FiniteRandomAccessRangeTag, T> 
 
     template<typename R,
         typename = octa::EnableIf<octa::IsOutputRange<R>::value
-    >> octa::Size copy(R orange, octa::Size n = -1) {
+    >> octa::Size copy(R &&orange, octa::Size n = -1) {
         octa::Size c = size();
         if (n < c) c = n;
         return orange.put_n(p_beg, c);
