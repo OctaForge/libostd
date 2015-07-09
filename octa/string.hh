@@ -577,6 +577,10 @@ template<typename T, typename U> struct ToString<Pair<T, U>> {
     }
 };
 
+template<typename T> struct ToString<const T>: ToString<T> {};
+template<typename T> struct ToString<volatile T>: ToString<T> {};
+template<typename T> struct ToString<const volatile T>: ToString<T> {};
+
 template<typename T, typename = decltype(ToString<T>()(declval<T>()))>
 String to_string(const T &v) {
     return ToString<T>()(v);

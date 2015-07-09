@@ -261,7 +261,8 @@ protected:
     }
 
     bool read_spec_range() {
-        p_nested_escape = !(p_flags & FMT_FLAG_DASH);
+        int sflags = p_flags;
+        p_nested_escape = !(sflags & FMT_FLAG_DASH);
         ++p_fmt;
         const char *begin_inner = p_fmt;
         if (!read_until_dummy()) {
@@ -274,6 +275,7 @@ protected:
             curfmt = p_fmt;
         }
         p_fmt = curfmt;
+        p_flags = sflags;
         /* find delimiter or ending */
         const char *begin_delim = p_fmt;
         const char *p = strchr(begin_delim, '%');
@@ -459,21 +461,28 @@ namespace detail {
 
     template<typename R, typename T>
     static inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc,
-                                       const char *fmt, const T &item) {
+                                       bool, const char *fmt,
+                                       const T &item) {
         return format_impl(writer, fmtn, esc, fmt, item);
     }
 
     template<typename R, typename T, typename U>
     static inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc,
+                                       bool expandval,
                                        const char *fmt,
                                        const Pair<T, U> &pair) {
-        return format_impl(writer, fmtn, esc, fmt, pair.first, pair.second);
+        if (expandval) {
+            return format_impl(writer, fmtn, esc, fmt, pair.first,
+                pair.second);
+        }
+        return format_impl(writer, fmtn, esc, fmt, pair);
     }
 
     template<typename R, typename T>
     static inline Ptrdiff write_range(R &writer, const FormatSpec *fl,
-                                      bool escape, const char *sep,
-                                      Size seplen, const T &val,
+                                      bool escape, bool expandval,
+                                      const char *sep, Size seplen,
+                                      const T &val,
                                       EnableIf<FmtRangeTest<T>::value,
                                                bool> = true) {
         auto range = octa::iter(val);
@@ -481,8 +490,8 @@ namespace detail {
         Ptrdiff ret = 0;
         Size fmtn = 0;
         /* test first item */
-        Ptrdiff fret = format_ritem(writer, fmtn, escape, fl->rest(),
-            range.front());
+        Ptrdiff fret = format_ritem(writer, fmtn, escape, expandval,
+            fl->rest(), range.front());
         if (fret < 0) return fret;
         ret += fret;
         range.pop_front();
@@ -492,8 +501,8 @@ namespace detail {
             if (v != seplen)
                 return -1;
             ret += seplen;
-            fret = format_ritem(writer, fmtn, escape, fl->rest(),
-                range.front());
+            fret = format_ritem(writer, fmtn, escape, expandval,
+                fl->rest(), range.front());
             if (fret < 0) return fret;
             ret += fret;
         }
@@ -501,7 +510,7 @@ namespace detail {
     }
 
     template<typename R, typename T>
-    static inline Ptrdiff write_range(R &, const FormatSpec *, bool,
+    static inline Ptrdiff write_range(R &, const FormatSpec *, bool, bool,
                                       const char *, Size, const T &,
                                       EnableIf<!FmtRangeTest<T>::value,
                                                bool> = true) {
@@ -775,22 +784,26 @@ namespace detail {
 
         /* range writer */
         template<typename R, typename T>
-        Ptrdiff write_range(R &writer, Size idx, const char *sep,
-                            Size seplen, const T &val) {
+        Ptrdiff write_range(R &writer, Size idx, bool expandval,
+                            const char *sep, Size seplen, const T &val) {
             if (idx) {
                 assert(false && "not enough format args");
                 return -1;
             }
             return detail::write_range(writer, this, this->p_nested_escape,
-                sep, seplen, val);
+                expandval, sep, seplen, val);
         }
 
         template<typename R, typename T, typename ...A>
-        Ptrdiff write_range(R &writer, Size idx, const char *sep,
-                            Size seplen, const T &val, const A &...args) {
-            if (idx) return write_range(writer, idx - 1, sep, seplen, args...);
+        Ptrdiff write_range(R &writer, Size idx, bool expandval,
+                            const char *sep, Size seplen, const T &val,
+                            const A &...args) {
+            if (idx) {
+                return write_range(writer, idx - 1, expandval, sep,
+                    seplen, args...);
+            }
             return detail::write_range(writer, this,
-                this->p_nested_escape, sep, seplen, val);
+                this->p_nested_escape, expandval, sep, seplen, val);
         }
     };
 
@@ -811,6 +824,7 @@ namespace detail {
                 new_fmt[spec.nested_len()] = '\0';
                 detail::WriteSpec nspec(new_fmt, spec.nested_escape());
                 Ptrdiff sw = nspec.write_range(writer, argpos - 1,
+                    (spec.flags() & FMT_FLAG_HASH),
                     spec.nested_sep(), spec.nested_sep_len(), args...);
                 if (sw < 0) return sw;
                 written += sw;
