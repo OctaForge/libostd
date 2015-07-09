@@ -261,8 +261,7 @@ protected:
     }
 
     bool read_spec_range() {
-        p_nested_escape = (*p_fmt != '-');
-        if (!p_nested_escape) ++p_fmt;
+        p_nested_escape = !(p_flags & FMT_FLAG_DASH);
         ++p_fmt;
         const char *begin_inner = p_fmt;
         if (!read_until_dummy()) {
@@ -319,9 +318,6 @@ protected:
     }
 
     bool read_spec() {
-        if ((*p_fmt == '(') || ((*p_fmt == '-') && (*(p_fmt + 1) == '('))) {
-            return read_spec_range();
-        }
         Size ndig = detail::read_digits(p_fmt, p_buf);
 
         bool havepos = false;
@@ -334,11 +330,6 @@ protected:
             p_index = byte(idx);
             ++p_fmt;
             havepos = true;
-        }
-
-        if (havepos && ((*p_fmt == '(') || ((*p_fmt == '-') &&
-                                            (*(p_fmt + 1) == '(')))) {
-            return read_spec_range();
         }
 
         /* parse flags */
@@ -354,6 +345,11 @@ protected:
             if (skipd) p_flags = FMT_FLAG_ZERO;
             if (skipd == ndig)
                 p_flags = detail::parse_fmt_flags(p_fmt, p_flags);
+        }
+
+        /* range/array formatting */
+        if ((*p_fmt == '(') && (havepos || !(ndig - skipd))) {
+            return read_spec_range();
         }
 
         /* parse width */
