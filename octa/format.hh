@@ -397,6 +397,27 @@ protected:
     char p_buf[32];
 };
 
+/* for cusotm container formatting */
+
+namespace detail {
+    template<typename T, typename U>
+    struct ToFmtTest {
+        template<typename TT, typename UU,
+            bool (TT::*)(UU &, const FormatSpec &) const
+        > struct Test {};
+        template<typename TT, typename UU>
+        static char test(Test<TT, UU, &TT::template to_format<UU>> *);
+        template<typename, typename> static int test(...);
+        static constexpr bool value = (sizeof(test<T, U>(0)) == sizeof(char));
+    };
+}
+
+template<typename T, typename R, typename = EnableIf<
+    detail::ToFmtTest<T, R>::value
+>> inline bool to_format(const T &v, R &writer, const FormatSpec &fs) {
+    return v.to_format(writer, fs);
+}
+
 namespace detail {
     template<typename R, typename T>
     inline Ptrdiff write_u(R &writer, const FormatSpec *fl, bool neg, T val) {
@@ -605,16 +626,16 @@ namespace detail {
         Size p_written;
     };
 
-    template<typename T, typename U>
-    struct FmtTofmtTest {
-        template<typename TT, typename UU,
-            bool (TT::*)(UU &, const FormatSpec &) const
-        > struct Test {};
-        template<typename TT, typename UU>
-        static char test(Test<TT, UU, &TT::template to_format<UU>> *);
-        template<typename, typename> static int test(...);
-        static constexpr bool value = (sizeof(test<T, U>(0)) == sizeof(char));
-    };
+    template<typename T, typename R>
+    static True test_tofmt(decltype(to_format(declval<const T &>(),
+                                              declval<R &>(),
+                                              declval<const FormatSpec &>())) *);
+
+    template<typename, typename>
+    static False test_tofmt(...);
+
+    template<typename T, typename R>
+    using FmtTofmtTest = decltype(test_tofmt<T, R>(0));
 
     struct WriteSpec: FormatSpec {
         WriteSpec(): FormatSpec() {}
@@ -774,7 +795,7 @@ namespace detail {
             EnableIf<FmtTofmtTest<T, FmtWriteRange<R>>::value, bool
         > = true) {
             FmtWriteRange<R> sink(writer);
-            if (!val.to_format(sink, *this)) return -1;
+            if (!to_format(val, sink, *this)) return -1;
             return sink.get_written();
         }
 
