@@ -397,7 +397,7 @@ protected:
     char p_buf[32];
 };
 
-/* for cusotm container formatting */
+/* for custom container formatting */
 
 template<typename T, typename R, typename = EnableIf<
     IsSame<decltype(declval<T>().to_format(declval<R &>(),

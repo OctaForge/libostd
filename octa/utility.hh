@@ -49,21 +49,19 @@ template<typename T> AddRvalueReference<T> declval();
 
 namespace detail {
     template<typename T>
-    struct SwapTest {
-        template<typename U, void (U::*)(U &)> struct Test {};
-        template<typename U> static char test(Test<U, &U::swap> *);
-        template<typename U> static  int test(...);
-        static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
-    };
+    auto test_swap(int) ->
+        decltype(IsVoid<decltype(declval<T>().swap(declval<T &>()))>());
+    template<typename>
+    False test_swap(...);
 
     template<typename T> inline void swap_fb(T &a, T &b, EnableIf<
-        detail::SwapTest<T>::value, bool
+        decltype(test_swap<T>(0))::value, bool
     > = true) {
         a.swap(b);
     }
 
     template<typename T> inline void swap_fb(T &a, T &b, EnableIf<
-        !detail::SwapTest<T>::value, bool
+        !decltype(test_swap<T>(0))::value, bool
     > = true) {
         T c(move(a));
         a = move(b);
