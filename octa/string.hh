@@ -535,12 +535,6 @@ struct ToString<T, EnableIf<detail::ToStringTest<T>::value>> {
     }
 };
 
-template<typename T> struct ToString<const T, EnableIf<
-    !detail::IterableTest<T>::value &&
-    !detail::ToStringTest<T>::value &&
-    !IsScalar<T>::value
->>: ToString<T> {};
-
 namespace detail {
     template<typename T>
     void str_printf(Vector<char> *s, const char *fmt, T v) {
@@ -623,6 +617,14 @@ template<> struct ToString<const char *> {
     }
 };
 
+template<> struct ToString<char *> {
+    using Argument = char *;
+    using Result = String;
+    String operator()(char *s) {
+        return String(s);
+    }
+};
+
 template<> struct ToString<String> {
     using Argument = String;
     using Result = String;
@@ -644,9 +646,9 @@ template<typename T, typename U> struct ToString<Pair<T, U>> {
     using Result = String;
     String operator()(const Argument &v) {
         String ret("{");
-        ret += ToString<T>()(v.first);
+        ret += ToString<RemoveReference<RemoveCv<T>>>()(v.first);
         ret += ", ";
-        ret += ToString<U>()(v.second);
+        ret += ToString<RemoveReference<RemoveCv<U>>>()(v.second);
         ret += "}";
         return ret;
     }
@@ -654,7 +656,7 @@ template<typename T, typename U> struct ToString<Pair<T, U>> {
 
 template<typename T>
 typename ToString<T>::Result to_string(const T &v) {
-    return ToString<T>()(v);
+    return ToString<RemoveReference<RemoveCv<T>>>()(v);
 }
 
 template<typename T>
