@@ -479,15 +479,16 @@ AnyString<A> concat(std::initializer_list<T> v, const S &sep = " ") {
 
 namespace detail {
     template<typename T>
-    struct ToStringTest {
-        template<typename U, String (U::*)() const> struct Test {};
-        template<typename U> static char test(Test<U, &U::to_string> *);
-        template<typename U> static  int test(...);
-        static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
-    };
+    auto test_tostring(int) ->
+        decltype(IsSame<decltype(declval<T>().to_string()), String>());
+    template<typename>
+    False test_tostring(...);
 
     template<typename T>
-    static True test_iterable(decltype(octa::iter(declval<T>())) *);
+    using ToStringTest = decltype(test_tostring<T>(0));
+
+    template<typename T>
+    True test_iterable(decltype(octa::iter(declval<T>())) *);
     template<typename> static False test_iterable(...);
 
     template<typename T>
