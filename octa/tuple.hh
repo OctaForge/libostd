@@ -551,6 +551,11 @@ inline bool operator>=(const Tuple<T...> &x, const Tuple<U...> &y) {
     return !(x < y);
 }
 
+/* uses alloc */
+
+template<typename ...T, typename A>
+struct UsesAllocator<Tuple<T...>, A>: True {};
+
 } /* namespace octa */
 
 #endif
