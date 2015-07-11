@@ -9,6 +9,7 @@
 #include <stddef.h>
 
 #include "octa/type_traits.hh"
+#include "octa/internal/tuple.hh"
 
 namespace octa {
 
@@ -164,6 +165,69 @@ Pair<typename detail::MakePairRet<T>::Type,
     return Pair<typename detail::MakePairRet<T>::Type,
                 typename detail::MakePairRet<U>::Type
     >(forward<T>(a), forward<U>(b));;
+}
+
+template<typename T, typename U>
+struct TupleSize<Pair<T, U>>: IntegralConstant<Size, 2> {};
+
+template<typename T, typename U>
+struct TupleSize<const Pair<T, U>>: IntegralConstant<Size, 2> {};
+
+namespace detail {
+    template<typename T, typename U>
+    struct TupleElementBase<0, Pair<T, U>> {
+        using Type = T;
+    };
+
+    template<typename T, typename U>
+    struct TupleElementBase<1, Pair<T, U>> {
+        using Type = U;
+    };
+
+    template<typename T, typename U>
+    struct TupleElementBase<0, const Pair<T, U>> {
+        using Type = const T;
+    };
+
+    template<typename T, typename U>
+    struct TupleElementBase<1, const Pair<T, U>> {
+        using Type = const U;
+    };
+
+    template<Size> struct GetPair;
+
+    template<> struct GetPair<0> {
+        template<typename T, typename U>
+        static T &get(Pair<T, U> &p) { return p.first; }
+        template<typename T, typename U>
+        static const T &get(const Pair<T, U> &p) { return p.first; }
+        template<typename T, typename U>
+        static T &&get(Pair<T, U> &&p) { return forward<T>(p.first); }
+    };
+
+    template<> struct GetPair<1> {
+        template<typename T, typename U>
+        static U &get(Pair<T, U> &p) { return p.second; }
+        template<typename T, typename U>
+        static const U &get(const Pair<T, U> &p) { return p.second; }
+        template<typename T, typename U>
+        static U &&get(Pair<T, U> &&p) { return forward<U>(p.second); }
+    };
+}
+
+template<Size I, typename T, typename U>
+TupleElement<I, Pair<T, U>> &get(Pair<T, U> &p) {
+    return detail::GetPair<I>::get(p);
+}
+
+template<Size I, typename T, typename U>
+const TupleElement<I, Pair<T, U>> &get(const Pair<T, U> &p) {
+    return detail::GetPair<I>::get(p);
+}
+
+template<Size I, typename T, typename U>
+TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) {
+    return detail::GetPair<I>::get(move(p));
 }
 
 namespace detail {
