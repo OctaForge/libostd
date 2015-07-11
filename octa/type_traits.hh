@@ -843,9 +843,8 @@ using AddPointer = typename detail::AddPointerBase<T>::Type;
 /* add lvalue reference */
 
 namespace detail {
-    template<typename T> struct AddLr       { using Type = T &; };
-    template<typename T> struct AddLr<T  &> { using Type = T &; };
-    template<typename T> struct AddLr<T &&> { using Type = T &; };
+    template<typename T> struct AddLr      { using Type = T &; };
+    template<typename T> struct AddLr<T &> { using Type = T &; };
     template<> struct AddLr<void> {
         using Type = void;
     };
@@ -863,9 +862,7 @@ namespace detail {
 /* add rvalue reference */
 
 namespace detail {
-    template<typename T> struct AddRr       { using Type = T &&; };
-    template<typename T> struct AddRr<T  &> { using Type = T &&; };
-    template<typename T> struct AddRr<T &&> { using Type = T &&; };
+    template<typename T> struct AddRr { using Type = T &&; };
     template<> struct AddRr<void> {
         using Type = void;
     };
