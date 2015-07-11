@@ -352,35 +352,87 @@ using ConstStringRange = StringRangeBase<const char>;
 template<typename A> using AnyString = StringBase<char, A>;
 
 template<typename T, typename A>
-static inline bool operator==(const StringBase<T, A> &lhs,
-                              const StringBase<T, A> &rhs) {
+inline bool operator==(const StringBase<T, A> &lhs,
+                       const StringBase<T, A> &rhs) {
     return !lhs.compare(rhs);
 }
 template<typename T, typename A>
-static inline bool operator==(const StringBase<T, A> &lhs,
-                              const char *rhs) {
+inline bool operator==(const StringBase<T, A> &lhs, const char *rhs) {
     return !lhs.compare(rhs);
 }
 template<typename T, typename A>
-static inline bool operator==(const char *lhs,
-                              const StringBase<T, A> &rhs) {
+inline bool operator==(const char *lhs, const StringBase<T, A> &rhs) {
     return !rhs.compare(lhs);
 }
 
 template<typename T, typename A>
-static inline bool operator!=(const StringBase<T, A> &lhs,
-                              const StringBase<T, A> &rhs) {
-    return !!lhs.compare(rhs);
+inline bool operator!=(const StringBase<T, A> &lhs,
+                       const StringBase<T, A> &rhs) {
+    return !(lhs == rhs);
 }
 template<typename T, typename A>
-static inline bool operator!=(const StringBase<T, A> &lhs,
-                              const char *rhs) {
-    return !!lhs.compare(rhs);
+inline bool operator!=(const StringBase<T, A> &lhs, const char *rhs) {
+    return !(lhs == rhs);
 }
 template<typename T, typename A>
-static inline bool operator!=(const char *lhs,
-                              const StringBase<T, A> &rhs) {
-    return !!rhs.compare(lhs);
+inline bool operator!=(const char *lhs,  const StringBase<T, A> &rhs) {
+    return !(rhs == lhs);
+}
+
+template<typename T, typename A>
+inline bool operator<(const StringBase<T, A> &lhs,
+                      const StringBase<T, A> &rhs) {
+    return lhs.compare(rhs) < 0;
+}
+template<typename T, typename A>
+inline bool operator<(const StringBase<T, A> &lhs, const char *rhs) {
+    return lhs.compare(rhs) < 0;
+}
+template<typename T, typename A>
+inline bool operator<(const char *lhs, const StringBase<T, A> &rhs) {
+    return rhs.compare(lhs) > 0;
+}
+
+template<typename T, typename A>
+inline bool operator>(const StringBase<T, A> &lhs,
+                      const StringBase<T, A> &rhs) {
+    return rhs < lhs;
+}
+template<typename T, typename A>
+inline bool operator>(const StringBase<T, A> &lhs, const char *rhs) {
+    return rhs < lhs;
+}
+template<typename T, typename A>
+inline bool operator>(const char *lhs, const StringBase<T, A> &rhs) {
+    return rhs < lhs;
+}
+
+template<typename T, typename A>
+inline bool operator<=(const StringBase<T, A> &lhs,
+                       const StringBase<T, A> &rhs) {
+    return !(rhs < lhs);
+}
+template<typename T, typename A>
+inline bool operator<=(const StringBase<T, A> &lhs, const char *rhs) {
+    return !(rhs < lhs);
+}
+template<typename T, typename A>
+inline bool operator<=(const char *lhs, const StringBase<T, A> &rhs) {
+    return !(rhs < lhs);
+}
+
+template<typename T, typename A>
+inline bool operator>=(const StringBase<T, A> &lhs,
+                       const StringBase<T, A> &rhs) {
+    return !(lhs < rhs);
+}
+template<typename T, typename A>
+inline bool operator>=(const StringBase<T, A> &lhs, const char *rhs) {
+    return !(lhs < rhs);
+}
+template<typename T, typename A>
+inline bool operator>=(const char *lhs, const StringBase<T, A> &rhs) {
+    return !(lhs < rhs);
 }
 
 template<typename T, typename F, typename S = const char *,

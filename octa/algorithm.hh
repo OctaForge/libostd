@@ -214,6 +214,30 @@ inline T clamp(const T &v, const U &lo, const U &hi, C compare) {
     return octa::max(T(lo), octa::min(v, T(hi), compare), compare);
 }
 
+/* lexicographical compare */
+
+template<typename R1, typename R2>
+bool lexicographical_compare(R1 range1, R2 range2) {
+    while (!range1.empty() && !range2.empty()) {
+        if (range1.front() < range2.front()) return true;
+        if (range2.front() < range1.front()) return false;
+        range1.pop_front();
+        range2.pop_front();
+    }
+    return (range1.empty() && !range2.empty());
+}
+
+template<typename R1, typename R2, typename C>
+bool lexicographical_compare(R1 range1, R2 range2, C compare) {
+    while (!range1.empty() && !range2.empty()) {
+        if (compare(range1.front(), range2.front())) return true;
+        if (compare(range2.front(), range1.front())) return false;
+        range1.pop_front();
+        range2.pop_front();
+    }
+    return (range1.empty() && !range2.empty());
+}
+
 /* algos that don't change the range */
 
 template<typename R, typename F>

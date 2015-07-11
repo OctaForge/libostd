@@ -16,26 +16,26 @@ namespace octa {
 /* move */
 
 template<typename T>
-static inline constexpr RemoveReference<T> &&move(T &&v) {
+inline constexpr RemoveReference<T> &&move(T &&v) {
     return static_cast<RemoveReference<T> &&>(v);
 }
 
 /* forward */
 
 template<typename T>
-static inline constexpr T &&forward(RemoveReference<T> &v) {
+inline constexpr T &&forward(RemoveReference<T> &v) {
     return static_cast<T &&>(v);
 }
 
 template<typename T>
-static inline constexpr T &&forward(RemoveReference<T> &&v) {
+inline constexpr T &&forward(RemoveReference<T> &&v) {
     return static_cast<T &&>(v);
 }
 
 /* exchange */
 
 template<typename T, typename U = T>
-T exchange(T &v, U &&nv) {
+inline T exchange(T &v, U &&nv) {
     T old = move(v);
     v = forward<U>(nv);
     return old;
@@ -71,11 +71,11 @@ namespace detail {
     }
 }
 
-template<typename T> void swap(T &a, T &b) {
+template<typename T> inline void swap(T &a, T &b) {
    detail::swap(a, b);
 }
 
-template<typename T, Size N> void swap(T (&a)[N], T (&b)[N]) {
+template<typename T, Size N> inline void swap(T (&a)[N], T (&b)[N]) {
     for (Size i = 0; i < N; ++i) {
         octa::swap(a[i], b[i]);
     }
@@ -159,12 +159,48 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T, typename U>
-Pair<typename detail::MakePairRet<T>::Type,
-     typename detail::MakePairRet<U>::Type
+inline Pair<typename detail::MakePairRet<T>::Type,
+            typename detail::MakePairRet<U>::Type
  > make_pair(T &&a, U &&b) {
     return Pair<typename detail::MakePairRet<T>::Type,
                 typename detail::MakePairRet<U>::Type
     >(forward<T>(a), forward<U>(b));;
+}
+
+template<typename T, typename U>
+inline constexpr bool operator==(const Pair<T, U> &x, const Pair<T, U> &y) {
+    return (x.first == y.first) && (x.second == y.second);
+}
+
+template<typename T, typename U>
+inline constexpr bool operator!=(const Pair<T, U> &x, const Pair<T, U> &y) {
+    return (x.first != y.first) || (x.second != y.second);
+}
+
+template<typename T, typename U>
+inline constexpr bool operator<(const Pair<T, U> &x, const Pair<T, U> &y) {
+    return (x.first < y.first)
+        ? true
+        : ((y.first < x.first)
+            ? false
+            : ((x.second < y.second)
+                ? true
+                : false));
+}
+
+template<typename T, typename U>
+inline constexpr bool operator>(const Pair<T, U> &x, const Pair<T, U> &y) {
+    return (y < x);
+}
+
+template<typename T, typename U>
+inline constexpr bool operator<=(const Pair<T, U> &x, const Pair<T, U> &y) {
+    return !(y < x);
+}
+
+template<typename T, typename U>
+inline constexpr bool operator>=(const Pair<T, U> &x, const Pair<T, U> &y) {
+    return !(x < y);
 }
 
 template<typename T, typename U>

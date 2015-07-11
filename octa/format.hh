@@ -26,7 +26,7 @@ enum FormatFlags {
 };
 
 namespace detail {
-    static inline int parse_fmt_flags(const char *&fmt, int ret) {
+    inline int parse_fmt_flags(const char *&fmt, int ret) {
         while (*fmt) {
             switch (*fmt) {
             case '-': ret |= FMT_FLAG_DASH; ++fmt; break;
@@ -41,7 +41,7 @@ namespace detail {
         return ret;
     }
 
-    static inline Size read_digits(const char *&fmt, char *buf) {
+    inline Size read_digits(const char *&fmt, char *buf) {
         Size ret = 0;
         for (; isdigit(*fmt); ++ret)
             *buf++ = *fmt++;
@@ -398,8 +398,7 @@ protected:
 
 namespace detail {
     template<typename R, typename T>
-    static inline Ptrdiff write_u(R &writer, const FormatSpec *fl,
-                                  bool neg, T val) {
+    inline Ptrdiff write_u(R &writer, const FormatSpec *fl, bool neg, T val) {
         char buf[20];
         Ptrdiff r = 0;
         Size n = 0;
@@ -460,17 +459,15 @@ namespace detail {
     using FmtRangeTest = decltype(test_fmt_range<T>(0));
 
     template<typename R, typename T>
-    static inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc,
-                                       bool, const char *fmt,
-                                       const T &item) {
+    inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc, bool,
+                                const char *fmt, const T &item) {
         return format_impl(writer, fmtn, esc, fmt, item);
     }
 
     template<typename R, typename T, typename U>
-    static inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc,
-                                       bool expandval,
-                                       const char *fmt,
-                                       const Pair<T, U> &pair) {
+    inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc,
+                                bool expandval, const char *fmt,
+                                const Pair<T, U> &pair) {
         if (expandval) {
             return format_impl(writer, fmtn, esc, fmt, pair.first,
                 pair.second);
@@ -479,12 +476,12 @@ namespace detail {
     }
 
     template<typename R, typename T>
-    static inline Ptrdiff write_range(R &writer, const FormatSpec *fl,
-                                      bool escape, bool expandval,
-                                      const char *sep, Size seplen,
-                                      const T &val,
-                                      EnableIf<FmtRangeTest<T>::value,
-                                               bool> = true) {
+    inline Ptrdiff write_range(R &writer, const FormatSpec *fl,
+                               bool escape, bool expandval,
+                               const char *sep, Size seplen,
+                               const T &val,
+                               EnableIf<FmtRangeTest<T>::value, bool>
+                                   = true) {
         auto range = octa::iter(val);
         if (range.empty()) return 0;
         Ptrdiff ret = 0;
@@ -510,10 +507,10 @@ namespace detail {
     }
 
     template<typename R, typename T>
-    static inline Ptrdiff write_range(R &, const FormatSpec *, bool, bool,
-                                      const char *, Size, const T &,
-                                      EnableIf<!FmtRangeTest<T>::value,
-                                               bool> = true) {
+    inline Ptrdiff write_range(R &, const FormatSpec *, bool, bool,
+                               const char *, Size, const T &,
+                               EnableIf<!FmtRangeTest<T>::value, bool>
+                                   = true) {
         assert(false && "invalid value for ranged format");
         return -1;
     }
@@ -539,7 +536,7 @@ namespace detail {
         nullptr, "\\\'"
     };
 
-    static inline const char *escape_fmt_char(char v, char quote) {
+    inline const char *escape_fmt_char(char v, char quote) {
         if ((v >= 0 && v < 0x20) || (v == quote)) {
             return fmt_escapes[Size(v)];
         } else if (v == 0x7F) {
@@ -548,7 +545,7 @@ namespace detail {
         return nullptr;
     }
 
-    static inline String escape_fmt_str(const char *val) {
+    inline String escape_fmt_str(const char *val) {
         String ret;
         ret.push('"');
         while (*val) {
@@ -808,8 +805,8 @@ namespace detail {
     };
 
     template<typename R, typename ...A>
-    static inline Ptrdiff format_impl(R &writer, Size &fmtn, bool escape,
-                                      const char *fmt, const A &...args) {
+    inline Ptrdiff format_impl(R &writer, Size &fmtn, bool escape,
+                               const char *fmt, const A &...args) {
         Size argidx = 1, retn = 0, twr = 0;
         Ptrdiff written = 0;
         detail::WriteSpec spec(fmt, escape);
@@ -871,8 +868,7 @@ namespace detail {
     }
 
     template<typename R, typename ...A>
-    static inline Ptrdiff format_impl(R &writer, Size &fmtn, bool,
-                                      const char *fmt) {
+    inline Ptrdiff format_impl(R &writer, Size &fmtn, bool, const char *fmt) {
         Size written = 0;
         detail::WriteSpec spec(fmt, false);
         if (spec.read_until_spec(writer, &written)) return -1;
@@ -882,8 +878,8 @@ namespace detail {
 } /* namespace detail */
 
 template<typename R, typename ...A>
-static inline Ptrdiff format(R &&writer, Size &fmtn, const char *fmt,
-                             const A &...args) {
+inline Ptrdiff format(R &&writer, Size &fmtn, const char *fmt,
+                      const A &...args) {
     return detail::format_impl(writer, fmtn, false, fmt, args...);
 }
 

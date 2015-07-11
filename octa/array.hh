@@ -99,6 +99,36 @@ TupleElement<I, Array<T, N>> &&get(Array<T, N> &&a) {
     return a[I];
 }
 
+template<typename T, Size N>
+inline bool operator==(const Array<T, N> &x, const Array<T, N> &y) {
+    return equal(x.iter(), y.iter());
+}
+
+template<typename T, Size N>
+inline bool operator!=(const Array<T, N> &x, const Array<T, N> &y) {
+    return !(x == y);
+}
+
+template<typename T, Size N>
+inline bool operator<(const Array<T, N> &x, const Array<T, N> &y) {
+    return lexicographical_compare(x.iter(), y.iter());
+}
+
+template<typename T, Size N>
+inline bool operator>(const Array<T, N> &x, const Array<T, N> &y) {
+    return (y < x);
+}
+
+template<typename T, Size N>
+inline bool operator<=(const Array<T, N> &x, const Array<T, N> &y) {
+    return !(y < x);
+}
+
+template<typename T, Size N>
+inline bool operator>=(const Array<T, N> &x, const Array<T, N> &y) {
+    return !(x < y);
+}
+
 } /* namespace octa */
 
 #endif
