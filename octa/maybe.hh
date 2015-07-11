@@ -240,7 +240,7 @@ public:
 
     void swap(Maybe &v) {
         if (this->p_engaged == v.p_engaged) {
-            if (this->p_engaged) octa::swap(this->p_value, v.p_value);
+            if (this->p_engaged) detail::swap_adl(this->p_value, v.p_value);
         } else {
             if (this->p_engaged) {
                 ::new(address_of(v.p_value)) Value(move(this->p_value));
@@ -249,7 +249,7 @@ public:
                 ::new(address_of(this->p_value)) Value(move(v.p_value));
                 v.p_value.~Value();
             }
-            octa::swap(this->p_engaged, v.p_engaged);
+            detail::swap_adl(this->p_engaged, v.p_engaged);
         }
     }
 

@@ -32,8 +32,8 @@ namespace detail {
             allocator_construct(alloc, &e, forward<U>(key), move(T()));
         }
         static inline void swap_elem(Element &a, Element &b) {
-            octa::swap(*((K *)&a.first), *((K *)&b.first));
-            octa::swap(*((T *)&a.second), *((T *)&b.second));
+            swap_adl(*((K *)&a.first), *((K *)&b.first));
+            swap_adl(*((T *)&a.second), *((T *)&b.second));
         }
     };
 

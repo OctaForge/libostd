@@ -114,7 +114,7 @@ namespace detail {
         }
 
         void swap(TupleLeaf &t) {
-            octa::swap(get(), t.get());
+            swap_adl(get(), t.get());
         }
 
         H &get() { return p_value; }
@@ -168,7 +168,7 @@ namespace detail {
         }
 
         void swap(TupleLeaf &t) {
-            octa::swap(get(), t.get());
+            swap_adl(get(), t.get());
         }
 
         H &get() { return (H &)*this; }

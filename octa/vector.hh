@@ -394,11 +394,11 @@ public:
     }
 
     void swap(Vector &v) {
-        octa::swap(p_len, v.p_len);
-        octa::swap(p_cap, v.p_cap);
-        octa::swap(p_buf.first(), v.p_buf.first());
+        detail::swap_adl(p_len, v.p_len);
+        detail::swap_adl(p_cap, v.p_cap);
+        detail::swap_adl(p_buf.first(), v.p_buf.first());
         if (AllocatorPropagateOnContainerSwap<A>::value)
-            octa::swap(p_buf.second(), v.p_buf.second());
+            detail::swap_adl(p_buf.second(), v.p_buf.second());
     }
 
     A get_allocator() const {

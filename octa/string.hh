@@ -505,7 +505,7 @@ struct ToString<T, EnableIf<detail::IterableTest<T>::value>> {
     String operator()(const T &v) const {
         String ret("{");
         ret += concat(octa::iter(v), ", ", ToString<
-            RemoveCv<RemoveReference<
+            RemoveConst<RemoveReference<
                 RangeReference<decltype(octa::iter(v))>
             >>
         >());

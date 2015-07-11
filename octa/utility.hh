@@ -56,13 +56,13 @@ namespace detail {
         static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
     };
 
-    template<typename T> inline void swap(T &a, T &b, EnableIf<
+    template<typename T> inline void swap_fb(T &a, T &b, EnableIf<
         detail::SwapTest<T>::value, bool
     > = true) {
         a.swap(b);
     }
 
-    template<typename T> inline void swap(T &a, T &b, EnableIf<
+    template<typename T> inline void swap_fb(T &a, T &b, EnableIf<
         !detail::SwapTest<T>::value, bool
     > = true) {
         T c(move(a));
@@ -72,12 +72,19 @@ namespace detail {
 }
 
 template<typename T> inline void swap(T &a, T &b) {
-   detail::swap(a, b);
+   detail::swap_fb(a, b);
 }
 
 template<typename T, Size N> inline void swap(T (&a)[N], T (&b)[N]) {
     for (Size i = 0; i < N; ++i) {
-        octa::swap(a[i], b[i]);
+        swap(a[i], b[i]);
+    }
+}
+
+namespace detail {
+    template<typename T> inline void swap_adl(T &a, T &b) {
+        using octa::swap;
+        swap(a, b);
     }
 }
 
@@ -134,8 +141,8 @@ struct Pair {
     }
 
     void swap(Pair &v) {
-        swap(first, v.first);
-        swap(second, v.second);
+        detail::swap_adl(first, v.first);
+        detail::swap_adl(second, v.second);
     }
 };
 
@@ -299,8 +306,8 @@ namespace detail {
         const U &second() const { return p_second; }
 
         void swap(CompressedPairBase &v) {
-            octa::swap(p_first, v.p_first);
-            octa::swap(p_second, v.p_second);
+            swap_adl(p_first, v.p_first);
+            swap_adl(p_second, v.p_second);
         }
     };
 
@@ -319,7 +326,7 @@ namespace detail {
         const U &second() const { return p_second; }
 
         void swap(CompressedPairBase &v) {
-            octa::swap(p_second, v.p_second);
+            swap_adl(p_second, v.p_second);
         }
     };
 
@@ -338,7 +345,7 @@ namespace detail {
         const U &second() const { return *this; }
 
         void swap(CompressedPairBase &v) {
-            octa::swap(p_first, v.p_first);
+            swap_adl(p_first, v.p_first);
         }
     };
 
