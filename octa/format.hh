@@ -399,21 +399,11 @@ protected:
 
 /* for cusotm container formatting */
 
-namespace detail {
-    template<typename T, typename U>
-    struct ToFmtTest {
-        template<typename TT, typename UU,
-            bool (TT::*)(UU &, const FormatSpec &) const
-        > struct Test {};
-        template<typename TT, typename UU>
-        static char test(Test<TT, UU, &TT::template to_format<UU>> *);
-        template<typename, typename> static int test(...);
-        static constexpr bool value = (sizeof(test<T, U>(0)) == sizeof(char));
-    };
-}
-
 template<typename T, typename R, typename = EnableIf<
-    detail::ToFmtTest<T, R>::value
+    IsSame<decltype(declval<T>().to_format(declval<R &>(),
+                                           declval<const FormatSpec &>())),
+           bool
+    >::value
 >> inline bool to_format(const T &v, R &writer, const FormatSpec &fs) {
     return v.to_format(writer, fs);
 }
