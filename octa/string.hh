@@ -651,7 +651,7 @@ typename ToString<T>::Result to_string(const T &v) {
 
 template<typename T>
 String to_string(std::initializer_list<T> init) {
-    return ToString<std::initializer_list<T>>()(init);
+    return to_string(iter(init));
 }
 
 } /* namespace octa */
