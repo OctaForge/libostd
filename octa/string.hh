@@ -500,7 +500,7 @@ struct ToString;
 
 template<typename T>
 struct ToString<T, EnableIf<detail::IterableTest<T>::value>> {
-    using Argument = T;
+    using Argument = RemoveCv<RemoveReference<T>>;
     using Result = String;
 
     String operator()(const T &v) const {
@@ -516,18 +516,8 @@ struct ToString<T, EnableIf<detail::IterableTest<T>::value>> {
 };
 
 template<typename T>
-struct ToString<T, EnableIf<IsScalar<T>::value>> {
-    using Argument = T;
-    using Result = String;
-
-    String operator()(const T &v) const {
-       return ToString<T>()(v);
-    }
-};
-
-template<typename T>
 struct ToString<T, EnableIf<detail::ToStringTest<T>::value>> {
-    using Argument = T;
+    using Argument = RemoveCv<RemoveReference<T>>;
     using Result = String;
 
     String operator()(const T &v) const {
