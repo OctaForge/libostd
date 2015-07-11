@@ -51,7 +51,7 @@ namespace detail {
     public:
         using Key = K;
         using Mapped = T;
-        using Size = Size;
+        using Size = octa::Size;
         using Difference = Ptrdiff;
         using Hasher = H;
         using KeyEqual = C;

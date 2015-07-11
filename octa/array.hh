@@ -16,7 +16,7 @@ namespace octa {
 
 template<typename T, Size N>
 struct Array {
-    using Size = Size;
+    using Size = octa::Size;
     using Difference = Ptrdiff;
     using Value = T;
     using Reference = T &;

@@ -18,14 +18,11 @@
 
 namespace octa {
 
-namespace detail {
-} /* namespace detail */
-
 template<typename T, typename A = Allocator<T>>
 class Vector {
     using VecPair = detail::CompressedPair<AllocatorPointer<A>, A>;
 
-    Size p_len, p_cap;
+    octa::Size p_len, p_cap;
     VecPair p_buf;
 
     void insert_base(Size idx, Size n) {
@@ -77,7 +74,7 @@ class Vector {
     }
 
 public:
-    using Size = Size;
+    using Size = octa::Size;
     using Difference = Ptrdiff;
     using Value = T;
     using Reference = T &;

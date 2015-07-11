@@ -483,7 +483,7 @@ private:
 
 namespace detail {
     template<typename T> struct BoxIf {
-        using Box = Box<T>;
+        using BoxType = Box<T>;
     };
 
     template<typename T> struct BoxIf<T[]> {
@@ -496,7 +496,7 @@ namespace detail {
 }
 
 template<typename T, typename ...A>
-typename detail::BoxIf<T>::Box make_box(A &&...args) {
+typename detail::BoxIf<T>::BoxType make_box(A &&...args) {
     return Box<T>(new T(forward<A>(args)...));
 }
 
@@ -529,7 +529,7 @@ template<> struct Allocator<const void> {
 };
 
 template<typename T> struct Allocator {
-    using Size = Size;
+    using Size = octa::Size;
     using Difference = Ptrdiff;
     using Value = T;
     using Reference = T &;
@@ -566,7 +566,7 @@ template<typename T> struct Allocator {
 };
 
 template<typename T> struct Allocator<const T> {
-    using Size = Size;
+    using Size = octa::Size;
     using Difference = Ptrdiff;
     using Value = const T;
     using Reference = const T &;

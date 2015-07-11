@@ -40,7 +40,7 @@ namespace detail {
 
     public:
         using Key = T;
-        using Size = Size;
+        using Size = octa::Size;
         using Difference = Ptrdiff;
         using Hasher = H;
         using KeyEqual = C;
