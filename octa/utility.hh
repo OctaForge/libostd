@@ -170,9 +170,6 @@ Pair<typename detail::MakePairRet<T>::Type,
 template<typename T, typename U>
 struct TupleSize<Pair<T, U>>: IntegralConstant<Size, 2> {};
 
-template<typename T, typename U>
-struct TupleSize<const Pair<T, U>>: IntegralConstant<Size, 2> {};
-
 namespace detail {
     template<typename T, typename U>
     struct TupleElementBase<0, Pair<T, U>> {
@@ -182,16 +179,6 @@ namespace detail {
     template<typename T, typename U>
     struct TupleElementBase<1, Pair<T, U>> {
         using Type = U;
-    };
-
-    template<typename T, typename U>
-    struct TupleElementBase<0, const Pair<T, U>> {
-        using Type = const T;
-    };
-
-    template<typename T, typename U>
-    struct TupleElementBase<1, const Pair<T, U>> {
-        using Type = const U;
     };
 
     template<Size> struct GetPair;

@@ -372,7 +372,7 @@ public:
             >
         >::value
     >> Tuple(AllocatorArg, const Alloc &a, T &&...t):
-        p_base(detail::MakeTupleIndices<sizeof...(T)>(),
+        p_base(allocator_arg, a, detail::MakeTupleIndices<sizeof...(T)>(),
                detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
                detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
                detail::MakeTupleTypes<Tuple, sizeof...(A), sizeof...(T)>(),

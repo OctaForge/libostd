@@ -11,6 +11,7 @@
 #include "octa/algorithm.hh"
 #include "octa/range.hh"
 #include "octa/string.hh"
+#include "octa/internal/tuple.hh"
 
 namespace octa {
 
@@ -74,6 +75,31 @@ struct Array {
 
     T p_buf[(N > 0) ? N : 1];
 };
+
+template<typename T, Size N>
+struct TupleSize<Array<T, N>>: IntegralConstant<Size, N> {};
+
+namespace detail {
+    template<Size I, typename T, Size N>
+    struct TupleElementBase<I, Array<T, N>> {
+        using Type = T;
+    };
+}
+
+template<Size I, typename T, Size N>
+TupleElement<I, Array<T, N>> &get(Array<T, N> &a) {
+    return a[I];
+}
+
+template<Size I, typename T, Size N>
+const TupleElement<I, Array<T, N>> &get(const Array<T, N> &a) {
+    return a[I];
+}
+
+template<Size I, typename T, Size N>
+TupleElement<I, Array<T, N>> &&get(Array<T, N> &&a) {
+    return a[I];
+}
 
 } /* namespace octa */
 
