@@ -277,10 +277,10 @@ class Tuple {
     friend TupleElement<I, Tuple<T...>> &get(Tuple<T...> &);
 
     template<Size I, typename ...T>
-    friend TupleElement<I, Tuple<T...>> &get(const Tuple<T...> &);
+    friend const TupleElement<I, Tuple<T...>> &get(const Tuple<T...> &);
 
     template<Size I, typename ...T>
-    friend TupleElement<I, Tuple<T...>> &get(Tuple<T...> &&);
+    friend TupleElement<I, Tuple<T...>> &&get(Tuple<T...> &&);
 
 public:
     template<bool D = true, typename = EnableIf<

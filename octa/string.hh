@@ -485,24 +485,24 @@ namespace detail {
         template<typename U> static  int test(...);
         static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
     };
+
+    template<typename T>
+    static True test_iterable(decltype(octa::iter(declval<T>())) *);
+    template<typename> static False test_iterable(...);
+
+    template<typename T>
+    using IterableTest = decltype(test_iterable<T>(0));
 }
 
-template<typename T> struct ToString {
+template<typename T, typename = void>
+struct ToString;
+
+template<typename T>
+struct ToString<T, EnableIf<detail::IterableTest<T>::value>> {
     using Argument = T;
     using Result = String;
 
-    template<typename U>
-    static String to_str(const U &v,
-        EnableIf<detail::ToStringTest<U>::value, bool> = true
-    ) {
-        return v.to_string();
-    }
-
-    template<typename U>
-    static String to_str(const U &v,
-        EnableIf<!detail::ToStringTest<U>::value &&
-            !IsScalar<U>::value, bool> = true
-    ) {
+    String operator()(const T &v) const {
         String ret("{");
         ret += concat(octa::iter(v), ", ", ToString<
             RemoveCv<RemoveReference<
@@ -512,19 +512,33 @@ template<typename T> struct ToString {
         ret += "}";
         return ret;
     }
+};
 
-    template<typename U>
-    static String to_str(const U &v,
-        EnableIf<!detail::ToStringTest<U>::value &&
-            IsScalar<U>::value, bool> = true
-    ) {
-        return ToString<U>()(v);
-    }
+template<typename T>
+struct ToString<T, EnableIf<IsScalar<T>::value>> {
+    using Argument = T;
+    using Result = String;
 
     String operator()(const T &v) const {
-        return to_str(v);
+       return ToString<T>()(v);
     }
 };
+
+template<typename T>
+struct ToString<T, EnableIf<detail::ToStringTest<T>::value>> {
+    using Argument = T;
+    using Result = String;
+
+    String operator()(const T &v) const {
+        return v.to_string();
+    }
+};
+
+template<typename T> struct ToString<const T, EnableIf<
+    !detail::IterableTest<T>::value &&
+    !detail::ToStringTest<T>::value &&
+    !IsScalar<T>::value
+>>: ToString<T> {};
 
 namespace detail {
     template<typename T>
@@ -637,10 +651,8 @@ template<typename T, typename U> struct ToString<Pair<T, U>> {
     }
 };
 
-template<typename T> struct ToString<const T>: ToString<T> {};
-
-template<typename T, typename = decltype(ToString<T>()(declval<T>()))>
-String to_string(const T &v) {
+template<typename T>
+typename ToString<T>::Result to_string(const T &v) {
     return ToString<T>()(v);
 }
 

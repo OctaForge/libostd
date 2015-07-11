@@ -14,6 +14,7 @@
 #include "octa/algorithm.hh"
 #include "octa/string.hh"
 #include "octa/utility.hh"
+#include "octa/internal/tuple.hh"
 
 namespace octa {
 
@@ -458,21 +459,46 @@ namespace detail {
     template<typename T>
     using FmtRangeTest = decltype(test_fmt_range<T>(0));
 
+    template<Size I>
+    struct FmtTupleUnpacker {
+        template<typename R, typename T, typename ...A>
+        static inline Ptrdiff unpack(R &writer, Size &fmtn, bool esc,
+                                     const char *fmt, const T &item,
+                                     const A &...args) {
+            return FmtTupleUnpacker<I - 1>::unpack(writer, fmtn, esc, fmt,
+                item, get<I - 1>(item), args...);
+        }
+    };
+
+    template<>
+    struct FmtTupleUnpacker<0> {
+        template<typename R, typename T, typename ...A>
+        static inline Ptrdiff unpack(R &writer, Size &fmtn, bool esc,
+                                     const char *fmt, const T &,
+                                     const A &...args) {
+            return format_impl(writer, fmtn, esc, fmt, args...);
+        }
+    };
+
     template<typename R, typename T>
     inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc, bool,
-                                const char *fmt, const T &item) {
+                                const char *fmt, const T &item,
+                                EnableIf<!IsTupleLike<T>::value, bool>
+                                    = true) {
         return format_impl(writer, fmtn, esc, fmt, item);
     }
 
-    template<typename R, typename T, typename U>
+    template<typename R, typename T>
     inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc,
                                 bool expandval, const char *fmt,
-                                const Pair<T, U> &pair) {
+                                const T &item,
+                                EnableIf<IsTupleLike<T>::value, bool>
+                                    = true) {
         if (expandval) {
-            return format_impl(writer, fmtn, esc, fmt, pair.first,
-                pair.second);
+            return FmtTupleUnpacker<TupleSize<T>::value>::unpack(writer,
+                fmtn, esc, fmt, item);
         }
-        return format_impl(writer, fmtn, esc, fmt, pair);
+        return format_impl(writer, fmtn, esc, fmt, item);
     }
 
     template<typename R, typename T>
@@ -515,9 +541,8 @@ namespace detail {
         return -1;
     }
 
-    template<typename T,
-        typename = decltype(octa::to_string(declval<T>()))
-    > static True test_fmt_tostr(int);
+    template<typename T>
+    static True test_fmt_tostr(decltype(octa::to_string(declval<T>())) *);
     template<typename> static False test_fmt_tostr(...);
 
     template<typename T>
@@ -756,7 +781,8 @@ namespace detail {
         /* generic failure case */
         template<typename R, typename T>
         Ptrdiff write(R &, bool, const T &, EnableIf<
-            !IsArithmetic<T>::value && !FmtTostrTest<T>::value, bool
+            !IsArithmetic<T>::value && !FmtTostrTest<T>::value &&
+            !FmtTofmtTest<T, FmtWriteRange<R>>::value, bool
         > = true) {
             assert(false && "value cannot be formatted");
             return -1;
