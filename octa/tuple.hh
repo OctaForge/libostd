@@ -439,6 +439,49 @@ inline Tuple<T &...> tie(T &...t) {
     return Tuple<T &...>(t...);
 }
 
+/* ignore */
+
+namespace detail {
+    struct Ignore {
+        template<typename T>
+        const Ignore &operator=(T &&) const { return *this; }
+    };
+}
+
+static const detail::Ignore ignore = detail::Ignore();
+
+/* make tuple */
+
+namespace detail {
+    template<typename T>
+    struct MakeTupleReturnType {
+        using Type = T;
+    };
+
+    template<typename T>
+    struct MakeTupleReturnType<ReferenceWrapper<T>> {
+        using Type = T &;
+    };
+
+    template<typename T>
+    struct MakeTupleReturn {
+        using Type = typename MakeTupleReturnType<Decay<T>>::Type;
+    };
+}
+
+template<typename ...T>
+inline Tuple<typename detail::MakeTupleReturn<T>::Type...>
+make_tuple(T &&...t) {
+    return Tuple<typename detail::MakeTupleReturn<T>::Type...>(forward<T>(t)...);
+}
+
+/* forward as tuple */
+
+template<typename ...T>
+inline Tuple<T &&...> forward_as_tuple(T &&...t) {
+    return Tuple<T &&...>(forward<T>(t)...);
+}
+
 } /* namespace octa */
 
 #endif
