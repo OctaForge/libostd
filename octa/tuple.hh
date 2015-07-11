@@ -480,6 +480,77 @@ inline Tuple<T &&...> forward_as_tuple(T &&...t) {
     return Tuple<T &&...>(forward<T>(t)...);
 }
 
+/* tuple relops */
+
+namespace detail {
+    template<Size I>
+    struct TupleEqual {
+        template<typename T, typename U>
+        bool operator()(const T &x, const U &y) {
+            return TupleEqual<I - 1>()(x, y) && (get<I>(x) == get<I>(y));
+        }
+    };
+
+    template<>
+    struct TupleEqual<0> {
+        template<typename T, typename U>
+        bool operator()(const T &, const U &) {
+            return true;
+        }
+    };
+}
+
+template<typename ...T, typename ...U>
+inline bool operator==(const Tuple<T...> &x, const Tuple<U...> &y) {
+    return detail::TupleEqual<sizeof...(T)>(x, y);
+}
+
+template<typename ...T, typename ...U>
+inline bool operator!=(const Tuple<T...> &x, const Tuple<U...> &y) {
+    return !(x == y);
+}
+
+namespace detail {
+    template<Size I>
+    struct TupleLess {
+        template<typename T, typename U>
+        bool operator()(const T &x, const U &y) {
+            Size J = TupleSize<T>::value - I;
+            if (get<J>(x) < get<J>(y)) return true;
+            if (get<J>(y) < get<J>(x)) return false;
+            return TupleLess<I - 1>()(x, y);
+        }
+    };
+
+    template<>
+    struct TupleLess<0> {
+        template<typename T, typename U>
+        bool operator()(const T &, const U &) {
+            return true;
+        }
+    };
+}
+
+template<typename ...T, typename ...U>
+inline bool operator<(const Tuple<T...> &x, const Tuple<U...> &y) {
+    return detail::TupleLess<sizeof...(T)>(x, y);
+}
+
+template<typename ...T, typename ...U>
+inline bool operator>(const Tuple<T...> &x, const Tuple<U...> &y) {
+    return y < x;
+}
+
+template<typename ...T, typename ...U>
+inline bool operator<=(const Tuple<T...> &x, const Tuple<U...> &y) {
+    return !(y < x);
+}
+
+template<typename ...T, typename ...U>
+inline bool operator>=(const Tuple<T...> &x, const Tuple<U...> &y) {
+    return !(x < y);
+}
+
 } /* namespace octa */
 
 #endif
