@@ -79,12 +79,10 @@ struct Array {
 template<typename T, Size N>
 struct TupleSize<Array<T, N>>: IntegralConstant<Size, N> {};
 
-namespace detail {
-    template<Size I, typename T, Size N>
-    struct TupleElementBase<I, Array<T, N>> {
-        using Type = T;
-    };
-}
+template<Size I, typename T, Size N>
+struct TupleElementBase<I, Array<T, N>> {
+    using Type = T;
+};
 
 template<Size I, typename T, Size N>
 TupleElement<I, Array<T, N>> &get(Array<T, N> &a) {

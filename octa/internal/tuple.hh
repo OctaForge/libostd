@@ -26,24 +26,22 @@ template<typename T> struct TupleSize<const volatile T>: public TupleSize<T> {};
 
 /* tuple element */
 
-namespace detail {
-    template<Size I, typename T> struct TupleElementBase;
-    template<Size I, typename T>
-    struct TupleElementBase<I, const T> {
-        using Type = AddConst<typename TupleElementBase<I, T>::Type>;
-    };
-    template<Size I, typename T>
-    struct TupleElementBase<I, volatile T> {
-        using Type = AddVolatile<typename TupleElementBase<I, T>::Type>;
-    };
-    template<Size I, typename T>
-    struct TupleElementBase<I, const volatile T> {
-        using Type = AddCv<typename TupleElementBase<I, T>::Type>;
-    };
-}
+template<Size I, typename T> struct TupleElementBase;
+template<Size I, typename T>
+struct TupleElementBase<I, const T> {
+    using Type = AddConst<typename TupleElementBase<I, T>::Type>;
+};
+template<Size I, typename T>
+struct TupleElementBase<I, volatile T> {
+    using Type = AddVolatile<typename TupleElementBase<I, T>::Type>;
+};
+template<Size I, typename T>
+struct TupleElementBase<I, const volatile T> {
+    using Type = AddCv<typename TupleElementBase<I, T>::Type>;
+};
 
 template<Size I, typename T>
-using TupleElement = typename detail::TupleElementBase<I, T>::Type;
+using TupleElement = typename TupleElementBase<I, T>::Type;
 
 /* is tuple-like */
 
@@ -123,25 +121,26 @@ namespace detail {
 
 namespace detail {
     template<typename ...T> struct TupleTypes {};
-
-    template<Size I> struct TupleElementBase<I, TupleTypes<>> {
-    public:
-        static_assert(I == 0, "TupleElement index out of range");
-        static_assert(I != 0, "TupleElement index out of range");
-    };
-
-    template<typename H, typename ...T>
-    struct TupleElementBase<0, TupleTypes<H, T...>> {
-    public:
-        using Type = H;
-    };
-
-    template<Size I, typename H, typename ...T>
-    struct TupleElementBase<I, TupleTypes<H, T...>> {
-    public:
-        using Type = typename TupleElementBase<I - 1, TupleTypes<T...>>::Type;
-    };
 }
+
+template<Size I> struct TupleElementBase<I, detail::TupleTypes<>> {
+public:
+    static_assert(I == 0, "TupleElement index out of range");
+    static_assert(I != 0, "TupleElement index out of range");
+};
+
+template<typename H, typename ...T>
+struct TupleElementBase<0, detail::TupleTypes<H, T...>> {
+public:
+    using Type = H;
+};
+
+template<Size I, typename H, typename ...T>
+struct TupleElementBase<I, detail::TupleTypes<H, T...>> {
+public:
+    using Type = typename TupleElementBase<I - 1,
+        detail::TupleTypes<T...>>::Type;
+};
 
 template<typename ...T> struct TupleSize<detail::TupleTypes<T...>>:
     IntegralConstant<Size, sizeof...(T)> {};

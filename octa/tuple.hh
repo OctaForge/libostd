@@ -22,12 +22,10 @@ template<typename ...T> struct TupleSize<Tuple<T...>>:
 
 /* tuple element */
 
-namespace detail {
-    template<Size I, typename ...T>
-    struct TupleElementBase<I, Tuple<T...>> {
-        using Type = typename TupleElementBase<I, TupleTypes<T...>>::Type;
-    };
-}
+template<Size I, typename ...T>
+struct TupleElementBase<I, Tuple<T...>> {
+    using Type = typename TupleElementBase<I, detail::TupleTypes<T...>>::Type;
+};
 
 /* tuple leaf */
 
