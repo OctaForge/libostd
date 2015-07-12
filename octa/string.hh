@@ -583,10 +583,10 @@ inline bool operator>=(const char *lhs, const StringBase<T, A> &rhs) {
     return !(lhs < rhs);
 }
 
-template<typename T, typename F, typename S = const char *,
-         typename A = typename String::Allocator>
-AnyString<A> concat(const T &v, const S &sep, F func) {
-    AnyString<A> ret;
+template<typename A, typename T, typename F, typename S = const char *>
+AnyString<A> concat(AllocatorArg, const A &alloc, const T &v, const S &sep,
+                    F func) {
+    AnyString<A> ret(alloc);
     auto range = octa::iter(v);
     if (range.empty()) return ret;
     for (;;) {
@@ -598,10 +598,10 @@ AnyString<A> concat(const T &v, const S &sep, F func) {
     return ret;
 }
 
-template<typename T, typename S = const char *,
-         typename A = typename String::Allocator>
-AnyString<A> concat(const T &v, const S &sep = " ") {
-    AnyString<A> ret;
+template<typename A, typename T, typename S = const char *>
+AnyString<A> concat(AllocatorArg, const A &alloc, const T &v,
+                    const S &sep = " ") {
+    AnyString<A> ret(alloc);
     auto range = octa::iter(v);
     if (range.empty()) return ret;
     for (;;) {
@@ -613,15 +613,35 @@ AnyString<A> concat(const T &v, const S &sep = " ") {
     return ret;
 }
 
-template<typename T, typename F, typename S = const char *,
-         typename A = typename String::Allocator>
-AnyString<A> concat(std::initializer_list<T> v, const S &sep, F func) {
+template<typename T, typename F, typename S = const char *>
+String concat(const T &v, const S &sep, F func) {
+    return concat(allocator_arg, typename String::Allocator(), v, sep, func);
+}
+
+template<typename T, typename S = const char *>
+String concat(const T &v, const S &sep = " ") {
+    return concat(allocator_arg, typename String::Allocator(), v, sep);
+}
+
+template<typename A, typename T, typename F, typename S = const char *>
+AnyString<A> concat(AllocatorArg, const A &alloc,
+                    std::initializer_list<T> v, const S &sep, F func) {
+    return concat(allocator_arg, alloc, octa::iter(v), sep, func);
+}
+
+template<typename A, typename T, typename S = const char *>
+AnyString<A> concat(AllocatorArg, const A &alloc,
+                    std::initializer_list<T> v, const S &sep = " ") {
+    return concat(allocator_arg, alloc, octa::iter(v), sep);
+}
+
+template<typename T, typename F, typename S = const char *>
+String concat(std::initializer_list<T> v, const S &sep, F func) {
     return concat(octa::iter(v), sep, func);
 }
 
-template<typename T, typename S = const char *,
-         typename A = typename String::Allocator>
-AnyString<A> concat(std::initializer_list<T> v, const S &sep = " ") {
+template<typename T, typename S = const char *>
+String concat(std::initializer_list<T> v, const S &sep = " ") {
     return concat(octa::iter(v), sep);
 }
 
