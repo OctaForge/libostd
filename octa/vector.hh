@@ -89,6 +89,7 @@ public:
 
     explicit Vector(Size n, const T &val = T(),
     const A &al = A()): Vector(al) {
+        if (!n) return;
         p_buf.first() = allocator_allocate(p_buf.second(), n);
         p_len = p_cap = n;
         Pointer cur = p_buf.first(), last = p_buf.first() + n;
@@ -115,7 +116,7 @@ public:
         v.p_len = v.p_cap = 0;
     }
 
-    Vector(Vector &&v, const A &a): p_buf(nullptr, a) {
+    Vector(Vector &&v, const A &a): p_len(0), p_cap(0), p_buf(nullptr, a) {
         if (a != v.p_buf.second()) {
             reserve(v.p_cap);
             p_len = v.p_len;
@@ -176,7 +177,7 @@ public:
         if (this == &v) return *this;
         clear();
         if (AllocatorPropagateOnContainerCopyAssignment<A>::value) {
-            if (p_buf.second() != v.p_buf.second()) {
+            if (p_buf.second() != v.p_buf.second() && p_cap) {
                 allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
                 p_cap = 0;
             }
@@ -190,7 +191,8 @@ public:
 
     Vector &operator=(Vector &&v) {
         clear();
-        allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
+        if (p_buf.first())
+            allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
         if (AllocatorPropagateOnContainerMoveAssignment<A>::value)
             p_buf.second() = v.p_buf.second();
         p_len = v.p_len;
@@ -228,6 +230,10 @@ public:
     }
 
     void resize(Size n, const T &v = T()) {
+        if (!n) {
+            clear();
+            return;
+        }
         Size l = p_len;
         reserve(n);
         p_len = n;
