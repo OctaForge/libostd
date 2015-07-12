@@ -412,6 +412,44 @@ public:
     }
 };
 
+template<typename T, typename A>
+inline bool operator==(const Vector<T, A> &x, const Vector<T, A> &y) {
+    return equal(x.iter(), y.iter());
+}
+
+template<typename T, typename A>
+inline bool operator!=(const Vector<T, A> &x, const Vector<T, A> &y) {
+    return !(x == y);
+}
+
+template<typename T, typename A>
+inline bool operator<(const Vector<T, A> &x, const Vector<T, A> &y) {
+    using Range = typename Vector<T, A>::Range;
+    Range range1 = x.iter(), range2 = y.iter();
+    while (!range1.empty() && !range2.empty()) {
+        if (range1.front() < range2.front()) return true;
+        if (range2.front() < range1.front()) return false;
+        range1.pop_front();
+        range2.pop_front();
+    }
+    return (range1.empty() && !range2.empty());
+}
+
+template<typename T, typename A>
+inline bool operator>(const Vector<T, A> &x, const Vector<T, A> &y) {
+    return (y < x);
+}
+
+template<typename T, typename A>
+inline bool operator<=(const Vector<T, A> &x, const Vector<T, A> &y) {
+    return !(y < x);
+}
+
+template<typename T, typename A>
+inline bool operator>=(const Vector<T, A> &x, const Vector<T, A> &y) {
+    return !(x < y);
+}
+
 } /* namespace octa */
 
 #endif
