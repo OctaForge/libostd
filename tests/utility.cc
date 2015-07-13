@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <string.h>
-#include "octa/utility.hh"
-#include "octa/string.hh"
+#include "ostd/utility.hh"
+#include "ostd/string.hh"
 
 using namespace ostd;
 

@@ -3,18 +3,18 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_FORMAT_HH
-#define OCTA_FORMAT_HH
+#ifndef OSTD_FORMAT_HH
+#define OSTD_FORMAT_HH
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <assert.h>
 
-#include "octa/algorithm.hh"
-#include "octa/string.hh"
-#include "octa/utility.hh"
-#include "octa/internal/tuple.hh"
+#include "ostd/algorithm.hh"
+#include "ostd/string.hh"
+#include "ostd/utility.hh"
+#include "ostd/internal/tuple.hh"
 
 namespace ostd {
 

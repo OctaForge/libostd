@@ -3,15 +3,15 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_IO_HH
-#define OCTA_IO_HH
+#ifndef OSTD_IO_HH
+#define OSTD_IO_HH
 
 #include <stdio.h>
 
-#include "octa/platform.hh"
-#include "octa/string.hh"
-#include "octa/stream.hh"
-#include "octa/format.hh"
+#include "ostd/platform.hh"
+#include "ostd/string.hh"
+#include "ostd/stream.hh"
+#include "ostd/format.hh"
 
 namespace ostd {
 
@@ -87,7 +87,7 @@ struct FileStream: Stream {
     }
 
     bool seek(StreamOffset pos, StreamSeek whence = StreamSeek::set) {
-#ifndef OCTA_PLATFORM_WIN32
+#ifndef OSTD_PLATFORM_WIN32
         return fseeko(p_f, pos, int(whence)) >= 0;
 #else
         return _fseeki64(p_f, pos, int(whence)) >= 0;
@@ -95,7 +95,7 @@ struct FileStream: Stream {
     }
 
     StreamOffset tell() const {
-#ifndef OCTA_PLATFORM_WIN32
+#ifndef OSTD_PLATFORM_WIN32
         return ftello(p_f);
 #else
         return _ftelli64(p_f);

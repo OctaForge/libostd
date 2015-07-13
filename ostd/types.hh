@@ -3,8 +3,8 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_TYPES_HH
-#define OCTA_TYPES_HH
+#ifndef OSTD_TYPES_HH
+#define OSTD_TYPES_HH
 
 #include <stdint.h>
 #include <stddef.h>

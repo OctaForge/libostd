@@ -3,15 +3,15 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_ARRAY_HH
-#define OCTA_ARRAY_HH
+#ifndef OSTD_ARRAY_HH
+#define OSTD_ARRAY_HH
 
 #include <stddef.h>
 
-#include "octa/algorithm.hh"
-#include "octa/range.hh"
-#include "octa/string.hh"
-#include "octa/internal/tuple.hh"
+#include "ostd/algorithm.hh"
+#include "ostd/range.hh"
+#include "ostd/string.hh"
+#include "ostd/internal/tuple.hh"
 
 namespace ostd {
 

@@ -3,15 +3,15 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_STRING_HH
-#define OCTA_STRING_HH
+#ifndef OSTD_STRING_HH
+#define OSTD_STRING_HH
 
 #include <stdio.h>
 #include <stddef.h>
 
-#include "octa/utility.hh"
-#include "octa/range.hh"
-#include "octa/vector.hh"
+#include "ostd/utility.hh"
+#include "ostd/range.hh"
+#include "ostd/vector.hh"
 
 namespace ostd {
 static constexpr Size npos = -1;
@@ -729,7 +729,7 @@ template<> struct ToString<char> {
     }
 };
 
-#define OCTA_TOSTR_NUM(T, fmt) \
+#define OSTD_TOSTR_NUM(T, fmt) \
 template<> struct ToString<T> { \
     using Argument = T; \
     using Result = String; \
@@ -740,21 +740,21 @@ template<> struct ToString<T> { \
     } \
 };
 
-OCTA_TOSTR_NUM(sbyte, "%d")
-OCTA_TOSTR_NUM(int, "%d")
-OCTA_TOSTR_NUM(int &, "%d")
-OCTA_TOSTR_NUM(long, "%ld")
-OCTA_TOSTR_NUM(float, "%f")
-OCTA_TOSTR_NUM(double, "%f")
+OSTD_TOSTR_NUM(sbyte, "%d")
+OSTD_TOSTR_NUM(int, "%d")
+OSTD_TOSTR_NUM(int &, "%d")
+OSTD_TOSTR_NUM(long, "%ld")
+OSTD_TOSTR_NUM(float, "%f")
+OSTD_TOSTR_NUM(double, "%f")
 
-OCTA_TOSTR_NUM(byte, "%u")
-OCTA_TOSTR_NUM(uint, "%u")
-OCTA_TOSTR_NUM(ulong, "%lu")
-OCTA_TOSTR_NUM(llong, "%lld")
-OCTA_TOSTR_NUM(ullong, "%llu")
-OCTA_TOSTR_NUM(ldouble, "%Lf")
+OSTD_TOSTR_NUM(byte, "%u")
+OSTD_TOSTR_NUM(uint, "%u")
+OSTD_TOSTR_NUM(ulong, "%lu")
+OSTD_TOSTR_NUM(llong, "%lld")
+OSTD_TOSTR_NUM(ullong, "%llu")
+OSTD_TOSTR_NUM(ldouble, "%Lf")
 
-#undef OCTA_TOSTR_NUM
+#undef OSTD_TOSTR_NUM
 
 template<typename T> struct ToString<T *> {
     using Argument = T *;

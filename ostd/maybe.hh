@@ -3,15 +3,15 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_MAYBE_HH
-#define OCTA_MAYBE_HH
+#ifndef OSTD_MAYBE_HH
+#define OSTD_MAYBE_HH
 
-#include "octa/types.hh"
-#include "octa/type_traits.hh"
-#include "octa/memory.hh"
-#include "octa/utility.hh"
-#include "octa/initializer_list.hh"
-#include "octa/functional.hh"
+#include "ostd/types.hh"
+#include "ostd/type_traits.hh"
+#include "ostd/memory.hh"
+#include "ostd/utility.hh"
+#include "ostd/initializer_list.hh"
+#include "ostd/functional.hh"
 
 namespace ostd {
 

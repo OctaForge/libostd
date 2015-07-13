@@ -3,15 +3,15 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_ALGORITHM_HH
-#define OCTA_ALGORITHM_HH
+#ifndef OSTD_ALGORITHM_HH
+#define OSTD_ALGORITHM_HH
 
 #include <math.h>
 
-#include "octa/functional.hh"
-#include "octa/range.hh"
-#include "octa/utility.hh"
-#include "octa/initializer_list.hh"
+#include "ostd/functional.hh"
+#include "ostd/range.hh"
+#include "ostd/utility.hh"
+#include "ostd/initializer_list.hh"
 
 namespace ostd {
 

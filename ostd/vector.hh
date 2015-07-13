@@ -3,18 +3,18 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_VECTOR_HH
-#define OCTA_VECTOR_HH
+#ifndef OSTD_VECTOR_HH
+#define OSTD_VECTOR_HH
 
 #include <string.h>
 #include <stddef.h>
 
-#include "octa/type_traits.hh"
-#include "octa/utility.hh"
-#include "octa/range.hh"
-#include "octa/algorithm.hh"
-#include "octa/initializer_list.hh"
-#include "octa/memory.hh"
+#include "ostd/type_traits.hh"
+#include "ostd/utility.hh"
+#include "ostd/range.hh"
+#include "ostd/algorithm.hh"
+#include "ostd/initializer_list.hh"
+#include "ostd/memory.hh"
 
 namespace ostd {
 

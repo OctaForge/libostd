@@ -3,14 +3,14 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_INITIALIZER_LIST_HH
-#define OCTA_INITIALIZER_LIST_HH
+#ifndef OSTD_INITIALIZER_LIST_HH
+#define OSTD_INITIALIZER_LIST_HH
 
 #include <stddef.h>
 
-#include "octa/range.hh"
+#include "ostd/range.hh"
 
-#ifndef OCTA_ALLOW_CXXSTD
+#ifndef OSTD_ALLOW_CXXSTD
 /* must be in std namespace otherwise the compiler won't know about it */
 namespace std {
 

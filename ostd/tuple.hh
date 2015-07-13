@@ -3,15 +3,15 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_TUPLE_HH
-#define OCTA_TUPLE_HH
+#ifndef OSTD_TUPLE_HH
+#define OSTD_TUPLE_HH
 
-#include "octa/internal/tuple.hh"
+#include "ostd/internal/tuple.hh"
 
-#include "octa/types.hh"
-#include "octa/type_traits.hh"
-#include "octa/memory.hh"
-#include "octa/utility.hh"
+#include "ostd/types.hh"
+#include "ostd/type_traits.hh"
+#include "ostd/memory.hh"
+#include "ostd/utility.hh"
 
 namespace ostd {
 

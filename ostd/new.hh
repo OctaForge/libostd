@@ -3,11 +3,11 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_NEW_HH
-#define OCTA_NEW_HH
+#ifndef OSTD_NEW_HH
+#define OSTD_NEW_HH
 
-#ifndef OCTA_ALLOW_CXXSTD
-#include "octa/types.hh"
+#ifndef OSTD_ALLOW_CXXSTD
+#include "ostd/types.hh"
 
 inline void *operator new     (ostd::Size, void *p) { return p; }
 inline void *operator new   [](ostd::Size, void *p) { return p; }

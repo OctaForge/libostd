@@ -3,14 +3,14 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_MEMORY_HH
-#define OCTA_MEMORY_HH
+#ifndef OSTD_MEMORY_HH
+#define OSTD_MEMORY_HH
 
 #include <stddef.h>
 
-#include "octa/new.hh"
-#include "octa/utility.hh"
-#include "octa/type_traits.hh"
+#include "ostd/new.hh"
+#include "ostd/utility.hh"
+#include "ostd/type_traits.hh"
 
 namespace ostd {
 /* address of */

@@ -3,13 +3,13 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OCTA_UTILITY_HH
-#define OCTA_UTILITY_HH
+#ifndef OSTD_UTILITY_HH
+#define OSTD_UTILITY_HH
 
 #include <stddef.h>
 
-#include "octa/type_traits.hh"
-#include "octa/internal/tuple.hh"
+#include "ostd/type_traits.hh"
+#include "ostd/internal/tuple.hh"
 
 namespace ostd {
 
