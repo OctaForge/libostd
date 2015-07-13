@@ -14,7 +14,7 @@
 #include "octa/utility.hh"
 #include "octa/type_traits.hh"
 
-namespace octa {
+namespace ostd {
 
 /* basic function objects */
 
@@ -797,7 +797,7 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
         f.p_stor.manager->call_move_and_destroyf(tmp, move(f.p_stor));
         p_stor.manager->call_move_and_destroyf(f.p_stor, move(p_stor));
         tmp.manager->call_move_and_destroyf(p_stor, move(tmp));
-        octa::swap(p_call, f.p_call);
+        ostd::swap(p_call, f.p_call);
     }
 
     operator bool() const { return p_call != nullptr; }
@@ -906,6 +906,6 @@ namespace detail {
 template<typename F> using FunctionMakeDefaultConstructible
     = typename detail::DcFuncType<F>::Type;
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

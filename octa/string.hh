@@ -13,7 +13,7 @@
 #include "octa/range.hh"
 #include "octa/vector.hh"
 
-namespace octa {
+namespace ostd {
 static constexpr Size npos = -1;
 
 template<typename T, typename A = Allocator<T>> class StringBase;
@@ -144,7 +144,7 @@ template<typename T, typename A>
 class StringBase {
     using StrPair = detail::CompressedPair<AllocatorPointer<A>, A>;
 
-    octa::Size p_len, p_cap;
+    ostd::Size p_len, p_cap;
     StrPair p_buf;
 
     template<typename R>
@@ -178,7 +178,7 @@ class StringBase {
     }
 
 public:
-    using Size = octa::Size;
+    using Size = ostd::Size;
     using Difference = Ptrdiff;
     using Value = T;
     using Reference = T &;
@@ -587,7 +587,7 @@ template<typename A, typename T, typename F, typename S = const char *>
 AnyString<A> concat(AllocatorArg, const A &alloc, const T &v, const S &sep,
                     F func) {
     AnyString<A> ret(alloc);
-    auto range = octa::iter(v);
+    auto range = ostd::iter(v);
     if (range.empty()) return ret;
     for (;;) {
         ret += func(range.front());
@@ -602,7 +602,7 @@ template<typename A, typename T, typename S = const char *>
 AnyString<A> concat(AllocatorArg, const A &alloc, const T &v,
                     const S &sep = " ") {
     AnyString<A> ret(alloc);
-    auto range = octa::iter(v);
+    auto range = ostd::iter(v);
     if (range.empty()) return ret;
     for (;;) {
         ret += range.front();
@@ -626,23 +626,23 @@ String concat(const T &v, const S &sep = " ") {
 template<typename A, typename T, typename F, typename S = const char *>
 AnyString<A> concat(AllocatorArg, const A &alloc,
                     std::initializer_list<T> v, const S &sep, F func) {
-    return concat(allocator_arg, alloc, octa::iter(v), sep, func);
+    return concat(allocator_arg, alloc, ostd::iter(v), sep, func);
 }
 
 template<typename A, typename T, typename S = const char *>
 AnyString<A> concat(AllocatorArg, const A &alloc,
                     std::initializer_list<T> v, const S &sep = " ") {
-    return concat(allocator_arg, alloc, octa::iter(v), sep);
+    return concat(allocator_arg, alloc, ostd::iter(v), sep);
 }
 
 template<typename T, typename F, typename S = const char *>
 String concat(std::initializer_list<T> v, const S &sep, F func) {
-    return concat(octa::iter(v), sep, func);
+    return concat(ostd::iter(v), sep, func);
 }
 
 template<typename T, typename S = const char *>
 String concat(std::initializer_list<T> v, const S &sep = " ") {
-    return concat(octa::iter(v), sep);
+    return concat(ostd::iter(v), sep);
 }
 
 namespace detail {
@@ -656,7 +656,7 @@ namespace detail {
     using ToStringTest = decltype(test_tostring<T>(0));
 
     template<typename T>
-    True test_iterable(decltype(octa::iter(declval<T>())) *);
+    True test_iterable(decltype(ostd::iter(declval<T>())) *);
     template<typename> static False test_iterable(...);
 
     template<typename T>
@@ -673,9 +673,9 @@ struct ToString<T, EnableIf<detail::IterableTest<T>::value>> {
 
     String operator()(const T &v) const {
         String ret("{");
-        ret += concat(octa::iter(v), ", ", ToString<
+        ret += concat(ostd::iter(v), ", ", ToString<
             RemoveConst<RemoveReference<
-                RangeReference<decltype(octa::iter(v))>
+                RangeReference<decltype(ostd::iter(v))>
             >>
         >());
         ret += "}";
@@ -821,6 +821,6 @@ String to_string(std::initializer_list<T> init) {
     return to_string(iter(init));
 }
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

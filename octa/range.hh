@@ -14,7 +14,7 @@
 #include "octa/utility.hh"
 #include "octa/type_traits.hh"
 
-namespace octa {
+namespace ostd {
 
 struct InputRangeTag {};
 struct OutputRangeTag {};
@@ -1182,6 +1182,6 @@ AppenderRange<T> appender(T &&v) {
 // range of
 template<typename T> using RangeOf = decltype(iter(declval<T>()));
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

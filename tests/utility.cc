@@ -3,7 +3,7 @@
 #include "octa/utility.hh"
 #include "octa/string.hh"
 
-using namespace octa;
+using namespace ostd;
 
 struct Foo {
     int x;

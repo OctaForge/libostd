@@ -10,7 +10,7 @@
 #include "octa/types.hh"
 #include "octa/type_traits.hh"
 
-namespace octa {
+namespace ostd {
 
 template<typename ...A> class Tuple;
 template<typename T, typename U> struct Pair;
@@ -276,6 +276,6 @@ namespace detail {
     > {};
 }
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

@@ -16,13 +16,13 @@
 #include "octa/initializer_list.hh"
 #include "octa/memory.hh"
 
-namespace octa {
+namespace ostd {
 
 template<typename T, typename A = Allocator<T>>
 class Vector {
     using VecPair = detail::CompressedPair<AllocatorPointer<A>, A>;
 
-    octa::Size p_len, p_cap;
+    ostd::Size p_len, p_cap;
     VecPair p_buf;
 
     void insert_base(Size idx, Size n) {
@@ -74,7 +74,7 @@ class Vector {
     }
 
 public:
-    using Size = octa::Size;
+    using Size = ostd::Size;
     using Difference = Ptrdiff;
     using Value = T;
     using Reference = T &;
@@ -382,7 +382,7 @@ public:
     }
 
     Range insert(Size idx, InitializerList<T> il) {
-        return insert_range(idx, octa::iter(il));
+        return insert_range(idx, ostd::iter(il));
     }
 
     Range iter() {
@@ -450,6 +450,6 @@ inline bool operator>=(const Vector<T, A> &x, const Vector<T, A> &y) {
     return !(x < y);
 }
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

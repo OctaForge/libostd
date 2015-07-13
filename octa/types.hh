@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-namespace octa {
+namespace ostd {
 
 /* "builtin" types */
 

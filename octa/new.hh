@@ -9,8 +9,8 @@
 #ifndef OCTA_ALLOW_CXXSTD
 #include "octa/types.hh"
 
-inline void *operator new     (octa::Size, void *p) { return p; }
-inline void *operator new   [](octa::Size, void *p) { return p; }
+inline void *operator new     (ostd::Size, void *p) { return p; }
+inline void *operator new   [](ostd::Size, void *p) { return p; }
 inline void  operator delete  (void *, void *)  {}
 inline void  operator delete[](void *, void *)  {}
 #else

@@ -13,7 +13,7 @@
 #include "octa/stream.hh"
 #include "octa/format.hh"
 
-namespace octa {
+namespace ostd {
 
 enum class StreamMode {
     read, write, append,
@@ -125,8 +125,8 @@ struct FileStream: Stream {
     }
 
     void swap(FileStream &s) {
-        octa::swap(p_f, s.p_f);
-        octa::swap(p_owned, s.p_owned);
+        ostd::swap(p_f, s.p_f);
+        ostd::swap(p_owned, s.p_owned);
     }
 
     FILE *get_file() { return p_f; }
@@ -153,7 +153,7 @@ inline void write(const AnyString<A> &s) {
 
 template<typename T>
 inline void write(const T &v) {
-    write(octa::to_string(v));
+    write(ostd::to_string(v));
 }
 
 template<typename T, typename ...A>
@@ -175,7 +175,7 @@ inline void writeln(const AnyString<A> &s) {
 
 template<typename T>
 inline void writeln(const T &v) {
-    writeln(octa::to_string(v));
+    writeln(ostd::to_string(v));
 }
 
 template<typename T, typename ...A>
@@ -231,6 +231,6 @@ inline void writefln(const AnyString<AL> &fmt,
     putc('\n', ::stdout);
 }
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

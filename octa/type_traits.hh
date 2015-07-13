@@ -10,7 +10,7 @@
 
 #include "octa/types.hh"
 
-namespace octa {
+namespace ostd {
 /* forward declarations */
 
 namespace detail {
@@ -1235,6 +1235,6 @@ namespace detail {
 template<typename T>
 using UnderlyingType = typename detail::UnderlyingTypeBase<T>::Type;
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

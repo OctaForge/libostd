@@ -13,7 +13,7 @@
 #include "octa/memory.hh"
 #include "octa/utility.hh"
 
-namespace octa {
+namespace ostd {
 
 /* tuple size */
 
@@ -556,6 +556,6 @@ inline bool operator>=(const Tuple<T...> &x, const Tuple<U...> &y) {
 template<typename ...T, typename A>
 struct UsesAllocator<Tuple<T...>, A>: True {};
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

@@ -3,7 +3,7 @@
 #include "octa/array.hh"
 #include "octa/string.hh"
 
-using namespace octa;
+using namespace ostd;
 
 int main() {
     Array<int, 5> x = { 2, 4, 8, 16, 32 };

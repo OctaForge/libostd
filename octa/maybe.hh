@@ -13,7 +13,7 @@
 #include "octa/initializer_list.hh"
 #include "octa/functional.hh"
 
-namespace octa {
+namespace ostd {
 
 struct InPlace {};
 constexpr InPlace in_place = InPlace();
@@ -254,7 +254,7 @@ public:
     }
 
     Size to_hash() const {
-        return this->p_engaged ? octa::ToHash<T>()(this->p_value) : 0;
+        return this->p_engaged ? ostd::ToHash<T>()(this->p_value) : 0;
     }
 };
 
@@ -421,6 +421,6 @@ inline constexpr Maybe<Decay<T>> make_maybe(T &&v) {
     return Maybe<Decay<T>>(forward<T>(v));
 }
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

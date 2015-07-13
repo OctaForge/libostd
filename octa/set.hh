@@ -14,7 +14,7 @@
 
 #include "octa/internal/hashtable.hh"
 
-namespace octa {
+namespace ostd {
 
 namespace detail {
     template<typename T, typename A> struct SetBase {
@@ -40,7 +40,7 @@ namespace detail {
 
     public:
         using Key = T;
-        using Size = octa::Size;
+        using Size = ostd::Size;
         using Difference = Ptrdiff;
         using Hasher = H;
         using KeyEqual = C;
@@ -148,6 +148,6 @@ template<
     typename A = Allocator<T>
 > using Multiset = detail::SetImpl<T, H, C, A, true>;
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

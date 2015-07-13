@@ -16,7 +16,7 @@
 #include "octa/utility.hh"
 #include "octa/format.hh"
 
-namespace octa {
+namespace ostd {
 
 #ifndef OCTA_PLATFORM_WIN32
 using StreamOffset = off_t;

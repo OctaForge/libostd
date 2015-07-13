@@ -13,11 +13,11 @@
 #include "octa/string.hh"
 #include "octa/internal/tuple.hh"
 
-namespace octa {
+namespace ostd {
 
 template<typename T, Size N>
 struct Array {
-    using Size = octa::Size;
+    using Size = ostd::Size;
     using Difference = Ptrdiff;
     using Value = T;
     using Reference = T &;
@@ -70,7 +70,7 @@ struct Array {
     }
 
     void swap(Array &v) {
-        octa::swap_ranges(iter(), v.iter());
+        ostd::swap_ranges(iter(), v.iter());
     }
 
     T p_buf[(N > 0) ? N : 1];
@@ -129,6 +129,6 @@ inline bool operator>=(const Array<T, N> &x, const Array<T, N> &y) {
     return !(x < y);
 }
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

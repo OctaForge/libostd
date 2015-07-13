@@ -16,7 +16,7 @@
 #include "octa/utility.hh"
 #include "octa/internal/tuple.hh"
 
-namespace octa {
+namespace ostd {
 
 enum FormatFlags {
     FMT_FLAG_DASH  = 1 << 0,
@@ -519,7 +519,7 @@ namespace detail {
                                const T &val,
                                EnableIf<FmtRangeTest<T>::value, bool>
                                    = true) {
-        auto range = octa::iter(val);
+        auto range = ostd::iter(val);
         if (range.empty()) return 0;
         Ptrdiff ret = 0;
         Size fmtn = 0;
@@ -553,7 +553,7 @@ namespace detail {
     }
 
     template<typename T>
-    static True test_fmt_tostr(decltype(octa::to_string(declval<T>())) *);
+    static True test_fmt_tostr(decltype(ostd::to_string(declval<T>())) *);
     template<typename> static False test_fmt_tostr(...);
 
     template<typename T>
@@ -776,7 +776,7 @@ namespace detail {
                 assert(false && "custom objects need '%s' format");
                 return -1;
             }
-            return write(writer, false, octa::to_string(val));
+            return write(writer, false, ostd::to_string(val));
         }
 
         /* custom format case */
@@ -938,6 +938,6 @@ Ptrdiff format(R &&writer, const AnyString<AL> &fmt, const A &...args) {
     return format(writer, fmtn, fmt.data(), args...);
 }
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

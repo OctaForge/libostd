@@ -11,7 +11,7 @@
 #include "octa/type_traits.hh"
 #include "octa/internal/tuple.hh"
 
-namespace octa {
+namespace ostd {
 
 /* move */
 
@@ -81,7 +81,7 @@ template<typename T, Size N> inline void swap(T (&a)[N], T (&b)[N]) {
 
 namespace detail {
     template<typename T> inline void swap_adl(T &a, T &b) {
-        using octa::swap;
+        using ostd::swap;
         swap(a, b);
     }
 }
@@ -382,6 +382,6 @@ namespace detail {
     };
 } /* namespace detail */
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

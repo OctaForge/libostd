@@ -14,7 +14,7 @@
 #include "octa/range.hh"
 #include "octa/initializer_list.hh"
 
-namespace octa {
+namespace ostd {
 
 namespace detail {
     template<typename T>
@@ -618,6 +618,6 @@ public:
     };
 } /* namespace detail */
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif

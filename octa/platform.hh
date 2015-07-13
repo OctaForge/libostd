@@ -71,7 +71,7 @@
 #  endif
 #endif
 
-namespace octa {
+namespace ostd {
 
 #if defined(OCTA_TOOLCHAIN_GNU)
 

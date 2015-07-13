@@ -12,7 +12,7 @@
 #include "octa/types.hh"
 #include "octa/type_traits.hh"
 
-namespace octa {
+namespace ostd {
 
 enum class MemoryOrder {
     relaxed = 0,

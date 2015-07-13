@@ -12,7 +12,7 @@
 #include "octa/utility.hh"
 #include "octa/type_traits.hh"
 
-namespace octa {
+namespace ostd {
 /* address of */
 
 template<typename T> constexpr T *address_of(T &v) {
@@ -529,7 +529,7 @@ template<> struct Allocator<const void> {
 };
 
 template<typename T> struct Allocator {
-    using Size = octa::Size;
+    using Size = ostd::Size;
     using Difference = Ptrdiff;
     using Value = T;
     using Reference = T &;
@@ -566,7 +566,7 @@ template<typename T> struct Allocator {
 };
 
 template<typename T> struct Allocator<const T> {
-    using Size = octa::Size;
+    using Size = ostd::Size;
     using Difference = Ptrdiff;
     using Value = const T;
     using Reference = const T &;
@@ -1113,6 +1113,6 @@ struct UsesAllocatorConstructor: IntegralConstant<int,
     detail::UsesAllocCtor<T, A, Args...>::value
 > {};
 
-} /* namespace octa */
+} /* namespace ostd */
 
 #endif
