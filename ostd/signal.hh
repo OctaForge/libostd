@@ -63,14 +63,14 @@ struct Event {
     }
 
     template<typename ...Args>
-    void emit(Args &&...args) {
+    void emit(Args &&...args) const {
         if (!p_class) return;
         for (Size i = 0; i < p_nfuncs; ++i)
             if (p_funcs[i]) p_funcs[i](*p_class, args...);
     }
 
     template<typename ...Args>
-    void operator()(Args &&...args) {
+    void operator()(Args &&...args) const {
         emit(forward<Args>(args)...);
     }
 
