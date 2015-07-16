@@ -31,9 +31,15 @@ struct Event {
     }
 
     ~Event() {
+        clear();
+    }
+
+    void clear() {
         for (Size i = 0; i < p_nfuncs; ++i)
             p_funcs[i].~Function<void(C &, A...)>();
         delete[] (byte *)p_funcs;
+        p_funcs = nullptr;
+        p_nfuncs = 0;
     }
 
     template<typename F>
