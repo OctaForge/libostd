@@ -43,6 +43,11 @@ namespace detail {
         template<typename F>
         Size connect(F &&func) {
             using Func = Function<void(C &, A...)>;
+            for (Size i = 0; i < p_nfuncs; ++i)
+                if (!p_funcs[i]) {
+                    p_funcs[i] = forward<F>(func);
+                    return i;
+                }
             Func *nbuf = (Func *)new byte[sizeof(Func) * (p_nfuncs + 1)];
             for (Size i = 0; i < p_nfuncs; ++i) {
                 new (&nbuf[i]) Func(move(p_funcs[i]));
