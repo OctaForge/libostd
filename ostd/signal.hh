@@ -25,12 +25,28 @@ namespace detail {
             p_funcs = nbuf;
         }
 
-        EventBase(EventBase &&ev): p_class(ev.p_class), p_funcs(ev.p_funcs),
-                                   p_nfuncs(ev.p_nfuncs) {
-            ev.p_class = nullptr;
-            ev.p_funcs = nullptr;
-            ev.p_nfuncs = 0;
+        EventBase(EventBase &&ev): p_class(nullptr), p_funcs(nullptr),
+                                   p_nfuncs(0) {
+            swap(ev);
         }
+
+        EventBase &operator=(const EventBase &ev) {
+            using Func = Function<void(C &, A...)>;
+            p_class = ev.p_class;
+            p_nfuncs = ev.p_nfuncs;
+            Func *nbuf = (Func *)new byte[sizeof(Func) * p_nfuncs];
+            for (Size i = 0; i < p_nfuncs; ++i)
+                new (&nbuf[i]) Func(ev.p_funcs[i]);
+            p_funcs = nbuf;
+            return *this;
+        }
+
+        EventBase &operator=(EventBase &&ev) {
+            swap(ev);
+            return *this;
+        }
+
+        ~EventBase() { clear(); }
 
         void clear() {
             for (Size i = 0; i < p_nfuncs; ++i)
@@ -72,6 +88,22 @@ namespace detail {
                 if (p_funcs[i]) p_funcs[i](*p_class, args...);
         }
 
+        C *get_class() const {
+            return p_class;
+        }
+
+        C *set_class(C *cl) {
+            C *ocl = p_class;
+            p_class = cl;
+            return ocl;
+        }
+
+        void swap(EventBase &ev) {
+            detail::swap_adl(p_class, ev.p_class);
+            detail::swap_adl(p_funcs, ev.p_funcs);
+            detail::swap_adl(p_nfuncs, ev.p_nfuncs);
+        }
+
     private:
         C *p_class;
         Function<void(C &, A...)> *p_funcs;
@@ -89,7 +121,15 @@ public:
     Event(const Event &ev): p_base(ev.p_base) {}
     Event(Event &&ev): p_base(move(ev.p_base)) {}
 
-    ~Event() { clear(); }
+    Event &operator=(const Event &ev) {
+        p_base = ev.p_base;
+        return *this;
+    }
+
+    Event &operator=(Event &&ev) {
+        p_base = move(ev.p_base);
+        return *this;
+    }
 
     void clear() { p_base.clear(); }
 
@@ -103,6 +143,11 @@ public:
 
     template<typename ...Args>
     void operator()(Args &&...args) { emit(forward<Args>(args)...); }
+
+    C *get_class() const { return p_base.get_class(); }
+    C *set_class(C *cl) { return p_base.set_class(cl); }
+
+    void swap(Event &ev) { p_base.swap(ev.p_base); }
 };
 
 template<typename C, typename ...A>
@@ -115,7 +160,15 @@ public:
     Event(const Event &ev): p_base(ev.p_base) {}
     Event(Event &&ev): p_base(move(ev.p_base)) {}
 
-    ~Event() { clear(); }
+    Event &operator=(const Event &ev) {
+        p_base = ev.p_base;
+        return *this;
+    }
+
+    Event &operator=(Event &&ev) {
+        p_base = move(ev.p_base);
+        return *this;
+    }
 
     void clear() { p_base.clear(); }
 
@@ -129,6 +182,11 @@ public:
 
     template<typename ...Args>
     void operator()(Args &&...args) const { emit(forward<Args>(args)...); }
+
+    C *get_class() const { return p_base.get_class(); }
+    C *set_class(C *cl) { return p_base.set_class(cl); }
+
+    void swap(Event &ev) { p_base.swap(ev.p_base); }
 };
 
 } /* namespace ostd */
