@@ -3,8 +3,8 @@
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
 
-#ifndef OSTD_SIGNAL_HH
-#define OSTD_SIGNAL_HH
+#ifndef OSTD_EVENT_HH
+#define OSTD_EVENT_HH
 
 #include "ostd/functional.hh"
 #include "ostd/utility.hh"
@@ -13,10 +13,10 @@ namespace ostd {
 
 namespace detail {
     template<typename C, typename ...A>
-    struct EventBase {
-        EventBase(C *cl): p_class(cl), p_funcs(nullptr), p_nfuncs(0) {}
+    struct SignalBase {
+        SignalBase(C *cl): p_class(cl), p_funcs(nullptr), p_nfuncs(0) {}
 
-        EventBase(const EventBase &ev): p_class(ev.p_class),
+        SignalBase(const SignalBase &ev): p_class(ev.p_class),
                                         p_nfuncs(ev.p_nfuncs) {
             using Func = Function<void(C &, A...)>;
             Func *nbuf = (Func *)new byte[sizeof(Func) * p_nfuncs];
@@ -25,12 +25,12 @@ namespace detail {
             p_funcs = nbuf;
         }
 
-        EventBase(EventBase &&ev): p_class(nullptr), p_funcs(nullptr),
+        SignalBase(SignalBase &&ev): p_class(nullptr), p_funcs(nullptr),
                                    p_nfuncs(0) {
             swap(ev);
         }
 
-        EventBase &operator=(const EventBase &ev) {
+        SignalBase &operator=(const SignalBase &ev) {
             using Func = Function<void(C &, A...)>;
             p_class = ev.p_class;
             p_nfuncs = ev.p_nfuncs;
@@ -41,12 +41,12 @@ namespace detail {
             return *this;
         }
 
-        EventBase &operator=(EventBase &&ev) {
+        SignalBase &operator=(SignalBase &&ev) {
             swap(ev);
             return *this;
         }
 
-        ~EventBase() { clear(); }
+        ~SignalBase() { clear(); }
 
         void clear() {
             for (Size i = 0; i < p_nfuncs; ++i)
@@ -98,7 +98,7 @@ namespace detail {
             return ocl;
         }
 
-        void swap(EventBase &ev) {
+        void swap(SignalBase &ev) {
             detail::swap_adl(p_class, ev.p_class);
             detail::swap_adl(p_funcs, ev.p_funcs);
             detail::swap_adl(p_nfuncs, ev.p_nfuncs);
@@ -112,21 +112,21 @@ namespace detail {
 } /* namespace detail */
 
 template<typename C, typename ...A>
-struct Event {
+struct Signal {
 private:
-    using Base = detail::EventBase<C, A...>;
+    using Base = detail::SignalBase<C, A...>;
     Base p_base;
 public:
-    Event(C *cl): p_base(cl) {}
-    Event(const Event &ev): p_base(ev.p_base) {}
-    Event(Event &&ev): p_base(move(ev.p_base)) {}
+    Signal(C *cl): p_base(cl) {}
+    Signal(const Signal &ev): p_base(ev.p_base) {}
+    Signal(Signal &&ev): p_base(move(ev.p_base)) {}
 
-    Event &operator=(const Event &ev) {
+    Signal &operator=(const Signal &ev) {
         p_base = ev.p_base;
         return *this;
     }
 
-    Event &operator=(Event &&ev) {
+    Signal &operator=(Signal &&ev) {
         p_base = move(ev.p_base);
         return *this;
     }
@@ -147,25 +147,25 @@ public:
     C *get_class() const { return p_base.get_class(); }
     C *set_class(C *cl) { return p_base.set_class(cl); }
 
-    void swap(Event &ev) { p_base.swap(ev.p_base); }
+    void swap(Signal &ev) { p_base.swap(ev.p_base); }
 };
 
 template<typename C, typename ...A>
-struct Event<const C, A...> {
+struct Signal<const C, A...> {
 private:
-    using Base = detail::EventBase<const C, A...>;
+    using Base = detail::SignalBase<const C, A...>;
     Base p_base;
 public:
-    Event(C *cl): p_base(cl) {}
-    Event(const Event &ev): p_base(ev.p_base) {}
-    Event(Event &&ev): p_base(move(ev.p_base)) {}
+    Signal(C *cl): p_base(cl) {}
+    Signal(const Signal &ev): p_base(ev.p_base) {}
+    Signal(Signal &&ev): p_base(move(ev.p_base)) {}
 
-    Event &operator=(const Event &ev) {
+    Signal &operator=(const Signal &ev) {
         p_base = ev.p_base;
         return *this;
     }
 
-    Event &operator=(Event &&ev) {
+    Signal &operator=(Signal &&ev) {
         p_base = move(ev.p_base);
         return *this;
     }
@@ -186,7 +186,7 @@ public:
     C *get_class() const { return p_base.get_class(); }
     C *set_class(C *cl) { return p_base.set_class(cl); }
 
-    void swap(Event &ev) { p_base.swap(ev.p_base); }
+    void swap(Signal &ev) { p_base.swap(ev.p_base); }
 };
 
 } /* namespace ostd */
