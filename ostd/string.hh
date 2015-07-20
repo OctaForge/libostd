@@ -12,6 +12,7 @@
 #include "ostd/utility.hh"
 #include "ostd/range.hh"
 #include "ostd/vector.hh"
+#include "ostd/functional.hh"
 
 namespace ostd {
 static constexpr Size npos = -1;
@@ -129,11 +130,7 @@ struct StringRangeBase: InputRange<
     const T *data() const { return p_beg; }
 
     Size to_hash() const {
-        const T *d = data();
-        Size h = 5381, len = size();
-        for (Size i = 0; i < len; ++i)
-            h = ((h << 5) + h) ^ d[i];
-        return h;
+        return detail::mem_hash(data(), size());
     }
 
 private:
