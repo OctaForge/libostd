@@ -7,6 +7,7 @@
 #define OSTD_INTERNAL_HASHTABLE_HH
 
 #include <string.h>
+#include <math.h>
 
 #include "ostd/types.hh"
 #include "ostd/utility.hh"
@@ -120,6 +121,63 @@ public:
 };
 
 namespace detail {
+    /* Use template metaprogramming to figure out a correct number
+     * of elements to use per chunk for proper cache alignment
+     * (i.e. sizeof(Chunk) % CACHE_LINE_SIZE == 0).
+     *
+     * If this is not possible, use the upper bound and pad the
+     * structure with some extra bytes.
+     */
+    static constexpr Size CACHE_LINE_SIZE = 64;
+    static constexpr Size CHUNK_LOWER_BOUND = 32;
+    static constexpr Size CHUNK_UPPER_BOUND = 128;
+
+    template<typename E, Size N>
+    struct HashChainAlign {
+        static constexpr Size csize = sizeof(HashChain<E>[N]) + sizeof(void *);
+        static constexpr Size value = ((csize % CACHE_LINE_SIZE) == 0)
+            ? N : HashChainAlign<E, N + 1>::value;
+    };
+
+    template<typename E>
+    struct HashChainAlign<E, CHUNK_UPPER_BOUND> {
+        static constexpr Size value = CHUNK_UPPER_BOUND;
+    };
+
+    template<Size N, bool B>
+    struct HashChainPad;
+
+    template<Size N>
+    struct HashChainPad<N, true> {};
+
+    template<Size N>
+    struct HashChainPad<N, false> {
+        byte pad[CACHE_LINE_SIZE - (N % CACHE_LINE_SIZE)];
+    };
+
+    template<Size N>
+    struct HashPad: HashChainPad<N, N % CACHE_LINE_SIZE == 0> {};
+
+    template<typename E, Size V = HashChainAlign<E, CHUNK_LOWER_BOUND>::value,
+             bool P = (V == CHUNK_UPPER_BOUND)
+    > struct HashChunk;
+
+    template<typename E, Size V>
+    struct HashChunk<E, V, false> {
+        static constexpr Size num = V;
+        HashChain<E> chains[num];
+        HashChunk *next;
+    };
+
+    template<typename E, Size V>
+    struct HashChunk<E, V, true>: HashPad<
+        sizeof(HashChain<E>[V]) + sizeof(void *)
+    > {
+        static constexpr Size num = V;
+        HashChain<E> chains[num];
+        HashChunk *next;
+    };
+
     template<
         typename B, /* contains methods specific to each ht type */
         typename E, /* element type */
@@ -131,14 +189,8 @@ namespace detail {
         bool Multihash
     > struct Hashtable {
 private:
-        static constexpr Size CHUNKSIZE = 64;
-
-        using Chain = detail::HashChain<E>;
-
-        struct Chunk {
-            Chain chains[CHUNKSIZE];
-            Chunk *next;
-        };
+        using Chain = HashChain<E>;
+        using Chunk = HashChunk<E>;
 
         Size p_size;
         Size p_len;
@@ -203,9 +255,9 @@ private:
                 allocator_construct(get_challoc(), chunk);
                 chunk->next = p_chunks;
                 p_chunks = chunk;
-                for (Size i = 0; i < (CHUNKSIZE - 1); ++i)
+                for (Size i = 0; i < (Chunk::num - 1); ++i)
                     chunk->chains[i].next = &chunk->chains[i + 1];
-                chunk->chains[CHUNKSIZE - 1].next = p_unused;
+                chunk->chains[Chunk::num - 1].next = p_unused;
                 p_unused = chunk->chains;
             }
             ++p_len;
