@@ -216,6 +216,15 @@ private:
 
         float p_maxlf;
 
+        void clear_buckets() {
+            memset(p_data.first(), 0, (p_size + 1) * sizeof(Chain *));
+        }
+
+        void init_buckets() {
+            p_data.first() = allocator_allocate(get_cpalloc(), p_size + 1);
+            clear_buckets();
+        }
+
         Chain *find(const K &key, Size &h) const {
             if (!p_size) return nullptr;
             h = bucket(key);
@@ -356,8 +365,7 @@ protected:
             FuncPair(hf, eqf))),
         p_maxlf(1.0f) {
             if (!size) return;
-            p_data.first() = allocator_allocate(get_cpalloc(), size + 1);
-            memset(p_data.first(), 0, (size + 1) * sizeof(Chain *));
+            init_buckets();
         }
 
         Hashtable(const Hashtable &ht, const A &alloc): p_size(ht.p_size),
@@ -366,8 +374,7 @@ protected:
             FuncPair(ht.get_hash(), ht.get_eq()))),
         p_maxlf(ht.p_maxlf) {
             if (!p_size) return;
-            p_data.first() = allocator_allocate(get_cpalloc(), p_size + 1);
-            memset(p_data.first(), 0, (p_size + 1) * sizeof(Chain *));
+            init_buckets();
             Chain **och = ht.p_data.first();
             for (Chain *oc = *och; oc; oc = oc->next) {
                 Size h = bucket(B::get_key(oc->value));
@@ -405,8 +412,7 @@ protected:
             p_len = 0;
             p_chunks = nullptr;
             p_unused = nullptr;
-            p_data.first() = allocator_allocate(get_cpalloc(), p_size + 1);
-            memset(p_data.first(), 0, (p_size + 1) * sizeof(Chain *));
+            init_buckets();
             Chain **och = ht.p_data.first();
             for (Chain *oc = *och; oc; oc = oc->next) {
                 Size h = bucket(B::get_key(oc->value));
@@ -421,9 +427,7 @@ protected:
                 if ((get_cpalloc() != ht.get_cpalloc()) && p_size) {
                     allocator_deallocate(get_cpalloc(),
                         p_data.first(), p_size + 1);
-                    p_data.first() = allocator_allocate(get_cpalloc(),
-                        p_size + 1);
-                    memset(p_data.first(), 0, (p_size + 1) * sizeof(Chain *));
+                    init_buckets();
                 }
                 get_alloc() = ht.get_alloc();
                 get_cpalloc() = ht.get_cpalloc();
@@ -482,7 +486,7 @@ public:
 
         void clear() {
             if (!p_len) return;
-            memset(p_data.first(), 0, (p_size + 1) * sizeof(Chain *));
+            clear_buckets();
             p_len = 0;
             p_unused = nullptr;
             delete_chunks(p_chunks);
@@ -592,12 +596,10 @@ public:
             if (fbcount > count) count = fbcount;
 
             Chain **och = p_data.first();
-            Chain **nch = allocator_allocate(get_cpalloc(), count + 1);
-            memset(nch, 0, (count + 1) * sizeof(Chain *));
-            p_data.first() = nch;
-
             Size osize = p_size;
+
             p_size = count;
+            init_buckets();
 
             Chain *p = och ? *och : nullptr;
             while (p) {
