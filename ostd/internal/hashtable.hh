@@ -283,13 +283,6 @@ private:
             }
         }
 
-        T *access_base(const K &key, Size &h) const {
-            if (!p_size) return NULL;
-            Chain *c = find(key, h);
-            if (c) return &B::get_data(c->value);
-            return nullptr;
-        }
-
         void rehash_ahead(Size n) {
             if (!bucket_count())
                 reserve(n);
@@ -307,23 +300,25 @@ protected:
 
         T &access_or_insert(const K &key) {
             Size h = 0;
-            T *v = access_base(key, h);
-            if (v) return *v;
+            Chain *c = find(key, h);
+            if (c) return B::get_data(c->value);
             rehash_ahead(1);
             return insert(h, key);
         }
 
         T &access_or_insert(K &&key) {
             Size h = 0;
-            T *v = access_base(key, h);
-            if (v) return *v;
+            Chain *c = find(key, h);
+            if (c) return B::get_data(c->value);
             rehash_ahead(1);
             return insert(h, move(key));
         }
 
-        T &access(const K &key) const {
+        T *access(const K &key) const {
             Size h;
-            return *access_base(key, h);
+            Chain *c = find(key, h);
+            if (c) return &B::get_data(c->value);
+            return nullptr;
         }
 
         template<typename R>
@@ -505,7 +500,7 @@ public:
 
         Size bucket_size(Size n) const {
             Size ret = 0;
-            if (ret >= p_size) return ret;
+            if (n >= p_size) return ret;
             Chain **cp = p_data.first();
             for (Chain *c = cp[n], *e = cp[n + 1]; c != e; c = c->next)
                 ++ret;
