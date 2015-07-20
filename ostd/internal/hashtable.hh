@@ -218,7 +218,7 @@ private:
 
         Chain *find(const K &key, Size &h) const {
             if (!p_size) return nullptr;
-            h = get_hash()(key) & (p_size - 1);
+            h = bucket(key);
             Chain **cp = p_data.first();
             for (Chain *c = cp[h], *e = cp[h + 1]; c != e; c = c->next)
                 if (get_eq()(key, B::get_key(c->value)))
@@ -370,7 +370,7 @@ protected:
             memset(p_data.first(), 0, (p_size + 1) * sizeof(Chain *));
             Chain **och = ht.p_data.first();
             for (Chain *oc = *och; oc; oc = oc->next) {
-                Size h = get_hash()(B::get_key(oc->value)) & (p_size - 1);
+                Size h = bucket(B::get_key(oc->value));
                 Chain *nc = insert(h);
                 allocator_destroy(get_alloc(), &nc->value);
                 allocator_construct(get_alloc(), &nc->value, oc->value);
@@ -409,7 +409,7 @@ protected:
             memset(p_data.first(), 0, (p_size + 1) * sizeof(Chain *));
             Chain **och = ht.p_data.first();
             for (Chain *oc = *och; oc; oc = oc->next) {
-                Size h = get_hash()(B::get_key(oc->value)) & (p_size - 1);
+                Size h = bucket(B::get_key(oc->value));
                 Chain *nc = insert(h);
                 B::swap_elem(oc->value, nc->value);
             }
@@ -512,7 +512,7 @@ public:
         Pair<Range, bool> emplace(Args &&...args) {
             rehash_ahead(1);
             E elem(forward<Args>(args)...);
-            Size h = get_hash()(B::get_key(elem)) & (p_size - 1);
+            Size h = bucket(B::get_key(elem));
             if (Multihash) {
                 /* multihash: always insert */
                 Chain *ch = insert(h);
@@ -539,7 +539,7 @@ public:
         Size erase(const K &key) {
             if (!p_len) return 0;
             Size olen = p_len;
-            Size h = get_hash()(key) & (p_size - 1);
+            Size h = bucket(key);
             Chain **cp = p_data.first();
             for (Chain *c = cp[h], *e = cp[h + 1]; c != e; c = c->next)
                 if (get_eq()(key, B::get_key(c->value))) {
@@ -602,7 +602,7 @@ public:
             Chain *p = och ? *och : nullptr;
             while (p) {
                 Chain *pp = p->next;
-                Size h = get_hash()(B::get_key(p->value)) & (p_size - 1);
+                Size h = bucket(B::get_key(p->value));
                 p->prev = p->next = nullptr;
                 insert_node(h, p);
                 p = pp;
