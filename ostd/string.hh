@@ -21,50 +21,50 @@ static constexpr Size npos = -1;
 template<typename T, typename A = Allocator<T>> class StringBase;
 
 template<typename T>
-struct StringRangeBase: InputRange<
-    StringRangeBase<T>, FiniteRandomAccessRangeTag, T
+struct CharRangeBase: InputRange<
+    CharRangeBase<T>, FiniteRandomAccessRangeTag, T
 > {
 private:
     struct Nat {};
 
 public:
-    StringRangeBase(): p_beg(nullptr), p_end(nullptr) {};
-    StringRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
-    StringRangeBase(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
+    CharRangeBase(): p_beg(nullptr), p_end(nullptr) {};
+    CharRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
+    CharRangeBase(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
 
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     template<typename U>
-    StringRangeBase(U beg, EnableIf<
+    CharRangeBase(U beg, EnableIf<
         IsConvertible<U, T *>::value && !IsArray<U>::value, Nat
     > = Nat()): p_beg(beg), p_end((T *)beg + strlen(beg)) {}
 
     template<typename U, Size N>
-    StringRangeBase(U (&beg)[N], EnableIf<
+    CharRangeBase(U (&beg)[N], EnableIf<
         IsConvertible<U *, T *>::value, Nat
     > = Nat()): p_beg(beg),
         p_end(beg + N - (beg[N - 1] == '\0')) {}
 
     template<typename U, typename A>
-    StringRangeBase(const StringBase<U, A> &s, EnableIf<
+    CharRangeBase(const StringBase<U, A> &s, EnableIf<
         IsConvertible<U *, T *>::value, Nat
     > = Nat()): p_beg(s.data()),
         p_end(s.data() + s.size()) {}
 
     template<typename U, typename = EnableIf<
         IsConvertible<U *, T *>::value
-    >> StringRangeBase(const StringRangeBase<U> &v):
+    >> CharRangeBase(const CharRangeBase<U> &v):
         p_beg(&v[0]), p_end(&v[v.size()]) {}
 
-    StringRangeBase &operator=(const StringRangeBase &v) {
+    CharRangeBase &operator=(const CharRangeBase &v) {
         p_beg = v.p_beg; p_end = v.p_end; return *this;
     }
 
     template<typename A>
-    StringRangeBase &operator=(const StringBase<T, A> &s) {
+    CharRangeBase &operator=(const StringBase<T, A> &s) {
         p_beg = s.data(); p_end = s.data() + s.size(); return *this;
     }
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
-    StringRangeBase &operator=(T *s) {
+    CharRangeBase &operator=(T *s) {
         p_beg = s; p_end = s + strlen(s); return *this;
     }
 
@@ -91,11 +91,11 @@ public:
 
     T &front() const { return *p_beg; }
 
-    bool equals_front(const StringRangeBase &range) const {
+    bool equals_front(const CharRangeBase &range) const {
         return p_beg == range.p_beg;
     }
 
-    Ptrdiff distance_front(const StringRangeBase &range) const {
+    Ptrdiff distance_front(const CharRangeBase &range) const {
         return range.p_beg - p_beg;
     }
 
@@ -120,18 +120,18 @@ public:
 
     T &back() const { return *(p_end - 1); }
 
-    bool equals_back(const StringRangeBase &range) const {
+    bool equals_back(const CharRangeBase &range) const {
         return p_end == range.p_end;
     }
 
-    Ptrdiff distance_back(const StringRangeBase &range) const {
+    Ptrdiff distance_back(const CharRangeBase &range) const {
         return range.p_end - p_end;
     }
 
     Size size() const { return p_end - p_beg; }
 
-    StringRangeBase slice(Size start, Size end) const {
-        return StringRangeBase(p_beg + start, p_beg + end);
+    CharRangeBase slice(Size start, Size end) const {
+        return CharRangeBase(p_beg + start, p_beg + end);
     }
 
     T &operator[](Size i) const { return p_beg[i]; }
@@ -199,8 +199,8 @@ public:
     using ConstReference = const T &;
     using Pointer = AllocatorPointer<A>;
     using ConstPointer = AllocatorConstPointer<A>;
-    using Range = StringRangeBase<T>;
-    using ConstRange = StringRangeBase<const T>;
+    using Range = CharRangeBase<T>;
+    using ConstRange = CharRangeBase<const T>;
     using Allocator = A;
 
     StringBase(const A &a = A()): p_len(0), p_cap(0),
@@ -515,8 +515,8 @@ public:
 };
 
 using String = StringBase<char>;
-using StringRange = StringRangeBase<char>;
-using ConstStringRange = StringRangeBase<const char>;
+using CharRange = CharRangeBase<char>;
+using ConstCharRange = CharRangeBase<const char>;
 
 template<typename A> using AnyString = StringBase<char, A>;
 
@@ -819,16 +819,16 @@ template<> struct ToString<String> {
     }
 };
 
-template<> struct ToString<StringRange> {
-    using Argument = StringRange;
+template<> struct ToString<CharRange> {
+    using Argument = CharRange;
     using Result = String;
     String operator()(const Argument &s) {
         return String(s);
     }
 };
 
-template<> struct ToString<ConstStringRange> {
-    using Argument = ConstStringRange;
+template<> struct ToString<ConstCharRange> {
+    using Argument = ConstCharRange;
     using Result = String;
     String operator()(const Argument &s) {
         return String(s);

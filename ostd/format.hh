@@ -27,7 +27,7 @@ enum FormatFlags {
 };
 
 namespace detail {
-    inline int parse_fmt_flags(ConstStringRange &fmt, int ret) {
+    inline int parse_fmt_flags(ConstCharRange &fmt, int ret) {
         while (!fmt.empty()) {
             switch (fmt.front()) {
             case '-': ret |= FMT_FLAG_DASH; fmt.pop_front(); break;
@@ -42,7 +42,7 @@ namespace detail {
         return ret;
     }
 
-    inline Size read_digits(ConstStringRange &fmt, char *buf) {
+    inline Size read_digits(ConstCharRange &fmt, char *buf) {
         Size ret = 0;
         for (; !fmt.empty() && isdigit(fmt.front()); ++ret) {
             *buf++ = fmt.front();
@@ -143,7 +143,7 @@ namespace detail {
 
 struct FormatSpec {
     FormatSpec(): p_nested_escape(false), p_fmt() {}
-    FormatSpec(ConstStringRange fmt, bool escape = false):
+    FormatSpec(ConstCharRange fmt, bool escape = false):
         p_nested_escape(escape), p_fmt(fmt) {}
 
     template<typename R>
@@ -177,7 +177,7 @@ struct FormatSpec {
         return r;
     }
 
-    ConstStringRange rest() const {
+    ConstCharRange rest() const {
         return p_fmt;
     }
 
@@ -218,15 +218,15 @@ struct FormatSpec {
 
     byte index() const { return p_index; }
 
-    ConstStringRange nested() const { return p_nested; }
-    ConstStringRange nested_sep() const { return p_nested_sep; }
+    ConstCharRange nested() const { return p_nested; }
+    ConstCharRange nested_sep() const { return p_nested_sep; }
 
     bool is_nested() const { return p_is_nested; }
     bool nested_escape() const { return p_nested_escape; }
 
 protected:
-    ConstStringRange p_nested;
-    ConstStringRange p_nested_sep;
+    ConstCharRange p_nested;
+    ConstCharRange p_nested_sep;
 
     int p_flags = 0;
 
@@ -263,21 +263,21 @@ protected:
         int sflags = p_flags;
         p_nested_escape = !(sflags & FMT_FLAG_DASH);
         p_fmt.pop_front();
-        ConstStringRange begin_inner(p_fmt);
+        ConstCharRange begin_inner(p_fmt);
         if (!read_until_dummy()) {
             p_is_nested = false;
             return false;
         }
         /* skip to the last spec in case multiple specs are present */
-        ConstStringRange curfmt(p_fmt);
+        ConstCharRange curfmt(p_fmt);
         while (read_until_dummy()) {
             curfmt = p_fmt;
         }
         p_fmt = curfmt;
         p_flags = sflags;
         /* find delimiter or ending */
-        ConstStringRange begin_delim(p_fmt);
-        ConstStringRange p = find(begin_delim, '%');
+        ConstCharRange begin_delim(p_fmt);
+        ConstCharRange p = find(begin_delim, '%');
         for (; !p.empty(); p = find(p, '%')) {
             p.pop_front();
             /* escape, skip */
@@ -391,7 +391,7 @@ protected:
         return (sp >= 65) && (detail::fmt_specs[sp - 65] != 0);
     }
 
-    ConstStringRange p_fmt;
+    ConstCharRange p_fmt;
     char p_buf[32];
 };
 
@@ -458,7 +458,7 @@ namespace detail {
 
     template<typename R, typename ...A>
     static Ptrdiff format_impl(R &writer, Size &fmtn, bool escape,
-                               ConstStringRange fmt, const A &...args);
+                               ConstCharRange fmt, const A &...args);
 
     template<typename T, typename = RangeOf<T>>
     static True test_fmt_range(int);
@@ -472,7 +472,7 @@ namespace detail {
     struct FmtTupleUnpacker {
         template<typename R, typename T, typename ...A>
         static inline Ptrdiff unpack(R &writer, Size &fmtn, bool esc,
-                                     ConstStringRange fmt, const T &item,
+                                     ConstCharRange fmt, const T &item,
                                      const A &...args) {
             return FmtTupleUnpacker<I - 1>::unpack(writer, fmtn, esc, fmt,
                 item, get<I - 1>(item), args...);
@@ -483,7 +483,7 @@ namespace detail {
     struct FmtTupleUnpacker<0> {
         template<typename R, typename T, typename ...A>
         static inline Ptrdiff unpack(R &writer, Size &fmtn, bool esc,
-                                     ConstStringRange fmt, const T &,
+                                     ConstCharRange fmt, const T &,
                                      const A &...args) {
             return format_impl(writer, fmtn, esc, fmt, args...);
         }
@@ -491,7 +491,7 @@ namespace detail {
 
     template<typename R, typename T>
     inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc, bool,
-                                ConstStringRange fmt, const T &item,
+                                ConstCharRange fmt, const T &item,
                                 EnableIf<!IsTupleLike<T>::value, bool>
                                     = true) {
         return format_impl(writer, fmtn, esc, fmt, item);
@@ -499,7 +499,7 @@ namespace detail {
 
     template<typename R, typename T>
     inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc,
-                                bool expandval, ConstStringRange fmt,
+                                bool expandval, ConstCharRange fmt,
                                 const T &item,
                                 EnableIf<IsTupleLike<T>::value, bool>
                                     = true) {
@@ -513,7 +513,7 @@ namespace detail {
     template<typename R, typename T>
     inline Ptrdiff write_range(R &writer, const FormatSpec *fl,
                                bool escape, bool expandval,
-                               ConstStringRange sep,
+                               ConstCharRange sep,
                                const T &val,
                                EnableIf<FmtRangeTest<T>::value, bool>
                                    = true) {
@@ -543,7 +543,7 @@ namespace detail {
 
     template<typename R, typename T>
     inline Ptrdiff write_range(R &, const FormatSpec *, bool, bool,
-                               ConstStringRange, const T &,
+                               ConstCharRange, const T &,
                                EnableIf<!FmtRangeTest<T>::value, bool>
                                    = true) {
         assert(false && "invalid value for ranged format");
@@ -627,7 +627,7 @@ namespace detail {
 
     struct WriteSpec: FormatSpec {
         WriteSpec(): FormatSpec() {}
-        WriteSpec(ConstStringRange fmt, bool esc): FormatSpec(fmt, esc) {}
+        WriteSpec(ConstCharRange fmt, bool esc): FormatSpec(fmt, esc) {}
 
         /* C string */
         template<typename R>
@@ -817,7 +817,7 @@ namespace detail {
         /* range writer */
         template<typename R, typename T>
         Ptrdiff write_range(R &writer, Size idx, bool expandval,
-                            ConstStringRange sep, const T &val) {
+                            ConstCharRange sep, const T &val) {
             if (idx) {
                 assert(false && "not enough format args");
                 return -1;
@@ -828,7 +828,7 @@ namespace detail {
 
         template<typename R, typename T, typename ...A>
         Ptrdiff write_range(R &writer, Size idx, bool expandval,
-                            ConstStringRange sep, const T &val,
+                            ConstCharRange sep, const T &val,
                             const A &...args) {
             if (idx) {
                 return write_range(writer, idx - 1, expandval, sep, args...);
@@ -840,7 +840,7 @@ namespace detail {
 
     template<typename R, typename ...A>
     inline Ptrdiff format_impl(R &writer, Size &fmtn, bool escape,
-                               ConstStringRange fmt, const A &...args) {
+                               ConstCharRange fmt, const A &...args) {
         Size argidx = 1, retn = 0, twr = 0;
         Ptrdiff written = 0;
         detail::WriteSpec spec(fmt, escape);
@@ -900,7 +900,7 @@ namespace detail {
 
     template<typename R, typename ...A>
     inline Ptrdiff format_impl(R &writer, Size &fmtn, bool,
-                               ConstStringRange fmt) {
+                               ConstCharRange fmt) {
         Size written = 0;
         detail::WriteSpec spec(fmt, false);
         if (spec.read_until_spec(writer, &written)) return -1;
@@ -910,13 +910,13 @@ namespace detail {
 } /* namespace detail */
 
 template<typename R, typename ...A>
-inline Ptrdiff format(R &&writer, Size &fmtn, ConstStringRange fmt,
+inline Ptrdiff format(R &&writer, Size &fmtn, ConstCharRange fmt,
                       const A &...args) {
     return detail::format_impl(writer, fmtn, false, fmt, args...);
 }
 
 template<typename R, typename ...A>
-Ptrdiff format(R &&writer, ConstStringRange fmt, const A &...args) {
+Ptrdiff format(R &&writer, ConstCharRange fmt, const A &...args) {
     Size fmtn = 0;
     return format(writer, fmtn, fmt, args...);
 }
