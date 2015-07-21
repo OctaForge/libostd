@@ -32,13 +32,13 @@ struct StringRangeBase: InputRange<
     template<typename U>
     StringRangeBase(U beg, EnableIf<
         IsConvertible<U, T *>::value && !IsArray<U>::value, bool
-    > = true): p_beg(beg), p_end((T *)beg + strlen(beg)) { printf("ptr\n"); }
+    > = true): p_beg(beg), p_end((T *)beg + strlen(beg)) {}
 
     template<typename U, Size N>
     StringRangeBase(U (&beg)[N], EnableIf<
         IsConvertible<U *, T *>::value, bool
     > = true): p_beg(beg),
-        p_end(beg + N - (beg[N - 1] == '\0')) { printf("arr\n"); }
+        p_end(beg + N - (beg[N - 1] == '\0')) {}
 
     template<typename U, typename A>
     StringRangeBase(const StringBase<U, A> &s, EnableIf<
@@ -817,6 +817,14 @@ template<> struct ToString<String> {
 
 template<> struct ToString<StringRange> {
     using Argument = StringRange;
+    using Result = String;
+    String operator()(const Argument &s) {
+        return String(s);
+    }
+};
+
+template<> struct ToString<ConstStringRange> {
+    using Argument = ConstStringRange;
     using Result = String;
     String operator()(const Argument &s) {
         return String(s);
