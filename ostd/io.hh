@@ -34,12 +34,7 @@ struct FileStream: Stream {
         s.p_owned = false;
     }
 
-    FileStream(const char *path, StreamMode mode): p_f() {
-        open(path, mode);
-    }
-
-    template<typename A>
-    FileStream(const AnyString<A> &path, StreamMode mode): p_f() {
+    FileStream(ConstCharRange path, StreamMode mode): p_f() {
         open(path, mode);
     }
 
@@ -54,16 +49,14 @@ struct FileStream: Stream {
         return *this;
     }
 
-    bool open(const char *path, StreamMode mode) {
-        if (p_f) return false;
-        p_f = fopen(path, detail::filemodes[Size(mode)]);
+    bool open(ConstCharRange path, StreamMode mode) {
+        if (p_f || path.size() > FILENAME_MAX) return false;
+        char buf[FILENAME_MAX + 1];
+        memcpy(buf, &path[0], path.size());
+        buf[path.size()] = '\0';
+        p_f = fopen(buf, detail::filemodes[Size(mode)]);
         p_owned = true;
         return is_open();
-    }
-
-    template<typename A>
-    bool open(const AnyString<A> &path, StreamMode mode) {
-        return open(path.data(), mode);
     }
 
     bool open(FILE *f) {
