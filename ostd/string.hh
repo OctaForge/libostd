@@ -610,6 +610,10 @@ inline namespace literals { inline namespace string_literals {
     String operator "" _s(const char *str, Size len) {
         return String(str, len);
     }
+
+    ConstCharRange operator "" _S(const char *str, Size len) {
+        return ConstCharRange(str, len);
+    }
 } }
 
 template<typename A, typename T, typename F, typename S = const char *>
