@@ -13,6 +13,7 @@
 #include "ostd/range.hh"
 #include "ostd/vector.hh"
 #include "ostd/functional.hh"
+#include "ostd/type_traits.hh"
 
 namespace ostd {
 static constexpr Size npos = -1;
@@ -26,8 +27,18 @@ struct StringRangeBase: InputRange<
     StringRangeBase() = delete;
     StringRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
     StringRangeBase(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
+
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
-    StringRangeBase(T *beg): p_beg(beg), p_end(beg + strlen(beg)) {}
+    template<typename U>
+    StringRangeBase(U beg, EnableIf<
+        IsConvertible<U, T *>::value && !IsArray<U>::value, bool
+    > = true): p_beg(beg), p_end((T *)beg + strlen(beg)) { printf("ptr\n"); }
+
+    template<typename U, Size N>
+    StringRangeBase(U (&beg)[N], EnableIf<
+        IsConvertible<U *, T *>::value, bool
+    > = true): p_beg(beg),
+        p_end(beg + N - (beg[N - 1] == '\0')) { printf("arr\n"); }
 
     template<typename A>
     StringRangeBase(const StringBase<T, A> &s): p_beg(s.data()),
