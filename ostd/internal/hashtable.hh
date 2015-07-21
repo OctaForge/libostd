@@ -554,28 +554,29 @@ public:
         }
 
         Size erase(const K &key) {
-            if (!p_len) return 0;
-            Size olen = p_len;
-            Size h = bucket(key);
+            Size h = 0;
+            Chain *c = find(key, h);
+            if (!c) return 0;
             Chain **cp = p_data.first();
-            for (Chain *c = cp[h], *e = cp[h + 1]; c != e; c = c->next)
-                if (get_eq()(key, B::get_key(c->value))) {
-                    --p_len;
-                    Size hh = h;
-                    Chain *next = c->next;
-                    for (; cp[hh] == c; --hh) {
-                        cp[hh] = next;
-                        if (!hh) break;
-                    }
-                    if (c->prev) c->prev->next = next;
-                    if (next) next->prev = c->prev;
-                    c->next = p_unused;
-                    c->prev = nullptr;
-                    p_unused = c;
-                    allocator_destroy(get_alloc(), &c->value);
-                    allocator_construct(get_alloc(), &c->value);
-                    if (!Multihash) return 1;
+            Size olen = p_len;
+            for (Chain *e = cp[h + 1]; c != e; c = c->next) {
+                if (!get_eq()(key, B::get_key(c->value))) break;
+                --p_len;
+                Size hh = h;
+                Chain *next = c->next;
+                for (; cp[hh] == c; --hh) {
+                    cp[hh] = next;
+                    if (!hh) break;
                 }
+                if (c->prev) c->prev->next = next;
+                if (next) next->prev = c->prev;
+                c->next = p_unused;
+                c->prev = nullptr;
+                p_unused = c;
+                allocator_destroy(get_alloc(), &c->value);
+                allocator_construct(get_alloc(), &c->value);
+                if (!Multihash) return 1;
+            }
             return olen - p_len;
         }
 
