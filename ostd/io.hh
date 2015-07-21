@@ -142,18 +142,24 @@ static FileStream err(::stderr);
 
 /* no need to call anything from FileStream, prefer simple calls... */
 
-inline void write(const char *s) {
-    fputs(s, ::stdout);
-}
+namespace detail {
+    struct IoNat {};
 
-template<typename A>
-inline void write(const AnyString<A> &s) {
-    fwrite(s.data(), 1, s.size(), ::stdout);
+    inline void write_impl(ConstCharRange s) {
+        fwrite(&s[0], 1, s.size(), ::stdout);
+    }
+
+    template<typename T>
+    inline void write_impl(const T &v, EnableIf<
+        !IsConstructible<ConstCharRange, const T &>::value, detail::IoNat
+    > = detail::IoNat()) {
+        write(ostd::to_string(v));
+    }
 }
 
 template<typename T>
 inline void write(const T &v) {
-    write(ostd::to_string(v));
+    detail::write_impl(v);
 }
 
 template<typename T, typename ...A>
@@ -162,20 +168,10 @@ inline void write(const T &v, const A &...args) {
     write(args...);
 }
 
-inline void writeln(const char *s) {
-    write(s);
-    putc('\n', ::stdout);
-}
-
-template<typename A>
-inline void writeln(const AnyString<A> &s) {
-    write(s);
-    putc('\n', ::stdout);
-}
-
 template<typename T>
 inline void writeln(const T &v) {
-    writeln(ostd::to_string(v));
+    write(v);
+    putc('\n', ::stdout);
 }
 
 template<typename T, typename ...A>
@@ -197,7 +193,7 @@ namespace detail {
 }
 
 template<typename ...A>
-inline void writef(const char *fmt, const A &...args) {
+inline void writef(ConstCharRange fmt, const A &...args) {
     char buf[512];
     Ptrdiff need = format(detail::FormatOutRange<sizeof(buf)>(buf),
         fmt, args...);
@@ -212,21 +208,8 @@ inline void writef(const char *fmt, const A &...args) {
     fwrite(s.data(), 1, need, ::stdout);
 }
 
-template<typename AL, typename ...A>
-inline void writef(const AnyString<AL> &fmt,
-                          const A &...args) {
-    writef(fmt.data(), args...);
-}
-
 template<typename ...A>
-inline void writefln(const char *fmt, const A &...args) {
-    writef(fmt, args...);
-    putc('\n', ::stdout);
-}
-
-template<typename AL, typename ...A>
-inline void writefln(const AnyString<AL> &fmt,
-                            const A &...args) {
+inline void writefln(ConstCharRange fmt, const A &...args) {
     writef(fmt, args...);
     putc('\n', ::stdout);
 }
