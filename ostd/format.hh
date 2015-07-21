@@ -27,14 +27,14 @@ enum FormatFlags {
 };
 
 namespace detail {
-    inline int parse_fmt_flags(const char *&fmt, int ret) {
-        while (*fmt) {
-            switch (*fmt) {
-            case '-': ret |= FMT_FLAG_DASH; ++fmt; break;
-            case '+': ret |= FMT_FLAG_PLUS; ++fmt; break;
-            case '#': ret |= FMT_FLAG_HASH; ++fmt; break;
-            case '0': ret |= FMT_FLAG_ZERO; ++fmt; break;
-            case ' ': ret |= FMT_FLAG_SPACE; ++fmt; break;
+    inline int parse_fmt_flags(ConstStringRange &fmt, int ret) {
+        while (!fmt.empty()) {
+            switch (fmt.front()) {
+            case '-': ret |= FMT_FLAG_DASH; fmt.pop_front(); break;
+            case '+': ret |= FMT_FLAG_PLUS; fmt.pop_front(); break;
+            case '#': ret |= FMT_FLAG_HASH; fmt.pop_front(); break;
+            case '0': ret |= FMT_FLAG_ZERO; fmt.pop_front(); break;
+            case ' ': ret |= FMT_FLAG_SPACE; fmt.pop_front(); break;
             default: goto retflags;
             }
         }
@@ -42,10 +42,12 @@ namespace detail {
         return ret;
     }
 
-    inline Size read_digits(const char *&fmt, char *buf) {
+    inline Size read_digits(ConstStringRange &fmt, char *buf) {
         Size ret = 0;
-        for (; isdigit(*fmt); ++ret)
-            *buf++ = *fmt++;
+        for (; !fmt.empty() && isdigit(fmt.front()); ++ret) {
+            *buf++ = fmt.front();
+            fmt.pop_front();
+        }
         *buf = '\0';
         return ret;
     }
@@ -140,25 +142,27 @@ namespace detail {
 }
 
 struct FormatSpec {
-    FormatSpec(): p_nested_escape(false), p_fmt(nullptr) {}
-    FormatSpec(const char *fmt, bool escape = false):
+    FormatSpec(): p_nested_escape(false), p_fmt() {}
+    FormatSpec(ConstStringRange fmt, bool escape = false):
         p_nested_escape(escape), p_fmt(fmt) {}
 
     template<typename R>
     bool read_until_spec(R &writer, Size *wret) {
         Size written = 0;
-        if (!p_fmt) return false;
-        while (*p_fmt) {
-            if (*p_fmt == '%') {
-                ++p_fmt;
-                if (*p_fmt == '%') goto plain;
+        if (wret) *wret = 0;
+        if (p_fmt.empty()) return false;
+        while (!p_fmt.empty()) {
+            if (p_fmt.front() == '%') {
+                p_fmt.pop_front();
+                if (p_fmt.front() == '%') goto plain;
                 bool r = read_spec();
                 if (wret) *wret = written;
                 return r;
             }
         plain:
             ++written;
-            writer.put(*p_fmt++);
+            writer.put(p_fmt.front());
+            p_fmt.pop_front();
         }
         if (wret) *wret = written;
         return false;
@@ -173,7 +177,7 @@ struct FormatSpec {
         return r;
     }
 
-    const char *rest() const {
+    ConstStringRange rest() const {
         return p_fmt;
     }
 
@@ -214,21 +218,15 @@ struct FormatSpec {
 
     byte index() const { return p_index; }
 
-    const char *nested() const { return p_nested; }
-    Size nested_len() const { return p_nested_len; }
-
-    const char *nested_sep() const { return p_nested_sep; }
-    Size nested_sep_len() const { return p_nested_sep_len; }
+    ConstStringRange nested() const { return p_nested; }
+    ConstStringRange nested_sep() const { return p_nested_sep; }
 
     bool is_nested() const { return p_is_nested; }
     bool nested_escape() const { return p_nested_escape; }
 
 protected:
-    const char *p_nested = nullptr;
-    Size p_nested_len = 0;
-
-    const char *p_nested_sep = nullptr;
-    Size p_nested_sep_len = 0;
+    ConstStringRange p_nested;
+    ConstStringRange p_nested_sep;
 
     int p_flags = 0;
 
@@ -249,14 +247,14 @@ protected:
     bool p_nested_escape = false;
 
     bool read_until_dummy() {
-        while (*p_fmt) {
-            if (*p_fmt == '%') {
-                ++p_fmt;
-                if (*p_fmt == '%') goto plain;
+        while (!p_fmt.empty()) {
+            if (p_fmt.front() == '%') {
+                p_fmt.pop_front();
+                if (p_fmt.front() == '%') goto plain;
                 return read_spec();
             }
         plain:
-            ++p_fmt;
+            p_fmt.pop_front();
         }
         return false;
     }
@@ -264,50 +262,49 @@ protected:
     bool read_spec_range() {
         int sflags = p_flags;
         p_nested_escape = !(sflags & FMT_FLAG_DASH);
-        ++p_fmt;
-        const char *begin_inner = p_fmt;
+        p_fmt.pop_front();
+        ConstStringRange begin_inner(p_fmt);
         if (!read_until_dummy()) {
             p_is_nested = false;
             return false;
         }
         /* skip to the last spec in case multiple specs are present */
-        const char *curfmt = p_fmt;
+        ConstStringRange curfmt(p_fmt);
         while (read_until_dummy()) {
             curfmt = p_fmt;
         }
         p_fmt = curfmt;
         p_flags = sflags;
         /* find delimiter or ending */
-        const char *begin_delim = p_fmt;
-        const char *p = strchr(begin_delim, '%');
-        for (; p; p = strchr(p, '%')) {
-            ++p;
+        ConstStringRange begin_delim(p_fmt);
+        ConstStringRange p = find(begin_delim, '%');
+        for (; !p.empty(); p = find(p, '%')) {
+            p.pop_front();
             /* escape, skip */
-            if (*p == '%') {
-                ++p;
+            if (p.front() == '%') {
+                p.pop_front();
                 continue;
             }
             /* found end, in that case delimiter is after spec */
-            if (*p == ')') {
-                p_nested = begin_inner;
-                p_nested_len = begin_delim - begin_inner;
-                p_nested_sep = begin_delim;
-                p_nested_sep_len = p - p_nested_sep - 1;
-                p_fmt = ++p;
+            if (p.front() == ')') {
+                p_nested = begin_inner.slice(0, &begin_delim[0] - &begin_inner[0]);
+                p_nested_sep = begin_delim.slice(0, &p[0] - &begin_delim[0] - 1);
+                p.pop_front();
+                p_fmt = p;
                 p_is_nested = true;
                 return true;
             }
             /* found actual delimiter start... */
-            if (*p == '|') {
-                p_nested = begin_inner;
-                p_nested_len = p - begin_inner - 1;
-                ++p;
+            if (p.front() == '|') {
+                p_nested = begin_inner.slice(0, &p[0] - &begin_inner[0] - 1);
+                p.pop_front();
                 p_nested_sep = p;
-                for (p = strchr(p, '%'); p; p = strchr(p, '%')) {
-                    ++p;
-                    if (*p == ')') {
-                        p_nested_sep_len = p - p_nested_sep - 1;
-                        p_fmt = ++p;
+                for (p = find(p, '%'); !p.empty(); p = find(p, '%')) {
+                    p.pop_front();
+                    if (p.front() == ')') {
+                        p_nested_sep = p_nested_sep.slice(0, &p[0] - &p_nested_sep[0] - 1);
+                        p.pop_front();
+                        p_fmt = p;
                         p_is_nested = true;
                         return true;
                     }
@@ -326,12 +323,12 @@ protected:
         bool havepos = false;
         p_index = 0;
         /* parse index */
-        if (*p_fmt == '$') {
+        if (p_fmt.front() == '$') {
             if (ndig <= 0) return false; /* no pos given */
             int idx = atoi(p_buf);
             if (idx <= 0 || idx > 255) return false; /* bad index */
             p_index = byte(idx);
-            ++p_fmt;
+            p_fmt.pop_front();
             havepos = true;
         }
 
@@ -351,7 +348,7 @@ protected:
         }
 
         /* range/array formatting */
-        if ((*p_fmt == '(') && (havepos || !(ndig - skipd))) {
+        if ((p_fmt.front() == '(') && (havepos || !(ndig - skipd))) {
             return read_spec_range();
         }
 
@@ -365,35 +362,36 @@ protected:
         } else if (detail::read_digits(p_fmt, p_buf)) {
             p_width = atoi(p_buf);
             p_has_width = true;
-        } else if (*p_fmt == '*') {
+        } else if (p_fmt.front() == '*') {
             p_arg_width = p_has_width = true;
-            ++p_fmt;
+            p_fmt.pop_front();
         }
 
         /* parse precision */
         p_precision = 0;
         p_has_precision = false;
         p_arg_precision = false;
-        if (*p_fmt != '.') goto fmtchar;
-        ++p_fmt;
+        if (p_fmt.front() != '.') goto fmtchar;
+        p_fmt.pop_front();
 
         if (detail::read_digits(p_fmt, p_buf)) {
             p_precision = atoi(p_buf);
             p_has_precision = true;
-        } else if (*p_fmt == '*') {
+        } else if (p_fmt.front() == '*') {
             p_arg_precision = p_has_precision = true;
-            ++p_fmt;
+            p_fmt.pop_front();
         } else return false;
 
     fmtchar:
-        p_spec = *p_fmt++;
+        p_spec = p_fmt.front();
+        p_fmt.pop_front();
         /* make sure we're testing on a signed byte - our mapping only
          * tests values up to 127 */
         sbyte sp = p_spec;
         return (sp >= 65) && (detail::fmt_specs[sp - 65] != 0);
     }
 
-    const char *p_fmt;
+    ConstStringRange p_fmt;
     char p_buf[32];
 };
 
@@ -525,7 +523,7 @@ namespace detail {
         Size fmtn = 0;
         /* test first item */
         Ptrdiff fret = format_ritem(writer, fmtn, escape, expandval,
-            fl->rest(), range.front());
+            &fl->rest()[0], range.front());
         if (fret < 0) return fret;
         ret += fret;
         range.pop_front();
@@ -536,7 +534,7 @@ namespace detail {
                 return -1;
             ret += seplen;
             fret = format_ritem(writer, fmtn, escape, expandval,
-                fl->rest(), range.front());
+                &fl->rest()[0], range.front());
             if (fret < 0) return fret;
             ret += fret;
         }
@@ -854,12 +852,14 @@ namespace detail {
                 if (!argpos) argpos = argidx++;
                 /* FIXME: figure out a better way */
                 char new_fmt[256];
-                memcpy(new_fmt, spec.nested(), spec.nested_len());
-                new_fmt[spec.nested_len()] = '\0';
+                ConstStringRange nst(spec.nested());
+                memcpy(new_fmt, &nst[0], nst.size());
+                new_fmt[nst.size()] = '\0';
                 detail::WriteSpec nspec(new_fmt, spec.nested_escape());
+                ConstStringRange nstsep(spec.nested_sep());
                 Ptrdiff sw = nspec.write_range(writer, argpos - 1,
                     (spec.flags() & FMT_FLAG_HASH),
-                    spec.nested_sep(), spec.nested_sep_len(), args...);
+                    &nstsep[0], nstsep.size(), args...);
                 if (sw < 0) return sw;
                 written += sw;
                 continue;

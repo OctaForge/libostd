@@ -24,26 +24,30 @@ template<typename T>
 struct StringRangeBase: InputRange<
     StringRangeBase<T>, FiniteRandomAccessRangeTag, T
 > {
-    StringRangeBase() = delete;
+private:
+    struct Nat {};
+
+public:
+    StringRangeBase(): p_beg(nullptr), p_end(nullptr) {};
     StringRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
     StringRangeBase(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
 
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     template<typename U>
     StringRangeBase(U beg, EnableIf<
-        IsConvertible<U, T *>::value && !IsArray<U>::value, bool
-    > = true): p_beg(beg), p_end((T *)beg + strlen(beg)) {}
+        IsConvertible<U, T *>::value && !IsArray<U>::value, Nat
+    > = Nat()): p_beg(beg), p_end((T *)beg + strlen(beg)) {}
 
     template<typename U, Size N>
     StringRangeBase(U (&beg)[N], EnableIf<
-        IsConvertible<U *, T *>::value, bool
-    > = true): p_beg(beg),
+        IsConvertible<U *, T *>::value, Nat
+    > = Nat()): p_beg(beg),
         p_end(beg + N - (beg[N - 1] == '\0')) {}
 
     template<typename U, typename A>
     StringRangeBase(const StringBase<U, A> &s, EnableIf<
-        IsConvertible<U *, T *>::value, bool
-    > = true): p_beg(s.data()),
+        IsConvertible<U *, T *>::value, Nat
+    > = Nat()): p_beg(s.data()),
         p_end(s.data() + s.size()) {}
 
     template<typename U, typename = EnableIf<
