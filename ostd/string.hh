@@ -40,8 +40,10 @@ struct StringRangeBase: InputRange<
     > = true): p_beg(beg),
         p_end(beg + N - (beg[N - 1] == '\0')) { printf("arr\n"); }
 
-    template<typename A>
-    StringRangeBase(const StringBase<T, A> &s): p_beg(s.data()),
+    template<typename U, typename A>
+    StringRangeBase(const StringBase<U, A> &s, EnableIf<
+        IsConvertible<U *, T *>::value, bool
+    > = true): p_beg(s.data()),
         p_end(s.data() + s.size()) {}
 
     template<typename U, typename = EnableIf<
