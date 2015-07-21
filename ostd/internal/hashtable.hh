@@ -258,7 +258,7 @@ private:
             return c;
         }
 
-        Chain *insert(Size h) {
+        Chain *request_node() {
             if (!p_unused) {
                 Chunk *chunk = allocator_allocate(get_challoc(), 1);
                 allocator_construct(get_challoc(), chunk);
@@ -272,7 +272,11 @@ private:
             ++p_len;
             Chain *c = p_unused;
             p_unused = p_unused->next;
-            return insert_node(h, c);
+            return c;
+        }
+
+        Chain *insert(Size h) {
+            return insert_node(h, request_node());
         }
 
         void delete_chunks(Chunk *chunks) {
@@ -511,13 +515,27 @@ public:
         Pair<Range, bool> emplace(Args &&...args) {
             rehash_ahead(1);
             E elem(forward<Args>(args)...);
-            Size h = bucket(B::get_key(elem));
             if (Multihash) {
-                /* multihash: always insert */
-                Chain *ch = insert(h);
+                /* multihash: always insert
+                 * gotta make sure that equal keys always come  after
+                 * each other (this is then used by other APIs)
+                 */
+                Size h = 0;
+                Chain *found = find(B::get_key(elem), h);
+                if (!found) {
+                    Chain *ch = insert(h);
+                    B::swap_elem(ch->value, elem);
+                    return make_pair(Range(ch), true);
+                }
+                Chain *ch = request_node();
                 B::swap_elem(ch->value, elem);
-                return make_pair(Range(ch), true);
+                Chain *next = found->next;
+                found->next = ch;
+                ch->prev = found;
+                ch->next = next;
+                if (next) next->prev = ch;
             }
+            Size h = bucket(B::get_key(elem));
             Chain *found = nullptr;
             bool ins = true;
             Chain **cp = p_data.first();
