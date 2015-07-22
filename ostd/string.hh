@@ -623,9 +623,9 @@ inline namespace literals { inline namespace string_literals {
     }
 } }
 
-template<typename A, typename T, typename F, typename S = const char *>
-AnyString<A> concat(AllocatorArg, const A &alloc, const T &v, const S &sep,
-                    F func) {
+template<typename A, typename T, typename F>
+AnyString<A> concat(AllocatorArg, const A &alloc, const T &v,
+                    ConstCharRange sep, F func) {
     AnyString<A> ret(alloc);
     auto range = ostd::iter(v);
     if (range.empty()) return ret;
@@ -638,9 +638,9 @@ AnyString<A> concat(AllocatorArg, const A &alloc, const T &v, const S &sep,
     return ret;
 }
 
-template<typename A, typename T, typename S = const char *>
+template<typename A, typename T>
 AnyString<A> concat(AllocatorArg, const A &alloc, const T &v,
-                    const S &sep = " ") {
+                    ConstCharRange sep = " ") {
     AnyString<A> ret(alloc);
     auto range = ostd::iter(v);
     if (range.empty()) return ret;
@@ -653,35 +653,35 @@ AnyString<A> concat(AllocatorArg, const A &alloc, const T &v,
     return ret;
 }
 
-template<typename T, typename F, typename S = const char *>
-String concat(const T &v, const S &sep, F func) {
+template<typename T, typename F>
+String concat(const T &v, ConstCharRange sep, F func) {
     return concat(allocator_arg, typename String::Allocator(), v, sep, func);
 }
 
-template<typename T, typename S = const char *>
-String concat(const T &v, const S &sep = " ") {
+template<typename T>
+String concat(const T &v, ConstCharRange sep = " ") {
     return concat(allocator_arg, typename String::Allocator(), v, sep);
 }
 
-template<typename A, typename T, typename F, typename S = const char *>
+template<typename A, typename T, typename F>
 AnyString<A> concat(AllocatorArg, const A &alloc,
-                    std::initializer_list<T> v, const S &sep, F func) {
+                    std::initializer_list<T> v, ConstCharRange sep, F func) {
     return concat(allocator_arg, alloc, ostd::iter(v), sep, func);
 }
 
-template<typename A, typename T, typename S = const char *>
+template<typename A, typename T>
 AnyString<A> concat(AllocatorArg, const A &alloc,
-                    std::initializer_list<T> v, const S &sep = " ") {
+                    std::initializer_list<T> v, ConstCharRange sep = " ") {
     return concat(allocator_arg, alloc, ostd::iter(v), sep);
 }
 
-template<typename T, typename F, typename S = const char *>
-String concat(std::initializer_list<T> v, const S &sep, F func) {
+template<typename T, typename F>
+String concat(std::initializer_list<T> v, ConstCharRange sep, F func) {
     return concat(ostd::iter(v), sep, func);
 }
 
-template<typename T, typename S = const char *>
-String concat(std::initializer_list<T> v, const S &sep = " ") {
+template<typename T>
+String concat(std::initializer_list<T> v, ConstCharRange sep = " ") {
     return concat(ostd::iter(v), sep);
 }
 
