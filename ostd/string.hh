@@ -262,19 +262,12 @@ public:
     }
 
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
-    StringBase(const Value *v, const A &a = A()): StringBase(a) {
-        Size len = strlen(v);
-        if (!len) return;
-        reserve(len);
-        memcpy(p_buf.first(), v, len + 1);
-        p_len = len;
-    }
-
-    StringBase(const Value *v, Size n, const A &a = A()): StringBase(a) {
-        if (!n) return;
-        reserve(n);
-        memcpy(p_buf.first(), v, n);
-        p_buf.first()[n] = '\0';
+    StringBase(ConstRange v, const A &a = A()): StringBase(a) {
+        if (!v.size()) return;
+        reserve(v.size());
+        memcpy(p_buf.first(), &v[0], v.size());
+        p_buf.first()[v.size()] = '\0';
+        p_len = v.size();
     }
 
     template<typename R, typename = EnableIf<
@@ -282,6 +275,10 @@ public:
         IsConvertible<RangeReference<R>, Value>::value
     >> StringBase(R range, const A &a = A()): StringBase(a) {
         ctor_from_range(range);
+    }
+
+    ~StringBase() {
+        allocator_deallocate(p_buf.second(), p_buf.first(), p_cap + 1);
     }
 
     void clear() {
@@ -320,11 +317,11 @@ public:
         if (!p_cap) p_buf.first() = (Pointer)&p_len;
         return *this;
     }
-    StringBase &operator=(const Value *v) {
-        Size len = strlen(v);
-        reserve(len);
-        if (len) memcpy(p_buf.first(), v, len);
-        p_buf.first()[len] = '\0';
+    StringBase &operator=(ConstRange v) {
+        reserve(v.size());
+        if (v.size()) memcpy(p_buf.first(), &v[0], v.size());
+        p_buf.first()[v.size()] = '\0';
+        p_len = v.size();
         return *this;
     }
     template<typename R, typename = EnableIf<
@@ -608,7 +605,7 @@ inline bool operator>=(const char *lhs, const StringBase<T, A> &rhs) {
 
 inline namespace literals { inline namespace string_literals {
     String operator "" _s(const char *str, Size len) {
-        return String(str, len);
+        return String(ConstCharRange(str, len));
     }
 
     ConstCharRange operator "" _S(const char *str, Size len) {
@@ -748,7 +745,7 @@ template<> struct ToString<bool> {
     using Argument = bool;
     using Result = String;
     String operator()(bool b) {
-        return b ? "true" : "false";
+        return String(b ? "true" : "false");
     }
 };
 
