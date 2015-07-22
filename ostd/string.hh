@@ -270,6 +270,16 @@ public:
         p_len = v.size();
     }
 
+    template<typename U>
+    StringBase(U v, const EnableIf<
+        IsConvertible<U, const Value *>::value && !IsArray<U>::value, A
+    > &a = A()): StringBase(ConstRange(v), a) {}
+
+    template<typename U, Size N>
+    StringBase(U (&v)[N], const EnableIf<
+        IsConvertible<U *, const Value *>::value, A
+    > &a = A()): StringBase(ConstRange(v), a) {}
+
     template<typename R, typename = EnableIf<
         IsInputRange<R>::value &&
         IsConvertible<RangeReference<R>, Value>::value
@@ -745,7 +755,7 @@ template<> struct ToString<bool> {
     using Argument = bool;
     using Result = String;
     String operator()(bool b) {
-        return String(b ? "true" : "false");
+        return b ? "true" : "false";
     }
 };
 
