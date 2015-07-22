@@ -181,16 +181,17 @@ struct FormatSpec {
         return p_fmt;
     }
 
-    void build_spec(char *buf, const char *spec, Size specn) {
-        *buf++ = '%';
-        if (p_flags & FMT_FLAG_DASH ) *buf++ = '-';
-        if (p_flags & FMT_FLAG_ZERO ) *buf++ = '0';
-        if (p_flags & FMT_FLAG_SPACE) *buf++ = ' ';
-        if (p_flags & FMT_FLAG_PLUS ) *buf++ = '+';
-        if (p_flags & FMT_FLAG_HASH ) *buf++ = '#';
-        memcpy(buf, "*.*", 3);
-        memcpy(buf + 3, spec, specn);
-        *(buf += specn + 3) = '\0';
+    template<typename R>
+    Size build_spec(R &&out, ConstCharRange spec) {
+        Size ret = out.put('%');
+        if (p_flags & FMT_FLAG_DASH ) ret += out.put('-');
+        if (p_flags & FMT_FLAG_ZERO ) ret += out.put('0');
+        if (p_flags & FMT_FLAG_SPACE) ret += out.put(' ');
+        if (p_flags & FMT_FLAG_PLUS ) ret += out.put('+');
+        if (p_flags & FMT_FLAG_HASH ) ret += out.put('#');
+        ret += out.put_n("*.*", 3);
+        ret += out.put_n(&spec[0], spec.size());
+        return ret;
     }
 
     int width() const { return p_width; }
@@ -608,6 +609,9 @@ namespace detail {
             p_written += ret;
             return ret;
         }
+        Size put_string(ConstCharRange r) {
+            return put_n(&r[0], r.size());
+        }
         Size get_written() const { return p_written; }
     private:
         R &p_out;
@@ -729,7 +733,7 @@ namespace detail {
             if (specn == 7) fmtspec[Long] = 'g';
             if (Long) fmtspec[0] = 'L';
 
-            this->build_spec(buf, fmtspec, sizeof(fmtspec));
+            buf[this->build_spec(iter(buf), fmtspec)] = '\0';
             Ptrdiff ret = snprintf(rbuf, sizeof(rbuf), buf,
                 this->width(),
                 this->has_precision() ? this->precision() : 6, val);
