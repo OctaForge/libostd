@@ -579,16 +579,16 @@ namespace detail {
         return nullptr;
     }
 
-    inline String escape_fmt_str(const char *val) {
+    inline String escape_fmt_str(ConstCharRange val) {
         String ret;
         ret.push('"');
-        while (*val) {
-            const char *esc = escape_fmt_char(*val, '"');
+        while (!val.empty()) {
+            const char *esc = escape_fmt_char(val.front(), '"');
             if (esc)
                 ret.append(esc);
             else
-                ret.push(*val);
-            ++val;
+                ret.push(val.front());
+            val.pop_front();
         }
         ret.push('"');
         return ret;
@@ -629,39 +629,31 @@ namespace detail {
         WriteSpec(): FormatSpec() {}
         WriteSpec(ConstCharRange fmt, bool esc): FormatSpec(fmt, esc) {}
 
-        /* C string */
+        /* string base writer */
         template<typename R>
-        Ptrdiff write(R &writer, bool escape, const char *val, Size n) {
+        Ptrdiff write_str(R &writer, bool escape, ConstCharRange val) {
             if (escape) {
-                String esc = escape_fmt_str(val);
-                return write(writer, false, (const char *)esc.data(),
-                    esc.size());
+                return write_str(writer, false, escape_fmt_str(val));
             }
+            Size n = val.size();
             if (this->precision()) n = this->precision();
             Ptrdiff r = n;
             r += this->write_spaces(writer, n, true);
-            writer.put_n(val, n);
+            writer.put_n(&val[0], n);
             r += this->write_spaces(writer, n, false);
             return r;
         }
 
-        template<typename R>
-        Ptrdiff write(R &writer, bool escape, const char *val) {
+        /* any string value */
+        template<typename R, typename T>
+        Ptrdiff write(R &writer, bool escape, const T &val, EnableIf<
+            IsConstructible<ConstCharRange, const T &>::value, bool
+        > = true) {
             if (this->spec() != 's') {
                 assert(false && "cannot print strings with the given spec");
                 return -1;
             }
-            return write(writer, escape, val, strlen(val));
-        }
-
-        /* OctaSTD string */
-        template<typename R, typename A>
-        Ptrdiff write(R &writer, bool escape, const AnyString<A> &val) {
-            if (this->spec() != 's') {
-                assert(false && "cannot print strings with the given spec");
-                return -1;
-            }
-            return write(writer, escape, val.data(), val.size());
+            return write_str(writer, escape, val);
         }
 
         /* character */
@@ -756,7 +748,9 @@ namespace detail {
 
         /* pointer value */
         template<typename R, typename T>
-        Ptrdiff write(R &writer, bool, T *val) {
+        Ptrdiff write(R &writer, bool, T *val, EnableIf<
+            !IsConstructible<ConstCharRange, T *>::value, bool
+        > = true) {
             if (this->p_spec == 's') {
                 this->p_spec = 'x';
                 this->p_flags |= FMT_FLAG_HASH;
@@ -767,7 +761,9 @@ namespace detail {
         /* generic value */
         template<typename R, typename T>
         Ptrdiff write(R &writer, bool, const T &val, EnableIf<
-            !IsArithmetic<T>::value && FmtTostrTest<T>::value &&
+            !IsArithmetic<T>::value &&
+            !IsConstructible<ConstCharRange, const T &>::value &&
+            FmtTostrTest<T>::value &&
             !FmtTofmtTest<T, FmtWriteRange<R>>::value, bool
         > = true) {
             if (this->spec() != 's') {
@@ -790,7 +786,9 @@ namespace detail {
         /* generic failure case */
         template<typename R, typename T>
         Ptrdiff write(R &, bool, const T &, EnableIf<
-            !IsArithmetic<T>::value && !FmtTostrTest<T>::value &&
+            !IsArithmetic<T>::value &&
+            !IsConstructible<ConstCharRange, const T &>::value &&
+            !FmtTostrTest<T>::value &&
             !FmtTofmtTest<T, FmtWriteRange<R>>::value, bool
         > = true) {
             assert(false && "value cannot be formatted");
