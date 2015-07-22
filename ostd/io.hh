@@ -113,10 +113,6 @@ struct FileStream: Stream {
         return  fputc(c, p_f) != EOF;
     }
 
-    bool write(const char *s) {
-        return fputs(s, p_f) != EOF;
-    }
-
     void swap(FileStream &s) {
         ostd::swap(p_f, s.p_f);
         ostd::swap(p_owned, s.p_owned);
@@ -144,8 +140,8 @@ namespace detail {
 
     template<typename T>
     inline void write_impl(const T &v, EnableIf<
-        !IsConstructible<ConstCharRange, const T &>::value, detail::IoNat
-    > = detail::IoNat()) {
+        !IsConstructible<ConstCharRange, const T &>::value, IoNat
+    > = IoNat()) {
         write(ostd::to_string(v));
     }
 }
@@ -172,17 +168,6 @@ inline void writeln(const T &v, const A &...args) {
     write(v);
     write(args...);
     putc('\n', ::stdout);
-}
-
-namespace detail {
-    struct UnsafeWritefRange: OutputRange<UnsafeWritefRange, char> {
-        UnsafeWritefRange(char *p): p_ptr(p) {}
-        bool put(char c) {
-            *p_ptr++ = c;
-            return true;
-        }
-        char *p_ptr;
-    };
 }
 
 template<typename ...A>
