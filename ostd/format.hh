@@ -399,9 +399,8 @@ protected:
 /* for custom container formatting */
 
 template<typename T, typename R, typename = EnableIf<
-    IsSame<decltype(declval<T>().to_format(declval<R &>(),
-                                           declval<const FormatSpec &>())),
-           bool
+    IsSame<decltype(declval<const T &>()
+        .to_format(declval<R &>(), declval<const FormatSpec &>())), bool
     >::value
 >> inline bool to_format(const T &v, R &writer, const FormatSpec &fs) {
     return v.to_format(writer, fs);
