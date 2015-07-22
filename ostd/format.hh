@@ -595,29 +595,6 @@ namespace detail {
         return ret;
     }
 
-    template<typename R>
-    struct FmtWriteRange: OutputRange<FmtWriteRange<R>, char> {
-        FmtWriteRange() = delete;
-        FmtWriteRange(R &out): p_out(out), p_written(0) {}
-        bool put(char v) {
-            bool ret = p_out.put(v);
-            p_written += ret;
-            return ret;
-        }
-        Size put_n(const char *v, Size n) {
-            Size ret = p_out.put_n(v, n);
-            p_written += ret;
-            return ret;
-        }
-        Size put_string(ConstCharRange r) {
-            return put_n(&r[0], r.size());
-        }
-        Size get_written() const { return p_written; }
-    private:
-        R &p_out;
-        Size p_written;
-    };
-
     template<typename T, typename R>
     static True test_tofmt(decltype(to_format(declval<const T &>(),
                                               declval<R &>(),
@@ -768,7 +745,7 @@ namespace detail {
             !IsArithmetic<T>::value &&
             !IsConstructible<ConstCharRange, const T &>::value &&
             FmtTostrTest<T>::value &&
-            !FmtTofmtTest<T, FmtWriteRange<R>>::value, bool
+            !FmtTofmtTest<T, TostrRange<R>>::value, bool
         > = true) {
             if (this->spec() != 's') {
                 assert(false && "custom objects need '%s' format");
@@ -780,9 +757,9 @@ namespace detail {
         /* custom format case */
         template<typename R, typename T>
         Ptrdiff write(R &writer, bool, const T &val,
-            EnableIf<FmtTofmtTest<T, FmtWriteRange<R>>::value, bool
+            EnableIf<FmtTofmtTest<T, TostrRange<R>>::value, bool
         > = true) {
-            FmtWriteRange<R> sink(writer);
+            TostrRange<R> sink(writer);
             if (!to_format(val, sink, *this)) return -1;
             return sink.get_written();
         }
@@ -793,7 +770,7 @@ namespace detail {
             !IsArithmetic<T>::value &&
             !IsConstructible<ConstCharRange, const T &>::value &&
             !FmtTostrTest<T>::value &&
-            !FmtTofmtTest<T, FmtWriteRange<R>>::value, bool
+            !FmtTofmtTest<T, TostrRange<R>>::value, bool
         > = true) {
             assert(false && "value cannot be formatted");
             return -1;

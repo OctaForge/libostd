@@ -288,6 +288,7 @@ public:
     }
 
     ~StringBase() {
+        if (!p_cap) return;
         allocator_deallocate(p_buf.second(), p_buf.first(), p_cap + 1);
     }
 
@@ -686,14 +687,42 @@ String concat(std::initializer_list<T> v, ConstCharRange sep = " ") {
 }
 
 namespace detail {
-    template<typename T>
+    template<typename R>
+    struct TostrRange: OutputRange<TostrRange<R>, char> {
+        TostrRange() = delete;
+        TostrRange(R &out): p_out(out), p_written(0) {}
+        bool put(char v) {
+            bool ret = p_out.put(v);
+            p_written += ret;
+            return ret;
+        }
+        Size put_n(const char *v, Size n) {
+            Size ret = p_out.put_n(v, n);
+            p_written += ret;
+            return ret;
+        }
+        Size put_string(ConstCharRange r) {
+            return put_n(&r[0], r.size());
+        }
+        Size get_written() const { return p_written; }
+    private:
+        R &p_out;
+        Size p_written;
+    };
+
+    template<typename T, typename R>
     auto test_tostring(int) ->
         decltype(IsSame<decltype(declval<T>().to_string()), String>());
-    template<typename>
+
+    template<typename T, typename R>
+    static True test_tostring(decltype(declval<const T &>().to_string
+        (declval<R &>())) *);
+
+    template<typename, typename>
     False test_tostring(...);
 
-    template<typename T>
-    using ToStringTest = decltype(test_tostring<T>(0));
+    template<typename T, typename R>
+    using ToStringTest = decltype(test_tostring<T, R>(0));
 
     template<typename T>
     True test_iterable(decltype(ostd::iter(declval<T>())) *);
@@ -724,12 +753,17 @@ struct ToString<T, EnableIf<detail::IterableTest<T>::value>> {
 };
 
 template<typename T>
-struct ToString<T, EnableIf<detail::ToStringTest<T>::value>> {
+struct ToString<T, EnableIf<
+    detail::ToStringTest<T, detail::TostrRange<AppenderRange<String>>>::value
+>> {
     using Argument = RemoveCv<RemoveReference<T>>;
     using Result = String;
 
     String operator()(const T &v) const {
-        return v.to_string();
+        auto app = appender<String>();
+        detail::TostrRange<AppenderRange<String>> sink(app);
+        if (!v.to_string(sink)) return String();
+        return move(app.get());
     }
 };
 
