@@ -942,6 +942,9 @@ struct PointerRange: InputRange<PointerRange<T>, ContiguousRangeTag, T> {
         return copy(PointerRange(p, c), c);
     }
 
+    T *data() { return p_beg; }
+    const T *data() const { return p_beg; }
+
 private:
     T *p_beg, *p_end;
 };

@@ -142,7 +142,6 @@ public:
         return true;
     }
 
-    /* non-range methods */
     T *data() { return p_beg; }
     const T *data() const { return p_beg; }
 
