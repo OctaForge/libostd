@@ -22,7 +22,7 @@ template<typename T, typename A = Allocator<T>> class StringBase;
 
 template<typename T>
 struct CharRangeBase: InputRange<
-    CharRangeBase<T>, FiniteRandomAccessRangeTag, T
+    CharRangeBase<T>, ContiguousRangeTag, T
 > {
 private:
     struct Nat {};
