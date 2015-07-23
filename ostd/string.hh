@@ -623,66 +623,67 @@ inline namespace literals { inline namespace string_literals {
     }
 } }
 
-template<typename A, typename T, typename F>
-AnyString<A> concat(AllocatorArg, const A &alloc, const T &v,
-                    ConstCharRange sep, F func) {
-    AnyString<A> ret(alloc);
+namespace detail {
+    template<typename T, bool = IsConvertible<T, ConstCharRange>::value,
+                         bool = IsConvertible<T, char>::value>
+    struct ConcatPut;
+
+    template<typename T, bool B>
+    struct ConcatPut<T, true, B> {
+        template<typename R>
+        static bool put(R &sink, ConstCharRange v) {
+            return v.size() && (sink.put_n(&v[0], v.size()) == v.size());
+        }
+    };
+
+    template<typename T>
+    struct ConcatPut<T, false, true> {
+        template<typename R>
+        static bool put(R &sink, char v) {
+            return sink.put(v);
+        }
+    };
+}
+
+template<typename R, typename T, typename F>
+bool concat(R &&sink, const T &v, ConstCharRange sep, F func) {
     auto range = ostd::iter(v);
-    if (range.empty()) return ret;
+    if (range.empty()) return true;
     for (;;) {
-        ret += func(range.front());
+        if (!detail::ConcatPut<
+            decltype(func(range.front()))
+        >::put(sink, func(range.front())))
+            return false;
         range.pop_front();
         if (range.empty()) break;
-        ret += sep;
+        sink.put_n(&sep[0], sep.size());
     }
-    return ret;
+    return true;
 }
 
-template<typename A, typename T>
-AnyString<A> concat(AllocatorArg, const A &alloc, const T &v,
-                    ConstCharRange sep = " ") {
-    AnyString<A> ret(alloc);
+template<typename R, typename T>
+bool concat(R &&sink, const T &v, ConstCharRange sep = " ") {
     auto range = ostd::iter(v);
-    if (range.empty()) return ret;
+    if (range.empty()) return true;
     for (;;) {
-        ret += range.front();
+        ConstCharRange ret = range.front();
+        if (!ret.size() || (sink.put_n(&ret[0], ret.size()) != ret.size()))
+            return false;
         range.pop_front();
         if (range.empty()) break;
-        ret += sep;
+        sink.put_n(&sep[0], sep.size());
     }
-    return ret;
+    return true;
 }
 
-template<typename T, typename F>
-String concat(const T &v, ConstCharRange sep, F func) {
-    return concat(allocator_arg, typename String::Allocator(), v, sep, func);
+template<typename R, typename T, typename F>
+bool concat(R &&sink, std::initializer_list<T> v, ConstCharRange sep, F func) {
+    return concat(sink, ostd::iter(v), sep, func);
 }
 
-template<typename T>
-String concat(const T &v, ConstCharRange sep = " ") {
-    return concat(allocator_arg, typename String::Allocator(), v, sep);
-}
-
-template<typename A, typename T, typename F>
-AnyString<A> concat(AllocatorArg, const A &alloc,
-                    std::initializer_list<T> v, ConstCharRange sep, F func) {
-    return concat(allocator_arg, alloc, ostd::iter(v), sep, func);
-}
-
-template<typename A, typename T>
-AnyString<A> concat(AllocatorArg, const A &alloc,
-                    std::initializer_list<T> v, ConstCharRange sep = " ") {
-    return concat(allocator_arg, alloc, ostd::iter(v), sep);
-}
-
-template<typename T, typename F>
-String concat(std::initializer_list<T> v, ConstCharRange sep, F func) {
-    return concat(ostd::iter(v), sep, func);
-}
-
-template<typename T>
-String concat(std::initializer_list<T> v, ConstCharRange sep = " ") {
-    return concat(ostd::iter(v), sep);
+template<typename R, typename T>
+String concat(R &&sink, std::initializer_list<T> v, ConstCharRange sep = " ") {
+    return concat(sink, ostd::iter(v), sep);
 }
 
 namespace detail {
@@ -710,18 +711,18 @@ namespace detail {
     };
 
     template<typename T, typename R>
-    auto test_tostring(int) ->
-        decltype(IsSame<decltype(declval<T>().to_string()), String>());
+    auto test_stringify(int) ->
+        decltype(IsSame<decltype(declval<T>().stringify()), String>());
 
     template<typename T, typename R>
-    static True test_tostring(decltype(declval<const T &>().to_string
+    static True test_stringify(decltype(declval<const T &>().to_string
         (declval<R &>())) *);
 
     template<typename, typename>
-    False test_tostring(...);
+    False test_stringify(...);
 
     template<typename T, typename R>
-    using ToStringTest = decltype(test_tostring<T, R>(0));
+    using StringifyTest = decltype(test_stringify<T, R>(0));
 
     template<typename T>
     True test_iterable(decltype(ostd::iter(declval<T>())) *);
@@ -741,11 +742,12 @@ struct ToString<T, EnableIf<detail::IterableTest<T>::value>> {
 
     String operator()(const T &v) const {
         String ret("{");
-        ret += concat(ostd::iter(v), ", ", ToString<
+        auto x = appender<String>();
+        if (concat(x, ostd::iter(v), ", ", ToString<
             RemoveConst<RemoveReference<
                 RangeReference<decltype(ostd::iter(v))>
             >>
-        >());
+        >())) ret += x.get();
         ret += "}";
         return ret;
     }
@@ -753,7 +755,7 @@ struct ToString<T, EnableIf<detail::IterableTest<T>::value>> {
 
 template<typename T>
 struct ToString<T, EnableIf<
-    detail::ToStringTest<T, detail::TostrRange<AppenderRange<String>>>::value
+    detail::StringifyTest<T, detail::TostrRange<AppenderRange<String>>>::value
 >> {
     using Argument = RemoveCv<RemoveReference<T>>;
     using Result = String;
