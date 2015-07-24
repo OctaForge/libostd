@@ -149,9 +149,42 @@ public:
         return detail::mem_hash(data(), size());
     }
 
+    /* non-range */
+    int compare(CharRangeBase<const T> s) const {
+        int ret = memcmp(data(), s.data(), ostd::min(size(), s.size()));
+        return ret ? ret : (size() - s.size());
+    }
+
 private:
     T *p_beg, *p_end;
 };
+
+using CharRange = CharRangeBase<char>;
+using ConstCharRange = CharRangeBase<const char>;
+
+inline bool operator==(ConstCharRange lhs, ConstCharRange rhs) {
+    return !lhs.compare(rhs);
+}
+
+inline bool operator!=(ConstCharRange lhs, ConstCharRange rhs) {
+    return !(lhs == rhs);
+}
+
+inline bool operator<(ConstCharRange lhs, ConstCharRange rhs) {
+    return lhs.compare(rhs) < 0;
+}
+
+inline bool operator>(ConstCharRange lhs, ConstCharRange rhs) {
+    return lhs.compare(rhs) > 0;
+}
+
+inline bool operator<=(ConstCharRange lhs, ConstCharRange rhs) {
+    return lhs.compare(rhs) <= 0;
+}
+
+inline bool operator>=(ConstCharRange lhs, ConstCharRange rhs) {
+    return lhs.compare(rhs) >= 0;
+}
 
 template<typename T, typename A>
 class StringBase {
@@ -482,12 +515,8 @@ public:
         return *this;
     }
 
-    int compare(const StringBase &s) const {
-        return strcmp(p_buf.first(), s.data());
-    }
-
-    int compare(const Value *p) const {
-        return strcmp(p_buf.first(), p);
+    int compare(ConstRange r) const {
+        return iter().compare(r);
     }
 
     Range iter() {
@@ -522,94 +551,8 @@ public:
 };
 
 using String = StringBase<char>;
-using CharRange = CharRangeBase<char>;
-using ConstCharRange = CharRangeBase<const char>;
 
 template<typename A> using AnyString = StringBase<char, A>;
-
-template<typename T, typename A>
-inline bool operator==(const StringBase<T, A> &lhs,
-                       const StringBase<T, A> &rhs) {
-    return !lhs.compare(rhs);
-}
-template<typename T, typename A>
-inline bool operator==(const StringBase<T, A> &lhs, const char *rhs) {
-    return !lhs.compare(rhs);
-}
-template<typename T, typename A>
-inline bool operator==(const char *lhs, const StringBase<T, A> &rhs) {
-    return !rhs.compare(lhs);
-}
-
-template<typename T, typename A>
-inline bool operator!=(const StringBase<T, A> &lhs,
-                       const StringBase<T, A> &rhs) {
-    return !(lhs == rhs);
-}
-template<typename T, typename A>
-inline bool operator!=(const StringBase<T, A> &lhs, const char *rhs) {
-    return !(lhs == rhs);
-}
-template<typename T, typename A>
-inline bool operator!=(const char *lhs,  const StringBase<T, A> &rhs) {
-    return !(rhs == lhs);
-}
-
-template<typename T, typename A>
-inline bool operator<(const StringBase<T, A> &lhs,
-                      const StringBase<T, A> &rhs) {
-    return lhs.compare(rhs) < 0;
-}
-template<typename T, typename A>
-inline bool operator<(const StringBase<T, A> &lhs, const char *rhs) {
-    return lhs.compare(rhs) < 0;
-}
-template<typename T, typename A>
-inline bool operator<(const char *lhs, const StringBase<T, A> &rhs) {
-    return rhs.compare(lhs) > 0;
-}
-
-template<typename T, typename A>
-inline bool operator>(const StringBase<T, A> &lhs,
-                      const StringBase<T, A> &rhs) {
-    return rhs < lhs;
-}
-template<typename T, typename A>
-inline bool operator>(const StringBase<T, A> &lhs, const char *rhs) {
-    return rhs < lhs;
-}
-template<typename T, typename A>
-inline bool operator>(const char *lhs, const StringBase<T, A> &rhs) {
-    return rhs < lhs;
-}
-
-template<typename T, typename A>
-inline bool operator<=(const StringBase<T, A> &lhs,
-                       const StringBase<T, A> &rhs) {
-    return !(rhs < lhs);
-}
-template<typename T, typename A>
-inline bool operator<=(const StringBase<T, A> &lhs, const char *rhs) {
-    return !(rhs < lhs);
-}
-template<typename T, typename A>
-inline bool operator<=(const char *lhs, const StringBase<T, A> &rhs) {
-    return !(rhs < lhs);
-}
-
-template<typename T, typename A>
-inline bool operator>=(const StringBase<T, A> &lhs,
-                       const StringBase<T, A> &rhs) {
-    return !(lhs < rhs);
-}
-template<typename T, typename A>
-inline bool operator>=(const StringBase<T, A> &lhs, const char *rhs) {
-    return !(lhs < rhs);
-}
-template<typename T, typename A>
-inline bool operator>=(const char *lhs, const StringBase<T, A> &rhs) {
-    return !(lhs < rhs);
-}
 
 /* string literals */
 
