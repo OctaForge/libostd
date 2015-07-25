@@ -167,7 +167,7 @@ inline bool operator==(ConstCharRange lhs, ConstCharRange rhs) {
 }
 
 inline bool operator!=(ConstCharRange lhs, ConstCharRange rhs) {
-    return !(lhs == rhs);
+    return lhs.compare(rhs);
 }
 
 inline bool operator<(ConstCharRange lhs, ConstCharRange rhs) {
@@ -450,33 +450,11 @@ public:
         p_buf.first()[p_len] = '\0';
     }
 
-    StringBase &append(const StringBase &s) {
-        reserve(p_len + s.p_len);
-        if (!s.p_len) return *this;
-        memcpy(p_buf.first() + p_len, s.p_buf.first(), s.p_len);
-        p_len += s.p_len;
-        p_buf.first()[p_len] = '\0';
-        return *this;
-    }
-
-    StringBase &append(const StringBase &s, Size idx, Size len) {
-        if (!s.p_len) return;
-        Size end = (len == npos) ? s.size() : (idx + len);
-        Size nch = (end - idx);
-        if (!nch) return;
-        reserve(p_len + nch);
-        memcpy(p_buf.first() + p_len, s.p_buf.first() + idx, nch);
-        p_len += nch;
-        p_buf.first()[p_len] = '\0';
-        return *this;
-    }
-
-    StringBase &append(const Value *s) {
-        Size len = strlen(s);
-        reserve(p_len + len);
-        if (!len) return *this;
-        memcpy(p_buf.first() + p_len, s, len);
-        p_len += len;
+    StringBase &append(ConstRange r) {
+        if (!r.size()) return *this;
+        reserve(p_len + r.size());
+        memcpy(p_buf.first() + p_len, &r[0], r.size());
+        p_len += r.size();
         p_buf.first()[p_len] = '\0';
         return *this;
     }
@@ -490,8 +468,11 @@ public:
         return *this;
     }
 
-    template<typename R>
-    StringBase &append_range(R range) {
+    template<typename R, typename = EnableIf<
+        IsInputRange<R>::value &&
+        IsConvertible<RangeReference<R>, Value>::value &&
+        !IsConvertible<R, ConstRange>::value
+    >> StringBase &append(R range) {
         Size nadd = 0;
         for (; !range.empty(); range.pop_front()) {
             reserve(p_len + nadd + 1);
@@ -502,17 +483,18 @@ public:
         return *this;
     }
 
-    StringBase &operator+=(const StringBase &s) {
-        return append(s);
-    }
-    StringBase &operator+=(const Value *s) {
-        return append(s);
+    StringBase &operator+=(ConstRange r) {
+        return append(r);
     }
     StringBase &operator+=(T c) {
         reserve(p_len + 1);
         p_buf.first()[p_len++] = c;
         p_buf.first()[p_len] = '\0';
         return *this;
+    }
+    template<typename R>
+    StringBase &operator+=(const R &v) {
+        return append(v);
     }
 
     int compare(ConstRange r) const {
