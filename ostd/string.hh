@@ -623,7 +623,7 @@ bool concat(R &&sink, std::initializer_list<T> v, ConstCharRange sep, F func) {
 }
 
 template<typename R, typename T>
-String concat(R &&sink, std::initializer_list<T> v, ConstCharRange sep = " ") {
+bool concat(R &&sink, std::initializer_list<T> v, ConstCharRange sep = " ") {
     return concat(sink, ostd::iter(v), sep);
 }
 
