@@ -552,8 +552,6 @@ public:
 
 using String = StringBase<char>;
 
-template<typename A> using AnyString = StringBase<char, A>;
-
 /* string literals */
 
 inline namespace literals { inline namespace string_literals {
