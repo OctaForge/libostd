@@ -225,8 +225,8 @@ namespace detail {
 
 
     template<> struct FnvConstants<8> {
-        static constexpr Size prime = 1099511628211u;
-        static constexpr Size offset = 14695981039346656037u;
+        static constexpr Size prime = 1099511628211ull;
+        static constexpr Size offset = 14695981039346656037ull;
     };
 
     inline Size mem_hash(const void *p, Size l) {
