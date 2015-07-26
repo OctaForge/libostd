@@ -16,7 +16,25 @@ struct Vec2 {
         struct { T x, y; };
         T value[2];
     };
+
+    Vec2(): x(0), y(0) {}
+    Vec2(const Vec2 &v): x(v.x), y(v.y) {}
+    Vec2(T v): x(v), y(v) {}
+    Vec2(T x, T y): x(x), y(y) {}
+
+    T &operator[](Size idx)       { return value[idx]; }
+    T  operator[](Size idx) const { return value[idx]; }
 };
+
+template<typename T>
+inline bool operator==(const Vec2<T> &a, const Vec2<T> &b) {
+    return (a.x == b.x) && (a.y == b.y);
+}
+
+template<typename T>
+inline bool operator!=(const Vec2<T> &a, const Vec2<T> &b) {
+    return (a.x != b.x) || (a.y != b.y);
+}
 
 using Vec2f = Vec2<float>;
 using Vec2d = Vec2<double>;
@@ -31,7 +49,22 @@ struct Vec3 {
         struct { T r, g, b; };
         T value[3];
     };
+
+    Vec3(): x(0), y(0), z(0) {}
+    Vec3(const Vec3 &v): x(v.x), y(v.y), z(v.z) {}
+    Vec3(T v): x(v), y(v), z(v) {}
+    Vec3(T x, T y, T z): x(x), y(y), z(z) {}
 };
+
+template<typename T>
+inline bool operator==(const Vec3<T> &a, const Vec3<T> &b) {
+    return (a.x == b.x) && (a.y == b.y) && (a.z == b.z);
+}
+
+template<typename T>
+inline bool operator!=(const Vec3<T> &a, const Vec3<T> &b) {
+    return (a.x != b.x) || (a.y != b.y) || (a.z != b.z);
+}
 
 using Vec3f = Vec3<float>;
 using Vec3d = Vec3<double>;
@@ -46,7 +79,22 @@ struct Vec4 {
         struct { T r, g, b, a; };
         T value[4];
     };
+
+    Vec4(): x(0), y(0), z(0), w(0) {}
+    Vec4(const Vec3 &v): x(v.x), y(v.y), z(v.z), w(v.w) {}
+    Vec4(T v): x(v), y(v), z(v), w(v) {}
+    Vec4(T x, T y, T z, T w): x(x), y(y), z(z), w(w) {}
 };
+
+template<typename T>
+inline bool operator==(const Vec4<T> &a, const Vec4<T> &b) {
+    return (a.x == b.x) && (a.y == b.y) && (a.z == b.z) && (a.w == b.w);
+}
+
+template<typename T>
+inline bool operator!=(const Vec4<T> &a, const Vec4<T> &b) {
+    return (a.x != b.x) || (a.y != b.y) || (a.z != b.z) || (a.w != b.w);
+}
 
 using Vec4f = Vec4<float>;
 using Vec4d = Vec4<double>;
