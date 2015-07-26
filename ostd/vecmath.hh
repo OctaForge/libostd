@@ -91,7 +91,17 @@ inline Vec2<T> operator+(const Vec2<T> &a, const Vec2<T> &b) {
 }
 
 template<typename T>
+inline Vec2<T> operator+(const Vec2<T> &a, T b) {
+    return Vec2<T>(a).add(b);
+}
+
+template<typename T>
 inline Vec2<T> operator-(const Vec2<T> &a, const Vec2<T> &b) {
+    return Vec2<T>(a).sub(b);
+}
+
+template<typename T>
+inline Vec2<T> operator-(const Vec2<T> &a, T b) {
     return Vec2<T>(a).sub(b);
 }
 
@@ -101,7 +111,17 @@ inline Vec2<T> operator*(const Vec2<T> &a, const Vec2<T> &b) {
 }
 
 template<typename T>
+inline Vec2<T> operator*(const Vec2<T> &a, T b) {
+    return Vec2<T>(a).mul(b);
+}
+
+template<typename T>
 inline Vec2<T> operator/(const Vec2<T> &a, const Vec2<T> &b) {
+    return Vec2<T>(a).div(b);
+}
+
+template<typename T>
+inline Vec2<T> operator/(const Vec2<T> &a, T b) {
     return Vec2<T>(a).div(b);
 }
 
@@ -197,7 +217,17 @@ inline Vec3<T> operator+(const Vec3<T> &a, const Vec3<T> &b) {
 }
 
 template<typename T>
+inline Vec3<T> operator+(const Vec3<T> &a, T b) {
+    return Vec3<T>(a).add(b);
+}
+
+template<typename T>
 inline Vec3<T> operator-(const Vec3<T> &a, const Vec3<T> &b) {
+    return Vec3<T>(a).sub(b);
+}
+
+template<typename T>
+inline Vec3<T> operator-(const Vec3<T> &a, T b) {
     return Vec3<T>(a).sub(b);
 }
 
@@ -207,7 +237,17 @@ inline Vec3<T> operator*(const Vec3<T> &a, const Vec3<T> &b) {
 }
 
 template<typename T>
+inline Vec3<T> operator*(const Vec3<T> &a, T b) {
+    return Vec3<T>(a).mul(b);
+}
+
+template<typename T>
 inline Vec3<T> operator/(const Vec3<T> &a, const Vec3<T> &b) {
+    return Vec3<T>(a).div(b);
+}
+
+template<typename T>
+inline Vec3<T> operator/(const Vec3<T> &a, T b) {
     return Vec3<T>(a).div(b);
 }
 
@@ -303,7 +343,17 @@ inline Vec4<T> operator+(const Vec4<T> &a, const Vec4<T> &b) {
 }
 
 template<typename T>
+inline Vec4<T> operator+(const Vec4<T> &a, T b) {
+    return Vec4<T>(a).add(b);
+}
+
+template<typename T>
 inline Vec4<T> operator-(const Vec4<T> &a, const Vec4<T> &b) {
+    return Vec4<T>(a).sub(b);
+}
+
+template<typename T>
+inline Vec4<T> operator-(const Vec4<T> &a, T b) {
     return Vec4<T>(a).sub(b);
 }
 
@@ -313,7 +363,17 @@ inline Vec4<T> operator*(const Vec4<T> &a, const Vec4<T> &b) {
 }
 
 template<typename T>
+inline Vec4<T> operator*(const Vec4<T> &a, T b) {
+    return Vec4<T>(a).mul(b);
+}
+
+template<typename T>
 inline Vec4<T> operator/(const Vec4<T> &a, const Vec4<T> &b) {
+    return Vec4<T>(a).div(b);
+}
+
+template<typename T>
+inline Vec4<T> operator/(const Vec4<T> &a, T b) {
     return Vec4<T>(a).div(b);
 }
 
