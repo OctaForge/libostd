@@ -60,6 +60,19 @@ struct Vec2 {
         x /= o.x; y /= o.y;
         return *this;
     }
+
+    Vec2 &neg() {
+        x = -x; y = -y;
+        return *this;
+    }
+
+    bool is_zero() const {
+        return (x == 0) && (y == 0);
+    }
+
+    T dot(const Vec2<T> &o) const {
+        return (x * o.x) + (y * o.y);
+    }
 };
 
 template<typename T>
@@ -90,6 +103,11 @@ inline Vec2<T> operator*(const Vec2<T> &a, const Vec2<T> &b) {
 template<typename T>
 inline Vec2<T> operator/(const Vec2<T> &a, const Vec2<T> &b) {
     return Vec2<T>(a).div(b);
+}
+
+template<typename T>
+inline Vec2<T> operator-(const Vec2<T> &a) {
+    return Vec2<T>(a).neg();
 }
 
 using Vec2f = Vec2<float>;
@@ -148,6 +166,19 @@ struct Vec3 {
         x /= o.x; y /= o.y; z /= o.z;
         return *this;
     }
+
+    Vec3 &neg() {
+        x = -x; y = -y; z = -z;
+        return *this;
+    }
+
+    bool is_zero() const {
+        return (x == 0) && (y == 0) && (z == 0);
+    }
+
+    T dot(const Vec3<T> &o) const {
+        return (x * o.x) + (y * o.y) + (z * o.z);
+    }
 };
 
 template<typename T>
@@ -178,6 +209,11 @@ inline Vec3<T> operator*(const Vec3<T> &a, const Vec3<T> &b) {
 template<typename T>
 inline Vec3<T> operator/(const Vec3<T> &a, const Vec3<T> &b) {
     return Vec3<T>(a).div(b);
+}
+
+template<typename T>
+inline Vec3<T> operator-(const Vec3<T> &a) {
+    return Vec3<T>(a).neg();
 }
 
 using Vec3f = Vec3<float>;
@@ -236,6 +272,19 @@ struct Vec4 {
         x /= o.x; y /= o.y; z /= o.z; w /= o.w;
         return *this;
     }
+
+    Vec4 &neg() {
+        x = -x; y = -y; z = -z; w = -w;
+        return *this;
+    }
+
+    bool is_zero() const {
+        return (x == 0) && (y == 0) && (z == 0) && (w == 0);
+    }
+
+    T dot(const Vec4<T> &o) const {
+        return (x * o.x) + (y * o.y) + (z * o.z) + (w * o.w);
+    }
 };
 
 template<typename T>
@@ -266,6 +315,11 @@ inline Vec4<T> operator*(const Vec4<T> &a, const Vec4<T> &b) {
 template<typename T>
 inline Vec4<T> operator/(const Vec4<T> &a, const Vec4<T> &b) {
     return Vec4<T>(a).div(b);
+}
+
+template<typename T>
+inline Vec4<T> operator-(const Vec4<T> &a) {
+    return Vec4<T>(a).neg();
 }
 
 using Vec4f = Vec4<float>;
