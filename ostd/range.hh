@@ -815,7 +815,7 @@ NumberRange<T> range(T v) {
 
 template<typename T>
 struct PointerRange: InputRange<PointerRange<T>, ContiguousRangeTag, T> {
-    PointerRange() = delete;
+    PointerRange(): p_beg(nullptr), p_end(nullptr) {}
     PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
     PointerRange(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
 
