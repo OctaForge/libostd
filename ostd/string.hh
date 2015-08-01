@@ -537,11 +537,11 @@ using String = StringBase<char>;
 /* string literals */
 
 inline namespace literals { inline namespace string_literals {
-    String operator "" _s(const char *str, Size len) {
+    inline String operator "" _s(const char *str, Size len) {
         return String(ConstCharRange(str, len));
     }
 
-    ConstCharRange operator "" _S(const char *str, Size len) {
+    inline ConstCharRange operator "" _S(const char *str, Size len) {
         return ConstCharRange(str, len);
     }
 } }
