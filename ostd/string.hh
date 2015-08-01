@@ -348,6 +348,7 @@ public:
         } else p_buf.first() = &p_len;
         return *this;
     }
+
     StringBase &operator=(StringBase &&v) {
         clear();
         if (p_cap) allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
@@ -360,6 +361,7 @@ public:
         if (!p_cap) p_buf.first() = (Pointer)&p_len;
         return *this;
     }
+
     StringBase &operator=(ConstRange v) {
         reserve(v.size());
         if (v.size()) memcpy(p_buf.first(), &v[0], v.size());
@@ -367,6 +369,22 @@ public:
         p_len = v.size();
         return *this;
     }
+
+    template<typename U>
+    EnableIf<
+        IsConvertible<U, const Value *>::value && !IsArray<U>::value,
+        StringBase &
+    > operator=(U v) {
+        return operator=(ConstRange(v));
+    }
+
+    template<typename U, Size N>
+    EnableIf<
+        IsConvertible<U *, const Value *>::value, StringBase &
+    > operator=(U (&v)[N]) {
+        return operator=(ConstRange(v));
+    }
+
     template<typename R, typename = EnableIf<
         IsInputRange<R>::value &&
         IsConvertible<RangeReference<R>, Value>::value
