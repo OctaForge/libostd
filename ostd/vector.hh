@@ -305,6 +305,19 @@ public:
         return p_buf.first()[p_len++];
     }
 
+    Range push_n(const T *v, Size n) {
+        reserve(p_len + n);
+        if (IsPod<T>()) {
+            memcpy(p_buf.first() + p_len, v, n * sizeof(T));
+        } else {
+            for (Size i = 0; i < n; ++i)
+                allocator_construct(p_buf.second(),
+                    &p_buf.first()[p_len + i], v[i]);
+        }
+        p_len += n;
+        return Range(&p_buf.first()[p_len - n], &p_buf.first()[p_len]);
+    }
+
     template<typename ...U>
     T &emplace_back(U &&...args) {
         if (p_len == p_cap) reserve(p_len + 1);
