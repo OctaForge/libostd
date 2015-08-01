@@ -336,7 +336,7 @@ public:
             if ((p_buf.second() != v.p_buf.second()) && p_cap) {
                 allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
                 p_cap = 0;
-                p_buf.first() = &p_len;
+                p_buf.first() = (Pointer)&p_len;
             }
             p_buf.second() = v.p_buf.second();
         }
@@ -345,7 +345,7 @@ public:
         if (p_len) {
             memcpy(p_buf.first(), v.p_buf.first(), p_len);
             p_buf.first()[p_len] = '\0';
-        } else p_buf.first() = &p_len;
+        } else p_buf.first() = (Pointer)&p_len;
         return *this;
     }
 
