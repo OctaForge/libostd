@@ -346,6 +346,8 @@ public:
     Size size() const { return p_len; }
     Size capacity() const { return p_cap; }
 
+    void advance(Size s) { p_len += s; }
+
     Size max_size() const { return Size(~0) / sizeof(T); }
 
     bool empty() const { return (p_len == 0); }
