@@ -29,7 +29,13 @@ private:
 
 public:
     CharRangeBase(): p_beg(nullptr), p_end(nullptr) {};
-    CharRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
+
+    template<typename U>
+    CharRangeBase(T *beg, U end, EnableIf<
+        (IsPointer<U>::value || IsNullPointer<U>::value) &&
+        IsConvertible<U, T *>::value, Nat
+    > = Nat()): p_beg(beg), p_end(end) {}
+
     CharRangeBase(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
 
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */

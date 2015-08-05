@@ -815,8 +815,18 @@ NumberRange<T> range(T v) {
 
 template<typename T>
 struct PointerRange: InputRange<PointerRange<T>, ContiguousRangeTag, T> {
+private:
+    struct Nat {};
+
+public:
     PointerRange(): p_beg(nullptr), p_end(nullptr) {}
-    PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
+
+    template<typename U>
+    PointerRange(T *beg, U end, EnableIf<
+        (IsPointer<U>::value || IsNullPointer<U>::value) &&
+        IsConvertible<U, T *>::value, Nat
+    > = Nat()): p_beg(beg), p_end(end) {}
+
     PointerRange(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
 
     template<typename U, typename = EnableIf<
