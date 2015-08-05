@@ -331,6 +331,7 @@ public:
     }
 
     void clear() {
+        if (!p_len) return;
         p_len = 0;
         *p_buf.first() = '\0';
     }
