@@ -19,11 +19,17 @@ namespace ostd {
 
 namespace detail {
     template<typename T>
-    using KeysetKey = const Decay<decltype(declval<const T &>().get_key())>;
+    using KeysetKeyRet = decltype(declval<const T &>().get_key());
+    template<typename T>
+    using KeysetKey = const Decay<KeysetKeyRet<T>>;
 
     template<typename T, typename A> struct KeysetBase {
         using Key = KeysetKey<T>;
-        static inline const Key &get_key(const T &e) {
+
+        using RetKey = Conditional<
+            IsReference<KeysetKeyRet<T>>::value, Key &, Key
+        >;
+        static inline RetKey get_key(const T &e) {
             return e.get_key();
         }
         static inline T &get_data(T &e) {
