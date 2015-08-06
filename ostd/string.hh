@@ -42,7 +42,7 @@ public:
     template<typename U>
     CharRangeBase(U beg, EnableIf<
         IsConvertible<U, T *>::value && !IsArray<U>::value, Nat
-    > = Nat()): p_beg(beg), p_end((T *)beg + strlen(beg)) {}
+    > = Nat()): p_beg(beg), p_end((T *)beg + (beg ? strlen(beg) : 0)) {}
 
     template<typename U, Size N>
     CharRangeBase(U (&beg)[N], EnableIf<
@@ -71,7 +71,7 @@ public:
     }
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     CharRangeBase &operator=(T *s) {
-        p_beg = s; p_end = s + strlen(s); return *this;
+        p_beg = s; p_end = s + (s ? strlen(s) : 0); return *this;
     }
 
     bool empty() const { return p_beg == p_end; }
