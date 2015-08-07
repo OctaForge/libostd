@@ -434,17 +434,17 @@ public:
         p_buf.first() = tmp;
     }
 
-    T &operator[](Size i) { return p_buf[i]; }
-    const T &operator[](Size i) const { return p_buf[i]; }
+    T &operator[](Size i) { return p_buf.first()[i]; }
+    const T &operator[](Size i) const { return p_buf.first()[i]; }
 
-    T &at(Size i) { return p_buf[i]; }
-    const T &at(Size i) const { return p_buf[i]; }
+    T &at(Size i) { return p_buf.first()[i]; }
+    const T &at(Size i) const { return p_buf.first()[i]; }
 
-    T &front() { return p_buf[0]; }
-    const T &front() const { return p_buf[0]; };
+    T &front() { return p_buf.first()[0]; }
+    const T &front() const { return p_buf.first()[0]; };
 
-    T &back() { return p_buf[size() - 1]; }
-    const T &back() const { return p_buf[size() - 1]; }
+    T &back() { return p_buf.first()[size() - 1]; }
+    const T &back() const { return p_buf.first()[size() - 1]; }
 
     Value *data() { return p_buf.first(); }
     const Value *data() const { return p_buf.first(); }
@@ -456,6 +456,8 @@ public:
     Size capacity() const {
         return p_cap;
     }
+
+    void advance(Size s) { p_len += s; }
 
     Size length() const {
         /* TODO: unicode */
