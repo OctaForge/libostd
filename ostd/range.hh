@@ -970,9 +970,21 @@ PointerRange<T> iter(T (&array)[N]) {
     return PointerRange<T>(array, N);
 }
 
-template<typename T, Size N>
-PointerRange<const T> iter(const T (&array)[N]) {
-    return PointerRange<const T>(array, N);
+namespace detail {
+    struct PtrNat {};
+}
+
+template<typename T, typename U>
+PointerRange<T> iter(T *a, U b, EnableIf<
+    (IsPointer<U>::vvalue || IsNullPointer<U>::value) &&
+    IsConvertible<U, T *>::value, detail::PtrNat
+> = detail::PtrNat()) {
+    return PointerRange<T>(a, b);
+}
+
+template<typename T>
+PointerRange<T> iter(T *a, ostd::Size b) {
+    return PointerRange<T>(a, b);
 }
 
 template<typename T, typename S>
