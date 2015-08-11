@@ -292,6 +292,24 @@ R find_if_not(R range, P pred) {
     return range;
 }
 
+template<typename R1, typename R2, typename C>
+R1 find_one_of(R1 range, R2 values, C compare) {
+    for (; !range.empty(); range.pop_front())
+        for (R2 rv = values; !rv.empty(); rv.pop_front())
+            if (compare(range.front(), rv.front()))
+                return range;
+    return range;
+}
+
+template<typename R1, typename R2>
+R1 find_one_of(R1 range, R2 values) {
+    for (; !range.empty(); range.pop_front())
+        for (R2 rv = values; !rv.empty(); rv.pop_front())
+            if (range.front() == rv.front())
+                return range;
+    return range;
+}
+
 template<typename R, typename T>
 RangeSize<R> count(R range, const T &v) {
     RangeSize<R> ret = 0;
