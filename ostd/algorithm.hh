@@ -347,6 +347,11 @@ bool equal(R range1, R range2) {
     return range2.empty();
 }
 
+template<typename R>
+R slice_until(R range1, R range2) {
+    return range1.slice(0, range1.distance_front(range2));
+}
+
 /* algos that modify ranges or work with output ranges */
 
 template<typename R1, typename R2>
