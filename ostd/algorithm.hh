@@ -276,6 +276,20 @@ R find(R range, const T &v) {
     return range;
 }
 
+template<typename R, typename T>
+R find_last(R range, const T &v) {
+    range = find(range, v);
+    if (!range.empty()) for (;;) {
+        R prev = range;
+        prev.pop_front();
+        R r = find(prev, v);
+        if (r.empty())
+            break;
+        prev = r;
+    }
+    return range;
+}
+
 template<typename R, typename P>
 R find_if(R range, P pred) {
     for (; !range.empty(); range.pop_front())
