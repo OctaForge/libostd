@@ -167,9 +167,10 @@ private:
 struct DirectoryRange;
 
 struct DirectoryStream {
-    DirectoryStream(): p_d(), p_owned(false) {}
+    DirectoryStream(): p_d(), p_path(), p_owned(false) {}
     DirectoryStream(const DirectoryStream &) = delete;
-    DirectoryStream(DirectoryStream &&s): p_d(s.p_d), p_owned(s.p_owned) {
+    DirectoryStream(DirectoryStream &&s): p_d(s.p_d), p_path(move(s.p_path)),
+                                          p_owned(s.p_owned) {
         s.p_d = nullptr;
         s.p_owned = false;
     }
@@ -193,6 +194,7 @@ struct DirectoryStream {
         memcpy(buf, &path[0], path.size());
         buf[path.size()] = '\0';
         p_d = opendir(buf);
+        p_path = path;
         p_owned = true;
         return is_open();
     }
@@ -227,11 +229,17 @@ struct DirectoryStream {
         if (!p_d) return FileInfo();
         auto rd = readdir(p_d);
         if (!rd) return FileInfo();
-        return FileInfo((const char *)rd->d_name);
+        if (!strcmp(rd->d_name, ".") || !strcmp(rd->d_name, ".."))
+            return read();
+        String ap = p_path;
+        ap += PATH_SEPARATOR;
+        ap += (const char *)rd->d_name;
+        return FileInfo(ap);
     }
 
     void swap(DirectoryStream &s) {
         detail::swap_adl(p_d, s.p_d);
+        detail::swap_adl(p_path, s.p_path);
         detail::swap_adl(p_owned, s.p_owned);
     }
 
@@ -239,6 +247,7 @@ struct DirectoryStream {
 
 private:
     DIR *p_d;
+    String p_path;
     bool p_owned;
 };
 
