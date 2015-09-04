@@ -20,7 +20,7 @@
 namespace ostd {
 
 enum class FileType {
-    unknown, fifo, chr, dir, blk, reg, lnk, sock, wht
+    unknown, regular, fifo, character, directory, block, symlink, socket
 };
 
 struct FileInfo;
@@ -136,19 +136,19 @@ private:
             p_dot = r.distance_front(found);
 
         if (S_ISREG(st.st_mode))
-            p_type = FileType::reg;
+            p_type = FileType::regular;
         else if (S_ISDIR(st.st_mode))
-            p_type = FileType::dir;
+            p_type = FileType::directory;
         else if (S_ISCHR(st.st_mode))
-            p_type = FileType::chr;
+            p_type = FileType::character;
         else if (S_ISBLK(st.st_mode))
-            p_type = FileType::blk;
+            p_type = FileType::block;
         else if (S_ISFIFO(st.st_mode))
             p_type = FileType::fifo;
         else if (S_ISLNK(st.st_mode))
-            p_type = FileType::lnk;
+            p_type = FileType::symlink;
         else if (S_ISSOCK(st.st_mode))
-            p_type = FileType::sock;
+            p_type = FileType::socket;
         else
             p_type = FileType::unknown;
 
