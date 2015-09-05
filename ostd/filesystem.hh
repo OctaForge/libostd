@@ -167,6 +167,8 @@ private:
 struct DirectoryRange;
 
 struct DirectoryStream {
+    friend struct DirectoryRange;
+
     DirectoryStream(): p_d(), p_path(), p_owned(false) {}
     DirectoryStream(const DirectoryStream &) = delete;
     DirectoryStream(DirectoryStream &&s): p_d(s.p_d), p_path(move(s.p_path)),
@@ -208,15 +210,17 @@ struct DirectoryStream {
         p_owned = false;
     }
 
-    bool seek(long offset) {
-        if (!p_d) return false;
-        seekdir(p_d, offset);
-        return true;
-    }
-
-    long tell() const {
+    long size() const {
         if (!p_d) return -1;
-        return telldir(p_d);
+        long cs = telldir(p_d);
+        if (cs < 0) return cs;
+        seekdir(p_d, 0);
+        long ret = 0;
+        struct dirent *rd = nullptr;
+        while ((rd = readdir(p_d)))
+            ret += (strcmp(rd->d_name, ".") && strcmp(rd->d_name, ".."));
+        seekdir(p_d, cs);
+        return ret;
     }
 
     bool rewind() {
@@ -246,53 +250,71 @@ struct DirectoryStream {
     DirectoryRange iter();
 
 private:
+    bool compare(const DirectoryStream &ds) {
+        if (!p_d) return !ds.p_d;
+        return (p_d == ds.p_d) && (telldir(p_d) == telldir(ds.p_d));
+    }
+
+    bool empty(long n) const {
+        return !p_d || (telldir(p_d) >= n);
+    }
+
+    bool pop_front() const {
+        if (!p_d) return false;
+        long cs = telldir(p_d);
+        if (cs < 0) return false;
+        seekdir(p_d, cs + 1);
+        return telldir(p_d) == (cs + 1);
+    }
+
+    void push_front() const {
+        if (!p_d) return;
+        long cs = telldir(p_d);
+        if (cs < 0) return;
+        seekdir(p_d, cs - 1);
+    }
+
     DIR *p_d;
     String p_path;
     bool p_owned;
 };
 
 struct DirectoryRange: InputRange<
-    DirectoryRange, InputRangeTag, FileInfo, FileInfo &, Size, long
+    DirectoryRange, InputRangeTag, FileInfo, FileInfo, Size, long
 > {
     DirectoryRange() = delete;
-    DirectoryRange(DirectoryStream &s): p_stream(&s) {
-        p_curr = move(s.read());
-    }
+    DirectoryRange(DirectoryStream &s): p_stream(&s), p_ssize(s.size()) {}
     DirectoryRange(const DirectoryRange &r):
-        p_stream(r.p_stream), p_curr(r.p_curr) {}
-    DirectoryRange(DirectoryRange &&r): p_stream(r.p_stream),
-                                        p_curr(move(r.p_curr)) {
-        r.p_stream = nullptr;
-    }
+        p_stream(r.p_stream), p_ssize(r.p_ssize) {}
 
-    DirectoryRange &operator=(const DirectoryRange &) = delete;
-    DirectoryRange &operator=(DirectoryRange &&r) {
-        detail::swap_adl(p_stream, r.p_stream);
-        detail::swap_adl(p_curr, r.p_curr);
+    DirectoryRange &operator=(const DirectoryRange &r) {
+        p_stream = r.p_stream;
+        p_ssize = r.p_ssize;
         return *this;
     }
 
     bool empty() const {
-        return p_curr.type() == FileType::unknown;
+        return p_stream->empty(p_ssize);
     }
 
     bool pop_front() {
-        if (empty()) return false;
-        p_curr = move(p_stream->read());
-        return empty();
+        return p_stream->pop_front();
     }
 
-    FileInfo &front() const {
-        return p_curr;
+    FileInfo front() const {
+        FileInfo ret(p_stream->read());
+        p_stream->push_front();
+        return ret;
     }
 
     bool equals_front(const DirectoryRange &s) const {
-        return p_stream->tell() == s.p_stream->tell();
+        if (!p_stream) return !s.p_stream;
+        return p_stream->compare(*s.p_stream);
     }
 
 private:
     DirectoryStream *p_stream;
-    mutable FileInfo p_curr;
+    long p_ssize;
 };
 
 DirectoryRange DirectoryStream::iter() {
