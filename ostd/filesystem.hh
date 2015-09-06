@@ -264,15 +264,8 @@ struct DirectoryStream {
         long ret = 0;
         struct dirent rdv;
         struct dirent *rd;
-        for (;;) {
-            if (readdir_r(td, &rdv, &rd)) {
-                closedir(td);
-                return -1;
-            }
-            if (!rd)
-                break;
-            ret += (strcmp(rd->d_name, ".") && strcmp(rd->d_name, ".."));
-        }
+        while (pop_front(td, &rdv, &rd))
+            ++ret;
         closedir(td);
         return ret;
     }
@@ -303,16 +296,20 @@ private:
         return !p_de;
     }
 
-    bool pop_front() {
-        if (!p_d) return false;
-        if (readdir_r(p_d, &p_dev, &p_de))
+    static bool pop_front(DIR *d, struct dirent *dev, struct dirent **de) {
+        if (!d) return false;
+        if (readdir_r(d, dev, de))
             return false;
-        while (p_de && (!strcmp(p_de->d_name, ".") ||
-                        !strcmp(p_de->d_name, ".."))) {
-            if (readdir_r(p_d, &p_dev, &p_de))
+        while (*de && (!strcmp((*de)->d_name, ".") ||
+                       !strcmp((*de)->d_name, ".."))) {
+            if (readdir_r(d, dev, de))
                 return false;
         }
-        return !!p_de;
+        return !!*de;
+    }
+
+    bool pop_front() {
+        return pop_front(p_d, &p_dev, &p_de);
     }
 
     FileInfo front() const {
