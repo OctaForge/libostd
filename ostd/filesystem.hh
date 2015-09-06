@@ -6,8 +6,16 @@
 #ifndef OSTD_FILESYSTEM_HH
 #define OSTD_FILESYSTEM_HH
 
+#include "ostd/platform.hh"
+
+#ifdef OSTD_PLATFORM_WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#else
 #include <dirent.h>
 #include <sys/stat.h>
+#endif
 
 #include "ostd/types.hh"
 #include "ostd/range.hh"
@@ -15,7 +23,6 @@
 #include "ostd/string.hh"
 #include "ostd/array.hh"
 #include "ostd/algorithm.hh"
-#include "ostd/platform.hh"
 
 namespace ostd {
 
@@ -29,6 +36,17 @@ struct FileInfo;
 static constexpr char PATH_SEPARATOR = '\\';
 #else
 static constexpr char PATH_SEPARATOR = '/';
+#endif
+
+#ifdef OSTD_PLATFORM_WIN32
+namespace detail {
+    inline time_t filetime_to_time_t(const FILETIME &ft) {
+        ULARGE_INTEGER ul;
+        ul.LowPart  = ft.dwLowDateTime;
+        ul.HighPart = ft.dwHighDateTime;
+        return (time_t)((ul.QuadPart / 10000000ULL) - 11644473600ULL);
+    }
+}
 #endif
 
 inline void path_normalize(CharRange) {
@@ -112,8 +130,15 @@ struct FileInfo {
 
 private:
     void init_from_str(ConstCharRange path) {
+#ifdef OSTD_PLATFORM_WIN32
+        WIN32_FILE_ATTRIBUTE_DATA attr;
+        if (!GetFileAttributesEx(path, GetFileExInfoStandard, &attr) ||
+            attr.dwFileAttributes == INVALID_FILE_ATTRIBUTES)
+#else
         struct stat st;
-        if (stat(String(path).data(), &st) < 0) {
+        if (stat(String(path).data(), &st) < 0)
+#endif
+        {
             p_slash = p_dot = npos;
             p_type = FileType::unknown;
             p_path.clear();
@@ -123,7 +148,7 @@ private:
         p_path = path;
         ConstCharRange r = p_path.iter();
 
-        ConstCharRange found = find_last(r, '/');
+        ConstCharRange found = find_last(r, PATH_SEPARATOR);
         if (found.empty())
             p_slash = npos;
         else
@@ -135,6 +160,26 @@ private:
         else
             p_dot = r.distance_front(found);
 
+#ifdef OSTD_PLATFORM_WIN32
+        if (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+            p_type = FileType::directory;
+        else if (attr.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+            p_type = FileType::symlink;
+        else if (attr.dwFileAttributes & (FILE_ATTRIBUTE_ARCHIVE |
+                                          FILE_ATTRIBUTE_COMPRESSED |
+                                          FILE_ATTRIBUTE_COMPRESSED |
+                                          FILE_ATTRIBUTE_HIDDEN |
+                                          FILE_ATTRIBUTE_NORMAL |
+                                          FILE_ATTRIBUTE_SPARSE_FILE |
+                                          FILE_ATTRIBUTE_TEMPORARY))
+            p_type = FileType::regular;
+        else
+            p_type = FileType::unknown;
+
+        p_atime = detail::filetime_to_time_t(attr.ftLastAccessTime);
+        p_mtime = detail::filetime_to_time_t(attr.ftLastWriteTime);
+        p_ctime = detail::filetime_to_time_t(attr.ftCreationTime);
+#else
         if (S_ISREG(st.st_mode))
             p_type = FileType::regular;
         else if (S_ISDIR(st.st_mode))
@@ -155,6 +200,7 @@ private:
         p_atime = st.st_atime;
         p_mtime = st.st_mtime;
         p_ctime = st.st_ctime;
+#endif
     }
 
     Size p_slash = npos, p_dot = npos;
