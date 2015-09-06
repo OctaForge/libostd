@@ -215,10 +215,14 @@ struct DirectoryRange;
 struct DirectoryStream {
     friend struct DirectoryRange;
 
-    DirectoryStream(): p_d(), p_path() {}
+    DirectoryStream(): p_d(), p_de(), p_dev(), p_path() {}
     DirectoryStream(const DirectoryStream &) = delete;
-    DirectoryStream(DirectoryStream &&s): p_d(s.p_d), p_path(move(s.p_path)) {
+    DirectoryStream(DirectoryStream &&s): p_d(s.p_d), p_de(s.p_de),
+                                          p_dev(s.p_dev),
+                                          p_path(move(s.p_path)) {
         s.p_d = nullptr;
+        s.p_de = nullptr;
+        memset(&s.p_dev, 0, sizeof(s.p_dev));
     }
 
     DirectoryStream(ConstCharRange path): p_d() {
@@ -241,6 +245,7 @@ struct DirectoryStream {
         buf[path.size()] = '\0';
         p_d = opendir(buf);
         p_path = path;
+        pop_front();
         return is_open();
     }
 
@@ -249,72 +254,79 @@ struct DirectoryStream {
     void close() {
         if (p_d) closedir(p_d);
         p_d = nullptr;
+        p_de = nullptr;
     }
 
     long size() const {
         if (!p_d) return -1;
-        long cs = telldir(p_d);
-        if (cs < 0) return cs;
-        seekdir(p_d, 0);
+        DIR *td = opendir(p_path.data());
+        if (!td) return -1;
         long ret = 0;
-        struct dirent *rd = nullptr;
-        while ((rd = readdir(p_d)))
+        struct dirent rdv;
+        struct dirent *rd;
+        for (;;) {
+            if (readdir_r(td, &rdv, &rd)) {
+                closedir(td);
+                return -1;
+            }
+            if (!rd)
+                break;
             ret += (strcmp(rd->d_name, ".") && strcmp(rd->d_name, ".."));
-        seekdir(p_d, cs);
+        }
+        closedir(td);
         return ret;
     }
 
     bool rewind() {
         if (!p_d) return false;
         rewinddir(p_d);
+        p_de = nullptr;
         return true;
     }
 
     FileInfo read() {
-        if (!p_d) return FileInfo();
-        auto rd = readdir(p_d);
-        if (!rd) return FileInfo();
-        if (!strcmp(rd->d_name, ".") || !strcmp(rd->d_name, ".."))
-            return read();
-        String ap = p_path;
-        ap += PATH_SEPARATOR;
-        ap += (const char *)rd->d_name;
-        return FileInfo(ap);
+        if (!pop_front())
+            return FileInfo();
+        return front();
     }
 
     void swap(DirectoryStream &s) {
         detail::swap_adl(p_d, s.p_d);
+        detail::swap_adl(p_de, s.p_de);
         detail::swap_adl(p_path, s.p_path);
     }
 
     DirectoryRange iter();
 
 private:
-    bool compare(const DirectoryStream &ds) {
-        if (!p_d) return !ds.p_d;
-        return (p_d == ds.p_d) && (telldir(p_d) == telldir(ds.p_d));
+    bool empty() const {
+        return !p_de;
     }
 
-    bool empty(long n) const {
-        return !p_d || (telldir(p_d) >= n);
-    }
-
-    bool pop_front() const {
+    bool pop_front() {
         if (!p_d) return false;
-        long cs = telldir(p_d);
-        if (cs < 0) return false;
-        seekdir(p_d, cs + 1);
-        return telldir(p_d) == (cs + 1);
+        if (readdir_r(p_d, &p_dev, &p_de))
+            return false;
+        while (p_de && (!strcmp(p_de->d_name, ".") ||
+                        !strcmp(p_de->d_name, ".."))) {
+            if (readdir_r(p_d, &p_dev, &p_de))
+                return false;
+        }
+        return !!p_de;
     }
 
-    void push_front() const {
-        if (!p_d) return;
-        long cs = telldir(p_d);
-        if (cs < 0) return;
-        seekdir(p_d, cs - 1);
+    FileInfo front() const {
+        if (!p_de)
+            return FileInfo();
+        String ap = p_path;
+        ap += PATH_SEPARATOR;
+        ap += (const char *)p_de->d_name;
+        return FileInfo(ap);
     }
 
     DIR *p_d;
+    struct dirent *p_de;
+    struct dirent  p_dev;
     String p_path;
 };
 
@@ -322,18 +334,16 @@ struct DirectoryRange: InputRange<
     DirectoryRange, InputRangeTag, FileInfo, FileInfo, Size, long
 > {
     DirectoryRange() = delete;
-    DirectoryRange(DirectoryStream &s): p_stream(&s), p_ssize(s.size()) {}
-    DirectoryRange(const DirectoryRange &r):
-        p_stream(r.p_stream), p_ssize(r.p_ssize) {}
+    DirectoryRange(DirectoryStream &s): p_stream(&s) {}
+    DirectoryRange(const DirectoryRange &r): p_stream(r.p_stream) {}
 
     DirectoryRange &operator=(const DirectoryRange &r) {
         p_stream = r.p_stream;
-        p_ssize = r.p_ssize;
         return *this;
     }
 
     bool empty() const {
-        return p_stream->empty(p_ssize);
+        return p_stream->empty();
     }
 
     bool pop_front() {
@@ -341,19 +351,15 @@ struct DirectoryRange: InputRange<
     }
 
     FileInfo front() const {
-        FileInfo ret(p_stream->read());
-        p_stream->push_front();
-        return ret;
+        return p_stream->front();
     }
 
     bool equals_front(const DirectoryRange &s) const {
-        if (!p_stream) return !s.p_stream;
-        return p_stream->compare(*s.p_stream);
+        return p_stream == s.p_stream;
     }
 
 private:
     DirectoryStream *p_stream;
-    long p_ssize;
 };
 
 DirectoryRange DirectoryStream::iter() {
