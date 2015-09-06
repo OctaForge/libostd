@@ -215,12 +215,10 @@ struct DirectoryRange;
 struct DirectoryStream {
     friend struct DirectoryRange;
 
-    DirectoryStream(): p_d(), p_path(), p_owned(false) {}
+    DirectoryStream(): p_d(), p_path() {}
     DirectoryStream(const DirectoryStream &) = delete;
-    DirectoryStream(DirectoryStream &&s): p_d(s.p_d), p_path(move(s.p_path)),
-                                          p_owned(s.p_owned) {
+    DirectoryStream(DirectoryStream &&s): p_d(s.p_d), p_path(move(s.p_path)) {
         s.p_d = nullptr;
-        s.p_owned = false;
     }
 
     DirectoryStream(ConstCharRange path): p_d() {
@@ -243,17 +241,14 @@ struct DirectoryStream {
         buf[path.size()] = '\0';
         p_d = opendir(buf);
         p_path = path;
-        p_owned = true;
         return is_open();
     }
 
     bool is_open() const { return p_d != nullptr; }
-    bool is_owned() const { return p_owned; }
 
     void close() {
-        if (p_d && p_owned) closedir(p_d);
+        if (p_d) closedir(p_d);
         p_d = nullptr;
-        p_owned = false;
     }
 
     long size() const {
@@ -290,7 +285,6 @@ struct DirectoryStream {
     void swap(DirectoryStream &s) {
         detail::swap_adl(p_d, s.p_d);
         detail::swap_adl(p_path, s.p_path);
-        detail::swap_adl(p_owned, s.p_owned);
     }
 
     DirectoryRange iter();
@@ -322,7 +316,6 @@ private:
 
     DIR *p_d;
     String p_path;
-    bool p_owned;
 };
 
 struct DirectoryRange: InputRange<
