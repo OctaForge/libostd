@@ -277,6 +277,10 @@ struct DirectoryStream {
         return true;
     }
 
+    bool empty() const {
+        return !p_de;
+    }
+
     FileInfo read() {
         if (!pop_front())
             return FileInfo();
@@ -292,19 +296,14 @@ struct DirectoryStream {
     DirectoryRange iter();
 
 private:
-    bool empty() const {
-        return !p_de;
-    }
-
     static bool pop_front(DIR *d, struct dirent *dev, struct dirent **de) {
         if (!d) return false;
         if (readdir_r(d, dev, de))
             return false;
         while (*de && (!strcmp((*de)->d_name, ".") ||
-                       !strcmp((*de)->d_name, ".."))) {
+                       !strcmp((*de)->d_name, "..")))
             if (readdir_r(d, dev, de))
                 return false;
-        }
         return !!*de;
     }
 
