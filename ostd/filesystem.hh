@@ -277,7 +277,10 @@ struct DirectoryStream {
     bool rewind() {
         if (!p_d) return false;
         rewinddir(p_d);
-        p_de = nullptr;
+        if (!pop_front() || !skip_dots()) {
+            close();
+            return false;
+        }
         return true;
     }
 
