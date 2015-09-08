@@ -212,6 +212,7 @@ private:
 
 struct DirectoryRange;
 
+#ifndef OSTD_PLATFORM_WIN32
 struct DirectoryStream {
     friend struct DirectoryRange;
 
@@ -332,6 +333,144 @@ private:
     struct dirent  p_dev;
     String p_path;
 };
+
+#else /* OSTD_PLATFORM_WIN32 */
+
+struct DirectoryStream {
+    friend struct DirectoryRange;
+
+    DirectoryStream(): p_handle(INVALID_HANDLE_VALUE), p_data(), p_path() {}
+    DirectoryStream(const DirectoryStream &) = delete;
+    DirectoryStream(DirectoryStream &&s): p_handle(s.p_handle),
+                                          p_data(s.p_data),
+                                          p_path(move(s.p_path)) {
+        s.p_handle = INVALID_HANDLE_VALUE;
+        memset(&s.p_data, 0, sizeof(s.p_data));
+    }
+
+    DirectoryStream(ConstCharRange path): p_d() {
+        open(path);
+    }
+
+    ~DirectoryStream() { close(); }
+
+    DirectoryStream &operator=(const DirectoryStream &) = delete;
+    DirectoryStream &operator=(DirectoryStream &&s) {
+        close();
+        swap(s);
+        return *this;
+    }
+
+    bool open(ConstCharRange path) {
+        if (p_handle || (path.size() >= 1024)) return false;
+        char buf[1024];
+        memcpy(buf, &path[0], path.size());
+        buf[path.size()] = '\0';
+        p_handle = FindFirstFile(buf, &p_data);
+        if (p_handle == INVALID_HANDLE_VALUE)
+            return false;
+        while (!strcmp(p_data.cFileName, ".") ||
+               !strcmp(p_data.cFileName, ".."))
+            if (!FindNextFile(p_handle, &p_data)) {
+                FindClose(p_handle);
+                p_handle = INVALID_HANDLE_VALUE;
+                p_data.cFileName[0] = '\0';
+                return false;
+            }
+        p_path = path;
+        return true;
+    }
+
+    bool is_open() const { return p_handle != INVALID_HANDLE_VALUE; }
+
+    void close() {
+        if (p_handle != INVALID_HANDLE_VALUE)
+            FindClose(p_handle);
+        p_handle = INVALID_HANDLE_VALUE;
+        p_data.cFileName[0] = '\0';
+    }
+
+    long size() const {
+        if (p_handle == INVALID_HANDLE_VALUE)
+            return -1;
+        WIN32_FIND_DATA wfd;
+        HANDLE *td = FindFirstFile(p_path.data(), &wfd);
+        if (td == INVALID_HANDLE_VALUE)
+            return -1;
+        while (!strcmp(wfd.cFileName, ".") && !strcmp(wfd.cFileName, ".."))
+            if (!FindNextFile(td, &wfd)) {
+                FindClose(td);
+                return 0;
+            }
+        long ret = 1;
+        while (FindNextFile(td, &wfd))
+            ++ret;
+        FindClose(td);
+        return ret;
+    }
+
+    bool rewind() {
+        if (p_handle != INVALID_HANDLE_VALUE)
+            FindClose(p_handle);
+        p_handle = FindFirstFile(p_path.data(), &p_data);
+        if (p_handle == INVALID_HANDLE_VALUE) {
+            p_data.cFileName[0] = '\0';
+            return false;
+        }
+        while (!strcmp(p_data.cFileName, ".") ||
+               !strcmp(p_data.cFileName, ".."))
+            if (!FindNextFile(p_handle, &p_data)) {
+                FindClose(p_handle);
+                p_handle = INVALID_HANDLE_VALUE;
+                p_data.cFileName[0] = '\0';
+                return false;
+            }
+        return true;
+    }
+
+    bool empty() const {
+        return p_data.cFileName[0] == '\0';
+    }
+
+    FileInfo read() {
+        if (!pop_front())
+            return FileInfo();
+        return front();
+    }
+
+    void swap(DirectoryStream &s) {
+        detail::swap_adl(p_d, s.p_d);
+        detail::swap_adl(p_de, s.p_de);
+        detail::swap_adl(p_path, s.p_path);
+    }
+
+    DirectoryRange iter();
+
+private:
+    bool pop_front() {
+        if (!is_open())
+            return false;
+        if (!FindNextFile(p_handle, &p_data)) {
+            p_data.cFileName[0] = '\0';
+            return false;
+        }
+        return true;
+    }
+
+    FileInfo front() const {
+        if (empty())
+            return FileInfo();
+        String ap = p_path;
+        ap += PATH_SEPARATOR;
+        ap += (const char *)p_data.cFileName;
+        return FileInfo(ap);
+    }
+
+    HANDLE *p_handle;
+    WIN32_FIND_DATA p_data;
+    String p_path;
+};
+#endif /* OSTD_PLATFORM_WIN32 */
 
 struct DirectoryRange: InputRange<
     DirectoryRange, InputRangeTag, FileInfo, FileInfo, Size, long
