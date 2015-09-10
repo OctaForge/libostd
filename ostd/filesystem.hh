@@ -507,7 +507,7 @@ private:
     DirectoryStream *p_stream;
 };
 
-DirectoryRange DirectoryStream::iter() {
+inline DirectoryRange DirectoryStream::iter() {
     return DirectoryRange(*this);
 }
 
