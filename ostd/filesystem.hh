@@ -537,6 +537,19 @@ inline FileInfo path_join(const A &...args) {
     return FileInfo(path);
 }
 
+inline bool directory_change(ConstCharRange path) {
+    char buf[1024];
+    if (path.size() >= 1024)
+        return false;
+    memcpy(buf, path.data(), path.size());
+    buf[path.size()] = '\0';
+#ifndef OSTD_PLATFORM_WIN32
+    return !chdir(buf);
+#else
+    return !_chdir(buf);
+#endif
+}
+
 } /* namespace ostd */
 
 #endif
