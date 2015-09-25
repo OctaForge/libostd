@@ -71,6 +71,13 @@
 #  endif
 #endif
 
+#ifndef OSTD_PLATFORM_WIN32
+#include <unistd.h>
+#else
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 namespace ostd {
 
 #if defined(OSTD_TOOLCHAIN_GNU)
@@ -114,6 +121,22 @@ inline uint64_t endian_swap64(uint64_t x) {
 }
 
 #endif
+
+inline int cpu_count_get() {
+    static int count = 0;
+    if (count <= 0) {
+#ifdef OSTD_PLATFORM_WIN32
+        SYSTEM_INFO info;
+        GetSystemInfo(&info);
+        count = info.dwNumberOfProcessors;
+#elif defined(_SC_NPROCESSORS_ONLN)
+        count = int(sysconf(_SC_NPROCESSORS_ONLN));
+#endif
+        if (count <= 0)
+            count = 1;
+    }
+    return count;
+}
 
 }
 
