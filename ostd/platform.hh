@@ -78,6 +78,30 @@
 #include <windows.h>
 #endif
 
+#ifdef OSTD_PLATFORM_WIN32
+#  ifdef OSTD_LIBRARY_DLL
+#    ifdef OSTD_TOOLCHAIN_GNU
+#      define OSTD_EXPORT __attribute__((dllexport))
+#    else
+#      define OSTD_EXPORT __declspec(dllexport)
+#    endif
+#  else
+#    ifdef OSTD_TOOLCHAIN_GNU
+#      define OSTD_EXPORT __attribute__((dllimport))
+#    else
+#      define OSTD_EXPORT __declspec(dllimport)
+#    endif
+#  endif
+#  define OSTD_LOCAL
+#else
+#  if __GNUC__ >= 4
+#    define OSTD_EXPORT __attribute__((visibility("default")))
+#    define OSTD_LOCAL  __attribute__((visibility("hidden")))
+#  else
+#    define OSTD_EXPORT
+#    define OSTD_LOCAL
+#endif
+
 namespace ostd {
 
 #if defined(OSTD_TOOLCHAIN_GNU)
