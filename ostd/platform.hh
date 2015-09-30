@@ -100,6 +100,7 @@
 #  else
 #    define OSTD_EXPORT
 #    define OSTD_LOCAL
+#  endif
 #endif
 
 namespace ostd {
