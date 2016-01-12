@@ -260,7 +260,7 @@ TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) {
 
 namespace detail {
     template<typename T, typename U,
-        bool = IsSame<RemoveCv<T>, RemoveCv<U>>::value,
+        bool = IsSame<RemoveCv<T>, RemoveCv<U>>,
         bool = IsEmpty<T>, bool = IsEmpty<U>
     > struct CompressedPairSwitch;
 

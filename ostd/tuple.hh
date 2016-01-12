@@ -53,18 +53,16 @@ namespace detail {
                 "attempt to default construct a reference element in a tuple");
         }
 
-        template<typename T,
-                 typename = EnableIf<And<Not<IsSame<Decay<T>, TupleLeaf>>,
-                                         IntegralConstant<bool,
-                                                          IsConstructible<H, T>
-                                         >>::value>>
+        template<typename T, typename = EnableIf<And<
+            Not<IntegralConstant<bool, IsSame<Decay<T>, TupleLeaf>>>,
+            IntegralConstant<bool, IsConstructible<H, T>>
+        >::value>>
         explicit TupleLeaf(T &&t): p_value(forward<T>(t)) {
             static_assert(!IsReference<H> ||
                           (IsLvalueReference<H> &&
                            (IsLvalueReference<T> ||
                             IsSame<RemoveReference<T>,
-                                   ReferenceWrapper<RemoveReference<H>>
-                            >::value)) ||
+                                   ReferenceWrapper<RemoveReference<H>>>)) ||
                            (IsRvalueReference<H> &&
                             !IsLvalueReference<T>),
             "attempt to construct a reference element in a tuple with an rvalue");
@@ -77,8 +75,7 @@ namespace detail {
                           (IsLvalueReference<H> &&
                            (IsLvalueReference<T> ||
                             IsSame<RemoveReference<T>,
-                                   ReferenceWrapper<RemoveReference<H>>
-                            >::value)),
+                                   ReferenceWrapper<RemoveReference<H>>>)),
             "attempt to construct a reference element in a tuple with an rvalue");
         }
 
@@ -89,8 +86,7 @@ namespace detail {
                           (IsLvalueReference<H> &&
                            (IsLvalueReference<T> ||
                             IsSame<RemoveReference<T>,
-                                   ReferenceWrapper<RemoveReference<H>>
-                            >::value)),
+                                   ReferenceWrapper<RemoveReference<H>>>)),
             "attempt to construct a reference element in a tuple with an rvalue");
         }
 
@@ -101,8 +97,7 @@ namespace detail {
                           (IsLvalueReference<H> &&
                            (IsLvalueReference<T> ||
                             IsSame<RemoveReference<T>,
-                                   ReferenceWrapper<RemoveReference<H>>
-                            >::value)),
+                                   ReferenceWrapper<RemoveReference<H>>>)),
             "attempt to construct a reference element in a tuple with an rvalue");
         }
 
@@ -143,7 +138,7 @@ namespace detail {
 
         template<typename T,
                  typename = EnableIf<And<
-                     Not<IsSame<Decay<T>, TupleLeaf>>,
+                     Not<IntegralConstant<bool, IsSame<Decay<T>, TupleLeaf>>>,
                      IntegralConstant<bool, IsConstructible<H, T>>
                  >::value>
         > explicit TupleLeaf(T &&t): H(forward<T>(t)) {}
@@ -187,8 +182,8 @@ namespace detail {
     template<typename ...A>
     inline void tuple_swallow(A &&...) {}
 
-    template<bool ...A>
-    struct TupleAll: IsSame<TupleAll<A...>, TupleAll<(A, true)...>> {};
+    template<bool ...A> struct TupleAll:
+        IntegralConstant<bool, IsSame<TupleAll<A...>, TupleAll<(A, true)...>>> {};
 
     template<typename T>
     struct TupleAllDefaultConstructible;

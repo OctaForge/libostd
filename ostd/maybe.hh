@@ -95,9 +95,9 @@ public:
 
     static_assert(!IsReference<T>,
         "Initialization of Maybe with a reference type is not allowed.");
-    static_assert(!IsSame<RemoveCv<T>, InPlace>::value,
+    static_assert(!IsSame<RemoveCv<T>, InPlace>,
         "Initialization of Maybe with InPlace is not allowed.");
-    static_assert(!IsSame<RemoveCv<T>, Nothing>::value,
+    static_assert(!IsSame<RemoveCv<T>, Nothing>,
         "Initialization of Maybe with Nothing is not allowed.");
     static_assert(IsObject<T>,
         "Initialization of Maybe with non-object type is not allowed.");
@@ -159,7 +159,7 @@ public:
     }
 
     template<typename U, typename = EnableIf<
-        IsSame<RemoveReference<U>, Value>::value &&
+        IsSame<RemoveReference<U>, Value> &&
         IsConstructible<Value, U> && IsAssignable<Value &, U>
     >>
     Maybe &operator=(U &&v) {

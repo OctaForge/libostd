@@ -264,7 +264,7 @@ public:
     Box(Box<TT, DD> &&u, EnableIf<!IsArray<TT>
         && IsConvertible<typename Box<TT, DD>::Pointer, Pointer>::value
         && IsConvertible<DD, D>::value
-        && (!IsReference<D> || IsSame<D, DD>::value)
+        && (!IsReference<D> || IsSame<D, DD>)
     > = Nat()): p_stor(u.release(), forward<DD>(u.get_deleter())) {}
 
     Box &operator=(Box &&u) {
@@ -327,13 +327,13 @@ namespace detail {
     template<typename T, typename U, bool = IsSame<
         RemoveCv<PointerElement<T>>,
         RemoveCv<PointerElement<U>>
-    >::value> struct SameOrLessCvQualifiedBase: IsConvertible<T, U> {};
+    >> struct SameOrLessCvQualifiedBase: IsConvertible<T, U> {};
 
     template<typename T, typename U>
     struct SameOrLessCvQualifiedBase<T, U, false>: False {};
 
     template<typename T, typename U, bool = IsPointer<T>
-        || IsSame<T, U>::value || detail::HasElement<T>::value
+        || IsSame<T, U> || detail::HasElement<T>::value
     > struct SameOrLessCvQualified: SameOrLessCvQualifiedBase<T, U> {};
 
     template<typename T, typename U>
@@ -393,7 +393,7 @@ public:
         && detail::SameOrLessCvQualified<typename Box<TT, DD>::Pointer,
                                          Pointer>::value
         && IsConvertible<DD, D>::value
-        && (!IsReference<D> || IsSame<D, DD>::value)> = Nat()
+        && (!IsReference<D> || IsSame<D, DD>)> = Nat()
     ): p_stor(u.release(), forward<DD>(u.get_deleter())) {}
 
     Box &operator=(Box &&u) {
@@ -885,7 +885,7 @@ namespace detail {
         IsSame<decltype(allocate_hint_test(declval<A>(),
                                            declval<S>(),
                                            declval<CVP>())), True
-        >::value
+        >
     > {};
 
     template<typename A>
@@ -938,7 +938,7 @@ namespace detail {
         IsSame< decltype(construct_test(declval<A>(),
                                        declval<T>(),
                                        declval<Args>()...)), True
-        >::value
+        >
     > {};
 
     template<typename A, typename T, typename ...Args>
@@ -969,8 +969,7 @@ namespace detail {
 
     template<typename A, typename P>
     struct DestroyTest: IntegralConstant<bool,
-        IsSame<decltype(destroy_test(declval<A>(), declval<P>())), True
-        >::value
+        IsSame<decltype(destroy_test(declval<A>(), declval<P>())), True>
     > {};
 
     template<typename A, typename T>
@@ -1000,8 +999,7 @@ namespace detail {
 
     template<typename A>
     struct AllocMaxSizeTest: IntegralConstant<bool,
-        IsSame<decltype(alloc_max_size_test(declval<A &>())), True
-        >::value
+        IsSame<decltype(alloc_max_size_test(declval<A &>())), True>
     > {};
 
     template<typename A>
@@ -1031,8 +1029,7 @@ namespace detail {
 
     template<typename A>
     struct AllocCopyTest: IntegralConstant<bool,
-        IsSame<decltype(alloc_copy_test(declval<A &>())), True
-        >::value
+        IsSame<decltype(alloc_copy_test(declval<A &>())), True>
     > {};
 
     template<typename A>

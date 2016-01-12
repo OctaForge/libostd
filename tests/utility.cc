@@ -77,8 +77,8 @@ int main() {
 
     auto x = make_pair(5, 3.14f);
 
-    assert((IsSame<decltype(x.first), int>::value));
-    assert((IsSame<decltype(x.second), float>::value));
+    assert((IsSame<decltype(x.first), int>));
+    assert((IsSame<decltype(x.second), float>));
 
     assert(x.first == 5);
     assert(x.second == 3.14f);

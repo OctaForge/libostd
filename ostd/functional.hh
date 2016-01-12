@@ -48,7 +48,7 @@ OSTD_DEFINE_BINARY_OP(BitXor, ^, T)
 #undef OSTD_DEFINE_BINARY_OP
 
 namespace detail {
-    template<typename T, bool = IsSame<RemoveConst<T>, char>::value>
+    template<typename T, bool = IsSame<RemoveConst<T>, char>>
     struct CharEqual {
         using FirstArgument = T *;
         using SecondArgument = T *;
@@ -372,7 +372,7 @@ template<> struct ToHash<ldouble>: detail::ScalarHash<ldouble> {
 };
 
 namespace detail {
-    template<typename T, bool = IsSame<RemoveConst<T>, char>::value>
+    template<typename T, bool = IsSame<RemoveConst<T>, char>>
     struct ToHashPtr {
         using Argument = T *;
         using Result = Size;

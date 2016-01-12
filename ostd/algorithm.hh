@@ -619,7 +619,7 @@ namespace detail {
     template<typename R, typename P> using FilterPred
         = EnableIf<IsSame<
             decltype(declval<P>()(declval<RangeReference<R>>())), bool
-        >::value, P>;
+        >, P>;
 }
 
 template<typename R, typename P>

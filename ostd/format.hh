@@ -401,7 +401,7 @@ protected:
 template<typename T, typename R, typename = EnableIf<
     IsSame<decltype(declval<const T &>()
         .to_format(declval<R &>(), declval<const FormatSpec &>())), bool
-    >::value
+    >
 >> inline bool to_format(const T &v, R &writer, const FormatSpec &fs) {
     return v.to_format(writer, fs);
 }
@@ -692,11 +692,9 @@ namespace detail {
             return detail::write_u(writer, this, false, val);
         }
 
-        template<typename R, typename T,
-            bool Long = IsSame<T, ldouble>::value
-        > Ptrdiff write(R &writer, bool, T val, EnableIf<
-            IsFloatingPoint<T>, bool
-        > = true) {
+        template<typename R, typename T, bool Long = IsSame<T, ldouble>>
+        Ptrdiff write(R &writer, bool, T val, EnableIf<IsFloatingPoint<T>, bool>
+                      = true) {
             char buf[16], rbuf[128];
             char fmtspec[Long + 1];
 

@@ -110,18 +110,23 @@ struct Not: IntegralConstant<bool, !T::Type::value> {};
 
 /* type equality */
 
-template<typename, typename> struct IsSame      : False {};
-template<typename T        > struct IsSame<T, T>:  True {};
+namespace detail {
+    template<typename, typename> struct IsSameBase      : False {};
+    template<typename T        > struct IsSameBase<T, T>:  True {};
+}
+
+template<typename T, typename U>
+static constexpr bool IsSame = detail::IsSameBase<T, U>::value;
 
 /* is void */
 
 template<typename T>
-static constexpr bool IsVoid = IsSame<RemoveCv<T>, void>::value;
+static constexpr bool IsVoid = IsSame<RemoveCv<T>, void>;
 
 /* is null pointer */
 
 template<typename T>
-static constexpr bool IsNullPointer = IsSame<RemoveCv<T>, Nullptr>::value;
+static constexpr bool IsNullPointer = IsSame<RemoveCv<T>, Nullptr>;
 
 /* is integer */
 
@@ -326,12 +331,12 @@ template<typename T> static constexpr bool IsAbstract = __is_abstract(T);
 /* is const */
 
 template<typename T>
-static constexpr bool IsConst = IsSame<T, const T>::value;
+static constexpr bool IsConst = IsSame<T, const T>;
 
 /* is volatile */
 
 template<typename T>
-static constexpr bool IsVolatile = IsSame<T, volatile T>::value;
+static constexpr bool IsVolatile = IsSame<T, volatile T>;
 
 /* is empty */
 

@@ -36,7 +36,7 @@ class Vector {
     template<typename R>
     void ctor_from_range(R &range, EnableIf<
         IsFiniteRandomAccessRange<R>::value && IsPod<T> &&
-        IsSame<T, RemoveCv<RangeValue<R>>>::value, bool
+        IsSame<T, RemoveCv<RangeValue<R>>>, bool
     > = true) {
         RangeSize<R> l = range.size();
         reserve(l);
@@ -47,7 +47,7 @@ class Vector {
     template<typename R>
     void ctor_from_range(R &range, EnableIf<
         !IsFiniteRandomAccessRange<R>::value || !IsPod<T> ||
-        !IsSame<T, RemoveCv<RangeValue<R>>>::value, bool
+        !IsSame<T, RemoveCv<RangeValue<R>>>, bool
     > = true) {
         Size i = 0;
         for (; !range.empty(); range.pop_front()) {

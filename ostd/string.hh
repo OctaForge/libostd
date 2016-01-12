@@ -210,7 +210,7 @@ class StringBase {
     template<typename R>
     void ctor_from_range(R &range, EnableIf<
         IsFiniteRandomAccessRange<R>::value &&
-        IsSame<T, RemoveCv<RangeValue<R>>>::value, bool
+        IsSame<T, RemoveCv<RangeValue<R>>>, bool
     > = true) {
         if (range.empty()) return;
         RangeSize<R> l = range.size();
@@ -223,7 +223,7 @@ class StringBase {
     template<typename R>
     void ctor_from_range(R &range, EnableIf<
         !IsFiniteRandomAccessRange<R>::value ||
-        !IsSame<T, RemoveCv<RangeValue<R>>>::value, bool
+        !IsSame<T, RemoveCv<RangeValue<R>>>, bool
     > = true) {
         if (range.empty()) return;
         Size i = 0;
@@ -669,7 +669,7 @@ namespace detail {
 
     template<typename T, typename R>
     auto test_stringify(int) ->
-        decltype(IsSame<decltype(declval<T>().stringify()), String>());
+        IntegralConstant<bool, IsSame<decltype(declval<T>().stringify()), String>>;
 
     template<typename T, typename R>
     static True test_stringify(decltype(declval<const T &>().to_string
