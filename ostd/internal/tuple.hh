@@ -218,7 +218,7 @@ namespace detail {
 
     template<typename T, typename ...TT, typename U, typename ...UU>
     struct TupleConstructibleBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>:
-        IntegralConstant<bool, IsConstructible<U, T>::value &&
+        IntegralConstant<bool, IsConstructible<U, T> &&
                                TupleConstructibleBase<TupleTypes<TT...>,
                                                       TupleTypes<UU...>>::value> {};
 
@@ -251,7 +251,7 @@ namespace detail {
 
     template<typename T, typename ...TT, typename U, typename ...UU>
     struct TupleAssignableBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>:
-        IntegralConstant<bool, IsAssignable<U &, T>::value &&
+        IntegralConstant<bool, IsAssignable<U &, T> &&
                                TupleAssignableBase<TupleTypes<TT...>,
                                                    TupleTypes<UU...>>::value> {};
 

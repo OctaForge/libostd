@@ -140,7 +140,7 @@ namespace detail {
 
     template<typename T>
     inline void write_impl(const T &v, EnableIf<
-        !IsConstructible<ConstCharRange, const T &>::value, IoNat
+        !IsConstructible<ConstCharRange, const T &>, IoNat
     > = IoNat()) {
         write(ostd::to_string(v));
     }

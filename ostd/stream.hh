@@ -69,7 +69,7 @@ private:
 
     template<typename T>
     inline bool write_impl(const T &v, EnableIf<
-        !IsConstructible<ConstCharRange, const T &>::value, StNat
+        !IsConstructible<ConstCharRange, const T &>, StNat
     > = StNat()) {
         return write(ostd::to_string(v));
     }

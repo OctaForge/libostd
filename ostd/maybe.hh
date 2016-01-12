@@ -111,13 +111,12 @@ public:
     constexpr Maybe(const Value &v): Base(v) {}
     constexpr Maybe(Value &&v): Base(move(v)) {}
 
-    template<typename ...A, typename = EnableIf<
-        IsConstructible<T, A...>::value>>
+    template<typename ...A, typename = EnableIf<IsConstructible<T, A...>>>
     constexpr explicit Maybe(InPlace, A &&...args): Base(in_place,
         forward<A>(args)...) {}
 
     template<typename U, typename ...A, typename = EnableIf<
-        IsConstructible<T, std::initializer_list<U> &, A...>::value>>
+        IsConstructible<T, std::initializer_list<U> &, A...>>>
     constexpr explicit
     Maybe(InPlace, std::initializer_list<U> il, A &&...args):
         Base(in_place, il, forward<A>(args)...) {}
@@ -161,8 +160,7 @@ public:
 
     template<typename U, typename = EnableIf<
         IsSame<RemoveReference<U>, Value>::value &&
-        IsConstructible<Value, U>::value &&
-        IsAssignable<Value &, U>::value
+        IsConstructible<Value, U> && IsAssignable<Value &, U>
     >>
     Maybe &operator=(U &&v) {
         if (this->p_engaged) {
@@ -174,9 +172,7 @@ public:
         return *this;
     }
 
-    template<typename ...A, typename = EnableIf<
-        IsConstructible<Value, A...>::value
-    >>
+    template<typename ...A, typename = EnableIf<IsConstructible<Value, A...>>>
     void emplace(A &&...args) {
         *this = nothing;
         ::new(address_of(this->p_value)) Value(forward<A>(args)...);
@@ -184,7 +180,7 @@ public:
     }
 
     template<typename U, typename ...A, typename = EnableIf<
-        IsConstructible<Value, std::initializer_list<U> &, A...>::value
+        IsConstructible<Value, std::initializer_list<U> &, A...>
     >>
     void emplace(std::initializer_list<U> il, A &&...args) {
         *this = nothing;
@@ -221,7 +217,7 @@ public:
 
     template<typename U>
     constexpr Value value_or(U &&v) const & {
-        static_assert(IsCopyConstructible<Value>::value,
+        static_assert(IsCopyConstructible<Value>,
             "Maybe<T>::value_or: T must be copy constructible");
         static_assert(IsConvertible<U, Value>::value,
             "Maybe<T>::value_or: U must be convertible to T");
@@ -230,7 +226,7 @@ public:
 
     template<typename U>
     Value value_or(U &&v) && {
-        static_assert(IsMoveConstructible<Value>::value,
+        static_assert(IsMoveConstructible<Value>,
             "Maybe<T>::value_or: T must be copy constructible");
         static_assert(IsConvertible<U, Value>::value,
             "Maybe<T>::value_or: U must be convertible to T");

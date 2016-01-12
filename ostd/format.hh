@@ -627,7 +627,7 @@ namespace detail {
         /* any string value */
         template<typename R, typename T>
         Ptrdiff write(R &writer, bool escape, const T &val, EnableIf<
-            IsConstructible<ConstCharRange, const T &>::value, bool
+            IsConstructible<ConstCharRange, const T &>, bool
         > = true) {
             if (this->spec() != 's') {
                 assert(false && "cannot print strings with the given spec");
@@ -729,7 +729,7 @@ namespace detail {
         /* pointer value */
         template<typename R, typename T>
         Ptrdiff write(R &writer, bool, T *val, EnableIf<
-            !IsConstructible<ConstCharRange, T *>::value, bool
+            !IsConstructible<ConstCharRange, T *>, bool
         > = true) {
             if (this->p_spec == 's') {
                 this->p_spec = 'x';
@@ -742,7 +742,7 @@ namespace detail {
         template<typename R, typename T>
         Ptrdiff write(R &writer, bool, const T &val, EnableIf<
             !IsArithmetic<T> &&
-            !IsConstructible<ConstCharRange, const T &>::value &&
+            !IsConstructible<ConstCharRange, const T &> &&
             FmtTostrTest<T>::value &&
             !FmtTofmtTest<T, TostrRange<R>>::value, bool
         > = true) {
@@ -767,7 +767,7 @@ namespace detail {
         template<typename R, typename T>
         Ptrdiff write(R &, bool, const T &, EnableIf<
             !IsArithmetic<T> &&
-            !IsConstructible<ConstCharRange, const T &>::value &&
+            !IsConstructible<ConstCharRange, const T &> &&
             !FmtTostrTest<T>::value &&
             !FmtTofmtTest<T, TostrRange<R>>::value, bool
         > = true) {

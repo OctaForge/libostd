@@ -513,7 +513,7 @@ namespace detail {
     struct FunctorInPlace {
         static constexpr bool value = sizeof(T)  <= sizeof(FunctorData)
           && (alignof(FunctorData) % alignof(T)) == 0
-          && IsMoveConstructible<T>::value;
+          && IsMoveConstructible<T>;
     };
 
     struct FunctionManager;
@@ -929,8 +929,8 @@ namespace detail {
         using Type = typename DcLambdaTypes<F>::Ptr;
     };
 
-    template<typename F, bool = IsDefaultConstructible<F>::value &&
-                                IsMoveConstructible<F>::value
+    template<typename F, bool = IsDefaultConstructible<F> &&
+                                IsMoveConstructible<F>
     > struct DcFuncTypeObj {
         using Type = typename DcFuncTypeObjBase<F>::Type;
     };

@@ -276,7 +276,7 @@ public:
     template<typename TT, typename DD>
     EnableIf<!IsArray<TT>
         && IsConvertible<typename Box<TT, DD>::Pointer, Pointer>::value
-        && IsAssignable<D &, DD &&>::value,
+        && IsAssignable<D &, DD &&>,
         Box &
     > operator=(Box<TT, DD> &&u) {
         reset(u.release());
@@ -406,7 +406,7 @@ public:
     EnableIf<IsArray<TT>
         && detail::SameOrLessCvQualified<typename Box<TT, DD>::Pointer,
                                          Pointer>::value
-        && IsAssignable<D &, DD &&>::value,
+        && IsAssignable<D &, DD &&>,
         Box &
     > operator=(Box<TT, DD> &&u) {
         reset(u.release());
@@ -1088,7 +1088,7 @@ namespace detail {
         static constexpr bool ua = UsesAllocator<T, A>::value;
         static constexpr bool ic = IsConstructible<
             T, AllocatorArg, A, Args...
-        >::value;
+        >;
         static constexpr int value = ua ? (2 - ic) : 0;
     };
 }

@@ -5,7 +5,7 @@ import subprocess as sp
 
 # configuration - you can modify this
 
-COMPILER = "c++"
+COMPILER = "clang++-devel"
 CXXFLAGS = [
     "-std=c++14",
     "-Wall", "-Wextra",

@@ -488,23 +488,26 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T, typename ...A>
-struct IsConstructible: detail::Ctible<T, A...> {};
+static constexpr bool IsConstructible = detail::Ctible<T, A...>::value;
 
 /* is default constructible */
 
-template<typename T> struct IsDefaultConstructible: IsConstructible<T> {};
+template<typename T>
+static constexpr bool IsDefaultConstructible = IsConstructible<T>;
 
 /* is copy constructible */
 
-template<typename T> struct IsCopyConstructible: IsConstructible<T,
+template<typename T>
+static constexpr bool IsCopyConstructible = IsConstructible<T,
     AddLvalueReference<AddConst<T>>
-> {};
+>;
 
 /* is move constructible */
 
-template<typename T> struct IsMoveConstructible: IsConstructible<T,
+template<typename T>
+static constexpr bool IsMoveConstructible = IsConstructible<T,
     AddRvalueReference<T>
-> {};
+>;
 
 /* is assignable */
 
@@ -525,21 +528,23 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T, typename U>
-struct IsAssignable: detail::IsAssignableBase<T, U> {};
+static constexpr bool IsAssignable = detail::IsAssignableBase<T, U>::value;
 
 /* is copy assignable */
 
-template<typename T> struct IsCopyAssignable: IsAssignable<
+template<typename T>
+static constexpr bool IsCopyAssignable = IsAssignable<
     AddLvalueReference<T>,
     AddLvalueReference<AddConst<T>>
-> {};
+>;
 
 /* is move assignable */
 
-template<typename T> struct IsMoveAssignable: IsAssignable<
+template<typename T>
+static constexpr bool IsMoveAssignable = IsAssignable<
     AddLvalueReference<T>,
     const AddRvalueReference<T>
-> {};
+>;
 
 /* is destructible */
 

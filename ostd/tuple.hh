@@ -55,7 +55,9 @@ namespace detail {
 
         template<typename T,
                  typename = EnableIf<And<Not<IsSame<Decay<T>, TupleLeaf>>,
-                                         IsConstructible<H, T>>::value>>
+                                         IntegralConstant<bool,
+                                                          IsConstructible<H, T>
+                                         >>::value>>
         explicit TupleLeaf(T &&t): p_value(forward<T>(t)) {
             static_assert(!IsReference<H> ||
                           (IsLvalueReference<H> &&
@@ -142,7 +144,7 @@ namespace detail {
         template<typename T,
                  typename = EnableIf<And<
                      Not<IsSame<Decay<T>, TupleLeaf>>,
-                     IsConstructible<H, T>
+                     IntegralConstant<bool, IsConstructible<H, T>>
                  >::value>
         > explicit TupleLeaf(T &&t): H(forward<T>(t)) {}
 
@@ -193,7 +195,7 @@ namespace detail {
 
     template<typename ...A>
     struct TupleAllDefaultConstructible<TupleTypes<A...>>:
-        TupleAll<IsDefaultConstructible<A>::value...> {};
+        TupleAll<IsDefaultConstructible<A>...> {};
 }
 
 /* tuple implementation */
@@ -284,7 +286,7 @@ class Tuple {
 
 public:
     template<bool D = true, typename = EnableIf<
-        detail::TupleAll<(D && IsDefaultConstructible<A>::value)...>::value
+        detail::TupleAll<(D && IsDefaultConstructible<A>)...>::value
     >> Tuple() {}
 
     explicit Tuple(const A &...t):
