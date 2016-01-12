@@ -24,8 +24,6 @@ namespace detail {
     template<typename ...> struct CommonTypeBase;
 }
 
-template<typename> struct IsTriviallyDefaultConstructible;
-
 template<typename T>
 using RemoveCv = typename detail::RemoveCvBase<T>::Type;
 
