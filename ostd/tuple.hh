@@ -30,26 +30,26 @@ struct TupleElementBase<I, Tuple<T...>> {
 /* tuple leaf */
 
 namespace detail {
-    template<Size I, typename H, bool = IsEmpty<H>::value>
+    template<Size I, typename H, bool = IsEmpty<H>>
     struct TupleLeaf {
         constexpr TupleLeaf(): p_value() {
-            static_assert(!IsReference<H>::value,
+            static_assert(!IsReference<H>,
                 "attempt to default construct a reference element in a tuple");
         }
 
         template<typename A>
         TupleLeaf(IntegralConstant<int, 0>, const A &): p_value() {
-            static_assert(!IsReference<H>::value,
+            static_assert(!IsReference<H>,
                 "attempt to default construct a reference element in a tuple");
         }
         template<typename A>
         TupleLeaf(IntegralConstant<int, 1>, const A &a): p_value(allocator_arg, a) {
-            static_assert(!IsReference<H>::value,
+            static_assert(!IsReference<H>,
                 "attempt to default construct a reference element in a tuple");
         }
         template<typename A>
         TupleLeaf(IntegralConstant<int, 2>, const A &a): p_value(a) {
-            static_assert(!IsReference<H>::value,
+            static_assert(!IsReference<H>,
                 "attempt to default construct a reference element in a tuple");
         }
 
@@ -57,23 +57,23 @@ namespace detail {
                  typename = EnableIf<And<Not<IsSame<Decay<T>, TupleLeaf>>,
                                          IsConstructible<H, T>>::value>>
         explicit TupleLeaf(T &&t): p_value(forward<T>(t)) {
-            static_assert(!IsReference<H>::value ||
-                          (IsLvalueReference<H>::value &&
-                           (IsLvalueReference<T>::value ||
+            static_assert(!IsReference<H> ||
+                          (IsLvalueReference<H> &&
+                           (IsLvalueReference<T> ||
                             IsSame<RemoveReference<T>,
                                    ReferenceWrapper<RemoveReference<H>>
                             >::value)) ||
-                           (IsRvalueReference<H>::value &&
-                            !IsLvalueReference<T>::value),
+                           (IsRvalueReference<H> &&
+                            !IsLvalueReference<T>),
             "attempt to construct a reference element in a tuple with an rvalue");
         }
 
         template<typename T, typename A>
         explicit TupleLeaf(IntegralConstant<int, 0>, const A &, T &&t):
                            p_value(forward<T>(t)) {
-            static_assert(!IsLvalueReference<H>::value ||
-                          (IsLvalueReference<H>::value &&
-                           (IsLvalueReference<T>::value ||
+            static_assert(!IsLvalueReference<H> ||
+                          (IsLvalueReference<H> &&
+                           (IsLvalueReference<T> ||
                             IsSame<RemoveReference<T>,
                                    ReferenceWrapper<RemoveReference<H>>
                             >::value)),
@@ -83,9 +83,9 @@ namespace detail {
         template<typename T, typename A>
         explicit TupleLeaf(IntegralConstant<int, 1>, const A &a, T &&t):
                            p_value(allocator_arg, a, forward<T>(t)) {
-            static_assert(!IsLvalueReference<H>::value ||
-                          (IsLvalueReference<H>::value &&
-                           (IsLvalueReference<T>::value ||
+            static_assert(!IsLvalueReference<H> ||
+                          (IsLvalueReference<H> &&
+                           (IsLvalueReference<T> ||
                             IsSame<RemoveReference<T>,
                                    ReferenceWrapper<RemoveReference<H>>
                             >::value)),
@@ -95,9 +95,9 @@ namespace detail {
         template<typename T, typename A>
         explicit TupleLeaf(IntegralConstant<int, 2>, const A &a, T &&t):
                            p_value(forward<T>(t), a) {
-            static_assert(!IsLvalueReference<H>::value ||
-                          (IsLvalueReference<H>::value &&
-                           (IsLvalueReference<T>::value ||
+            static_assert(!IsLvalueReference<H> ||
+                          (IsLvalueReference<H> &&
+                           (IsLvalueReference<T> ||
                             IsSame<RemoveReference<T>,
                                    ReferenceWrapper<RemoveReference<H>>
                             >::value)),

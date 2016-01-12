@@ -288,7 +288,7 @@ template <typename T> inline T kill_dependency(T v) {
 }
 
 namespace detail {
-    template<typename T, bool = IsIntegral<T>::value && !IsSame<T, bool>::value>
+    template<typename T, bool = IsIntegral<T> && !IsSame<T, bool>::value>
     struct Atomic {
         mutable AtomicBase<T> p_a;
 
@@ -656,13 +656,13 @@ inline bool atomic_compare_exchange_strong_explicit(Atomic<T> *a, T *e,
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_add(volatile Atomic<T> *a, T op) {
     return a->fetch_add(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_add(Atomic<T> *a, T op) {
     return a->fetch_add(op);
 }
@@ -678,14 +678,14 @@ inline T *atomic_fetch_add(Atomic<T *> *a, Ptrdiff op) {
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_add_explicit(volatile Atomic<T> *a, T op,
                           MemoryOrder ord) {
     return a->fetch_add(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_add_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
     return a->fetch_add(op, ord);
 }
@@ -703,13 +703,13 @@ inline T *atomic_fetch_add_explicit(Atomic<T *> *a, Ptrdiff op,
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_sub(volatile Atomic<T> *a, T op) {
     return a->fetch_sub(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_sub(Atomic<T> *a, T op) {
     return a->fetch_sub(op);
 }
@@ -725,14 +725,14 @@ inline T *atomic_fetch_sub(Atomic<T *> *a, Ptrdiff op) {
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_sub_explicit(volatile Atomic<T> *a, T op,
                           MemoryOrder ord) {
     return a->fetch_sub(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_sub_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
     return a->fetch_sub(op, ord);
 }
@@ -750,76 +750,76 @@ inline T *atomic_fetch_sub_explicit(Atomic<T *> *a, Ptrdiff op,
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_and(volatile Atomic<T> *a, T op) {
     return a->fetch_and(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_and(Atomic<T> *a, T op) {
     return a->fetch_and(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_and_explicit(volatile Atomic<T> *a, T op,
                           MemoryOrder ord) {
     return a->fetch_and(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_and_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
     return a->fetch_and(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_or(volatile Atomic<T> *a, T op) {
     return a->fetch_or(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_or(Atomic<T> *a, T op) {
     return a->fetch_or(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_or_explicit(volatile Atomic<T> *a, T op,
                          MemoryOrder ord) {
     return a->fetch_or(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_or_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
     return a->fetch_or(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_xor(volatile Atomic<T> *a, T op) {
     return a->fetch_xor(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_xor(Atomic<T> *a, T op) {
     return a->fetch_xor(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_xor_explicit(volatile Atomic<T> *a, T op,
                           MemoryOrder ord) {
     return a->fetch_xor(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T>::value && !IsSame<T, bool>::value, T>
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>::value, T>
 atomic_fetch_xor_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
     return a->fetch_xor(op, ord);
 }

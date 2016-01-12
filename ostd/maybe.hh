@@ -93,13 +93,13 @@ class Maybe: private detail::MaybeStorage<T> {
 public:
     using Value = T;
 
-    static_assert(!IsReference<T>::value,
+    static_assert(!IsReference<T>,
         "Initialization of Maybe with a reference type is not allowed.");
     static_assert(!IsSame<RemoveCv<T>, InPlace>::value,
         "Initialization of Maybe with InPlace is not allowed.");
     static_assert(!IsSame<RemoveCv<T>, Nothing>::value,
         "Initialization of Maybe with Nothing is not allowed.");
-    static_assert(IsObject<T>::value,
+    static_assert(IsObject<T>,
         "Initialization of Maybe with non-object type is not allowed.");
     static_assert(IsDestructible<T>::value,
         "Initialization of Maybe with a non-destructible object is not allowed.");

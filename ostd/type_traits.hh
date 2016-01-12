@@ -24,7 +24,6 @@ namespace detail {
     template<typename ...> struct CommonTypeBase;
 }
 
-template<typename> struct IsReference;
 template<typename> struct IsTriviallyDefaultConstructible;
 
 template<typename T>
@@ -111,25 +110,20 @@ struct Or: detail::OrBase<T::Type::value, A...> {};
 template<typename T>
 struct Not: IntegralConstant<bool, !T::Type::value> {};
 
+/* type equality */
+
+template<typename, typename> struct IsSame      : False {};
+template<typename T        > struct IsSame<T, T>:  True {};
+
 /* is void */
 
-namespace detail {
-    template<typename T> struct IsVoidBase      : False {};
-    template<          > struct IsVoidBase<void>:  True {};
-}
-
-    template<typename T>
-    struct IsVoid: detail::IsVoidBase<RemoveCv<T>> {};
+template<typename T>
+static constexpr bool IsVoid = IsSame<RemoveCv<T>, void>::value;
 
 /* is null pointer */
 
-namespace detail {
-    template<typename> struct IsNullPointerBase         : False {};
-    template<        > struct IsNullPointerBase<Nullptr>:  True {};
-}
-
-template<typename T> struct IsNullPointer:
-    detail::IsNullPointerBase<RemoveCv<T>> {};
+template<typename T>
+static constexpr bool IsNullPointer = IsSame<RemoveCv<T>, Nullptr>::value;
 
 /* is integer */
 
@@ -156,7 +150,7 @@ namespace detail {
 }
 
 template<typename T>
-struct IsIntegral: detail::IsIntegralBase<RemoveCv<T>> {};
+static constexpr bool IsIntegral = detail::IsIntegralBase<RemoveCv<T>>::value;
 
 /* is floating point */
 
@@ -170,13 +164,18 @@ namespace detail {
 }
 
 template<typename T>
-struct IsFloatingPoint: detail::IsFloatingPointBase<RemoveCv<T>> {};
+static constexpr bool IsFloatingPoint = detail::IsFloatingPointBase<RemoveCv<T>>::value;
 
 /* is array */
 
-template<typename          > struct IsArray      : False {};
-template<typename T        > struct IsArray<T[] >:  True {};
-template<typename T, Size N> struct IsArray<T[N]>:  True {};
+namespace detail {
+    template<typename          > struct IsArrayBase      : False {};
+    template<typename T        > struct IsArrayBase<T[] >:  True {};
+    template<typename T, Size N> struct IsArrayBase<T[N]>:  True {};
+}
+
+template<typename T>
+static constexpr bool IsArray = detail::IsArrayBase<T>::value;
 
 /* is pointer */
 
@@ -186,29 +185,44 @@ namespace detail {
 }
 
 template<typename T>
-struct IsPointer: detail::IsPointerBase<RemoveCv<T>> {};
+static constexpr bool IsPointer = detail::IsPointerBase<RemoveCv<T>>::value;
 
 /* is lvalue reference */
 
-template<typename  > struct IsLvalueReference     : False {};
-template<typename T> struct IsLvalueReference<T &>:  True {};
+namespace detail {
+    template<typename  > struct IsLvalueReferenceBase     : False {};
+    template<typename T> struct IsLvalueReferenceBase<T &>:  True {};
+}
+
+template<typename T>
+static constexpr bool IsLvalueReference = detail::IsLvalueReferenceBase<T>::value;
 
 /* is rvalue reference */
 
-template<typename  > struct IsRvalueReference      : False {};
-template<typename T> struct IsRvalueReference<T &&>:  True {};
+namespace detail {
+    template<typename  > struct IsRvalueReferenceBase      : False {};
+    template<typename T> struct IsRvalueReferenceBase<T &&>:  True {};
+}
+
+template<typename T>
+static constexpr bool IsRvalueReference = detail::IsRvalueReferenceBase<T>::value;
+
+/* is reference */
+
+template<typename T>
+static constexpr bool IsReference = IsLvalueReference<T> || IsRvalueReference<T>;
 
 /* is enum */
 
-template<typename T> struct IsEnum: IntegralConstant<bool, __is_enum(T)> {};
+template<typename T> static constexpr bool IsEnum = __is_enum(T);
 
 /* is union */
 
-template<typename T> struct IsUnion: IntegralConstant<bool, __is_union(T)> {};
+template<typename T> static constexpr bool IsUnion = __is_union(T);
 
 /* is class */
 
-template<typename T> struct IsClass: IntegralConstant<bool, __is_class(T)> {};
+template<typename T> static constexpr bool IsClass = __is_class(T);
 
 /* is function */
 
@@ -222,11 +236,11 @@ namespace detail {
     template<typename T> T                 &function_source(int);
     template<typename T> FunctionTestDummy  function_source(...);
 
-    template<typename T, bool = IsClass<T>::value ||
-                                IsUnion<T>::value ||
-                                IsVoid<T>::value ||
-                                IsReference<T>::value ||
-                                IsNullPointer<T>::value
+    template<typename T, bool = IsClass<T> ||
+                                IsUnion<T> ||
+                                IsVoid<T> ||
+                                IsReference<T> ||
+                                IsNullPointer<T>
     > struct IsFunctionBase: IntegralConstant<bool,
         sizeof(function_test<T>(function_source<T>(0))) == 1
     > {};
@@ -234,25 +248,24 @@ namespace detail {
     template<typename T> struct IsFunctionBase<T, true>: False {};
 } /* namespace detail */
 
-template<typename T> struct IsFunction: detail::IsFunctionBase<T> {};
+template<typename T>
+static constexpr bool IsFunction = detail::IsFunctionBase<T>::value;
 
 /* is arithmetic */
 
-template<typename T> struct IsArithmetic: IntegralConstant<bool,
-    (IsIntegral<T>::value || IsFloatingPoint<T>::value)
-> {};
+template<typename T>
+static constexpr bool IsArithmetic = IsIntegral<T> || IsFloatingPoint<T>;
 
 /* is fundamental */
 
-template<typename T> struct IsFundamental: IntegralConstant<bool,
-    (IsArithmetic<T>::value || IsVoid<T>::value || IsNullPointer<T>::value)
-> {};
+template<typename T>
+static constexpr bool IsFundamental = IsArithmetic<T> || IsVoid<T> ||
+                                      IsNullPointer<T>;
 
 /* is compound */
 
-template<typename T> struct IsCompound: IntegralConstant<bool,
-    !IsFundamental<T>::value
-> {};
+template<typename T>
+static constexpr bool IsCompound = !IsFundamental<T>;
 
 /* is pointer to member */
 
@@ -265,7 +278,7 @@ namespace detail {
 }
 
 template<typename T>
-struct IsMemberPointer: detail::IsMemberPointerBase<RemoveCv<T>> {};
+static constexpr bool IsMemberPointer = detail::IsMemberPointerBase<RemoveCv<T>>::value;
 
 /* is pointer to member object */
 
@@ -275,12 +288,12 @@ namespace detail {
 
     template<typename T, typename U>
     struct IsMemberObjectPointerBase<T U::*>: IntegralConstant<bool,
-        !IsFunction<T>::value
+        !IsFunction<T>
     > {};
 }
 
-template<typename T> struct IsMemberObjectPointer:
-    detail::IsMemberObjectPointerBase<RemoveCv<T>> {};
+template<typename T>
+static constexpr bool IsMemberObjectPointer = detail::IsMemberObjectPointerBase<RemoveCv<T>>::value;
 
 /* is pointer to member function */
 
@@ -290,115 +303,105 @@ namespace detail {
 
     template<typename T, typename U>
     struct IsMemberFunctionPointerBase<T U::*>: IntegralConstant<bool,
-        IsFunction<T>::value
+        IsFunction<T>
     > {};
 }
 
-template<typename T> struct IsMemberFunctionPointer:
-    detail::IsMemberFunctionPointerBase<RemoveCv<T>> {};
-
-/* is reference */
-
-template<typename T> struct IsReference: IntegralConstant<bool,
-    (IsLvalueReference<T>::value || IsRvalueReference<T>::value)
-> {};
+template<typename T>
+static constexpr bool IsMemberFunctionPointer = detail::IsMemberFunctionPointerBase<RemoveCv<T>>::value;
 
 /* is object */
 
-template<typename T> struct IsObject: IntegralConstant<bool,
-    (!IsFunction<T>::value && !IsVoid<T>::value && !IsReference<T>::value)
-> {};
+template<typename T>
+static constexpr bool IsObject = !IsFunction<T> && !IsVoid<T> && !IsReference<T>;
 
 /* is scalar */
 
-template<typename T> struct IsScalar: IntegralConstant<bool,
-    (IsMemberPointer<T>::value || IsPointer<T>::value || IsEnum<T>::value
-  || IsNullPointer  <T>::value || IsArithmetic<T>::value)
-> {};
+template<typename T> static constexpr bool IsScalar
+    = IsMemberPointer<T> || IsPointer<T> || IsEnum<T> ||
+      IsNullPointer  <T> || IsArithmetic<T>;
 
 /* is abstract */
 
-template<typename T>
-struct IsAbstract: IntegralConstant<bool, __is_abstract(T)> {};
+template<typename T> static constexpr bool IsAbstract = __is_abstract(T);
 
 /* is const */
 
-template<typename  > struct IsConst         : False {};
-template<typename T> struct IsConst<const T>:  True {};
+template<typename T>
+static constexpr bool IsConst = IsSame<T, const T>::value;
 
 /* is volatile */
 
-template<typename  > struct IsVolatile            : False {};
-template<typename T> struct IsVolatile<volatile T>:  True {};
+template<typename T>
+static constexpr bool IsVolatile = IsSame<T, volatile T>::value;
 
 /* is empty */
 
-template<typename T>
-struct IsEmpty: IntegralConstant<bool, __is_empty(T)> {};
+template<typename T> static constexpr bool IsEmpty = __is_empty(T);
 
 /* is POD */
 
-template<typename T> struct IsPod: IntegralConstant<bool, __is_pod(T)> {};
+template<typename T> static constexpr bool IsPod = __is_pod(T);
 
 /* is polymorphic */
 
-template<typename T>
-struct IsPolymorphic: IntegralConstant<bool, __is_polymorphic(T)> {};
+template<typename T> static constexpr bool IsPolymorphic = __is_polymorphic(T);
 
 /* is signed */
 
 namespace detail {
     template<typename T>
-    struct IsSignedBase: IntegralConstant<bool, T(-1) < T(0)> {};
+    struct IsSignedCore: IntegralConstant<bool, T(-1) < T(0)> {};
+
+    template<typename T, bool = IsArithmetic<T>>
+    struct IsSignedBase: False {};
+
+    template<typename T>
+    struct IsSignedBase<T, true>: detail::IsSignedCore<T> {};
 }
 
-template<typename T, bool = IsArithmetic<T>::value>
-struct IsSigned: False {};
-
 template<typename T>
-struct IsSigned<T, true>: detail::IsSignedBase<T> {};
+static constexpr bool IsSigned = detail::IsSignedBase<T>::value;
 
 /* is unsigned */
 
 namespace detail {
     template<typename T>
-    struct IsUnsignedBase: IntegralConstant<bool, T(0) < T(-1)> {};
+    struct IsUnsignedCore: IntegralConstant<bool, T(0) < T(-1)> {};
+
+    template<typename T, bool = IsArithmetic<T>>
+    struct IsUnsignedBase: False {};
+
+    template<typename T>
+    struct IsUnsignedBase<T, true>: detail::IsUnsignedCore<T> {};
 }
 
-template<typename T, bool = IsArithmetic<T>::value>
-struct IsUnsigned: False {};
-
 template<typename T>
-struct IsUnsigned<T, true>: detail::IsUnsignedBase<T> {};
+static constexpr bool IsUnsigned = detail::IsUnsignedBase<T>::value;
 
 /* is standard layout */
 
 template<typename T>
-struct IsStandardLayout: IntegralConstant<bool, __is_standard_layout(T)> {};
+static constexpr bool IsStandardLayout = __is_standard_layout(T);
 
 /* is literal type */
 
 template<typename T>
-struct IsLiteralType: IntegralConstant<bool, __is_literal_type(T)> {};
+static constexpr bool IsLiteralType = __is_literal_type(T);
 
 /* is trivially copyable */
 
 template<typename T>
-struct IsTriviallyCopyable: IntegralConstant<bool,
-    IsScalar<RemoveAllExtents<T>>::value
-> {};
+static constexpr bool IsTriviallyCopyable = IsScalar<RemoveAllExtents<T>>;
 
 /* is trivial */
 
-template<typename T>
-struct IsTrivial: IntegralConstant<bool, __is_trivial(T)> {};
+template<typename T> static constexpr bool IsTrivial = __is_trivial(T);
 
 /* has virtual destructor */
 
 template<typename T>
-struct HasVirtualDestructor: IntegralConstant<bool,
-    __has_virtual_destructor(T)
-> {};
+static constexpr bool HasVirtualDestructor = __has_virtual_destructor(T);
 
 /* is constructible */
 
@@ -427,7 +430,7 @@ namespace detail {
 
     /* scalars are default constructible, refs are not */
     template<typename T>
-    struct CtibleCore<true, T>: IsScalar<T> {};
+    struct CtibleCore<true, T>: IntegralConstant<bool, IsScalar<T>> {};
 
     /* scalars and references are constructible from one arg if
      * implicitly convertible to scalar or reference */
@@ -449,7 +452,7 @@ namespace detail {
     /* treat scalars and refs separately */
     template<bool, typename T, typename ...A>
     struct CtibleVoidCheck: CtibleCore<
-        (IsScalar<T>::value || IsReference<T>::value), T, A...
+        (IsScalar<T> || IsReference<T>), T, A...
     > {};
 
     /* if any of T or A is void, IsConstructible should be false */
@@ -462,14 +465,14 @@ namespace detail {
 
     template<typename T, typename ...A>
     struct CtibleContainsVoid<T, A...> {
-        static constexpr bool value = IsVoid<T>::value
+        static constexpr bool value = IsVoid<T>
            || CtibleContainsVoid<A...>::value;
     };
 
     /* entry point */
     template<typename T, typename ...A>
     struct Ctible: CtibleVoidCheck<
-        CtibleContainsVoid<T, A...>::value || IsAbstract<T>::value,
+        CtibleContainsVoid<T, A...>::value || IsAbstract<T>,
         T, A...
     > {};
 
@@ -514,9 +517,8 @@ namespace detail {
 
     template<typename T> False assign_test(Any, T &&);
 
-    template<typename T, typename U, bool = IsVoid<T>::value ||
-                                            IsVoid<U>::value
-    > struct IsAssignableBase: CommonTypeBase<
+    template<typename T, typename U, bool = IsVoid<T> || IsVoid<U>>
+    struct IsAssignableBase: CommonTypeBase<
         decltype(assign_test(declval_in<T>(), declval_in<U>()))
     >::Type {};
 
@@ -569,13 +571,13 @@ namespace detail {
     template<typename T, bool> struct DtibleFalse;
 
     template<typename T> struct DtibleFalse<T, false>
-        : DtibleImpl<T, IsReference<T>::value> {};
+        : DtibleImpl<T, IsReference<T>> {};
 
     template<typename T> struct DtibleFalse<T, true>: False {};
 } /* namespace detail */
 
 template<typename T>
-struct IsDestructible: detail::DtibleFalse<T, IsFunction<T>::value> {};
+struct IsDestructible: detail::DtibleFalse<T, IsFunction<T>> {};
 
 template<typename T> struct IsDestructible<T[]>: False {};
 template<           > struct IsDestructible<void>: False {};
@@ -678,10 +680,10 @@ struct IsBaseOf: IntegralConstant<bool, __is_base_of(B, D)> {};
 /* is convertible */
 
 namespace detail {
-    template<typename F, typename T, bool = IsVoid<F>::value
-        || IsFunction<T>::value || IsArray<T>::value
+    template<typename F, typename T, bool = IsVoid<F>
+        || IsFunction<T> || IsArray<T>
     > struct IsConvertibleBase {
-        using Type = typename IsVoid<T>::Type;
+        using Type = IntegralConstant<bool, IsVoid<T>>;
     };
 
     template<typename F, typename T>
@@ -700,11 +702,6 @@ namespace detail {
 
 template<typename F, typename T>
 struct IsConvertible: detail::IsConvertibleBase<F, T>::Type {};
-
-/* type equality */
-
-template<typename, typename> struct IsSame      : False {};
-template<typename T        > struct IsSame<T, T>:  True {};
 
 /* extent */
 
@@ -762,8 +759,7 @@ namespace detail {
 /* add const, volatile, cv */
 
 namespace detail {
-    template<typename T, bool = IsReference<T>::value
-         || IsFunction<T>::value || IsConst<T>::value>
+    template<typename T, bool = IsReference<T> || IsFunction<T> || IsConst<T>>
     struct AddConstCore { using Type = T; };
 
     template<typename T> struct AddConstCore<T, false> {
@@ -774,8 +770,7 @@ namespace detail {
         using Type = typename AddConstCore<T>::Type;
     };
 
-    template<typename T, bool = IsReference<T>::value
-         || IsFunction<T>::value || IsVolatile<T>::value>
+    template<typename T, bool = IsReference<T> || IsFunction<T> || IsVolatile<T>>
     struct AddVolatileCore { using Type = T; };
 
     template<typename T> struct AddVolatileCore<T, false> {
@@ -951,8 +946,8 @@ namespace detail {
     };
 
     template<typename T, typename U,
-        bool = IsConst<RemoveReference<T>>::value,
-        bool = IsVolatile<RemoveReference<T>>::value
+        bool = IsConst<RemoveReference<T>>,
+        bool = IsVolatile<RemoveReference<T>>
     > struct ApplyCv {
         using Type = U;
     };
@@ -987,12 +982,10 @@ namespace detail {
         using Type = const volatile U &;
     };
 
-    template<typename T, bool = IsIntegral<T>::value ||
-                                IsEnum<T>::value>
+    template<typename T, bool = IsIntegral<T> || IsEnum<T>>
     struct MakeSignedCore {};
 
-    template<typename T, bool = IsIntegral<T>::value ||
-                                IsEnum<T>::value>
+    template<typename T, bool = IsIntegral<T> || IsEnum<T>>
     struct MakeUnsignedCore {};
 
     template<typename T>
@@ -1133,10 +1126,9 @@ namespace detail {
     private:
         using U = RemoveReference<T>;
     public:
-        using Type = Conditional<IsArray<U>::value,
+        using Type = Conditional<IsArray<U>,
             RemoveExtent<U> *,
-            Conditional<IsFunction<U>::value,
-                AddPointer<U>, RemoveCv<U>>
+            Conditional<IsFunction<U>, AddPointer<U>, RemoveCv<U>>
         >;
     };
 }

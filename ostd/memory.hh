@@ -153,7 +153,7 @@ namespace detail {
 
     template<typename T>
     struct PointerTo {
-        static T pointer_to(Conditional<IsVoid<PointerElement<T>>::value,
+        static T pointer_to(Conditional<IsVoid<PointerElement<T>>,
             PointerToNat, PointerElement<T>
         > &r) {
             return T::pointer_to(r);
@@ -162,16 +162,14 @@ namespace detail {
 
     template<typename T>
     struct PointerTo<T *> {
-        static T pointer_to(Conditional<IsVoid<T>::value,
-            PointerToNat, T
-        > &r) {
+        static T pointer_to(Conditional<IsVoid<T>, PointerToNat, T> &r) {
             return address_of(r);
         }
     };
 }
 
 template<typename T>
-static T pointer_to(Conditional<IsVoid<PointerElement<T>>::value,
+static T pointer_to(Conditional<IsVoid<PointerElement<T>>,
     detail::PointerToNat, PointerElement<T>
 > &r) {
     return detail::PointerTo<T>::pointer_to(r);
@@ -242,36 +240,31 @@ private:
 
 public:
     constexpr Box(): p_stor(nullptr, D()) {
-        static_assert(!IsPointer<D>::value,
-            "Box constructed with null fptr deleter");
+        static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
     constexpr Box(Nullptr): p_stor(nullptr, D()) {
-        static_assert(!IsPointer<D>::value,
-            "Box constructed with null fptr deleter");
+        static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
 
     explicit Box(Pointer p): p_stor(p, D()) {
-        static_assert(!IsPointer<D>::value,
-            "Box constructed with null fptr deleter");
+        static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
 
-    Box(Pointer p, Conditional<IsReference<D>::value,
-        D, AddLvalueReference<const D>
-    > d): p_stor(p, d) {}
+    Box(Pointer p, Conditional<IsReference<D>, D, AddLvalueReference<const D>> d):
+        p_stor(p, d) {}
 
     Box(Pointer p, RemoveReference<D> &&d):
     p_stor(p, move(d)) {
-        static_assert(!IsReference<D>::value,
-            "rvalue deleter cannot be a ref");
+        static_assert(!IsReference<D>, "rvalue deleter cannot be a ref");
     }
 
     Box(Box &&u): p_stor(u.release(), forward<D>(u.get_deleter())) {}
 
     template<typename TT, typename DD>
-    Box(Box<TT, DD> &&u, EnableIf<!IsArray<TT>::value
+    Box(Box<TT, DD> &&u, EnableIf<!IsArray<TT>
         && IsConvertible<typename Box<TT, DD>::Pointer, Pointer>::value
         && IsConvertible<DD, D>::value
-        && (!IsReference<D>::value || IsSame<D, DD>::value)
+        && (!IsReference<D> || IsSame<D, DD>::value)
     > = Nat()): p_stor(u.release(), forward<DD>(u.get_deleter())) {}
 
     Box &operator=(Box &&u) {
@@ -281,7 +274,7 @@ public:
     }
 
     template<typename TT, typename DD>
-    EnableIf<!IsArray<TT>::value
+    EnableIf<!IsArray<TT>
         && IsConvertible<typename Box<TT, DD>::Pointer, Pointer>::value
         && IsAssignable<D &, DD &&>::value,
         Box &
@@ -339,7 +332,7 @@ namespace detail {
     template<typename T, typename U>
     struct SameOrLessCvQualifiedBase<T, U, false>: False {};
 
-    template<typename T, typename U, bool = IsPointer<T>::value
+    template<typename T, typename U, bool = IsPointer<T>
         || IsSame<T, U>::value || detail::HasElement<T>::value
     > struct SameOrLessCvQualified: SameOrLessCvQualifiedBase<T, U> {};
 
@@ -361,54 +354,46 @@ private:
 
 public:
     constexpr Box(): p_stor(nullptr, D()) {
-        static_assert(!IsPointer<D>::value,
-            "Box constructed with null fptr deleter");
+        static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
     constexpr Box(Nullptr): p_stor(nullptr, D()) {
-        static_assert(!IsPointer<D>::value,
-            "Box constructed with null fptr deleter");
+        static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
 
     template<typename U> explicit Box(U p, EnableIf<
         detail::SameOrLessCvQualified<U, Pointer>::value, Nat
     > = Nat()): p_stor(p, D()) {
-        static_assert(!IsPointer<D>::value,
-            "Box constructed with null fptr deleter");
+        static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
 
     template<typename U> Box(U p, Conditional<
-        IsReference<D>::value,
-        D, AddLvalueReference<const D>
+        IsReference<D>, D, AddLvalueReference<const D>
     > d, EnableIf<detail::SameOrLessCvQualified<U, Pointer>::value,
     Nat> = Nat()): p_stor(p, d) {}
 
-    Box(Nullptr, Conditional<IsReference<D>::value,
-        D, AddLvalueReference<const D>
-    > d): p_stor(nullptr, d) {}
+    Box(Nullptr, Conditional<IsReference<D>, D, AddLvalueReference<const D>> d):
+        p_stor(nullptr, d) {}
 
     template<typename U> Box(U p, RemoveReference<D> &&d,
     EnableIf<
         detail::SameOrLessCvQualified<U, Pointer>::value, Nat
     > = Nat()): p_stor(p, move(d)) {
-        static_assert(!IsReference<D>::value,
-            "rvalue deleter cannot be a ref");
+        static_assert(!IsReference<D>, "rvalue deleter cannot be a ref");
     }
 
     Box(Nullptr, RemoveReference<D> &&d):
     p_stor(nullptr, move(d)) {
-        static_assert(!IsReference<D>::value,
-            "rvalue deleter cannot be a ref");
+        static_assert(!IsReference<D>, "rvalue deleter cannot be a ref");
     }
 
     Box(Box &&u): p_stor(u.release(), forward<D>(u.get_deleter())) {}
 
     template<typename TT, typename DD>
-    Box(Box<TT, DD> &&u, EnableIf<IsArray<TT>::value
+    Box(Box<TT, DD> &&u, EnableIf<IsArray<TT>
         && detail::SameOrLessCvQualified<typename Box<TT, DD>::Pointer,
                                          Pointer>::value
         && IsConvertible<DD, D>::value
-        && (!IsReference<D>::value ||
-             IsSame<D, DD>::value)> = Nat()
+        && (!IsReference<D> || IsSame<D, DD>::value)> = Nat()
     ): p_stor(u.release(), forward<DD>(u.get_deleter())) {}
 
     Box &operator=(Box &&u) {
@@ -418,7 +403,7 @@ public:
     }
 
     template<typename TT, typename DD>
-    EnableIf<IsArray<TT>::value
+    EnableIf<IsArray<TT>
         && detail::SameOrLessCvQualified<typename Box<TT, DD>::Pointer,
                                          Pointer>::value
         && IsAssignable<D &, DD &&>::value,
@@ -866,7 +851,7 @@ namespace detail {
 
     template<typename A, bool = IsAlwaysEqualTest<A>::value>
     struct IsAlwaysEqualBase {
-        using Type = typename IsEmpty<A>::Type;
+        using Type = IntegralConstant<bool, IsEmpty<A>>;
     };
 
     template<typename A>

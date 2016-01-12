@@ -157,7 +157,7 @@ namespace detail {
     struct MakeTupleTypesBase<TupleTypes<TS...>, T, S, E> {
         using TR = RemoveReference<T>;
         using Type = typename MakeTupleTypesBase<TupleTypes<TS...,
-            Conditional<IsLvalueReference<T>::value,
+            Conditional<IsLvalueReference<T>,
                 TupleElement<S, TR> &,
                 TupleElement<S, TR>>>, T, S + 1, E>::Type;
     };

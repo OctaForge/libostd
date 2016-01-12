@@ -26,9 +26,7 @@ namespace detail {
     template<typename T, typename A> struct KeysetBase {
         using Key = KeysetKey<T>;
 
-        using RetKey = Conditional<
-            IsReference<KeysetKeyRet<T>>::value, Key &, Key
-        >;
+        using RetKey = Conditional<IsReference<KeysetKeyRet<T>>, Key &, Key>;
         static inline RetKey get_key(const T &e) {
             return e.get_key();
         }

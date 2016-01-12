@@ -111,7 +111,7 @@ namespace detail {
     /* retrieve width/precision */
     template<typename T>
     bool convert_arg_param(const T &val, int &param, EnableIf<
-        IsIntegral<T>::value, bool
+        IsIntegral<T>, bool
     > = true) {
         param = int(val);
         return true;
@@ -119,7 +119,7 @@ namespace detail {
 
     template<typename T>
     bool convert_arg_param(const T &, int &, EnableIf<
-        !IsIntegral<T>::value, bool
+        !IsIntegral<T>, bool
     > = true) {
         assert(false && "invalid argument for width/precision");
         return false;
@@ -677,7 +677,7 @@ namespace detail {
         /* signed integers */
         template<typename R, typename T>
         Ptrdiff write(R &writer, bool, T val, EnableIf<
-            IsIntegral<T>::value && IsSigned<T>::value, bool
+            IsIntegral<T> && IsSigned<T>, bool
         > = true) {
             using UT = MakeUnsigned<T>;
             return detail::write_u(writer, this, val < 0,
@@ -687,7 +687,7 @@ namespace detail {
         /* unsigned integers */
         template<typename R, typename T>
         Ptrdiff write(R &writer, bool, T val, EnableIf<
-            IsIntegral<T>::value && IsUnsigned<T>::value, bool
+            IsIntegral<T> && IsUnsigned<T>, bool
         > = true) {
             return detail::write_u(writer, this, false, val);
         }
@@ -695,7 +695,7 @@ namespace detail {
         template<typename R, typename T,
             bool Long = IsSame<T, ldouble>::value
         > Ptrdiff write(R &writer, bool, T val, EnableIf<
-            IsFloatingPoint<T>::value, bool
+            IsFloatingPoint<T>, bool
         > = true) {
             char buf[16], rbuf[128];
             char fmtspec[Long + 1];
@@ -741,7 +741,7 @@ namespace detail {
         /* generic value */
         template<typename R, typename T>
         Ptrdiff write(R &writer, bool, const T &val, EnableIf<
-            !IsArithmetic<T>::value &&
+            !IsArithmetic<T> &&
             !IsConstructible<ConstCharRange, const T &>::value &&
             FmtTostrTest<T>::value &&
             !FmtTofmtTest<T, TostrRange<R>>::value, bool
@@ -766,7 +766,7 @@ namespace detail {
         /* generic failure case */
         template<typename R, typename T>
         Ptrdiff write(R &, bool, const T &, EnableIf<
-            !IsArithmetic<T>::value &&
+            !IsArithmetic<T> &&
             !IsConstructible<ConstCharRange, const T &>::value &&
             !FmtTostrTest<T>::value &&
             !FmtTofmtTest<T, TostrRange<R>>::value, bool

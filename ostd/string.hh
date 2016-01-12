@@ -32,7 +32,7 @@ public:
 
     template<typename U>
     CharRangeBase(T *beg, U end, EnableIf<
-        (IsPointer<U>::value || IsNullPointer<U>::value) &&
+        (IsPointer<U> || IsNullPointer<U>) &&
         IsConvertible<U, T *>::value, Nat
     > = Nat()): p_beg(beg), p_end(end) {}
 
@@ -41,7 +41,7 @@ public:
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     template<typename U>
     CharRangeBase(U beg, EnableIf<
-        IsConvertible<U, T *>::value && !IsArray<U>::value, Nat
+        IsConvertible<U, T *>::value && !IsArray<U>, Nat
     > = Nat()): p_beg(beg), p_end((T *)beg + (beg ? strlen(beg) : 0)) {}
 
     CharRangeBase(Nullptr): p_beg(nullptr), p_end(nullptr) {}
@@ -318,7 +318,7 @@ public:
 
     template<typename U>
     StringBase(U v, const EnableIf<
-        IsConvertible<U, const Value *>::value && !IsArray<U>::value, A
+        IsConvertible<U, const Value *>::value && !IsArray<U>, A
     > &a = A()): StringBase(ConstRange(v), a) {}
 
     template<typename U, Size N>
@@ -387,8 +387,7 @@ public:
 
     template<typename U>
     EnableIf<
-        IsConvertible<U, const Value *>::value && !IsArray<U>::value,
-        StringBase &
+        IsConvertible<U, const Value *>::value && !IsArray<U>, StringBase &
     > operator=(U v) {
         return operator=(ConstRange(v));
     }

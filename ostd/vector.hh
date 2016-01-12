@@ -35,8 +35,7 @@ class Vector {
 
     template<typename R>
     void ctor_from_range(R &range, EnableIf<
-        IsFiniteRandomAccessRange<R>::value &&
-        IsPod<T>::value &&
+        IsFiniteRandomAccessRange<R>::value && IsPod<T> &&
         IsSame<T, RemoveCv<RangeValue<R>>>::value, bool
     > = true) {
         RangeSize<R> l = range.size();
@@ -47,8 +46,7 @@ class Vector {
 
     template<typename R>
     void ctor_from_range(R &range, EnableIf<
-        !IsFiniteRandomAccessRange<R>::value ||
-        !IsPod<T>::value ||
+        !IsFiniteRandomAccessRange<R>::value || !IsPod<T> ||
         !IsSame<T, RemoveCv<RangeValue<R>>>::value, bool
     > = true) {
         Size i = 0;
@@ -62,7 +60,7 @@ class Vector {
     }
 
     void copy_contents(const Vector &v) {
-        if (IsPod<T>()) {
+        if (IsPod<T>) {
             memcpy(p_buf.first(), v.p_buf.first(), p_len * sizeof(T));
         } else {
             Pointer cur = p_buf.first(), last = p_buf.first() + p_len;
@@ -120,7 +118,7 @@ public:
         if (a != v.p_buf.second()) {
             reserve(v.p_cap);
             p_len = v.p_len;
-            if (IsPod<T>()) {
+            if (IsPod<T>) {
                 memcpy(p_buf.first(), v.p_buf.first(), p_len * sizeof(T));
             } else {
                 Pointer cur = p_buf.first(), last = p_buf.first() + p_len;
@@ -140,7 +138,7 @@ public:
 
     Vector(ConstRange r, const A &a = A()): Vector(a) {
         reserve(r.size());
-        if (IsPod<T>()) {
+        if (IsPod<T>) {
             memcpy(p_buf.first(), &r[0], r.size() * sizeof(T));
         } else {
             for (Size i = 0; i < r.size(); ++i)
@@ -165,7 +163,7 @@ public:
     }
 
     void clear() {
-        if (p_len > 0 && !IsPod<T>()) {
+        if (p_len > 0 && !IsPod<T>) {
             Pointer cur = p_buf.first(), last = p_buf.first() + p_len;
             while (cur != last)
                 allocator_destroy(p_buf.second(), cur++);
@@ -206,7 +204,7 @@ public:
         clear();
         Size ilen = il.end() - il.begin();
         reserve(ilen);
-        if (IsPod<T>()) {
+        if (IsPod<T>) {
             memcpy(p_buf.first(), il.begin(), ilen);
         } else {
             Pointer tbuf = p_buf.first(), ibuf = il.begin(),
@@ -237,7 +235,7 @@ public:
         Size l = p_len;
         reserve(n);
         p_len = n;
-        if (IsPod<T>()) {
+        if (IsPod<T>) {
             for (Size i = l; i < p_len; ++i) {
                 p_buf.first()[i] = T(v);
             }
@@ -259,7 +257,7 @@ public:
         }
         Pointer tmp = allocator_allocate(p_buf.second(), p_cap);
         if (oc > 0) {
-            if (IsPod<T>()) {
+            if (IsPod<T>) {
                 memcpy(tmp, p_buf.first(), p_len * sizeof(T));
             } else {
                 Pointer cur = p_buf.first(), tcur = tmp,
@@ -307,7 +305,7 @@ public:
 
     Range push_n(const T *v, Size n) {
         reserve(p_len + n);
-        if (IsPod<T>()) {
+        if (IsPod<T>) {
             memcpy(p_buf.first() + p_len, v, n * sizeof(T));
         } else {
             for (Size i = 0; i < n; ++i)
@@ -327,7 +325,7 @@ public:
     }
 
     void pop() {
-        if (!IsPod<T>()) {
+        if (!IsPod<T>) {
             allocator_destroy(p_buf.second(), &p_buf.first()[--p_len]);
         } else {
             --p_len;

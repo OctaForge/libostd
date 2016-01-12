@@ -7,7 +7,7 @@ import subprocess as sp
 
 COMPILER = "c++"
 CXXFLAGS = [
-    "-std=c++11",
+    "-std=c++14",
     "-Wall", "-Wextra",
     "-Wno-missing-braces", # clang false positive
     "-I."

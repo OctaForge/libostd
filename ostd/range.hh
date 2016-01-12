@@ -874,7 +874,7 @@ public:
 
     template<typename U>
     PointerRange(T *beg, U end, EnableIf<
-        (IsPointer<U>::value || IsNullPointer<U>::value) &&
+        (IsPointer<U> || IsNullPointer<U>) &&
         IsConvertible<U, T *>::value, Nat
     > = Nat()): p_beg(beg), p_end(end) {}
 
@@ -985,7 +985,7 @@ public:
     Size put_n(const T *p, Size n) {
         Size ret = size();
         if (n < ret) ret = n;
-        if (IsPod<T>()) {
+        if (IsPod<T>) {
             memcpy(p_beg, p, ret * sizeof(T));
             p_beg += ret;
             return ret;
@@ -1027,7 +1027,7 @@ namespace detail {
 
 template<typename T, typename U>
 PointerRange<T> iter(T *a, U b, EnableIf<
-    (IsPointer<U>::vvalue || IsNullPointer<U>::value) &&
+    (IsPointer<U> || IsNullPointer<U>) &&
     IsConvertible<U, T *>::value, detail::PtrNat
 > = detail::PtrNat()) {
     return PointerRange<T>(a, b);

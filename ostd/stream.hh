@@ -30,7 +30,7 @@ enum class StreamSeek {
     set = SEEK_SET
 };
 
-template<typename T = char, bool = IsPod<T>::value>
+template<typename T = char, bool = IsPod<T>>
 struct StreamRange;
 
 namespace detail {

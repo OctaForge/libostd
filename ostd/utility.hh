@@ -50,7 +50,7 @@ template<typename T> AddRvalueReference<T> declval();
 namespace detail {
     template<typename T>
     auto test_swap(int) ->
-        decltype(IsVoid<decltype(declval<T>().swap(declval<T &>()))>());
+        IntegralConstant<bool, IsVoid<decltype(declval<T>().swap(declval<T &>()))>>;
     template<typename>
     False test_swap(...);
 
@@ -261,8 +261,7 @@ TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) {
 namespace detail {
     template<typename T, typename U,
         bool = IsSame<RemoveCv<T>, RemoveCv<U>>::value,
-        bool = IsEmpty<T>::value,
-        bool = IsEmpty<U>::value
+        bool = IsEmpty<T>, bool = IsEmpty<U>
     > struct CompressedPairSwitch;
 
     /* neither empty */
