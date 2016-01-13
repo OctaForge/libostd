@@ -110,13 +110,8 @@ struct Not: IntegralConstant<bool, !T::Type::value> {};
 
 /* type equality */
 
-namespace detail {
-    template<typename, typename> struct IsSameBase      : False {};
-    template<typename T        > struct IsSameBase<T, T>:  True {};
-}
-
-template<typename T, typename U>
-constexpr bool IsSame = detail::IsSameBase<T, U>::value;
+template<typename, typename> constexpr bool IsSame       = false;
+template<typename T        > constexpr bool IsSame<T, T> = true;
 
 /* is void */
 
@@ -171,14 +166,9 @@ constexpr bool IsFloatingPoint = detail::IsFloatingPointBase<RemoveCv<T>>::value
 
 /* is array */
 
-namespace detail {
-    template<typename          > struct IsArrayBase      : False {};
-    template<typename T        > struct IsArrayBase<T[] >:  True {};
-    template<typename T, Size N> struct IsArrayBase<T[N]>:  True {};
-}
-
-template<typename T>
-constexpr bool IsArray = detail::IsArrayBase<T>::value;
+template<typename          > constexpr bool IsArray       = false;
+template<typename T        > constexpr bool IsArray<T[]>  = true;
+template<typename T, Size N> constexpr bool IsArray<T[N]> = true;
 
 /* is pointer */
 
@@ -192,23 +182,13 @@ constexpr bool IsPointer = detail::IsPointerBase<RemoveCv<T>>::value;
 
 /* is lvalue reference */
 
-namespace detail {
-    template<typename  > struct IsLvalueReferenceBase     : False {};
-    template<typename T> struct IsLvalueReferenceBase<T &>:  True {};
-}
-
-template<typename T>
-constexpr bool IsLvalueReference = detail::IsLvalueReferenceBase<T>::value;
+template<typename  > constexpr bool IsLvalueReference      = false;
+template<typename T> constexpr bool IsLvalueReference<T &> = true;
 
 /* is rvalue reference */
 
-namespace detail {
-    template<typename  > struct IsRvalueReferenceBase      : False {};
-    template<typename T> struct IsRvalueReferenceBase<T &&>:  True {};
-}
-
-template<typename T>
-constexpr bool IsRvalueReference = detail::IsRvalueReferenceBase<T>::value;
+template<typename  > constexpr bool IsRvalueReference       = false;
+template<typename T> constexpr bool IsRvalueReference<T &&> = true;
 
 /* is reference */
 
