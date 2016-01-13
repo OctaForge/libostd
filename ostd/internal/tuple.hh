@@ -185,7 +185,7 @@ namespace detail {
 
     template<typename T, typename ...TT, typename U, typename ...UU>
     struct TupleConvertibleBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>:
-        IntegralConstant<bool, IsConvertible<T, U>::value &&
+        IntegralConstant<bool, IsConvertible<T, U> &&
                                TupleConvertibleBase<TupleTypes<TT...>,
                                                     TupleTypes<UU...>>::value> {};
 

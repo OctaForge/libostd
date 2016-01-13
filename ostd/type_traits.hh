@@ -582,108 +582,113 @@ namespace detail {
         : DtibleImpl<T, IsReference<T>> {};
 
     template<typename T> struct DtibleFalse<T, true>: False {};
+
+    template<typename T>
+    struct IsDestructibleBase: detail::DtibleFalse<T, IsFunction<T>> {};
+
+    template<typename T> struct IsDestructibleBase<T[]>: False {};
+    template<          > struct IsDestructibleBase<void>: False {};
 } /* namespace detail */
 
 template<typename T>
-struct IsDestructible: detail::DtibleFalse<T, IsFunction<T>> {};
-
-template<typename T> struct IsDestructible<T[]>: False {};
-template<           > struct IsDestructible<void>: False {};
+static constexpr bool IsDestructible = detail::IsDestructibleBase<T>::value;
 
 /* is trivially constructible */
 
+namespace detail {
+    template<typename T, typename ...A>
+    struct IsTriviallyConstructibleBase: False {};
+
+    template<typename T>
+    struct IsTriviallyConstructibleBase<T>: IntegralConstant<bool,
+        __has_trivial_constructor(T)
+    > {};
+
+    template<typename T>
+    struct IsTriviallyConstructibleBase<T, T &>: IntegralConstant<bool,
+        __has_trivial_copy(T)
+    > {};
+
+    template<typename T>
+    struct IsTriviallyConstructibleBase<T, const T &>: IntegralConstant<bool,
+        __has_trivial_copy(T)
+    > {};
+
+    template<typename T>
+    struct IsTriviallyConstructibleBase<T, T &&>: IntegralConstant<bool,
+        __has_trivial_copy(T)
+    > {};
+} /* namespace detail */
+
 template<typename T, typename ...A>
-struct IsTriviallyConstructible: False {};
-
-template<typename T>
-struct IsTriviallyConstructible<T>: IntegralConstant<bool,
-    __has_trivial_constructor(T)
-> {};
-
-template<typename T>
-struct IsTriviallyConstructible<T, T &>: IntegralConstant<bool,
-    __has_trivial_copy(T)
-> {};
-
-template<typename T>
-struct IsTriviallyConstructible<T, const T &>: IntegralConstant<bool,
-    __has_trivial_copy(T)
-> {};
-
-template<typename T>
-struct IsTriviallyConstructible<T, T &&>: IntegralConstant<bool,
-    __has_trivial_copy(T)
-> {};
+static constexpr bool IsTriviallyConstructible
+    = detail::IsTriviallyConstructibleBase<T, A...>::value;
 
 /* is trivially default constructible */
 
-template<typename T>
-struct IsTriviallyDefaultConstructible: IsTriviallyConstructible<T> {};
+template<typename T> static constexpr bool IsTriviallyDefaultConstructible
+    = IsTriviallyConstructible<T>;
 
 /* is trivially copy constructible */
 
-template<typename T>
-struct IsTriviallyCopyConstructible: IsTriviallyConstructible<T,
-    AddLvalueReference<const T>
-> {};
+template<typename T> static constexpr bool IsTriviallyCopyConstructible
+    = IsTriviallyConstructible<T, AddLvalueReference<const T>>;
 
 /* is trivially move constructible */
 
-template<typename T>
-struct IsTriviallyMoveConstructible: IsTriviallyConstructible<T,
-    AddRvalueReference<T>
-> {};
+template<typename T> static constexpr bool IsTriviallyMoveConstructible
+    = IsTriviallyConstructible<T, AddRvalueReference<T>>;
 
 /* is trivially assignable */
 
+namespace detail {
+    template<typename T, typename ...A>
+    struct IsTriviallyAssignableBase: False {};
+
+    template<typename T>
+    struct IsTriviallyAssignableBase<T>: IntegralConstant<bool,
+        __has_trivial_assign(T)
+    > {};
+
+    template<typename T>
+    struct IsTriviallyAssignableBase<T, T &>: IntegralConstant<bool,
+        __has_trivial_copy(T)
+    > {};
+
+    template<typename T>
+    struct IsTriviallyAssignableBase<T, const T &>: IntegralConstant<bool,
+        __has_trivial_copy(T)
+    > {};
+
+    template<typename T>
+    struct IsTriviallyAssignableBase<T, T &&>: IntegralConstant<bool,
+        __has_trivial_copy(T)
+    > {};
+} /* namespace detail */
+
 template<typename T, typename ...A>
-struct IsTriviallyAssignable: False {};
-
-template<typename T>
-struct IsTriviallyAssignable<T>: IntegralConstant<bool,
-    __has_trivial_assign(T)
-> {};
-
-template<typename T>
-struct IsTriviallyAssignable<T, T &>: IntegralConstant<bool,
-    __has_trivial_copy(T)
-> {};
-
-template<typename T>
-struct IsTriviallyAssignable<T, const T &>: IntegralConstant<bool,
-    __has_trivial_copy(T)
-> {};
-
-template<typename T>
-struct IsTriviallyAssignable<T, T &&>: IntegralConstant<bool,
-    __has_trivial_copy(T)
-> {};
+static constexpr bool IsTriviallyAssignable
+    = detail::IsTriviallyAssignableBase<T>::value;
 
 /* is trivially copy assignable */
 
-template<typename T>
-struct IsTriviallyCopyAssignable: IsTriviallyAssignable<T,
-    AddLvalueReference<const T>
-> {};
+template<typename T> static constexpr bool IsTriviallyCopyAssignable
+    = IsTriviallyAssignable<T, AddLvalueReference<const T>>;
 
 /* is trivially move assignable */
 
-template<typename T>
-struct IsTriviallyMoveAssignable: IsTriviallyAssignable<T,
-    AddRvalueReference<T>
-> {};
+template<typename T> static constexpr bool IsTriviallyMoveAssignable
+    = IsTriviallyAssignable<T, AddRvalueReference<T>>;
 
 /* is trivially destructible */
 
 template<typename T>
-struct IsTriviallyDestructible: IntegralConstant<bool,
-    __has_trivial_destructor(T)
-> {};
+static constexpr bool IsTriviallyDestructible = __has_trivial_destructor(T);
 
 /* is base of */
 
 template<typename B, typename D>
-struct IsBaseOf: IntegralConstant<bool, __is_base_of(B, D)> {};
+static constexpr bool IsBaseOf = __is_base_of(B, D);
 
 /* is convertible */
 
@@ -708,35 +713,47 @@ namespace detail {
     };
 }
 
-template<typename F, typename T>
-struct IsConvertible: detail::IsConvertibleBase<F, T>::Type {};
+template<typename F, typename T> static constexpr bool IsConvertible
+    = detail::IsConvertibleBase<F, T>::Type::value;
 
 /* extent */
 
+namespace detail {
+    template<typename T, uint I>
+    struct ExtentBase: IntegralConstant<Size, 0> {};
+
+    template<typename T>
+    struct ExtentBase<T[], 0>: IntegralConstant<Size, 0> {};
+
+    template<typename T, uint I>
+    struct ExtentBase<T[], I>:
+        IntegralConstant<Size, detail::ExtentBase<T, I - 1>::value> {};
+
+    template<typename T, Size N>
+    struct ExtentBase<T[N], 0>: IntegralConstant<Size, N> {};
+
+    template<typename T, Size N, uint I>
+    struct ExtentBase<T[N], I>:
+        IntegralConstant<Size, detail::ExtentBase<T, I - 1>::value> {};
+} /* namespace detail */
+
 template<typename T, uint I = 0>
-struct Extent: IntegralConstant<Size, 0> {};
-
-template<typename T>
-struct Extent<T[], 0>: IntegralConstant<Size, 0> {};
-
-template<typename T, uint I>
-struct Extent<T[], I>: IntegralConstant<Size, Extent<T, I - 1>::value> {};
-
-template<typename T, Size N>
-struct Extent<T[N], 0>: IntegralConstant<Size, N> {};
-
-template<typename T, Size N, uint I>
-struct Extent<T[N], I>: IntegralConstant<Size, Extent<T, I - 1>::value> {};
+static constexpr Size Extent = detail::ExtentBase<T, I>::value;
 
 /* rank */
 
-template<typename T> struct Rank: IntegralConstant<Size, 0> {};
+namespace detail {
+    template<typename T> struct RankBase: IntegralConstant<Size, 0> {};
+
+    template<typename T> struct RankBase<T[]>:
+        IntegralConstant<Size, detail::RankBase<T>::value + 1> {};
+
+    template<typename T, Size N> struct RankBase<T[N]>:
+        IntegralConstant<Size, detail::RankBase<T>::value + 1> {};
+}
 
 template<typename T>
-struct Rank<T[]>: IntegralConstant<Size, Rank<T>::value + 1> {};
-
-template<typename T, Size N>
-struct Rank<T[N]>: IntegralConstant<Size, Rank<T>::value + 1> {};
+static constexpr Size Rank = detail::RankBase<T>::value;
 
 /* remove const, volatile, cv */
 

@@ -24,7 +24,7 @@ struct Nothing {
 constexpr Nothing nothing = Nothing(0);
 
 namespace detail {
-    template<typename T, bool = IsTriviallyDestructible<T>::value>
+    template<typename T, bool = IsTriviallyDestructible<T>>
     class MaybeStorage {
     protected:
         using Value = T;
@@ -101,7 +101,7 @@ public:
         "Initialization of Maybe with Nothing is not allowed.");
     static_assert(IsObject<T>,
         "Initialization of Maybe with non-object type is not allowed.");
-    static_assert(IsDestructible<T>::value,
+    static_assert(IsDestructible<T>,
         "Initialization of Maybe with a non-destructible object is not allowed.");
 
     constexpr Maybe() {}
@@ -219,7 +219,7 @@ public:
     constexpr Value value_or(U &&v) const & {
         static_assert(IsCopyConstructible<Value>,
             "Maybe<T>::value_or: T must be copy constructible");
-        static_assert(IsConvertible<U, Value>::value,
+        static_assert(IsConvertible<U, Value>,
             "Maybe<T>::value_or: U must be convertible to T");
         return this->p_engaged ? this->p_value : Value(forward<U>(v));
     }
@@ -228,7 +228,7 @@ public:
     Value value_or(U &&v) && {
         static_assert(IsMoveConstructible<Value>,
             "Maybe<T>::value_or: T must be copy constructible");
-        static_assert(IsConvertible<U, Value>::value,
+        static_assert(IsConvertible<U, Value>,
             "Maybe<T>::value_or: U must be convertible to T");
         return this->p_engaged ? move(this->p_value)
                                : Value(forward<U>(v));

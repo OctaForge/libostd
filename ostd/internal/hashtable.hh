@@ -56,8 +56,7 @@ public:
 
     template<typename U>
     HashRange(const HashRange<U> &v, EnableIf<
-        IsSame<RemoveCv<T>, RemoveCv<U>> &&
-        IsConvertible<U *, T *>::value, bool
+        IsSame<RemoveCv<T>, RemoveCv<U>> && IsConvertible<U *, T *>, bool
     > = true): p_node((Chain *)v.p_node) {}
 
     HashRange &operator=(const HashRange &v) {
@@ -95,8 +94,7 @@ public:
 
     template<typename U>
     BucketRange(const BucketRange<U> &v, EnableIf<
-        IsSame<RemoveCv<T>, RemoveCv<U>> &&
-        IsConvertible<U *, T *>::value, bool
+        IsSame<RemoveCv<T>, RemoveCv<U>> && IsConvertible<U *, T *>, bool
     > = true): p_node((Chain *)v.p_node), p_end((Chain *)v.p_end) {}
 
     BucketRange &operator=(const BucketRange &v) {

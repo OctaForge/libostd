@@ -151,7 +151,7 @@ public:
         Vector(ConstRange(v.begin(), v.size()), a) {}
 
     template<typename R, typename = EnableIf<
-        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>::value
+        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
     >> Vector(R range, const A &a = A()): Vector(a) {
         ctor_from_range(range);
     }
@@ -218,7 +218,7 @@ public:
     }
 
     template<typename R, typename = EnableIf<
-        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>::value
+        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
     >> Vector &operator=(R range) {
         clear();
         ctor_from_range(range);

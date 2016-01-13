@@ -262,9 +262,8 @@ public:
 
     template<typename TT, typename DD>
     Box(Box<TT, DD> &&u, EnableIf<!IsArray<TT>
-        && IsConvertible<typename Box<TT, DD>::Pointer, Pointer>::value
-        && IsConvertible<DD, D>::value
-        && (!IsReference<D> || IsSame<D, DD>)
+        && IsConvertible<typename Box<TT, DD>::Pointer, Pointer>
+        && IsConvertible<DD, D> && (!IsReference<D> || IsSame<D, DD>)
     > = Nat()): p_stor(u.release(), forward<DD>(u.get_deleter())) {}
 
     Box &operator=(Box &&u) {
@@ -275,7 +274,7 @@ public:
 
     template<typename TT, typename DD>
     EnableIf<!IsArray<TT>
-        && IsConvertible<typename Box<TT, DD>::Pointer, Pointer>::value
+        && IsConvertible<typename Box<TT, DD>::Pointer, Pointer>
         && IsAssignable<D &, DD &&>,
         Box &
     > operator=(Box<TT, DD> &&u) {
@@ -327,7 +326,8 @@ namespace detail {
     template<typename T, typename U, bool = IsSame<
         RemoveCv<PointerElement<T>>,
         RemoveCv<PointerElement<U>>
-    >> struct SameOrLessCvQualifiedBase: IsConvertible<T, U> {};
+    >> struct SameOrLessCvQualifiedBase:
+        IntegralConstant<bool, IsConvertible<T, U>> {};
 
     template<typename T, typename U>
     struct SameOrLessCvQualifiedBase<T, U, false>: False {};
@@ -392,8 +392,7 @@ public:
     Box(Box<TT, DD> &&u, EnableIf<IsArray<TT>
         && detail::SameOrLessCvQualified<typename Box<TT, DD>::Pointer,
                                          Pointer>::value
-        && IsConvertible<DD, D>::value
-        && (!IsReference<D> || IsSame<D, DD>)> = Nat()
+        && IsConvertible<DD, D> && (!IsReference<D> || IsSame<D, DD>)> = Nat()
     ): p_stor(u.release(), forward<DD>(u.get_deleter())) {}
 
     Box &operator=(Box &&u) {
@@ -1067,7 +1066,7 @@ namespace detail {
 
     template<typename T, typename A, bool = HasAllocatorType<T>::value>
     struct UsesAllocatorBase: IntegralConstant<bool,
-        IsConvertible<A, typename T::Allocator>::value
+        IsConvertible<A, typename T::Allocator>
     > {};
 
     template<typename T, typename A>

@@ -71,9 +71,8 @@ namespace detail {
 // is input range
 
 namespace detail {
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, InputRangeTag
-    >::value> struct IsInputRangeCore: False {};
+    template<typename T, bool = IsConvertible<RangeCategory<T>, InputRangeTag>>
+    struct IsInputRangeCore: False {};
 
     template<typename T>
     struct IsInputRangeCore<T, true>: True {};
@@ -91,9 +90,8 @@ static constexpr bool IsInputRange = detail::IsInputRangeBase<T>::value;
 // is forward range
 
 namespace detail {
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, ForwardRangeTag
-    >::value> struct IsForwardRangeCore: False {};
+    template<typename T, bool = IsConvertible<RangeCategory<T>, ForwardRangeTag>>
+    struct IsForwardRangeCore: False {};
 
     template<typename T>
     struct IsForwardRangeCore<T, true>: True {};
@@ -113,7 +111,7 @@ static constexpr bool IsForwardRange = detail::IsForwardRangeBase<T>::value;
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, BidirectionalRangeTag
-    >::value> struct IsBidirectionalRangeCore: False {};
+    >> struct IsBidirectionalRangeCore: False {};
 
     template<typename T>
     struct IsBidirectionalRangeCore<T, true>: True {};
@@ -134,7 +132,7 @@ template<typename T> static constexpr bool IsBidirectionalRange
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, RandomAccessRangeTag
-    >::value> struct IsRandomAccessRangeCore: False {};
+    >> struct IsRandomAccessRangeCore: False {};
 
     template<typename T>
     struct IsRandomAccessRangeCore<T, true>: True {};
@@ -155,7 +153,7 @@ template<typename T> static constexpr bool IsRandomAccessRange
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, FiniteRandomAccessRangeTag
-    >::value> struct IsFiniteRandomAccessRangeCore: False {};
+    >> struct IsFiniteRandomAccessRangeCore: False {};
 
     template<typename T>
     struct IsFiniteRandomAccessRangeCore<T, true>: True {};
@@ -181,7 +179,7 @@ template<typename T> static constexpr bool IsInfiniteRandomAccessRange
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, ContiguousRangeTag
-    >::value> struct IsContiguousRangeCore: False {};
+    >> struct IsContiguousRangeCore: False {};
 
     template<typename T>
     struct IsContiguousRangeCore<T, true>: True {};
@@ -210,7 +208,7 @@ namespace detail {
 
     template<typename T, bool = (IsConvertible<
         RangeCategory<T>, OutputRangeTag
-    >::value || (IsInputRange<T> &&
+    > || (IsInputRange<T> &&
         (detail::OutputRangeTest<T, const RangeValue<T>  &>::value ||
          detail::OutputRangeTest<T,       RangeValue<T> &&>::value ||
          detail::OutputRangeTest<T,       RangeValue<T>   >::value)
@@ -304,9 +302,8 @@ public:
     RangeHalf() = delete;
     RangeHalf(const T &range): p_range(range) {}
 
-    template<typename U, typename = EnableIf<
-        IsConvertible<U, T>::value
-    >> RangeHalf(const RangeHalf<U> &half): p_range(half.p_range) {}
+    template<typename U, typename = EnableIf<IsConvertible<U, T>>>
+    RangeHalf(const RangeHalf<U> &half): p_range(half.p_range) {}
 
     RangeHalf(const RangeHalf &half): p_range(half.p_range) {}
     RangeHalf(RangeHalf &&half): p_range(move(half.p_range)) {}
@@ -899,16 +896,13 @@ public:
 
     template<typename U>
     PointerRange(T *beg, U end, EnableIf<
-        (IsPointer<U> || IsNullPointer<U>) &&
-        IsConvertible<U, T *>::value, Nat
+        (IsPointer<U> || IsNullPointer<U>) && IsConvertible<U, T *>, Nat
     > = Nat()): p_beg(beg), p_end(end) {}
 
     PointerRange(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
 
-    template<typename U, typename = EnableIf<
-        IsConvertible<U *, T *>::value
-    >> PointerRange(const PointerRange<U> &v):
-        p_beg(&v[0]), p_end(&v[v.size()]) {}
+    template<typename U, typename = EnableIf<IsConvertible<U *, T *>>>
+    PointerRange(const PointerRange<U> &v): p_beg(&v[0]), p_end(&v[v.size()]) {}
 
     PointerRange &operator=(const PointerRange &v) {
         p_beg = v.p_beg;
@@ -1051,8 +1045,7 @@ namespace detail {
 
 template<typename T, typename U>
 PointerRange<T> iter(T *a, U b, EnableIf<
-    (IsPointer<U> || IsNullPointer<U>) &&
-    IsConvertible<U, T *>::value, detail::PtrNat
+    (IsPointer<U> || IsNullPointer<U>) && IsConvertible<U, T *>, detail::PtrNat
 > = detail::PtrNat()) {
     return PointerRange<T>(a, b);
 }

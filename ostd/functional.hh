@@ -736,9 +736,8 @@ namespace detail {
         template<typename>
         static Nat test(...);
 
-        static constexpr bool value = IsConvertible<
-            decltype(test<T>(nullptr)), R
-        >::value;
+        static constexpr bool value
+            = IsConvertible<decltype(test<T>(nullptr)), R>;
     };
 
     template<typename T>

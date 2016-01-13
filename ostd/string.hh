@@ -32,35 +32,30 @@ public:
 
     template<typename U>
     CharRangeBase(T *beg, U end, EnableIf<
-        (IsPointer<U> || IsNullPointer<U>) &&
-        IsConvertible<U, T *>::value, Nat
+        (IsPointer<U> || IsNullPointer<U>) && IsConvertible<U, T *>, Nat
     > = Nat()): p_beg(beg), p_end(end) {}
 
     CharRangeBase(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
 
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     template<typename U>
-    CharRangeBase(U beg, EnableIf<
-        IsConvertible<U, T *>::value && !IsArray<U>, Nat
-    > = Nat()): p_beg(beg), p_end((T *)beg + (beg ? strlen(beg) : 0)) {}
+    CharRangeBase(U beg, EnableIf<IsConvertible<U, T *> && !IsArray<U>, Nat>
+        = Nat()): p_beg(beg), p_end((T *)beg + (beg ? strlen(beg) : 0)) {}
 
     CharRangeBase(Nullptr): p_beg(nullptr), p_end(nullptr) {}
 
     template<typename U, Size N>
-    CharRangeBase(U (&beg)[N], EnableIf<
-        IsConvertible<U *, T *>::value, Nat
-    > = Nat()): p_beg(beg),
-        p_end(beg + N - (beg[N - 1] == '\0')) {}
+    CharRangeBase(U (&beg)[N], EnableIf<IsConvertible<U *, T *>, Nat> = Nat()):
+        p_beg(beg), p_end(beg + N - (beg[N - 1] == '\0')) {}
 
     template<typename U, typename A>
     CharRangeBase(const StringBase<U, A> &s, EnableIf<
-        IsConvertible<U *, T *>::value, Nat
+        IsConvertible<U *, T *>, Nat
     > = Nat()): p_beg(s.data()),
         p_end(s.data() + s.size()) {}
 
-    template<typename U, typename = EnableIf<
-        IsConvertible<U *, T *>::value
-    >> CharRangeBase(const CharRangeBase<U> &v):
+    template<typename U, typename = EnableIf<IsConvertible<U *, T *>>>
+    CharRangeBase(const CharRangeBase<U> &v):
         p_beg(&v[0]), p_end(&v[v.size()]) {}
 
     CharRangeBase &operator=(const CharRangeBase &v) {
@@ -317,16 +312,16 @@ public:
 
     template<typename U>
     StringBase(U v, const EnableIf<
-        IsConvertible<U, const Value *>::value && !IsArray<U>, A
+        IsConvertible<U, const Value *> && !IsArray<U>, A
     > &a = A()): StringBase(ConstRange(v), a) {}
 
     template<typename U, Size N>
     StringBase(U (&v)[N], const EnableIf<
-        IsConvertible<U *, const Value *>::value, A
+        IsConvertible<U *, const Value *>, A
     > &a = A()): StringBase(ConstRange(v), a) {}
 
     template<typename R, typename = EnableIf<
-        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>::value
+        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
     >> StringBase(R range, const A &a = A()): StringBase(a) {
         ctor_from_range(range);
     }
@@ -384,21 +379,19 @@ public:
     }
 
     template<typename U>
-    EnableIf<
-        IsConvertible<U, const Value *>::value && !IsArray<U>, StringBase &
-    > operator=(U v) {
+    EnableIf<IsConvertible<U, const Value *> && !IsArray<U>, StringBase &>
+    operator=(U v) {
         return operator=(ConstRange(v));
     }
 
     template<typename U, Size N>
-    EnableIf<
-        IsConvertible<U *, const Value *>::value, StringBase &
-    > operator=(U (&v)[N]) {
+    EnableIf<IsConvertible<U *, const Value *>, StringBase &>
+    operator=(U (&v)[N]) {
         return operator=(ConstRange(v));
     }
 
     template<typename R, typename = EnableIf<
-        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>::value
+        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
     >> StringBase &operator=(const R &r) {
         clear();
         ctor_from_range(r);
@@ -500,9 +493,8 @@ public:
     }
 
     template<typename R, typename = EnableIf<
-        IsInputRange<R> &&
-        IsConvertible<RangeReference<R>, Value>::value &&
-        !IsConvertible<R, ConstRange>::value
+        IsInputRange<R> && IsConvertible<RangeReference<R>, Value> &&
+        !IsConvertible<R, ConstRange>
     >> StringBase &append(R range) {
         Size nadd = 0;
         for (; !range.empty(); range.pop_front()) {
@@ -578,8 +570,8 @@ inline namespace literals { inline namespace string_literals {
 } }
 
 namespace detail {
-    template<typename T, bool = IsConvertible<T, ConstCharRange>::value,
-                         bool = IsConvertible<T, char>::value>
+    template<typename T, bool = IsConvertible<T, ConstCharRange>,
+                         bool = IsConvertible<T, char>>
     struct ConcatPut;
 
     template<typename T, bool B>
