@@ -73,113 +73,129 @@ namespace detail {
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, InputRangeTag
-    >::value> struct IsInputRangeBase: False {};
+    >::value> struct IsInputRangeCore: False {};
 
     template<typename T>
-    struct IsInputRangeBase<T, true>: True {};
+    struct IsInputRangeCore<T, true>: True {};
+
+    template<typename T, bool = detail::IsRangeTest<T>::value>
+    struct IsInputRangeBase: False {};
+
+    template<typename T>
+    struct IsInputRangeBase<T, true>: detail::IsInputRangeCore<T>::Type {};
 }
 
-template<typename T, bool = detail::IsRangeTest<T>::value>
-struct IsInputRange: False {};
-
 template<typename T>
-struct IsInputRange<T, true>: detail::IsInputRangeBase<T>::Type {};
+static constexpr bool IsInputRange = detail::IsInputRangeBase<T>::value;
 
 // is forward range
 
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, ForwardRangeTag
-    >::value> struct IsForwardRangeBase: False {};
+    >::value> struct IsForwardRangeCore: False {};
 
     template<typename T>
-    struct IsForwardRangeBase<T, true>: True {};
+    struct IsForwardRangeCore<T, true>: True {};
+
+    template<typename T, bool = detail::IsRangeTest<T>::value>
+    struct IsForwardRangeBase: False {};
+
+    template<typename T>
+    struct IsForwardRangeBase<T, true>: detail::IsForwardRangeCore<T>::Type {};
 }
 
-template<typename T, bool = detail::IsRangeTest<T>::value>
-struct IsForwardRange: False {};
-
 template<typename T>
-struct IsForwardRange<T, true>: detail::IsForwardRangeBase<T>::Type {};
+static constexpr bool IsForwardRange = detail::IsForwardRangeBase<T>::value;
 
 // is bidirectional range
 
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, BidirectionalRangeTag
-    >::value> struct IsBidirectionalRangeBase: False {};
+    >::value> struct IsBidirectionalRangeCore: False {};
 
     template<typename T>
-    struct IsBidirectionalRangeBase<T, true>: True {};
+    struct IsBidirectionalRangeCore<T, true>: True {};
+
+    template<typename T, bool = detail::IsRangeTest<T>::value>
+    struct IsBidirectionalRangeBase: False {};
+
+    template<typename T>
+    struct IsBidirectionalRangeBase<T, true>:
+        detail::IsBidirectionalRangeCore<T>::Type {};
 }
 
-template<typename T, bool = detail::IsRangeTest<T>::value>
-struct IsBidirectionalRange: False {};
-
-template<typename T>
-struct IsBidirectionalRange<T, true>:
-    detail::IsBidirectionalRangeBase<T>::Type {};
+template<typename T> static constexpr bool IsBidirectionalRange
+    = detail::IsBidirectionalRangeBase<T>::value;
 
 // is random access range
 
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, RandomAccessRangeTag
-    >::value> struct IsRandomAccessRangeBase: False {};
+    >::value> struct IsRandomAccessRangeCore: False {};
 
     template<typename T>
-    struct IsRandomAccessRangeBase<T, true>: True {};
+    struct IsRandomAccessRangeCore<T, true>: True {};
+
+    template<typename T, bool = detail::IsRangeTest<T>::value>
+    struct IsRandomAccessRangeBase: False {};
+
+    template<typename T>
+    struct IsRandomAccessRangeBase<T, true>:
+        detail::IsRandomAccessRangeCore<T>::Type {};
 }
 
-template<typename T, bool = detail::IsRangeTest<T>::value>
-struct IsRandomAccessRange: False {};
-
-template<typename T>
-struct IsRandomAccessRange<T, true>:
-    detail::IsRandomAccessRangeBase<T>::Type {};
+template<typename T> static constexpr bool IsRandomAccessRange
+    = detail::IsRandomAccessRangeBase<T>::value;
 
 // is finite random access range
 
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, FiniteRandomAccessRangeTag
-    >::value> struct IsFiniteRandomAccessRangeBase: False {};
+    >::value> struct IsFiniteRandomAccessRangeCore: False {};
 
     template<typename T>
-    struct IsFiniteRandomAccessRangeBase<T, true>: True {};
+    struct IsFiniteRandomAccessRangeCore<T, true>: True {};
+
+    template<typename T, bool = detail::IsRangeTest<T>::value>
+    struct IsFiniteRandomAccessRangeBase: False {};
+
+    template<typename T>
+    struct IsFiniteRandomAccessRangeBase<T, true>:
+        detail::IsFiniteRandomAccessRangeCore<T>::Type {};
 }
 
-template<typename T, bool = detail::IsRangeTest<T>::value>
-struct IsFiniteRandomAccessRange: False {};
-
-template<typename T>
-struct IsFiniteRandomAccessRange<T, true>:
-    detail::IsFiniteRandomAccessRangeBase<T>::Type {};
+template<typename T> static constexpr bool IsFiniteRandomAccessRange
+    = detail::IsFiniteRandomAccessRangeBase<T>::value;
 
 // is infinite random access range
 
-template<typename T>
-struct IsInfiniteRandomAccessRange: IntegralConstant<bool,
-    (IsRandomAccessRange<T>::value && !IsFiniteRandomAccessRange<T>::value)
-> {};
+template<typename T> static constexpr bool IsInfiniteRandomAccessRange
+    = IsRandomAccessRange<T> && !IsFiniteRandomAccessRange<T>;
 
 // is contiguous range
 
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, ContiguousRangeTag
-    >::value> struct IsContiguousRangeBase: False {};
+    >::value> struct IsContiguousRangeCore: False {};
 
     template<typename T>
-    struct IsContiguousRangeBase<T, true>: True {};
+    struct IsContiguousRangeCore<T, true>: True {};
+
+    template<typename T, bool = detail::IsRangeTest<T>::value>
+    struct IsContiguousRangeBase: False {};
+
+    template<typename T>
+    struct IsContiguousRangeBase<T, true>:
+        detail::IsContiguousRangeCore<T>::Type {};
 }
 
-template<typename T, bool = detail::IsRangeTest<T>::value>
-struct IsContiguousRange: False {};
-
-template<typename T>
-struct IsContiguousRange<T, true>:
-    detail::IsContiguousRangeBase<T>::Type {};
+template<typename T> static constexpr bool IsContiguousRange
+    = detail::IsContiguousRangeBase<T>::value;
 
 // is output range
 
@@ -191,18 +207,28 @@ namespace detail {
         template<typename U> static  int test(...);
         static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
     };
+
+    template<typename T, bool = (IsConvertible<
+        RangeCategory<T>, OutputRangeTag
+    >::value || (IsInputRange<T> &&
+        (detail::OutputRangeTest<T, const RangeValue<T>  &>::value ||
+         detail::OutputRangeTest<T,       RangeValue<T> &&>::value ||
+         detail::OutputRangeTest<T,       RangeValue<T>   >::value)
+    ))> struct IsOutputRangeCore: False {};
+
+    template<typename T>
+    struct IsOutputRangeCore<T, true>: True {};
+
+    template<typename T, bool = detail::IsRangeTest<T>::value>
+    struct IsOutputRangeBase: False {};
+
+    template<typename T>
+    struct IsOutputRangeBase<T, true>:
+        detail::IsOutputRangeCore<T>::Type {};
 }
 
-template<typename T, bool = (IsConvertible<
-    RangeCategory<T>, OutputRangeTag
->::value || (IsInputRange<T>::value &&
-    (detail::OutputRangeTest<T, const RangeValue<T>  &>::value ||
-     detail::OutputRangeTest<T,       RangeValue<T> &&>::value ||
-     detail::OutputRangeTest<T,       RangeValue<T>   >::value)
-))> struct IsOutputRange: False {};
-
-template<typename T>
-struct IsOutputRange<T, true>: True {};
+template<typename T> static constexpr bool IsOutputRange
+    = detail::IsOutputRangeBase<T>::value;
 
 namespace detail {
     // range iterator
@@ -236,7 +262,7 @@ namespace detail {
 template<typename T> struct HalfRange;
 
 namespace detail {
-    template<typename R, bool = IsBidirectionalRange<typename R::Range>::value>
+    template<typename R, bool = IsBidirectionalRange<typename R::Range>>
     struct RangeAdd;
 
     template<typename R>
@@ -484,9 +510,8 @@ template<typename B, typename C, typename V, typename R = V &,
         return (on - n);
     }
 
-    template<typename OR,
-        typename = EnableIf<IsOutputRange<OR>::value>
-    > Size copy(OR &&orange, Size n = -1) {
+    template<typename OR, typename = EnableIf<IsOutputRange<OR>>>
+    Size copy(OR &&orange, Size n = -1) {
         B r(*((B *)this));
         Size on = n;
         for (; n && !r.empty(); --n) {
@@ -995,9 +1020,8 @@ public:
         return ret;
     }
 
-    template<typename R,
-        typename = EnableIf<IsOutputRange<R>::value
-    >> Size copy(R &&orange, Size n = -1) {
+    template<typename R, typename = EnableIf<IsOutputRange<R>>>
+    Size copy(R &&orange, Size n = -1) {
         Size c = size();
         if (n < c) c = n;
         return orange.put_n(p_beg, c);

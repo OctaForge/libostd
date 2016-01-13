@@ -209,8 +209,7 @@ class StringBase {
 
     template<typename R>
     void ctor_from_range(R &range, EnableIf<
-        IsFiniteRandomAccessRange<R>::value &&
-        IsSame<T, RemoveCv<RangeValue<R>>>, bool
+        IsFiniteRandomAccessRange<R> && IsSame<T, RemoveCv<RangeValue<R>>>, bool
     > = true) {
         if (range.empty()) return;
         RangeSize<R> l = range.size();
@@ -222,8 +221,8 @@ class StringBase {
 
     template<typename R>
     void ctor_from_range(R &range, EnableIf<
-        !IsFiniteRandomAccessRange<R>::value ||
-        !IsSame<T, RemoveCv<RangeValue<R>>>, bool
+        !IsFiniteRandomAccessRange<R> || !IsSame<T, RemoveCv<RangeValue<R>>>,
+        bool
     > = true) {
         if (range.empty()) return;
         Size i = 0;
@@ -327,8 +326,7 @@ public:
     > &a = A()): StringBase(ConstRange(v), a) {}
 
     template<typename R, typename = EnableIf<
-        IsInputRange<R>::value &&
-        IsConvertible<RangeReference<R>, Value>::value
+        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>::value
     >> StringBase(R range, const A &a = A()): StringBase(a) {
         ctor_from_range(range);
     }
@@ -400,8 +398,7 @@ public:
     }
 
     template<typename R, typename = EnableIf<
-        IsInputRange<R>::value &&
-        IsConvertible<RangeReference<R>, Value>::value
+        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>::value
     >> StringBase &operator=(const R &r) {
         clear();
         ctor_from_range(r);
@@ -503,7 +500,7 @@ public:
     }
 
     template<typename R, typename = EnableIf<
-        IsInputRange<R>::value &&
+        IsInputRange<R> &&
         IsConvertible<RangeReference<R>, Value>::value &&
         !IsConvertible<R, ConstRange>::value
     >> StringBase &append(R range) {

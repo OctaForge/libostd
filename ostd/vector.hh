@@ -35,7 +35,7 @@ class Vector {
 
     template<typename R>
     void ctor_from_range(R &range, EnableIf<
-        IsFiniteRandomAccessRange<R>::value && IsPod<T> &&
+        IsFiniteRandomAccessRange<R> && IsPod<T> &&
         IsSame<T, RemoveCv<RangeValue<R>>>, bool
     > = true) {
         RangeSize<R> l = range.size();
@@ -46,7 +46,7 @@ class Vector {
 
     template<typename R>
     void ctor_from_range(R &range, EnableIf<
-        !IsFiniteRandomAccessRange<R>::value || !IsPod<T> ||
+        !IsFiniteRandomAccessRange<R> || !IsPod<T> ||
         !IsSame<T, RemoveCv<RangeValue<R>>>, bool
     > = true) {
         Size i = 0;
@@ -151,8 +151,7 @@ public:
         Vector(ConstRange(v.begin(), v.size()), a) {}
 
     template<typename R, typename = EnableIf<
-        IsInputRange<R>::value &&
-        IsConvertible<RangeReference<R>, Value>::value
+        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>::value
     >> Vector(R range, const A &a = A()): Vector(a) {
         ctor_from_range(range);
     }
@@ -219,8 +218,7 @@ public:
     }
 
     template<typename R, typename = EnableIf<
-        IsInputRange<R>::value &&
-        IsConvertible<RangeReference<R>, Value>::value
+        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>::value
     >> Vector &operator=(R range) {
         clear();
         ctor_from_range(range);

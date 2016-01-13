@@ -86,8 +86,7 @@ namespace detail {
         MapImpl(MapImpl &&m, const A &alloc): Base(move(m), alloc) {}
 
         template<typename R, typename = EnableIf<
-            IsInputRange<R>::value && IsConvertible<RangeReference<R>,
-            Value>::value
+            IsInputRange<R> && IsConvertible<RangeReference<R>, Value>::value
         >> MapImpl(R range, Size size = 0, const H &hf = H(),
             const C &eqf = C(), const A &alloc = A()
         ): Base(size ? size : detail::estimate_hrsize(range),
@@ -127,8 +126,7 @@ namespace detail {
         }
 
         template<typename R, typename = EnableIf<
-            IsInputRange<R>::value &&
-            IsConvertible<RangeReference<R>, Value>::value
+            IsInputRange<R> && IsConvertible<RangeReference<R>, Value>::value
         >> MapImpl &operator=(R range) {
             Base::assign_range(range);
             return *this;

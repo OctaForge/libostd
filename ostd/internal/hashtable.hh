@@ -27,14 +27,14 @@ namespace detail {
 
     template<typename R>
     static inline Size estimate_hrsize(const R &range,
-        EnableIf<IsFiniteRandomAccessRange<R>::value, bool> = true
+        EnableIf<IsFiniteRandomAccessRange<R>, bool> = true
     ) {
         return range.size();
     }
 
     template<typename R>
     static inline Size estimate_hrsize(const R &,
-        EnableIf<!IsFiniteRandomAccessRange<R>::value, bool> = true
+        EnableIf<!IsFiniteRandomAccessRange<R>, bool> = true
     ) {
         /* we have no idea how big the range actually is */
         return 16;
