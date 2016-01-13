@@ -85,7 +85,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsInputRange = detail::IsInputRangeBase<T>::value;
+constexpr bool IsInputRange = detail::IsInputRangeBase<T>::value;
 
 // is forward range
 
@@ -104,7 +104,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsForwardRange = detail::IsForwardRangeBase<T>::value;
+constexpr bool IsForwardRange = detail::IsForwardRangeBase<T>::value;
 
 // is bidirectional range
 
@@ -124,7 +124,7 @@ namespace detail {
         detail::IsBidirectionalRangeCore<T>::Type {};
 }
 
-template<typename T> static constexpr bool IsBidirectionalRange
+template<typename T> constexpr bool IsBidirectionalRange
     = detail::IsBidirectionalRangeBase<T>::value;
 
 // is random access range
@@ -145,7 +145,7 @@ namespace detail {
         detail::IsRandomAccessRangeCore<T>::Type {};
 }
 
-template<typename T> static constexpr bool IsRandomAccessRange
+template<typename T> constexpr bool IsRandomAccessRange
     = detail::IsRandomAccessRangeBase<T>::value;
 
 // is finite random access range
@@ -166,12 +166,12 @@ namespace detail {
         detail::IsFiniteRandomAccessRangeCore<T>::Type {};
 }
 
-template<typename T> static constexpr bool IsFiniteRandomAccessRange
+template<typename T> constexpr bool IsFiniteRandomAccessRange
     = detail::IsFiniteRandomAccessRangeBase<T>::value;
 
 // is infinite random access range
 
-template<typename T> static constexpr bool IsInfiniteRandomAccessRange
+template<typename T> constexpr bool IsInfiniteRandomAccessRange
     = IsRandomAccessRange<T> && !IsFiniteRandomAccessRange<T>;
 
 // is contiguous range
@@ -192,7 +192,7 @@ namespace detail {
         detail::IsContiguousRangeCore<T>::Type {};
 }
 
-template<typename T> static constexpr bool IsContiguousRange
+template<typename T> constexpr bool IsContiguousRange
     = detail::IsContiguousRangeBase<T>::value;
 
 // is output range
@@ -225,7 +225,7 @@ namespace detail {
         detail::IsOutputRangeCore<T>::Type {};
 }
 
-template<typename T> static constexpr bool IsOutputRange
+template<typename T> constexpr bool IsOutputRange
     = detail::IsOutputRangeBase<T>::value;
 
 namespace detail {

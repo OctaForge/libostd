@@ -116,17 +116,17 @@ namespace detail {
 }
 
 template<typename T, typename U>
-static constexpr bool IsSame = detail::IsSameBase<T, U>::value;
+constexpr bool IsSame = detail::IsSameBase<T, U>::value;
 
 /* is void */
 
 template<typename T>
-static constexpr bool IsVoid = IsSame<RemoveCv<T>, void>;
+constexpr bool IsVoid = IsSame<RemoveCv<T>, void>;
 
 /* is null pointer */
 
 template<typename T>
-static constexpr bool IsNullPointer = IsSame<RemoveCv<T>, Nullptr>;
+constexpr bool IsNullPointer = IsSame<RemoveCv<T>, Nullptr>;
 
 /* is integer */
 
@@ -153,7 +153,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsIntegral = detail::IsIntegralBase<RemoveCv<T>>::value;
+constexpr bool IsIntegral = detail::IsIntegralBase<RemoveCv<T>>::value;
 
 /* is floating point */
 
@@ -167,7 +167,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsFloatingPoint = detail::IsFloatingPointBase<RemoveCv<T>>::value;
+constexpr bool IsFloatingPoint = detail::IsFloatingPointBase<RemoveCv<T>>::value;
 
 /* is array */
 
@@ -178,7 +178,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsArray = detail::IsArrayBase<T>::value;
+constexpr bool IsArray = detail::IsArrayBase<T>::value;
 
 /* is pointer */
 
@@ -188,7 +188,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsPointer = detail::IsPointerBase<RemoveCv<T>>::value;
+constexpr bool IsPointer = detail::IsPointerBase<RemoveCv<T>>::value;
 
 /* is lvalue reference */
 
@@ -198,7 +198,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsLvalueReference = detail::IsLvalueReferenceBase<T>::value;
+constexpr bool IsLvalueReference = detail::IsLvalueReferenceBase<T>::value;
 
 /* is rvalue reference */
 
@@ -208,24 +208,24 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsRvalueReference = detail::IsRvalueReferenceBase<T>::value;
+constexpr bool IsRvalueReference = detail::IsRvalueReferenceBase<T>::value;
 
 /* is reference */
 
 template<typename T>
-static constexpr bool IsReference = IsLvalueReference<T> || IsRvalueReference<T>;
+constexpr bool IsReference = IsLvalueReference<T> || IsRvalueReference<T>;
 
 /* is enum */
 
-template<typename T> static constexpr bool IsEnum = __is_enum(T);
+template<typename T> constexpr bool IsEnum = __is_enum(T);
 
 /* is union */
 
-template<typename T> static constexpr bool IsUnion = __is_union(T);
+template<typename T> constexpr bool IsUnion = __is_union(T);
 
 /* is class */
 
-template<typename T> static constexpr bool IsClass = __is_class(T);
+template<typename T> constexpr bool IsClass = __is_class(T);
 
 /* is function */
 
@@ -252,23 +252,22 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T>
-static constexpr bool IsFunction = detail::IsFunctionBase<T>::value;
+constexpr bool IsFunction = detail::IsFunctionBase<T>::value;
 
 /* is arithmetic */
 
 template<typename T>
-static constexpr bool IsArithmetic = IsIntegral<T> || IsFloatingPoint<T>;
+constexpr bool IsArithmetic = IsIntegral<T> || IsFloatingPoint<T>;
 
 /* is fundamental */
 
 template<typename T>
-static constexpr bool IsFundamental = IsArithmetic<T> || IsVoid<T> ||
-                                      IsNullPointer<T>;
+constexpr bool IsFundamental = IsArithmetic<T> || IsVoid<T> || IsNullPointer<T>;
 
 /* is compound */
 
 template<typename T>
-static constexpr bool IsCompound = !IsFundamental<T>;
+constexpr bool IsCompound = !IsFundamental<T>;
 
 /* is pointer to member */
 
@@ -281,7 +280,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsMemberPointer = detail::IsMemberPointerBase<RemoveCv<T>>::value;
+constexpr bool IsMemberPointer = detail::IsMemberPointerBase<RemoveCv<T>>::value;
 
 /* is pointer to member object */
 
@@ -296,7 +295,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsMemberObjectPointer = detail::IsMemberObjectPointerBase<RemoveCv<T>>::value;
+constexpr bool IsMemberObjectPointer = detail::IsMemberObjectPointerBase<RemoveCv<T>>::value;
 
 /* is pointer to member function */
 
@@ -311,44 +310,44 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsMemberFunctionPointer = detail::IsMemberFunctionPointerBase<RemoveCv<T>>::value;
+constexpr bool IsMemberFunctionPointer = detail::IsMemberFunctionPointerBase<RemoveCv<T>>::value;
 
 /* is object */
 
 template<typename T>
-static constexpr bool IsObject = !IsFunction<T> && !IsVoid<T> && !IsReference<T>;
+constexpr bool IsObject = !IsFunction<T> && !IsVoid<T> && !IsReference<T>;
 
 /* is scalar */
 
-template<typename T> static constexpr bool IsScalar
+template<typename T> constexpr bool IsScalar
     = IsMemberPointer<T> || IsPointer<T> || IsEnum<T> ||
       IsNullPointer  <T> || IsArithmetic<T>;
 
 /* is abstract */
 
-template<typename T> static constexpr bool IsAbstract = __is_abstract(T);
+template<typename T> constexpr bool IsAbstract = __is_abstract(T);
 
 /* is const */
 
 template<typename T>
-static constexpr bool IsConst = IsSame<T, const T>;
+constexpr bool IsConst = IsSame<T, const T>;
 
 /* is volatile */
 
 template<typename T>
-static constexpr bool IsVolatile = IsSame<T, volatile T>;
+constexpr bool IsVolatile = IsSame<T, volatile T>;
 
 /* is empty */
 
-template<typename T> static constexpr bool IsEmpty = __is_empty(T);
+template<typename T> constexpr bool IsEmpty = __is_empty(T);
 
 /* is POD */
 
-template<typename T> static constexpr bool IsPod = __is_pod(T);
+template<typename T> constexpr bool IsPod = __is_pod(T);
 
 /* is polymorphic */
 
-template<typename T> static constexpr bool IsPolymorphic = __is_polymorphic(T);
+template<typename T> constexpr bool IsPolymorphic = __is_polymorphic(T);
 
 /* is signed */
 
@@ -364,7 +363,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsSigned = detail::IsSignedBase<T>::value;
+constexpr bool IsSigned = detail::IsSignedBase<T>::value;
 
 /* is unsigned */
 
@@ -380,31 +379,31 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr bool IsUnsigned = detail::IsUnsignedBase<T>::value;
+constexpr bool IsUnsigned = detail::IsUnsignedBase<T>::value;
 
 /* is standard layout */
 
 template<typename T>
-static constexpr bool IsStandardLayout = __is_standard_layout(T);
+constexpr bool IsStandardLayout = __is_standard_layout(T);
 
 /* is literal type */
 
 template<typename T>
-static constexpr bool IsLiteralType = __is_literal_type(T);
+constexpr bool IsLiteralType = __is_literal_type(T);
 
 /* is trivially copyable */
 
 template<typename T>
-static constexpr bool IsTriviallyCopyable = IsScalar<RemoveAllExtents<T>>;
+constexpr bool IsTriviallyCopyable = IsScalar<RemoveAllExtents<T>>;
 
 /* is trivial */
 
-template<typename T> static constexpr bool IsTrivial = __is_trivial(T);
+template<typename T> constexpr bool IsTrivial = __is_trivial(T);
 
 /* has virtual destructor */
 
 template<typename T>
-static constexpr bool HasVirtualDestructor = __has_virtual_destructor(T);
+constexpr bool HasVirtualDestructor = __has_virtual_destructor(T);
 
 /* is constructible */
 
@@ -493,24 +492,24 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T, typename ...A>
-static constexpr bool IsConstructible = detail::Ctible<T, A...>::value;
+constexpr bool IsConstructible = detail::Ctible<T, A...>::value;
 
 /* is default constructible */
 
 template<typename T>
-static constexpr bool IsDefaultConstructible = IsConstructible<T>;
+constexpr bool IsDefaultConstructible = IsConstructible<T>;
 
 /* is copy constructible */
 
 template<typename T>
-static constexpr bool IsCopyConstructible = IsConstructible<T,
+constexpr bool IsCopyConstructible = IsConstructible<T,
     AddLvalueReference<AddConst<T>>
 >;
 
 /* is move constructible */
 
 template<typename T>
-static constexpr bool IsMoveConstructible = IsConstructible<T,
+constexpr bool IsMoveConstructible = IsConstructible<T,
     AddRvalueReference<T>
 >;
 
@@ -533,12 +532,12 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T, typename U>
-static constexpr bool IsAssignable = detail::IsAssignableBase<T, U>::value;
+constexpr bool IsAssignable = detail::IsAssignableBase<T, U>::value;
 
 /* is copy assignable */
 
 template<typename T>
-static constexpr bool IsCopyAssignable = IsAssignable<
+constexpr bool IsCopyAssignable = IsAssignable<
     AddLvalueReference<T>,
     AddLvalueReference<AddConst<T>>
 >;
@@ -546,7 +545,7 @@ static constexpr bool IsCopyAssignable = IsAssignable<
 /* is move assignable */
 
 template<typename T>
-static constexpr bool IsMoveAssignable = IsAssignable<
+constexpr bool IsMoveAssignable = IsAssignable<
     AddLvalueReference<T>,
     const AddRvalueReference<T>
 >;
@@ -591,7 +590,7 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T>
-static constexpr bool IsDestructible = detail::IsDestructibleBase<T>::value;
+constexpr bool IsDestructible = detail::IsDestructibleBase<T>::value;
 
 /* is trivially constructible */
 
@@ -621,22 +620,22 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T, typename ...A>
-static constexpr bool IsTriviallyConstructible
+constexpr bool IsTriviallyConstructible
     = detail::IsTriviallyConstructibleBase<T, A...>::value;
 
 /* is trivially default constructible */
 
-template<typename T> static constexpr bool IsTriviallyDefaultConstructible
+template<typename T> constexpr bool IsTriviallyDefaultConstructible
     = IsTriviallyConstructible<T>;
 
 /* is trivially copy constructible */
 
-template<typename T> static constexpr bool IsTriviallyCopyConstructible
+template<typename T> constexpr bool IsTriviallyCopyConstructible
     = IsTriviallyConstructible<T, AddLvalueReference<const T>>;
 
 /* is trivially move constructible */
 
-template<typename T> static constexpr bool IsTriviallyMoveConstructible
+template<typename T> constexpr bool IsTriviallyMoveConstructible
     = IsTriviallyConstructible<T, AddRvalueReference<T>>;
 
 /* is trivially assignable */
@@ -667,28 +666,28 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T, typename ...A>
-static constexpr bool IsTriviallyAssignable
+constexpr bool IsTriviallyAssignable
     = detail::IsTriviallyAssignableBase<T>::value;
 
 /* is trivially copy assignable */
 
-template<typename T> static constexpr bool IsTriviallyCopyAssignable
+template<typename T> constexpr bool IsTriviallyCopyAssignable
     = IsTriviallyAssignable<T, AddLvalueReference<const T>>;
 
 /* is trivially move assignable */
 
-template<typename T> static constexpr bool IsTriviallyMoveAssignable
+template<typename T> constexpr bool IsTriviallyMoveAssignable
     = IsTriviallyAssignable<T, AddRvalueReference<T>>;
 
 /* is trivially destructible */
 
 template<typename T>
-static constexpr bool IsTriviallyDestructible = __has_trivial_destructor(T);
+constexpr bool IsTriviallyDestructible = __has_trivial_destructor(T);
 
 /* is base of */
 
 template<typename B, typename D>
-static constexpr bool IsBaseOf = __is_base_of(B, D);
+constexpr bool IsBaseOf = __is_base_of(B, D);
 
 /* is convertible */
 
@@ -713,7 +712,7 @@ namespace detail {
     };
 }
 
-template<typename F, typename T> static constexpr bool IsConvertible
+template<typename F, typename T> constexpr bool IsConvertible
     = detail::IsConvertibleBase<F, T>::Type::value;
 
 /* extent */
@@ -738,7 +737,7 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T, uint I = 0>
-static constexpr Size Extent = detail::ExtentBase<T, I>::value;
+constexpr Size Extent = detail::ExtentBase<T, I>::value;
 
 /* rank */
 
@@ -753,7 +752,7 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr Size Rank = detail::RankBase<T>::value;
+constexpr Size Rank = detail::RankBase<T>::value;
 
 /* remove const, volatile, cv */
 
