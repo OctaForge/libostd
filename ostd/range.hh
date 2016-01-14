@@ -71,11 +71,8 @@ namespace detail {
 // is input range
 
 namespace detail {
-    template<typename T, bool = IsConvertible<RangeCategory<T>, InputRangeTag>>
-    constexpr bool IsInputRangeCore = false;
-
-    template<typename T>
-    constexpr bool IsInputRangeCore<T, true> = true;
+    template<typename T> constexpr bool IsInputRangeCore
+        = IsConvertible<RangeCategory<T>, InputRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
     constexpr bool IsInputRangeBase = false;
@@ -90,11 +87,8 @@ constexpr bool IsInputRange = detail::IsInputRangeBase<T>;
 // is forward range
 
 namespace detail {
-    template<typename T, bool = IsConvertible<RangeCategory<T>, ForwardRangeTag>>
-    constexpr bool IsForwardRangeCore = false;
-
-    template<typename T>
-    constexpr bool IsForwardRangeCore<T, true> = true;
+    template<typename T> constexpr bool IsForwardRangeCore
+        = IsConvertible<RangeCategory<T>, ForwardRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
     constexpr bool IsForwardRangeBase = false;
@@ -109,12 +103,8 @@ constexpr bool IsForwardRange = detail::IsForwardRangeBase<T>;
 // is bidirectional range
 
 namespace detail {
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, BidirectionalRangeTag
-    >> constexpr bool IsBidirectionalRangeCore = false;
-
-    template<typename T>
-    constexpr bool IsBidirectionalRangeCore<T, true> = true;
+    template<typename T> constexpr bool IsBidirectionalRangeCore
+        = IsConvertible<RangeCategory<T>, BidirectionalRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
     constexpr bool IsBidirectionalRangeBase = false;
@@ -130,12 +120,8 @@ template<typename T> constexpr bool IsBidirectionalRange
 // is random access range
 
 namespace detail {
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, RandomAccessRangeTag
-    >> constexpr bool IsRandomAccessRangeCore = false;
-
-    template<typename T>
-    constexpr bool IsRandomAccessRangeCore<T, true> = true;
+    template<typename T> constexpr bool IsRandomAccessRangeCore
+        = IsConvertible<RangeCategory<T>, RandomAccessRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
     constexpr bool IsRandomAccessRangeBase = false;
@@ -151,12 +137,8 @@ template<typename T> constexpr bool IsRandomAccessRange
 // is finite random access range
 
 namespace detail {
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, FiniteRandomAccessRangeTag
-    >> constexpr bool IsFiniteRandomAccessRangeCore = false;
-
-    template<typename T>
-    constexpr bool IsFiniteRandomAccessRangeCore<T, true> = true;
+    template<typename T> constexpr bool IsFiniteRandomAccessRangeCore
+        = IsConvertible<RangeCategory<T>, FiniteRandomAccessRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
     constexpr bool IsFiniteRandomAccessRangeBase = false;
@@ -177,12 +159,8 @@ template<typename T> constexpr bool IsInfiniteRandomAccessRange
 // is contiguous range
 
 namespace detail {
-    template<typename T, bool = IsConvertible<
-        RangeCategory<T>, ContiguousRangeTag
-    >> constexpr bool IsContiguousRangeCore = false;
-
-    template<typename T>
-    constexpr bool IsContiguousRangeCore<T, true> = true;
+    template<typename T> constexpr bool IsContiguousRangeCore
+        = IsConvertible<RangeCategory<T>, ContiguousRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
     constexpr bool IsContiguousRangeBase = false;
@@ -206,16 +184,12 @@ namespace detail {
         static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
     };
 
-    template<typename T, bool = (IsConvertible<
-        RangeCategory<T>, OutputRangeTag
-    > || (IsInputRange<T> &&
-        (detail::OutputRangeTest<T, const RangeValue<T>  &>::value ||
-         detail::OutputRangeTest<T,       RangeValue<T> &&>::value ||
-         detail::OutputRangeTest<T,       RangeValue<T>   >::value)
-    ))> constexpr bool IsOutputRangeCore = false;
-
-    template<typename T>
-    constexpr bool IsOutputRangeCore<T, true> = true;
+    template<typename T> constexpr bool IsOutputRangeCore
+        = IsConvertible<RangeCategory<T>, OutputRangeTag> ||
+          (IsInputRange<T> &&
+              (detail::OutputRangeTest<T, const RangeValue<T>  &>::value ||
+               detail::OutputRangeTest<T,       RangeValue<T> &&>::value ||
+               detail::OutputRangeTest<T,       RangeValue<T>   >::value));
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
     constexpr bool IsOutputRangeBase = false;
