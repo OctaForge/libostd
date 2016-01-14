@@ -223,16 +223,15 @@ namespace detail {
                                 IsUnion<T> ||
                                 IsVoid<T> ||
                                 IsReference<T> ||
-                                IsNullPointer<T>
-    > struct IsFunctionBase: IntegralConstant<bool,
-        sizeof(function_test<T>(function_source<T>(0))) == 1
-    > {};
+                                IsNullPointer<T>>
+    constexpr bool IsFunctionBase
+        = sizeof(function_test<T>(function_source<T>(0))) == 1;
 
-    template<typename T> struct IsFunctionBase<T, true>: False {};
+    template<typename T> constexpr bool IsFunctionBase<T, true> = false;
 } /* namespace detail */
 
 template<typename T>
-constexpr bool IsFunction = detail::IsFunctionBase<T>::value;
+constexpr bool IsFunction = detail::IsFunctionBase<T>;
 
 /* is arithmetic */
 
@@ -252,45 +251,38 @@ constexpr bool IsCompound = !IsFundamental<T>;
 /* is pointer to member */
 
 namespace detail {
-    template<typename>
-    struct IsMemberPointerBase: False {};
+    template<typename> constexpr bool IsMemberPointerBase = false;
 
     template<typename T, typename U>
-    struct IsMemberPointerBase<T U::*>: True {};
+    constexpr bool IsMemberPointerBase<T U::*> = true;
 }
 
 template<typename T>
-constexpr bool IsMemberPointer = detail::IsMemberPointerBase<RemoveCv<T>>::value;
+constexpr bool IsMemberPointer = detail::IsMemberPointerBase<RemoveCv<T>>;
 
 /* is pointer to member object */
 
 namespace detail {
-    template<typename>
-    struct IsMemberObjectPointerBase: False {};
+    template<typename> constexpr bool IsMemberObjectPointerBase = false;
 
     template<typename T, typename U>
-    struct IsMemberObjectPointerBase<T U::*>: IntegralConstant<bool,
-        !IsFunction<T>
-    > {};
+    constexpr bool IsMemberObjectPointerBase<T U::*> = !IsFunction<T>;
 }
 
 template<typename T>
-constexpr bool IsMemberObjectPointer = detail::IsMemberObjectPointerBase<RemoveCv<T>>::value;
+constexpr bool IsMemberObjectPointer = detail::IsMemberObjectPointerBase<RemoveCv<T>>;
 
 /* is pointer to member function */
 
 namespace detail {
-    template<typename>
-    struct IsMemberFunctionPointerBase: False {};
+    template<typename> constexpr bool IsMemberFunctionPointerBase = false;
 
     template<typename T, typename U>
-    struct IsMemberFunctionPointerBase<T U::*>: IntegralConstant<bool,
-        IsFunction<T>
-    > {};
+    constexpr bool IsMemberFunctionPointerBase<T U::*> = IsFunction<T>;
 }
 
 template<typename T>
-constexpr bool IsMemberFunctionPointer = detail::IsMemberFunctionPointerBase<RemoveCv<T>>::value;
+constexpr bool IsMemberFunctionPointer = detail::IsMemberFunctionPointerBase<RemoveCv<T>>;
 
 /* is object */
 
@@ -332,34 +324,32 @@ template<typename T> constexpr bool IsPolymorphic = __is_polymorphic(T);
 /* is signed */
 
 namespace detail {
-    template<typename T>
-    struct IsSignedCore: IntegralConstant<bool, T(-1) < T(0)> {};
+    template<typename T> constexpr bool IsSignedCore = T(-1) < T(0);
 
     template<typename T, bool = IsArithmetic<T>>
-    struct IsSignedBase: False {};
+    constexpr bool IsSignedBase = false;
 
     template<typename T>
-    struct IsSignedBase<T, true>: detail::IsSignedCore<T> {};
+    constexpr bool IsSignedBase<T, true> = detail::IsSignedCore<T>;
 }
 
 template<typename T>
-constexpr bool IsSigned = detail::IsSignedBase<T>::value;
+constexpr bool IsSigned = detail::IsSignedBase<T>;
 
 /* is unsigned */
 
 namespace detail {
-    template<typename T>
-    struct IsUnsignedCore: IntegralConstant<bool, T(0) < T(-1)> {};
+    template<typename T> constexpr bool IsUnsignedCore = T(0) < T(-1);
 
     template<typename T, bool = IsArithmetic<T>>
-    struct IsUnsignedBase: False {};
+    constexpr bool IsUnsignedBase = false;
 
     template<typename T>
-    struct IsUnsignedBase<T, true>: detail::IsUnsignedCore<T> {};
+    constexpr bool IsUnsignedBase<T, true> = detail::IsUnsignedCore<T>;
 }
 
 template<typename T>
-constexpr bool IsUnsigned = detail::IsUnsignedBase<T>::value;
+constexpr bool IsUnsigned = detail::IsUnsignedBase<T>;
 
 /* is standard layout */
 
@@ -698,41 +688,37 @@ template<typename F, typename T> constexpr bool IsConvertible
 /* extent */
 
 namespace detail {
-    template<typename T, uint I>
-    struct ExtentBase: IntegralConstant<Size, 0> {};
+    template<typename, uint> constexpr Size ExtentBase = 0;
 
     template<typename T>
-    struct ExtentBase<T[], 0>: IntegralConstant<Size, 0> {};
+    constexpr Size ExtentBase<T[], 0> = 0;
 
     template<typename T, uint I>
-    struct ExtentBase<T[], I>:
-        IntegralConstant<Size, detail::ExtentBase<T, I - 1>::value> {};
+    constexpr Size ExtentBase<T[], I> = detail::ExtentBase<T, I - 1>;
 
     template<typename T, Size N>
-    struct ExtentBase<T[N], 0>: IntegralConstant<Size, N> {};
+    constexpr Size ExtentBase<T[N], 0> = N;
 
     template<typename T, Size N, uint I>
-    struct ExtentBase<T[N], I>:
-        IntegralConstant<Size, detail::ExtentBase<T, I - 1>::value> {};
+    constexpr Size ExtentBase<T[N], I> = detail::ExtentBase<T, I - 1>;
 } /* namespace detail */
 
 template<typename T, uint I = 0>
-constexpr Size Extent = detail::ExtentBase<T, I>::value;
+constexpr Size Extent = detail::ExtentBase<T, I>;
 
 /* rank */
 
 namespace detail {
-    template<typename T> struct RankBase: IntegralConstant<Size, 0> {};
+    template<typename> constexpr Size RankBase = 0;
 
-    template<typename T> struct RankBase<T[]>:
-        IntegralConstant<Size, detail::RankBase<T>::value + 1> {};
+    template<typename T>
+    constexpr Size RankBase<T[]> = detail::RankBase<T> + 1;
 
-    template<typename T, Size N> struct RankBase<T[N]>:
-        IntegralConstant<Size, detail::RankBase<T>::value + 1> {};
+    template<typename T, Size N>
+    constexpr Size RankBase<T[N]> = detail::RankBase<T> + 1;
 }
 
-template<typename T>
-constexpr Size Rank = detail::RankBase<T>::value;
+template<typename T> constexpr Size Rank = detail::RankBase<T>;
 
 /* remove const, volatile, cv */
 
