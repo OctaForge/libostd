@@ -126,59 +126,59 @@ constexpr bool IsNullPointer = IsSame<RemoveCv<T>, Nullptr>;
 /* is integer */
 
 namespace detail {
-    template<typename T> struct IsIntegralBase: False {};
+    template<typename> constexpr bool IsIntegralBase = false;
 
-    template<> struct IsIntegralBase<bool  >: True {};
-    template<> struct IsIntegralBase<char  >: True {};
-    template<> struct IsIntegralBase<short >: True {};
-    template<> struct IsIntegralBase<int   >: True {};
-    template<> struct IsIntegralBase<long  >: True {};
+    template<> constexpr bool IsIntegralBase<bool  > = true;
+    template<> constexpr bool IsIntegralBase<char  > = true;
+    template<> constexpr bool IsIntegralBase<short > = true;
+    template<> constexpr bool IsIntegralBase<int   > = true;
+    template<> constexpr bool IsIntegralBase<long  > = true;
 
-    template<> struct IsIntegralBase<sbyte >: True {};
-    template<> struct IsIntegralBase<byte  >: True {};
-    template<> struct IsIntegralBase<ushort>: True {};
-    template<> struct IsIntegralBase<uint  >: True {};
-    template<> struct IsIntegralBase<ulong >: True {};
-    template<> struct IsIntegralBase<llong >: True {};
-    template<> struct IsIntegralBase<ullong>: True {};
+    template<> constexpr bool IsIntegralBase<sbyte > = true;
+    template<> constexpr bool IsIntegralBase<byte  > = true;
+    template<> constexpr bool IsIntegralBase<ushort> = true;
+    template<> constexpr bool IsIntegralBase<uint  > = true;
+    template<> constexpr bool IsIntegralBase<ulong > = true;
+    template<> constexpr bool IsIntegralBase<llong > = true;
+    template<> constexpr bool IsIntegralBase<ullong> = true;
 
-    template<> struct IsIntegralBase<Char16>: True {};
-    template<> struct IsIntegralBase<Char32>: True {};
-    template<> struct IsIntegralBase<Wchar >: True {};
+    template<> constexpr bool IsIntegralBase<Char16> = true;
+    template<> constexpr bool IsIntegralBase<Char32> = true;
+    template<> constexpr bool IsIntegralBase<Wchar > = true;
 }
 
 template<typename T>
-constexpr bool IsIntegral = detail::IsIntegralBase<RemoveCv<T>>::value;
+constexpr bool IsIntegral = detail::IsIntegralBase<RemoveCv<T>>;
 
 /* is floating point */
 
 namespace detail {
-    template<typename T> struct IsFloatingPointBase: False {};
+    template<typename> constexpr bool IsFloatingPointBase = false;
 
-    template<> struct IsFloatingPointBase<float >: True {};
-    template<> struct IsFloatingPointBase<double>: True {};
+    template<> constexpr bool IsFloatingPointBase<float > = true;
+    template<> constexpr bool IsFloatingPointBase<double> = true;
 
-    template<> struct IsFloatingPointBase<ldouble>: True {};
+    template<> constexpr bool IsFloatingPointBase<ldouble> = true;
 }
 
 template<typename T>
-constexpr bool IsFloatingPoint = detail::IsFloatingPointBase<RemoveCv<T>>::value;
+constexpr bool IsFloatingPoint = detail::IsFloatingPointBase<RemoveCv<T>>;
 
 /* is array */
 
 template<typename          > constexpr bool IsArray       = false;
-template<typename T        > constexpr bool IsArray<T[]>  = true;
+template<typename T        > constexpr bool IsArray<T[ ]> = true;
 template<typename T, Size N> constexpr bool IsArray<T[N]> = true;
 
 /* is pointer */
 
 namespace detail {
-    template<typename  > struct IsPointerBase     : False {};
-    template<typename T> struct IsPointerBase<T *>:  True {};
+    template<typename  > constexpr bool IsPointerBase      = false;
+    template<typename T> constexpr bool IsPointerBase<T *> = true;
 }
 
 template<typename T>
-constexpr bool IsPointer = detail::IsPointerBase<RemoveCv<T>>::value;
+constexpr bool IsPointer = detail::IsPointerBase<RemoveCv<T>>;
 
 /* is lvalue reference */
 
