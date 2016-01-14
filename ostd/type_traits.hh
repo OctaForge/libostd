@@ -348,17 +348,17 @@ namespace detail {
     template<typename ...A> False is_ctible_test(Any, A &&...);
 
     template<bool, typename T, typename ...A>
-    struct CtibleCore: CommonTypeBase<
+    constexpr bool CtibleCore = CommonTypeBase<
         decltype(is_ctible_test(declval_in<T>(), declval_in<A>()...))
-    >::Type {};
+    >::Type::value;
 
     /* function types are not constructible */
     template<typename R, typename ...A1, typename ...A2>
-    struct CtibleCore<false, R(A1...), A2...>: False {};
+    constexpr bool CtibleCore<false, R(A1...), A2...> = false;
 
     /* scalars are default constructible, refs are not */
     template<typename T>
-    struct CtibleCore<true, T>: IntegralConstant<bool, IsScalar<T>> {};
+    constexpr bool CtibleCore<true, T> = IsScalar<T>;
 
     /* scalars and references are constructible from one arg if
      * implicitly convertible to scalar or reference */
@@ -369,56 +369,53 @@ namespace detail {
     };
 
     template<typename T, typename U>
-    struct CtibleCore<true, T, U>: CommonTypeBase<
+    constexpr bool CtibleCore<true, T, U> = CommonTypeBase<
         decltype(CtibleRef<T>::test(declval_in<U>()))
-    >::Type {};
+    >::Type::value;
 
     /* scalars and references are not constructible from multiple args */
     template<typename T, typename U, typename ...A>
-    struct CtibleCore<true, T, U, A...>: False {};
+    constexpr bool CtibleCore<true, T, U, A...> = false;
 
     /* treat scalars and refs separately */
     template<bool, typename T, typename ...A>
-    struct CtibleVoidCheck: CtibleCore<
+    constexpr bool CtibleVoidCheck = CtibleCore<
         (IsScalar<T> || IsReference<T>), T, A...
-    > {};
+    >;
 
     /* if any of T or A is void, IsConstructible should be false */
     template<typename T, typename ...A>
-    struct CtibleVoidCheck<true, T, A...>: False {};
+    constexpr bool CtibleVoidCheck<true, T, A...> = false;
 
-    template<typename ...A> struct CtibleContainsVoid;
+    template<typename ...A> constexpr bool CtibleContainsVoid = false;
 
-    template<> struct CtibleContainsVoid<>: False {};
+    template<> constexpr bool CtibleContainsVoid<> = false;
 
     template<typename T, typename ...A>
-    struct CtibleContainsVoid<T, A...> {
-        static constexpr bool value = IsVoid<T>
-           || CtibleContainsVoid<A...>::value;
-    };
+    constexpr bool CtibleContainsVoid<T, A...>
+        = IsVoid<T> || CtibleContainsVoid<A...>;
 
     /* entry point */
     template<typename T, typename ...A>
-    struct Ctible: CtibleVoidCheck<
-        CtibleContainsVoid<T, A...>::value || IsAbstract<T>,
-        T, A...
-    > {};
+    constexpr bool Ctible = CtibleVoidCheck<
+        CtibleContainsVoid<T, A...> || IsAbstract<T>, T, A...
+    >;
 
     /* array types are default constructible if their element type is */
     template<typename T, Size N>
-    struct CtibleCore<false, T[N]>: Ctible<RemoveAllExtents<T>> {};
+    constexpr bool CtibleCore<false, T[N]> = Ctible<RemoveAllExtents<T>>;
 
     /* otherwise array types are not constructible by this syntax */
     template<typename T, Size N, typename ...A>
-    struct CtibleCore<false, T[N], A...>: False {};
+    constexpr bool CtibleCore<false, T[N], A...> = false;
 
     /* incomplete array types are not constructible */
     template<typename T, typename ...A>
-    struct CtibleCore<false, T[], A...>: False {};
+    constexpr bool CtibleCore<false, T[], A...> = false;
 } /* namespace detail */
 
 template<typename T, typename ...A>
-constexpr bool IsConstructible = detail::Ctible<T, A...>::value;
+constexpr bool IsConstructible = detail::Ctible<T, A...>;
 
 /* is default constructible */
 
@@ -449,16 +446,16 @@ namespace detail {
     template<typename T> False assign_test(Any, T &&);
 
     template<typename T, typename U, bool = IsVoid<T> || IsVoid<U>>
-    struct IsAssignableBase: CommonTypeBase<
+    constexpr bool IsAssignableBase = CommonTypeBase<
         decltype(assign_test(declval_in<T>(), declval_in<U>()))
-    >::Type {};
+    >::Type::value;
 
     template<typename T, typename U>
-    struct IsAssignableBase<T, U, true>: False {};
+    constexpr bool IsAssignableBase<T, U, true> = false;
 } /* namespace detail */
 
 template<typename T, typename U>
-constexpr bool IsAssignable = detail::IsAssignableBase<T, U>::value;
+constexpr bool IsAssignable = detail::IsAssignableBase<T, U>;
 
 /* is copy assignable */
 
@@ -491,63 +488,58 @@ namespace detail {
         static constexpr bool value = (sizeof(test<T>(12)) == sizeof(char));
     };
 
-    template<typename, bool> struct DtibleImpl;
+    template<typename, bool> constexpr bool DtibleImpl = false;
 
     template<typename T>
-    struct DtibleImpl<T, false>: IntegralConstant<bool,
-        IsDestructorWellformed<RemoveAllExtents<T>>::value
-    > {};
+    constexpr bool DtibleImpl<T, false>
+        = IsDestructorWellformed<RemoveAllExtents<T>>::value;
 
     template<typename T>
-    struct DtibleImpl<T, true>: True {};
+    constexpr bool DtibleImpl<T, true> = true;
 
-    template<typename T, bool> struct DtibleFalse;
+    template<typename T, bool> constexpr bool DtibleFalse = false;
 
-    template<typename T> struct DtibleFalse<T, false>
-        : DtibleImpl<T, IsReference<T>> {};
+    template<typename T> constexpr bool DtibleFalse<T, false>
+        = DtibleImpl<T, IsReference<T>>;
 
-    template<typename T> struct DtibleFalse<T, true>: False {};
+    template<typename T> constexpr bool DtibleFalse<T, true> = false;
 
     template<typename T>
-    struct IsDestructibleBase: detail::DtibleFalse<T, IsFunction<T>> {};
+    constexpr bool IsDestructibleBase = detail::DtibleFalse<T, IsFunction<T>>;
 
-    template<typename T> struct IsDestructibleBase<T[]>: False {};
-    template<          > struct IsDestructibleBase<void>: False {};
+    template<typename T> constexpr bool IsDestructibleBase<T[] > = false;
+    template<          > constexpr bool IsDestructibleBase<void> = false;
 } /* namespace detail */
 
 template<typename T>
-constexpr bool IsDestructible = detail::IsDestructibleBase<T>::value;
+constexpr bool IsDestructible = detail::IsDestructibleBase<T>;
 
 /* is trivially constructible */
 
 namespace detail {
     template<typename T, typename ...A>
-    struct IsTriviallyConstructibleBase: False {};
+    constexpr bool IsTriviallyConstructibleBase = false;
 
     template<typename T>
-    struct IsTriviallyConstructibleBase<T>: IntegralConstant<bool,
-        __has_trivial_constructor(T)
-    > {};
+    constexpr bool IsTriviallyConstructibleBase<T>
+        = __has_trivial_constructor(T);
 
     template<typename T>
-    struct IsTriviallyConstructibleBase<T, T &>: IntegralConstant<bool,
-        __has_trivial_copy(T)
-    > {};
+    constexpr bool IsTriviallyConstructibleBase<T, T &>
+        = __has_trivial_copy(T);
 
     template<typename T>
-    struct IsTriviallyConstructibleBase<T, const T &>: IntegralConstant<bool,
-        __has_trivial_copy(T)
-    > {};
+    constexpr bool IsTriviallyConstructibleBase<T, const T &>
+        = __has_trivial_copy(T);
 
     template<typename T>
-    struct IsTriviallyConstructibleBase<T, T &&>: IntegralConstant<bool,
-        __has_trivial_copy(T)
-    > {};
+    constexpr bool IsTriviallyConstructibleBase<T, T &&>
+        = __has_trivial_copy(T);
 } /* namespace detail */
 
 template<typename T, typename ...A>
 constexpr bool IsTriviallyConstructible
-    = detail::IsTriviallyConstructibleBase<T, A...>::value;
+    = detail::IsTriviallyConstructibleBase<T, A...>;
 
 /* is trivially default constructible */
 
@@ -568,32 +560,28 @@ template<typename T> constexpr bool IsTriviallyMoveConstructible
 
 namespace detail {
     template<typename T, typename ...A>
-    struct IsTriviallyAssignableBase: False {};
+    constexpr bool IsTriviallyAssignableBase = false;
 
     template<typename T>
-    struct IsTriviallyAssignableBase<T>: IntegralConstant<bool,
-        __has_trivial_assign(T)
-    > {};
+    constexpr bool IsTriviallyAssignableBase<T>
+        = __has_trivial_assign(T);
 
     template<typename T>
-    struct IsTriviallyAssignableBase<T, T &>: IntegralConstant<bool,
-        __has_trivial_copy(T)
-    > {};
+    constexpr bool IsTriviallyAssignableBase<T, T &>
+        = __has_trivial_copy(T);
 
     template<typename T>
-    struct IsTriviallyAssignableBase<T, const T &>: IntegralConstant<bool,
-        __has_trivial_copy(T)
-    > {};
+    constexpr bool IsTriviallyAssignableBase<T, const T &>
+        = __has_trivial_copy(T);
 
     template<typename T>
-    struct IsTriviallyAssignableBase<T, T &&>: IntegralConstant<bool,
-        __has_trivial_copy(T)
-    > {};
+    constexpr bool IsTriviallyAssignableBase<T, T &&>
+        = __has_trivial_copy(T);
 } /* namespace detail */
 
 template<typename T, typename ...A>
 constexpr bool IsTriviallyAssignable
-    = detail::IsTriviallyAssignableBase<T>::value;
+    = detail::IsTriviallyAssignableBase<T>;
 
 /* is trivially copy assignable */
 
@@ -1131,29 +1119,21 @@ template<Size N, Size A
 /* aligned union */
 
 namespace detail {
-    template<Size ...N> struct AlignMax;
+    template<Size ...N> constexpr Size AlignMax = 0;
+    template<Size N> constexpr Size AlignMax<N> = N;
 
-    template<Size N> struct AlignMax<N> {
-        static constexpr Size value = N;
-    };
-
-    template<Size N1, Size N2> struct AlignMax<N1, N2> {
-        static constexpr Size value = (N1 > N2) ? N1 : N2;
-    };
+    template<Size N1, Size N2> constexpr Size AlignMax<N1, N2>
+        = (N1 > N2) ? N1 : N2;
 
     template<Size N1, Size N2, Size ...N>
-    struct AlignMax<N1, N2, N...> {
-        static constexpr Size value
-            = AlignMax<AlignMax<N1, N2>::value, N...>::value;
-    };
+    constexpr Size AlignMax<N1, N2, N...> = AlignMax<AlignMax<N1, N2>, N...>;
 
     template<Size N, typename ...T> struct AlignedUnionBase {
         static constexpr Size alignment_value
-            = AlignMax<alignof(T)...>::value;
+            = AlignMax<alignof(T)...>;
 
         struct type {
-            alignas(alignment_value) byte data[AlignMax<N,
-                sizeof(T)...>::value];
+            alignas(alignment_value) byte data[AlignMax<N, sizeof(T)...>];
         };
     };
 } /* namespace detail */
