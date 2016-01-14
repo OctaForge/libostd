@@ -72,102 +72,102 @@ namespace detail {
 
 namespace detail {
     template<typename T, bool = IsConvertible<RangeCategory<T>, InputRangeTag>>
-    struct IsInputRangeCore: False {};
+    constexpr bool IsInputRangeCore = false;
 
     template<typename T>
-    struct IsInputRangeCore<T, true>: True {};
+    constexpr bool IsInputRangeCore<T, true> = true;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
-    struct IsInputRangeBase: False {};
+    constexpr bool IsInputRangeBase = false;
 
     template<typename T>
-    struct IsInputRangeBase<T, true>: detail::IsInputRangeCore<T>::Type {};
+    constexpr bool IsInputRangeBase<T, true> = detail::IsInputRangeCore<T>;
 }
 
 template<typename T>
-constexpr bool IsInputRange = detail::IsInputRangeBase<T>::value;
+constexpr bool IsInputRange = detail::IsInputRangeBase<T>;
 
 // is forward range
 
 namespace detail {
     template<typename T, bool = IsConvertible<RangeCategory<T>, ForwardRangeTag>>
-    struct IsForwardRangeCore: False {};
+    constexpr bool IsForwardRangeCore = false;
 
     template<typename T>
-    struct IsForwardRangeCore<T, true>: True {};
+    constexpr bool IsForwardRangeCore<T, true> = true;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
-    struct IsForwardRangeBase: False {};
+    constexpr bool IsForwardRangeBase = false;
 
     template<typename T>
-    struct IsForwardRangeBase<T, true>: detail::IsForwardRangeCore<T>::Type {};
+    constexpr bool IsForwardRangeBase<T, true> = detail::IsForwardRangeCore<T>;
 }
 
 template<typename T>
-constexpr bool IsForwardRange = detail::IsForwardRangeBase<T>::value;
+constexpr bool IsForwardRange = detail::IsForwardRangeBase<T>;
 
 // is bidirectional range
 
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, BidirectionalRangeTag
-    >> struct IsBidirectionalRangeCore: False {};
+    >> constexpr bool IsBidirectionalRangeCore = false;
 
     template<typename T>
-    struct IsBidirectionalRangeCore<T, true>: True {};
+    constexpr bool IsBidirectionalRangeCore<T, true> = true;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
-    struct IsBidirectionalRangeBase: False {};
+    constexpr bool IsBidirectionalRangeBase = false;
 
     template<typename T>
-    struct IsBidirectionalRangeBase<T, true>:
-        detail::IsBidirectionalRangeCore<T>::Type {};
+    constexpr bool IsBidirectionalRangeBase<T, true> =
+        detail::IsBidirectionalRangeCore<T>;
 }
 
 template<typename T> constexpr bool IsBidirectionalRange
-    = detail::IsBidirectionalRangeBase<T>::value;
+    = detail::IsBidirectionalRangeBase<T>;
 
 // is random access range
 
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, RandomAccessRangeTag
-    >> struct IsRandomAccessRangeCore: False {};
+    >> constexpr bool IsRandomAccessRangeCore = false;
 
     template<typename T>
-    struct IsRandomAccessRangeCore<T, true>: True {};
+    constexpr bool IsRandomAccessRangeCore<T, true> = true;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
-    struct IsRandomAccessRangeBase: False {};
+    constexpr bool IsRandomAccessRangeBase = false;
 
     template<typename T>
-    struct IsRandomAccessRangeBase<T, true>:
-        detail::IsRandomAccessRangeCore<T>::Type {};
+    constexpr bool IsRandomAccessRangeBase<T, true> =
+        detail::IsRandomAccessRangeCore<T>;
 }
 
 template<typename T> constexpr bool IsRandomAccessRange
-    = detail::IsRandomAccessRangeBase<T>::value;
+    = detail::IsRandomAccessRangeBase<T>;
 
 // is finite random access range
 
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, FiniteRandomAccessRangeTag
-    >> struct IsFiniteRandomAccessRangeCore: False {};
+    >> constexpr bool IsFiniteRandomAccessRangeCore = false;
 
     template<typename T>
-    struct IsFiniteRandomAccessRangeCore<T, true>: True {};
+    constexpr bool IsFiniteRandomAccessRangeCore<T, true> = true;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
-    struct IsFiniteRandomAccessRangeBase: False {};
+    constexpr bool IsFiniteRandomAccessRangeBase = false;
 
     template<typename T>
-    struct IsFiniteRandomAccessRangeBase<T, true>:
-        detail::IsFiniteRandomAccessRangeCore<T>::Type {};
+    constexpr bool IsFiniteRandomAccessRangeBase<T, true> =
+        detail::IsFiniteRandomAccessRangeCore<T>;
 }
 
 template<typename T> constexpr bool IsFiniteRandomAccessRange
-    = detail::IsFiniteRandomAccessRangeBase<T>::value;
+    = detail::IsFiniteRandomAccessRangeBase<T>;
 
 // is infinite random access range
 
@@ -179,21 +179,21 @@ template<typename T> constexpr bool IsInfiniteRandomAccessRange
 namespace detail {
     template<typename T, bool = IsConvertible<
         RangeCategory<T>, ContiguousRangeTag
-    >> struct IsContiguousRangeCore: False {};
+    >> constexpr bool IsContiguousRangeCore = false;
 
     template<typename T>
-    struct IsContiguousRangeCore<T, true>: True {};
+    constexpr bool IsContiguousRangeCore<T, true> = true;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
-    struct IsContiguousRangeBase: False {};
+    constexpr bool IsContiguousRangeBase = false;
 
     template<typename T>
-    struct IsContiguousRangeBase<T, true>:
-        detail::IsContiguousRangeCore<T>::Type {};
+    constexpr bool IsContiguousRangeBase<T, true> =
+        detail::IsContiguousRangeCore<T>;
 }
 
 template<typename T> constexpr bool IsContiguousRange
-    = detail::IsContiguousRangeBase<T>::value;
+    = detail::IsContiguousRangeBase<T>;
 
 // is output range
 
@@ -212,21 +212,19 @@ namespace detail {
         (detail::OutputRangeTest<T, const RangeValue<T>  &>::value ||
          detail::OutputRangeTest<T,       RangeValue<T> &&>::value ||
          detail::OutputRangeTest<T,       RangeValue<T>   >::value)
-    ))> struct IsOutputRangeCore: False {};
+    ))> constexpr bool IsOutputRangeCore = false;
 
     template<typename T>
-    struct IsOutputRangeCore<T, true>: True {};
+    constexpr bool IsOutputRangeCore<T, true> = true;
 
     template<typename T, bool = detail::IsRangeTest<T>::value>
-    struct IsOutputRangeBase: False {};
+    constexpr bool IsOutputRangeBase = false;
 
     template<typename T>
-    struct IsOutputRangeBase<T, true>:
-        detail::IsOutputRangeCore<T>::Type {};
+    constexpr bool IsOutputRangeBase<T, true> = detail::IsOutputRangeCore<T>;
 }
 
-template<typename T> constexpr bool IsOutputRange
-    = detail::IsOutputRangeBase<T>::value;
+template<typename T> constexpr bool IsOutputRange = detail::IsOutputRangeBase<T>;
 
 namespace detail {
     // range iterator

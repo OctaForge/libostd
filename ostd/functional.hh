@@ -510,11 +510,9 @@ namespace detail {
     };
 
     template<typename T>
-    struct FunctorInPlace {
-        static constexpr bool value = sizeof(T)  <= sizeof(FunctorData)
-          && (alignof(FunctorData) % alignof(T)) == 0
-          && IsMoveConstructible<T>;
-    };
+    constexpr bool FunctorInPlace = sizeof(T) <= sizeof(FunctorData) &&
+                                    (alignof(FunctorData) % alignof(T)) == 0 &&
+                                    IsMoveConstructible<T>;
 
     struct FunctionManager;
 
@@ -572,9 +570,7 @@ namespace detail {
     };
 
     template<typename T, typename A>
-    struct FunctorDataManager<T, A,
-        EnableIf<!FunctorInPlace<T>::value>
-    > {
+    struct FunctorDataManager<T, A, EnableIf<!FunctorInPlace<T>>> {
         template<typename R, typename ...Args>
         static R call(const FunctorData &s, Args ...args) {
             return (*(AllocatorPointer<A> &)s)(forward<Args>(args)...);
