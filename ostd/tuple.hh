@@ -53,10 +53,9 @@ namespace detail {
                 "attempt to default construct a reference element in a tuple");
         }
 
-        template<typename T, typename = EnableIf<And<
-            Not<IntegralConstant<bool, IsSame<Decay<T>, TupleLeaf>>>,
-            IntegralConstant<bool, IsConstructible<H, T>>
-        >::value>>
+        template<typename T, typename = EnableIf<
+            !IsSame<Decay<T>, TupleLeaf> && IsConstructible<H, T>
+        >>
         explicit TupleLeaf(T &&t): p_value(forward<T>(t)) {
             static_assert(!IsReference<H> ||
                           (IsLvalueReference<H> &&
@@ -136,12 +135,9 @@ namespace detail {
         template<typename A>
         TupleLeaf(IntegralConstant<int, 2>, const A &a): H(a) {}
 
-        template<typename T,
-                 typename = EnableIf<And<
-                     Not<IntegralConstant<bool, IsSame<Decay<T>, TupleLeaf>>>,
-                     IntegralConstant<bool, IsConstructible<H, T>>
-                 >::value>
-        > explicit TupleLeaf(T &&t): H(forward<T>(t)) {}
+        template<typename T, typename = EnableIf<
+            !IsSame<Decay<T>, TupleLeaf> && IsConstructible<H, T>
+        >> explicit TupleLeaf(T &&t): H(forward<T>(t)) {}
 
         template<typename T, typename A>
         explicit TupleLeaf(IntegralConstant<int, 0>, const A &, T &&t):
