@@ -77,7 +77,7 @@ struct Array {
 };
 
 template<typename T, Size N>
-struct TupleSize<Array<T, N>>: IntegralConstant<Size, N> {};
+struct TupleSize<Array<T, N>>: Constant<Size, N> {};
 
 template<Size I, typename T, Size N>
 struct TupleElementBase<I, Array<T, N>> {

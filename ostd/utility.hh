@@ -50,7 +50,7 @@ template<typename T> AddRvalueReference<T> declval();
 namespace detail {
     template<typename T>
     auto test_swap(int) ->
-        IntegralConstant<bool, IsVoid<decltype(declval<T>().swap(declval<T &>()))>>;
+        Constant<bool, IsVoid<decltype(declval<T>().swap(declval<T &>()))>>;
     template<typename>
     False test_swap(...);
 
@@ -209,7 +209,7 @@ inline constexpr bool operator>=(const Pair<T, U> &x, const Pair<T, U> &y) {
 }
 
 template<typename T, typename U>
-struct TupleSize<Pair<T, U>>: IntegralConstant<Size, 2> {};
+struct TupleSize<Pair<T, U>>: Constant<Size, 2> {};
 
 template<typename T, typename U>
 struct TupleElementBase<0, Pair<T, U>> {

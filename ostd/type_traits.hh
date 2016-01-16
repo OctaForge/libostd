@@ -49,20 +49,20 @@ namespace detail {
 /* integral constant */
 
 template<typename T, T val>
-struct IntegralConstant {
+struct Constant {
     static constexpr T value = val;
 
     using Value = T;
-    using Type = IntegralConstant<T, val>;
+    using Type = Constant<T, val>;
 
     constexpr operator Value() const { return value; }
     constexpr Value operator()() const { return value; }
 };
 
-using True = IntegralConstant<bool, true>;
-using False = IntegralConstant<bool, false>;
+using True = Constant<bool, true>;
+using False = Constant<bool, false>;
 
-template<typename T, T val> constexpr T IntegralConstant<T, val>::value;
+template<typename T, T val> constexpr T Constant<T, val>::value;
 
 /* type equality */
 
@@ -609,7 +609,7 @@ namespace detail {
     template<typename F, typename T, bool = IsVoid<F>
         || IsFunction<T> || IsArray<T>
     > struct IsConvertibleBase {
-        using Type = IntegralConstant<bool, IsVoid<T>>;
+        using Type = Constant<bool, IsVoid<T>>;
     };
 
     template<typename F, typename T>

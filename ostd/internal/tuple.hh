@@ -143,7 +143,7 @@ public:
 };
 
 template<typename ...T> struct TupleSize<detail::TupleTypes<T...>>:
-    IntegralConstant<Size, sizeof...(T)> {};
+    Constant<Size, sizeof...(T)> {};
 
 template<typename ...T> struct IsTupleLike<detail::TupleTypes<T...>>: True {};
 
@@ -185,7 +185,7 @@ namespace detail {
 
     template<typename T, typename ...TT, typename U, typename ...UU>
     struct TupleConvertibleBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>:
-        IntegralConstant<bool, IsConvertible<T, U> &&
+        Constant<bool, IsConvertible<T, U> &&
                                TupleConvertibleBase<TupleTypes<TT...>,
                                                     TupleTypes<UU...>>::value> {};
 
@@ -218,7 +218,7 @@ namespace detail {
 
     template<typename T, typename ...TT, typename U, typename ...UU>
     struct TupleConstructibleBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>:
-        IntegralConstant<bool, IsConstructible<U, T> &&
+        Constant<bool, IsConstructible<U, T> &&
                                TupleConstructibleBase<TupleTypes<TT...>,
                                                       TupleTypes<UU...>>::value> {};
 
@@ -251,7 +251,7 @@ namespace detail {
 
     template<typename T, typename ...TT, typename U, typename ...UU>
     struct TupleAssignableBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>:
-        IntegralConstant<bool, IsAssignable<U &, T> &&
+        Constant<bool, IsAssignable<U &, T> &&
                                TupleAssignableBase<TupleTypes<TT...>,
                                                    TupleTypes<UU...>>::value> {};
 

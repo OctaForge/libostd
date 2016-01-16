@@ -208,7 +208,7 @@ namespace detail {
     template<typename T>
     static char ptr_test(typename T::Pointer * = 0);
 
-    template<typename T> struct HasPtr: IntegralConstant<bool,
+    template<typename T> struct HasPtr: Constant<bool,
         (sizeof(ptr_test<T>(0)) == 1)
     > {};
 
@@ -327,7 +327,7 @@ namespace detail {
         RemoveCv<PointerElement<T>>,
         RemoveCv<PointerElement<U>>
     >> struct SameOrLessCvQualifiedBase:
-        IntegralConstant<bool, IsConvertible<T, U>> {};
+        Constant<bool, IsConvertible<T, U>> {};
 
     template<typename T, typename U>
     struct SameOrLessCvQualifiedBase<T, U, false>: False {};
@@ -850,7 +850,7 @@ namespace detail {
 
     template<typename A, bool = IsAlwaysEqualTest<A>::value>
     struct IsAlwaysEqualBase {
-        using Type = IntegralConstant<bool, IsEmpty<A>>;
+        using Type = Constant<bool, IsEmpty<A>>;
     };
 
     template<typename A>
@@ -880,7 +880,7 @@ namespace detail {
         -> False;
 
     template<typename A, typename S, typename CVP>
-    struct AllocateHintTest: IntegralConstant<bool,
+    struct AllocateHintTest: Constant<bool,
         IsSame<decltype(allocate_hint_test(declval<A>(),
                                            declval<S>(),
                                            declval<CVP>())), True
@@ -933,7 +933,7 @@ namespace detail {
         -> False;
 
     template<typename A, typename T, typename ...Args>
-    struct ConstructTest: IntegralConstant<bool,
+    struct ConstructTest: Constant<bool,
         IsSame< decltype(construct_test(declval<A>(),
                                        declval<T>(),
                                        declval<Args>()...)), True
@@ -967,7 +967,7 @@ namespace detail {
     auto destroy_test(const A &, P &&) -> False;
 
     template<typename A, typename P>
-    struct DestroyTest: IntegralConstant<bool,
+    struct DestroyTest: Constant<bool,
         IsSame<decltype(destroy_test(declval<A>(), declval<P>())), True>
     > {};
 
@@ -997,7 +997,7 @@ namespace detail {
     auto alloc_max_size_test(const A &) -> False;
 
     template<typename A>
-    struct AllocMaxSizeTest: IntegralConstant<bool,
+    struct AllocMaxSizeTest: Constant<bool,
         IsSame<decltype(alloc_max_size_test(declval<A &>())), True>
     > {};
 
@@ -1027,7 +1027,7 @@ namespace detail {
     auto alloc_copy_test(const A &) -> False;
 
     template<typename A>
-    struct AllocCopyTest: IntegralConstant<bool,
+    struct AllocCopyTest: Constant<bool,
         IsSame<decltype(alloc_copy_test(declval<A &>())), True>
     > {};
 
@@ -1065,7 +1065,7 @@ namespace detail {
     };
 
     template<typename T, typename A, bool = HasAllocatorType<T>::value>
-    struct UsesAllocatorBase: IntegralConstant<bool,
+    struct UsesAllocatorBase: Constant<bool,
         IsConvertible<A, typename T::Allocator>
     > {};
 
@@ -1090,7 +1090,7 @@ namespace detail {
 }
 
 template<typename T, typename A, typename ...Args>
-struct UsesAllocatorConstructor: IntegralConstant<int,
+struct UsesAllocatorConstructor: Constant<int,
     detail::UsesAllocCtor<T, A, Args...>::value
 > {};
 

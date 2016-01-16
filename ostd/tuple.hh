@@ -18,7 +18,7 @@ namespace ostd {
 /* tuple size */
 
 template<typename ...T> struct TupleSize<Tuple<T...>>:
-    IntegralConstant<Size, sizeof...(T)> {};
+    Constant<Size, sizeof...(T)> {};
 
 /* tuple element */
 
@@ -38,17 +38,17 @@ namespace detail {
         }
 
         template<typename A>
-        TupleLeaf(IntegralConstant<int, 0>, const A &): p_value() {
+        TupleLeaf(Constant<int, 0>, const A &): p_value() {
             static_assert(!IsReference<H>,
                 "attempt to default construct a reference element in a tuple");
         }
         template<typename A>
-        TupleLeaf(IntegralConstant<int, 1>, const A &a): p_value(allocator_arg, a) {
+        TupleLeaf(Constant<int, 1>, const A &a): p_value(allocator_arg, a) {
             static_assert(!IsReference<H>,
                 "attempt to default construct a reference element in a tuple");
         }
         template<typename A>
-        TupleLeaf(IntegralConstant<int, 2>, const A &a): p_value(a) {
+        TupleLeaf(Constant<int, 2>, const A &a): p_value(a) {
             static_assert(!IsReference<H>,
                 "attempt to default construct a reference element in a tuple");
         }
@@ -68,7 +68,7 @@ namespace detail {
         }
 
         template<typename T, typename A>
-        explicit TupleLeaf(IntegralConstant<int, 0>, const A &, T &&t):
+        explicit TupleLeaf(Constant<int, 0>, const A &, T &&t):
                            p_value(forward<T>(t)) {
             static_assert(!IsLvalueReference<H> ||
                           (IsLvalueReference<H> &&
@@ -79,7 +79,7 @@ namespace detail {
         }
 
         template<typename T, typename A>
-        explicit TupleLeaf(IntegralConstant<int, 1>, const A &a, T &&t):
+        explicit TupleLeaf(Constant<int, 1>, const A &a, T &&t):
                            p_value(allocator_arg, a, forward<T>(t)) {
             static_assert(!IsLvalueReference<H> ||
                           (IsLvalueReference<H> &&
@@ -90,7 +90,7 @@ namespace detail {
         }
 
         template<typename T, typename A>
-        explicit TupleLeaf(IntegralConstant<int, 2>, const A &a, T &&t):
+        explicit TupleLeaf(Constant<int, 2>, const A &a, T &&t):
                            p_value(forward<T>(t), a) {
             static_assert(!IsLvalueReference<H> ||
                           (IsLvalueReference<H> &&
@@ -126,29 +126,29 @@ namespace detail {
         constexpr TupleLeaf() {}
 
         template<typename A>
-        TupleLeaf(IntegralConstant<int, 0>, const A &) {}
+        TupleLeaf(Constant<int, 0>, const A &) {}
 
         template<typename A>
-        TupleLeaf(IntegralConstant<int, 1>, const A &a):
+        TupleLeaf(Constant<int, 1>, const A &a):
             H(allocator_arg, a) {}
 
         template<typename A>
-        TupleLeaf(IntegralConstant<int, 2>, const A &a): H(a) {}
+        TupleLeaf(Constant<int, 2>, const A &a): H(a) {}
 
         template<typename T, typename = EnableIf<
             !IsSame<Decay<T>, TupleLeaf> && IsConstructible<H, T>
         >> explicit TupleLeaf(T &&t): H(forward<T>(t)) {}
 
         template<typename T, typename A>
-        explicit TupleLeaf(IntegralConstant<int, 0>, const A &, T &&t):
+        explicit TupleLeaf(Constant<int, 0>, const A &, T &&t):
             H(forward<T>(t)) {}
 
         template<typename T, typename A>
-        explicit TupleLeaf(IntegralConstant<int, 1>, const A &a, T &&t):
+        explicit TupleLeaf(Constant<int, 1>, const A &a, T &&t):
             H(allocator_arg, a, forward<T>(t)) {}
 
         template<typename T, typename A>
-        explicit TupleLeaf(IntegralConstant<int, 2>, const A &a, T &&t):
+        explicit TupleLeaf(Constant<int, 2>, const A &a, T &&t):
             H(forward<T>(t), a) {}
 
         TupleLeaf(const TupleLeaf &) = default;
@@ -179,7 +179,7 @@ namespace detail {
     inline void tuple_swallow(A &&...) {}
 
     template<bool ...A> struct TupleAll:
-        IntegralConstant<bool, IsSame<TupleAll<A...>, TupleAll<(A, true)...>>> {};
+        Constant<bool, IsSame<TupleAll<A...>, TupleAll<(A, true)...>>> {};
 
     template<typename T>
     struct TupleAllDefaultConstructible;

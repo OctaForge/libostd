@@ -658,7 +658,7 @@ namespace detail {
 
     template<typename T, typename R>
     auto test_stringify(int) ->
-        IntegralConstant<bool, IsSame<decltype(declval<T>().stringify()), String>>;
+        Constant<bool, IsSame<decltype(declval<T>().stringify()), String>>;
 
     template<typename T, typename R>
     static True test_stringify(decltype(declval<const T &>().to_string
