@@ -59,8 +59,11 @@ struct Constant {
     constexpr Value operator()() const { return value; }
 };
 
-using True = Constant<bool, true>;
-using False = Constant<bool, false>;
+template<bool val>
+using BoolConstant = Constant<bool, val>;
+
+using True = BoolConstant<true>;
+using False = BoolConstant<false>;
 
 template<typename T, T val> constexpr T Constant<T, val>::value;
 

@@ -1,0 +1,19 @@
+/* Various type limits.
+ *
+ * This file is part of OctaSTD. See COPYING.md for futher information.
+ */
+
+#ifndef OSTD_LIMTIS_HH
+#define OSTD_LIMITS_HH
+
+#include <limits.h>
+
+namespace ostd {
+
+template<typename>
+struct Limits {
+};
+
+} /* namespace ostd */
+
+#endif
