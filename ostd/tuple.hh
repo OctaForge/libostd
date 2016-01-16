@@ -218,13 +218,13 @@ namespace detail {
         {}
 
         template<typename T, typename = EnableIf<
-            TupleConstructible<T, Tuple<A...>>::value
+            TupleConstructible<T, Tuple<A...>>
         >> TupleBase(T &&t): TupleLeaf<I, A>(forward<
             TupleElement<I, MakeTupleTypes<T>>
         >(get<I>(t)))... {}
 
         template<typename Alloc, typename T, typename = EnableIf<
-            TupleConvertible<T, Tuple<A...>>::value
+            TupleConvertible<T, Tuple<A...>>
         >> TupleBase(AllocatorArg, const Alloc &a, T &&t):
             TupleLeaf<I, A>(UsesAllocatorConstructor<
                 A, Alloc, TupleElement<I, MakeTupleTypes<T>>
@@ -232,7 +232,7 @@ namespace detail {
         {}
 
         template<typename T>
-        EnableIf<TupleAssignable<T, Tuple<A...>>::value, TupleBase &>
+        EnableIf<TupleAssignable<T, Tuple<A...>>, TupleBase &>
         operator=(T &&t) {
             tuple_swallow(TupleLeaf<I, A>::operator=(forward<
                 TupleElement<I, MakeTupleTypes<T>>
@@ -302,7 +302,7 @@ public:
                 (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
                                               : sizeof...(A)
             >
-        >::value &&
+        > &&
         detail::TupleAllDefaultConstructible<
             detail::MakeTupleTypes<Tuple, sizeof...(A),
                 (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
@@ -325,14 +325,14 @@ public:
                 (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
                                               : sizeof...(A)
             >
-        >::value &&
+        > &&
         !detail::TupleConvertible<
             Tuple<T...>,
             detail::MakeTupleTypes<Tuple,
                 (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
                                               : sizeof...(A)
             >
-        >::value &&
+        > &&
         detail::TupleAllDefaultConstructible<
             detail::MakeTupleTypes<Tuple, sizeof...(A),
                 (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
@@ -355,7 +355,7 @@ public:
                 (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
                                               : sizeof...(A)
             >
-        >::value &&
+        > &&
         detail::TupleAllDefaultConstructible<
             detail::MakeTupleTypes<Tuple, sizeof...(A),
                 (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
@@ -370,22 +370,21 @@ public:
                forward<T>(t)...) {}
 
     template<typename T, EnableIf<
-        detail::TupleConvertible<T, Tuple>::value, bool
+        detail::TupleConvertible<T, Tuple>, bool
     > = true> Tuple(T &&t): p_base(forward<T>(t)) {}
 
     template<typename T, EnableIf<
-        detail::TupleConstructible<T, Tuple>::value &&
-        !detail::TupleConvertible<T, Tuple>::value, bool
+        detail::TupleConstructible<T, Tuple> &&
+        !detail::TupleConvertible<T, Tuple>, bool
     > = true> Tuple(T &&t): p_base(forward<T>(t)) {}
 
     template<typename Alloc, typename T, typename = EnableIf<
-        detail::TupleConvertible<T, Tuple>::value
+        detail::TupleConvertible<T, Tuple>
     >> Tuple(AllocatorArg, const Alloc &a, T &&t):
         p_base(allocator_arg, a, forward<T>(t)) {}
 
-    template<typename T, typename = EnableIf<
-        detail::TupleAssignable<T, Tuple>::value
-    >> Tuple &operator=(T &&t) {
+    template<typename T, typename = EnableIf<detail::TupleAssignable<T, Tuple>>>
+    Tuple &operator=(T &&t) {
         p_base.operator=(forward<T>(t));
         return *this;
     }

@@ -181,99 +181,93 @@ namespace detail {
 
 namespace detail {
     template<typename, typename>
-    struct TupleConvertibleBase: False {};
+    constexpr bool TupleConvertibleBase = false;
 
     template<typename T, typename ...TT, typename U, typename ...UU>
-    struct TupleConvertibleBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>:
-        Constant<bool, IsConvertible<T, U> &&
-                               TupleConvertibleBase<TupleTypes<TT...>,
-                                                    TupleTypes<UU...>>::value> {};
+    constexpr bool TupleConvertibleBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>
+        = IsConvertible<T, U> && TupleConvertibleBase<TupleTypes<TT...>,
+                                                      TupleTypes<UU...>>;
 
     template<>
-    struct TupleConvertibleBase<TupleTypes<>, TupleTypes<>>: True {};
+    constexpr bool TupleConvertibleBase<TupleTypes<>, TupleTypes<>> = true;
 
     template<bool, typename, typename>
-    struct TupleConvertibleApply: False {};
+    constexpr bool TupleConvertibleApply = false;
 
     template<typename T, typename U>
-    struct TupleConvertibleApply<true, T, U>: TupleConvertibleBase<
-        MakeTupleTypes<T>, MakeTupleTypes<U>
-    > {};
+    constexpr bool TupleConvertibleApply<true, T, U>
+        = TupleConvertibleBase<MakeTupleTypes<T>, MakeTupleTypes<U>>;
 
     template<typename T, typename U, bool = IsTupleLike<RemoveReference<T>>::value,
                                      bool = IsTupleLike<U>::value>
-    struct TupleConvertible: False {};
+    constexpr bool TupleConvertible = false;
 
     template<typename T, typename U>
-    struct TupleConvertible<T, U, true, true>: TupleConvertibleApply<
+    constexpr bool TupleConvertible<T, U, true, true> = TupleConvertibleApply<
         TupleSize<RemoveReference<T>>::value == TupleSize<U>::value, T, U
-    > {};
+    >;
 }
 
 /* tuple constructible */
 
 namespace detail {
     template<typename, typename>
-    struct TupleConstructibleBase: False {};
+    constexpr bool TupleConstructibleBase = false;
 
     template<typename T, typename ...TT, typename U, typename ...UU>
-    struct TupleConstructibleBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>:
-        Constant<bool, IsConstructible<U, T> &&
-                               TupleConstructibleBase<TupleTypes<TT...>,
-                                                      TupleTypes<UU...>>::value> {};
+    constexpr bool TupleConstructibleBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>
+        = IsConstructible<U, T> && TupleConstructibleBase<TupleTypes<TT...>,
+                                                          TupleTypes<UU...>>;
 
     template<>
-    struct TupleConstructibleBase<TupleTypes<>, TupleTypes<>>: True {};
+    constexpr bool TupleConstructibleBase<TupleTypes<>, TupleTypes<>> = true;
 
     template<bool, typename, typename>
-    struct TupleConstructibleApply: False {};
+    constexpr bool TupleConstructibleApply = false;
 
     template<typename T, typename U>
-    struct TupleConstructibleApply<true, T, U>: TupleConstructibleBase<
-        MakeTupleTypes<T>, MakeTupleTypes<U>
-    > {};
+    constexpr bool TupleConstructibleApply<true, T, U>
+        = TupleConstructibleBase<MakeTupleTypes<T>, MakeTupleTypes<U>>;
 
     template<typename T, typename U, bool = IsTupleLike<RemoveReference<T>>::value,
                                      bool = IsTupleLike<U>::value>
-    struct TupleConstructible: False {};
+    constexpr bool TupleConstructible = false;
 
     template<typename T, typename U>
-    struct TupleConstructible<T, U, true, true>: TupleConstructibleApply<
+    constexpr bool TupleConstructible<T, U, true, true> = TupleConstructibleApply<
         TupleSize<RemoveReference<T>>::value == TupleSize<U>::value, T, U
-    > {};
+    >;
 }
 
 /* tuple assignable */
 
 namespace detail {
     template<typename, typename>
-    struct TupleAssignableBase: False {};
+    constexpr bool TupleAssignableBase = false;
 
     template<typename T, typename ...TT, typename U, typename ...UU>
-    struct TupleAssignableBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>:
-        Constant<bool, IsAssignable<U &, T> &&
-                               TupleAssignableBase<TupleTypes<TT...>,
-                                                   TupleTypes<UU...>>::value> {};
+    constexpr bool TupleAssignableBase<TupleTypes<T, TT...>, TupleTypes<U, UU...>>
+        = IsAssignable<U &, T> && TupleAssignableBase<TupleTypes<TT...>,
+                                                      TupleTypes<UU...>>;
 
     template<>
-    struct TupleAssignableBase<TupleTypes<>, TupleTypes<>>: True {};
+    constexpr bool TupleAssignableBase<TupleTypes<>, TupleTypes<>> = true;
 
     template<bool, typename, typename>
-    struct TupleAssignableApply: False {};
+    constexpr bool TupleAssignableApply = false;
 
     template<typename T, typename U>
-    struct TupleAssignableApply<true, T, U>: TupleAssignableBase<
-        MakeTupleTypes<T>, MakeTupleTypes<U>
-    > {};
+    constexpr bool TupleAssignableApply<true, T, U>
+        = TupleAssignableBase<MakeTupleTypes<T>, MakeTupleTypes<U>>;
 
     template<typename T, typename U, bool = IsTupleLike<RemoveReference<T>>::value,
                                      bool = IsTupleLike<U>::value>
-    struct TupleAssignable: False {};
+    constexpr bool TupleAssignable = false;
 
     template<typename T, typename U>
-    struct TupleAssignable<T, U, true, true>: TupleAssignableApply<
+    constexpr bool TupleAssignable<T, U, true, true> = TupleAssignableApply<
         TupleSize<RemoveReference<T>>::value == TupleSize<U>::value, T, U
-    > {};
+    >;
 }
 
 } /* namespace ostd */
