@@ -209,7 +209,7 @@ inline constexpr bool operator>=(const Pair<T, U> &x, const Pair<T, U> &y) {
 }
 
 template<typename T, typename U>
-struct TupleSize<Pair<T, U>>: Constant<Size, 2> {};
+constexpr Size TupleSize<Pair<T, U>> = 2;
 
 template<typename T, typename U>
 struct TupleElementBase<0, Pair<T, U>> {

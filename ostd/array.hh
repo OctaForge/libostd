@@ -77,7 +77,7 @@ struct Array {
 };
 
 template<typename T, Size N>
-struct TupleSize<Array<T, N>>: Constant<Size, N> {};
+constexpr Size TupleSize<Array<T, N>> = N;
 
 template<Size I, typename T, Size N>
 struct TupleElementBase<I, Array<T, N>> {

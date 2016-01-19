@@ -504,7 +504,7 @@ namespace detail {
                                 EnableIf<IsTupleLike<T>::value, bool>
                                     = true) {
         if (expandval) {
-            return FmtTupleUnpacker<TupleSize<T>::value>::unpack(writer,
+            return FmtTupleUnpacker<TupleSize<T>>::unpack(writer,
                 fmtn, esc, fmt, item);
         }
         return format_impl(writer, fmtn, esc, fmt, item);

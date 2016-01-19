@@ -84,6 +84,12 @@ using UintFast16 = uint_fast16_t;
 using UintFast32 = uint_fast32_t;
 using UintFast64 = uint_fast64_t;
 
+/* used occasionally for template variables */
+
+namespace detail {
+    template<typename> struct Undefined;
+}
+
 }
 
 #endif

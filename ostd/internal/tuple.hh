@@ -18,11 +18,11 @@ template<typename T, Size I> struct Array;
 
 /* tuple size */
 
-template<typename T> struct TupleSize;
+template<typename T> constexpr Size TupleSize = detail::Undefined<T>();
 
-template<typename T> struct TupleSize<const T>: public TupleSize<T> {};
-template<typename T> struct TupleSize<volatile T>: public TupleSize<T> {};
-template<typename T> struct TupleSize<const volatile T>: public TupleSize<T> {};
+template<typename T> constexpr Size TupleSize<const T> = TupleSize<T>;
+template<typename T> constexpr Size TupleSize<volatile T> = TupleSize<T>;
+template<typename T> constexpr Size TupleSize<const volatile T> = TupleSize<T>;
 
 /* tuple element */
 
@@ -142,8 +142,8 @@ public:
         detail::TupleTypes<T...>>::Type;
 };
 
-template<typename ...T> struct TupleSize<detail::TupleTypes<T...>>:
-    Constant<Size, sizeof...(T)> {};
+template<typename ...T> constexpr Size TupleSize<detail::TupleTypes<T...>>
+    = sizeof...(T);
 
 template<typename ...T> struct IsTupleLike<detail::TupleTypes<T...>>: True {};
 
@@ -173,7 +173,7 @@ namespace detail {
         using Type = typename MakeTupleTypesBase<TupleTypes<>, T, S, E>::Type;
     };
 
-    template<typename T, Size E = TupleSize<RemoveReference<T>>::value, Size S = 0>
+    template<typename T, Size E = TupleSize<RemoveReference<T>>, Size S = 0>
     using MakeTupleTypes = typename MakeTupleTypesImpl<T, E, S>::Type;
 }
 
@@ -204,7 +204,7 @@ namespace detail {
 
     template<typename T, typename U>
     constexpr bool TupleConvertible<T, U, true, true> = TupleConvertibleApply<
-        TupleSize<RemoveReference<T>>::value == TupleSize<U>::value, T, U
+        TupleSize<RemoveReference<T>> == TupleSize<U>, T, U
     >;
 }
 
@@ -235,7 +235,7 @@ namespace detail {
 
     template<typename T, typename U>
     constexpr bool TupleConstructible<T, U, true, true> = TupleConstructibleApply<
-        TupleSize<RemoveReference<T>>::value == TupleSize<U>::value, T, U
+        TupleSize<RemoveReference<T>> == TupleSize<U>, T, U
     >;
 }
 
@@ -266,7 +266,7 @@ namespace detail {
 
     template<typename T, typename U>
     constexpr bool TupleAssignable<T, U, true, true> = TupleAssignableApply<
-        TupleSize<RemoveReference<T>>::value == TupleSize<U>::value, T, U
+        TupleSize<RemoveReference<T>> == TupleSize<U>, T, U
     >;
 }
 

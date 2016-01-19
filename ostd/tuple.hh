@@ -17,8 +17,7 @@ namespace ostd {
 
 /* tuple size */
 
-template<typename ...T> struct TupleSize<Tuple<T...>>:
-    Constant<Size, sizeof...(T)> {};
+template<typename ...T> constexpr Size TupleSize<Tuple<T...>> = sizeof...(T);
 
 /* tuple element */
 
@@ -507,7 +506,7 @@ namespace detail {
     struct TupleLess {
         template<typename T, typename U>
         bool operator()(const T &x, const U &y) {
-            constexpr Size J = TupleSize<T>::value - I;
+            constexpr Size J = TupleSize<T> - I;
             if (get<J>(x) < get<J>(y)) return true;
             if (get<J>(y) < get<J>(x)) return false;
             return TupleLess<I - 1>()(x, y);
