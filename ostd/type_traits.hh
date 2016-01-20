@@ -612,7 +612,7 @@ namespace detail {
     template<typename F, typename T, bool = IsVoid<F>
         || IsFunction<T> || IsArray<T>
     > struct IsConvertibleBase {
-        using Type = Constant<bool, IsVoid<T>>;
+        static constexpr bool value = IsVoid<T>;
     };
 
     template<typename F, typename T>
@@ -625,12 +625,12 @@ namespace detail {
 
         template<typename, typename> static False test(...);
 
-        using Type = decltype(test<F, T>(0));
+        static constexpr bool value = decltype(test<F, T>(0))::value;
     };
 }
 
 template<typename F, typename T> constexpr bool IsConvertible
-    = detail::IsConvertibleBase<F, T>::Type::value;
+    = detail::IsConvertibleBase<F, T>::value;
 
 /* extent */
 

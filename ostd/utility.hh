@@ -50,7 +50,7 @@ template<typename T> AddRvalueReference<T> declval();
 namespace detail {
     template<typename T>
     auto test_swap(int) ->
-        Constant<bool, IsVoid<decltype(declval<T>().swap(declval<T &>()))>>;
+        BoolConstant<IsVoid<decltype(declval<T>().swap(declval<T &>()))>>;
     template<typename>
     False test_swap(...);
 

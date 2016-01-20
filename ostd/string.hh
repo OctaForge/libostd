@@ -658,7 +658,7 @@ namespace detail {
 
     template<typename T, typename R>
     auto test_stringify(int) ->
-        Constant<bool, IsSame<decltype(declval<T>().stringify()), String>>;
+        BoolConstant<IsSame<decltype(declval<T>().stringify()), String>>;
 
     template<typename T, typename R>
     static True test_stringify(decltype(declval<const T &>().to_string
@@ -668,21 +668,21 @@ namespace detail {
     False test_stringify(...);
 
     template<typename T, typename R>
-    using StringifyTest = decltype(test_stringify<T, R>(0));
+    constexpr bool StringifyTest = decltype(test_stringify<T, R>(0))::value;
 
     template<typename T>
     True test_iterable(decltype(ostd::iter(declval<T>())) *);
     template<typename> static False test_iterable(...);
 
     template<typename T>
-    using IterableTest = decltype(test_iterable<T>(0));
+    constexpr bool IterableTest = decltype(test_iterable<T>(0))::value;
 }
 
 template<typename T, typename = void>
 struct ToString;
 
 template<typename T>
-struct ToString<T, EnableIf<detail::IterableTest<T>::value>> {
+struct ToString<T, EnableIf<detail::IterableTest<T>>> {
     using Argument = RemoveCv<RemoveReference<T>>;
     using Result = String;
 
@@ -701,7 +701,7 @@ struct ToString<T, EnableIf<detail::IterableTest<T>::value>> {
 
 template<typename T>
 struct ToString<T, EnableIf<
-    detail::StringifyTest<T, detail::TostrRange<AppenderRange<String>>>::value
+    detail::StringifyTest<T, detail::TostrRange<AppenderRange<String>>>
 >> {
     using Argument = RemoveCv<RemoveReference<T>>;
     using Result = String;

@@ -1063,23 +1063,21 @@ namespace detail {
     };
 
     template<typename T, typename A, bool = HasAllocatorType<T>::value>
-    struct UsesAllocatorBase: Constant<bool,
-        IsConvertible<A, typename T::Allocator>
-    > {};
+    constexpr bool UsesAllocatorBase = IsConvertible<A, typename T::Allocator>;
 
     template<typename T, typename A>
-    struct UsesAllocatorBase<T, A, false>: False {};
+    constexpr bool UsesAllocatorBase<T, A, false> = false;
 }
 
 template<typename T, typename A>
-struct UsesAllocator: detail::UsesAllocatorBase<T, A> {};
+constexpr bool UsesAllocator = detail::UsesAllocatorBase<T, A>;
 
 /* uses allocator ctor */
 
 namespace detail {
     template<typename T, typename A, typename ...Args>
     struct UsesAllocCtor {
-        static constexpr bool ua = UsesAllocator<T, A>::value;
+        static constexpr bool ua = UsesAllocator<T, A>;
         static constexpr bool ic = IsConstructible<
             T, AllocatorArg, A, Args...
         >;
@@ -1088,9 +1086,8 @@ namespace detail {
 }
 
 template<typename T, typename A, typename ...Args>
-struct UsesAllocatorConstructor: Constant<int,
-    detail::UsesAllocCtor<T, A, Args...>::value
-> {};
+constexpr int UsesAllocatorConstructor
+    = detail::UsesAllocCtor<T, A, Args...>::value;
 
 } /* namespace ostd */
 

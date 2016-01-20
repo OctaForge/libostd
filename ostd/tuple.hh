@@ -177,15 +177,15 @@ namespace detail {
     template<typename ...A>
     inline void tuple_swallow(A &&...) {}
 
-    template<bool ...A> struct TupleAll:
-        Constant<bool, IsSame<TupleAll<A...>, TupleAll<(A, true)...>>> {};
+    template<bool ...A> constexpr bool TupleAll
+        = IsSame<TupleAll<A...>, TupleAll<(A, true)...>>;
 
     template<typename T>
-    struct TupleAllDefaultConstructible;
+    constexpr bool TupleAllDefaultConstructible = detail::Undefined<T>();
 
     template<typename ...A>
-    struct TupleAllDefaultConstructible<TupleTypes<A...>>:
-        TupleAll<IsDefaultConstructible<A>...> {};
+    constexpr bool TupleAllDefaultConstructible<TupleTypes<A...>>
+        = TupleAll<IsDefaultConstructible<A>...>;
 }
 
 /* tuple implementation */
@@ -211,9 +211,9 @@ namespace detail {
                            TupleIndices<Ia...>, TupleTypes<Aa...>,
                            TupleIndices<Ib...>, TupleTypes<Ab...>,
                            T &&...t):
-            TupleLeaf<Ia, Aa>(UsesAllocatorConstructor<Aa, Alloc, T>(), a,
+            TupleLeaf<Ia, Aa>(UsesAllocatorConstructor<Aa, Alloc, T>, a,
                 forward<T>(t))...,
-            TupleLeaf<Ib, Ab>(UsesAllocatorConstructor<Ab, Alloc>(), a)...
+            TupleLeaf<Ib, Ab>(UsesAllocatorConstructor<Ab, Alloc>, a)...
         {}
 
         template<typename T, typename = EnableIf<
@@ -227,7 +227,7 @@ namespace detail {
         >> TupleBase(AllocatorArg, const Alloc &a, T &&t):
             TupleLeaf<I, A>(UsesAllocatorConstructor<
                 A, Alloc, TupleElement<I, MakeTupleTypes<T>>
-            >(), a, forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t)))...
+            >, a, forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t)))...
         {}
 
         template<typename T>
@@ -276,7 +276,7 @@ class Tuple {
 
 public:
     template<bool D = true, typename = EnableIf<
-        detail::TupleAll<(D && IsDefaultConstructible<A>)...>::value
+        detail::TupleAll<(D && IsDefaultConstructible<A>)...>
     >> Tuple() {}
 
     explicit Tuple(const A &...t):
@@ -307,7 +307,7 @@ public:
                 (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
                                               : sizeof...(A)
             >
-        >::value, bool
+        >, bool
     > = true>
     Tuple(T &&...t):
         p_base(detail::MakeTupleIndices<sizeof...(T)>(),
@@ -337,7 +337,7 @@ public:
                 (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
                                               : sizeof...(A)
             >
-        >::value, bool
+        >, bool
     > = true>
     Tuple(T &&...t):
         p_base(detail::MakeTupleIndices<sizeof...(T)>(),
@@ -360,7 +360,7 @@ public:
                 (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
                                               : sizeof...(A)
             >
-        >::value
+        >
     >> Tuple(AllocatorArg, const Alloc &a, T &&...t):
         p_base(allocator_arg, a, detail::MakeTupleIndices<sizeof...(T)>(),
                detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
@@ -545,7 +545,7 @@ inline bool operator>=(const Tuple<T...> &x, const Tuple<U...> &y) {
 /* uses alloc */
 
 template<typename ...T, typename A>
-struct UsesAllocator<Tuple<T...>, A>: True {};
+constexpr bool UsesAllocator<Tuple<T...>, A> = true;
 
 } /* namespace ostd */
 

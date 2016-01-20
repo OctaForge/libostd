@@ -466,7 +466,7 @@ namespace detail {
     static False test_fmt_range(...);
 
     template<typename T>
-    using FmtRangeTest = decltype(test_fmt_range<T>(0));
+    constexpr bool FmtRangeTest = decltype(test_fmt_range<T>(0))::value;
 
     template<Size I>
     struct FmtTupleUnpacker {
@@ -515,7 +515,7 @@ namespace detail {
                                bool escape, bool expandval,
                                ConstCharRange sep,
                                const T &val,
-                               EnableIf<FmtRangeTest<T>::value, bool>
+                               EnableIf<FmtRangeTest<T>, bool>
                                    = true) {
         auto range = ostd::iter(val);
         if (range.empty()) return 0;
@@ -544,7 +544,7 @@ namespace detail {
     template<typename R, typename T>
     inline Ptrdiff write_range(R &, const FormatSpec *, bool, bool,
                                ConstCharRange, const T &,
-                               EnableIf<!FmtRangeTest<T>::value, bool>
+                               EnableIf<!FmtRangeTest<T>, bool>
                                    = true) {
         assert(false && "invalid value for ranged format");
         return -1;
@@ -555,7 +555,7 @@ namespace detail {
     template<typename> static False test_fmt_tostr(...);
 
     template<typename T>
-    using FmtTostrTest = decltype(test_fmt_tostr<T>(0));
+    constexpr bool FmtTostrTest = decltype(test_fmt_tostr<T>(0))::value;
 
     /* non-printable escapes up to 0x20 (space) */
     static constexpr const char *fmt_escapes[] = {
@@ -603,7 +603,7 @@ namespace detail {
     static False test_tofmt(...);
 
     template<typename T, typename R>
-    using FmtTofmtTest = decltype(test_tofmt<T, R>(0));
+    constexpr bool FmtTofmtTest = decltype(test_tofmt<T, R>(0))::value;
 
     struct WriteSpec: FormatSpec {
         WriteSpec(): FormatSpec() {}
@@ -741,8 +741,7 @@ namespace detail {
         Ptrdiff write(R &writer, bool, const T &val, EnableIf<
             !IsArithmetic<T> &&
             !IsConstructible<ConstCharRange, const T &> &&
-            FmtTostrTest<T>::value &&
-            !FmtTofmtTest<T, TostrRange<R>>::value, bool
+            FmtTostrTest<T> && !FmtTofmtTest<T, TostrRange<R>>, bool
         > = true) {
             if (this->spec() != 's') {
                 assert(false && "custom objects need '%s' format");
@@ -754,7 +753,7 @@ namespace detail {
         /* custom format case */
         template<typename R, typename T>
         Ptrdiff write(R &writer, bool, const T &val,
-            EnableIf<FmtTofmtTest<T, TostrRange<R>>::value, bool
+            EnableIf<FmtTofmtTest<T, TostrRange<R>>, bool
         > = true) {
             TostrRange<R> sink(writer);
             if (!to_format(val, sink, *this)) return -1;
@@ -766,8 +765,7 @@ namespace detail {
         Ptrdiff write(R &, bool, const T &, EnableIf<
             !IsArithmetic<T> &&
             !IsConstructible<ConstCharRange, const T &> &&
-            !FmtTostrTest<T>::value &&
-            !FmtTofmtTest<T, TostrRange<R>>::value, bool
+            !FmtTostrTest<T> && !FmtTofmtTest<T, TostrRange<R>>, bool
         > = true) {
             assert(false && "value cannot be formatted");
             return -1;
