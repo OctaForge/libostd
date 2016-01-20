@@ -208,11 +208,9 @@ namespace detail {
     template<typename T>
     static char ptr_test(typename T::Pointer * = 0);
 
-    template<typename T> struct HasPtr: Constant<bool,
-        (sizeof(ptr_test<T>(0)) == 1)
-    > {};
+    template<typename T> constexpr bool HasPtr = sizeof(ptr_test<T>(0)) == 1;
 
-    template<typename T, typename D, bool = HasPtr<D>::value>
+    template<typename T, typename D, bool = HasPtr<D>>
     struct PointerBase {
         using Type = typename D::Pointer;
     };

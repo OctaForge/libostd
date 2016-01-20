@@ -45,14 +45,15 @@ using TupleElement = typename TupleElementBase<I, T>::Type;
 
 /* is tuple-like */
 
-template<typename T> struct IsTupleLike: False {};
-template<typename T> struct IsTupleLike<const T>: IsTupleLike<T> {};
-template<typename T> struct IsTupleLike<volatile T>: IsTupleLike<T> {};
-template<typename T> struct IsTupleLike<const volatile T>: IsTupleLike<T> {};
+template<typename T> constexpr bool IsTupleLike = false;
+
+template<typename T> constexpr bool IsTupleLike<const T> = IsTupleLike<T>;
+template<typename T> constexpr bool IsTupleLike<volatile T> = IsTupleLike<T>;
+template<typename T> constexpr bool IsTupleLike<const volatile T> = IsTupleLike<T>;
 
 /* tuple specializations */
 
-template<typename ...A> struct IsTupleLike<Tuple<A...>>: True {};
+template<typename ...A> constexpr bool IsTupleLike<Tuple<A...>> = true;
 
 template<Size I, typename ...A>
 TupleElement<I, Tuple<A...>> &get(Tuple<A...> &);
@@ -65,7 +66,7 @@ TupleElement<I, Tuple<A...>> &&get(Tuple<A...> &&);
 
 /* pair specializations */
 
-template<typename T, typename U> struct IsTupleLike<Pair<T, U>>: True {};
+template<typename T, typename U> constexpr bool IsTupleLike<Pair<T, U>> = true;
 
 template<Size I, typename T, typename U>
 TupleElement<I, Pair<T, U>> &get(Pair<T, U> &);
@@ -78,7 +79,7 @@ TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&);
 
 /* array specializations */
 
-template<typename T, Size I> struct IsTupleLike<Array<T, I>>: True {};
+template<typename T, Size I> constexpr bool IsTupleLike<Array<T, I>> = true;
 
 template<Size I, typename T, Size S>
 T &get(Array<T, S> &);
@@ -145,7 +146,7 @@ public:
 template<typename ...T> constexpr Size TupleSize<detail::TupleTypes<T...>>
     = sizeof...(T);
 
-template<typename ...T> struct IsTupleLike<detail::TupleTypes<T...>>: True {};
+template<typename ...T> constexpr bool IsTupleLike<detail::TupleTypes<T...>> = true;
 
 /* make tuple types */
 
@@ -198,8 +199,8 @@ namespace detail {
     constexpr bool TupleConvertibleApply<true, T, U>
         = TupleConvertibleBase<MakeTupleTypes<T>, MakeTupleTypes<U>>;
 
-    template<typename T, typename U, bool = IsTupleLike<RemoveReference<T>>::value,
-                                     bool = IsTupleLike<U>::value>
+    template<typename T, typename U, bool = IsTupleLike<RemoveReference<T>>,
+                                     bool = IsTupleLike<U>>
     constexpr bool TupleConvertible = false;
 
     template<typename T, typename U>
@@ -229,8 +230,8 @@ namespace detail {
     constexpr bool TupleConstructibleApply<true, T, U>
         = TupleConstructibleBase<MakeTupleTypes<T>, MakeTupleTypes<U>>;
 
-    template<typename T, typename U, bool = IsTupleLike<RemoveReference<T>>::value,
-                                     bool = IsTupleLike<U>::value>
+    template<typename T, typename U, bool = IsTupleLike<RemoveReference<T>>,
+                                     bool = IsTupleLike<U>>
     constexpr bool TupleConstructible = false;
 
     template<typename T, typename U>
@@ -260,8 +261,8 @@ namespace detail {
     constexpr bool TupleAssignableApply<true, T, U>
         = TupleAssignableBase<MakeTupleTypes<T>, MakeTupleTypes<U>>;
 
-    template<typename T, typename U, bool = IsTupleLike<RemoveReference<T>>::value,
-                                     bool = IsTupleLike<U>::value>
+    template<typename T, typename U, bool = IsTupleLike<RemoveReference<T>>,
+                                     bool = IsTupleLike<U>>
     constexpr bool TupleAssignable = false;
 
     template<typename T, typename U>

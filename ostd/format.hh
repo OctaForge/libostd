@@ -492,7 +492,7 @@ namespace detail {
     template<typename R, typename T>
     inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc, bool,
                                 ConstCharRange fmt, const T &item,
-                                EnableIf<!IsTupleLike<T>::value, bool>
+                                EnableIf<!IsTupleLike<T>, bool>
                                     = true) {
         return format_impl(writer, fmtn, esc, fmt, item);
     }
@@ -501,7 +501,7 @@ namespace detail {
     inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc,
                                 bool expandval, ConstCharRange fmt,
                                 const T &item,
-                                EnableIf<IsTupleLike<T>::value, bool>
+                                EnableIf<IsTupleLike<T>, bool>
                                     = true) {
         if (expandval) {
             return FmtTupleUnpacker<TupleSize<T>>::unpack(writer,
