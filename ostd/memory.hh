@@ -324,18 +324,17 @@ namespace detail {
     template<typename T, typename U, bool = IsSame<
         RemoveCv<PointerElement<T>>,
         RemoveCv<PointerElement<U>>
-    >> struct SameOrLessCvQualifiedBase:
-        Constant<bool, IsConvertible<T, U>> {};
+    >> constexpr bool SameOrLessCvQualifiedBase = IsConvertible<T, U>;
 
     template<typename T, typename U>
-    struct SameOrLessCvQualifiedBase<T, U, false>: False {};
+    constexpr bool SameOrLessCvQualifiedBase<T, U, false> = false;
 
     template<typename T, typename U, bool = IsPointer<T>
         || IsSame<T, U> || detail::HasElement<T>::value
-    > struct SameOrLessCvQualified: SameOrLessCvQualifiedBase<T, U> {};
+    > constexpr bool SameOrLessCvQualified = SameOrLessCvQualifiedBase<T, U>;
 
     template<typename T, typename U>
-    struct SameOrLessCvQualified<T, U, false>: False {};
+    constexpr bool SameOrLessCvQualified<T, U, false> = false;
 } /* namespace detail */
 
 template<typename T, typename D>
@@ -359,23 +358,22 @@ public:
     }
 
     template<typename U> explicit Box(U p, EnableIf<
-        detail::SameOrLessCvQualified<U, Pointer>::value, Nat
+        detail::SameOrLessCvQualified<U, Pointer>, Nat
     > = Nat()): p_stor(p, D()) {
         static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
 
     template<typename U> Box(U p, Conditional<
         IsReference<D>, D, AddLvalueReference<const D>
-    > d, EnableIf<detail::SameOrLessCvQualified<U, Pointer>::value,
-    Nat> = Nat()): p_stor(p, d) {}
+    > d, EnableIf<detail::SameOrLessCvQualified<U, Pointer>, Nat> = Nat()):
+        p_stor(p, d) {}
 
     Box(Nullptr, Conditional<IsReference<D>, D, AddLvalueReference<const D>> d):
         p_stor(nullptr, d) {}
 
     template<typename U> Box(U p, RemoveReference<D> &&d,
-    EnableIf<
-        detail::SameOrLessCvQualified<U, Pointer>::value, Nat
-    > = Nat()): p_stor(p, move(d)) {
+    EnableIf<detail::SameOrLessCvQualified<U, Pointer>, Nat> = Nat()):
+    p_stor(p, move(d)) {
         static_assert(!IsReference<D>, "rvalue deleter cannot be a ref");
     }
 
@@ -389,7 +387,7 @@ public:
     template<typename TT, typename DD>
     Box(Box<TT, DD> &&u, EnableIf<IsArray<TT>
         && detail::SameOrLessCvQualified<typename Box<TT, DD>::Pointer,
-                                         Pointer>::value
+                                         Pointer>
         && IsConvertible<DD, D> && (!IsReference<D> || IsSame<D, DD>)> = Nat()
     ): p_stor(u.release(), forward<DD>(u.get_deleter())) {}
 
@@ -402,7 +400,7 @@ public:
     template<typename TT, typename DD>
     EnableIf<IsArray<TT>
         && detail::SameOrLessCvQualified<typename Box<TT, DD>::Pointer,
-                                         Pointer>::value
+                                         Pointer>
         && IsAssignable<D &, DD &&>,
         Box &
     > operator=(Box<TT, DD> &&u) {
@@ -438,7 +436,7 @@ public:
     }
 
     template<typename U> EnableIf<
-        detail::SameOrLessCvQualified<U, Pointer>::value, void
+        detail::SameOrLessCvQualified<U, Pointer>, void
     > reset(U p) {
         Pointer tmp = p_stor.first();
         p_stor.first() = p;
@@ -762,26 +760,23 @@ namespace detail {
     template<typename T>
     struct PropagateOnContainerCopyAssignmentTest {
         template<typename U> static char test(
-            typename U::PropagateOnContainerCopyAssignment * = 0);
+            decltype(U::PropagateOnContainerCopyAssignment) * = 0);
         template<typename U> static  int test(...);
         static constexpr bool value = (sizeof(test<T>(0)) == 1);
     };
 
     template<typename A, bool = PropagateOnContainerCopyAssignmentTest<
         A
-    >::value> struct PropagateOnContainerCopyAssignmentBase {
-        using Type = False;
-    };
+    >::value> constexpr bool PropagateOnContainerCopyAssignmentBase = false;
 
     template<typename A>
-    struct PropagateOnContainerCopyAssignmentBase<A, true> {
-        using Type = typename A::PropagateOnContainerCopyAssignment;
-    };
+    constexpr bool PropagateOnContainerCopyAssignmentBase<A, true>
+        = A::PropagateOnContainerCopyAssignment;
 } /* namespace detail */
 
 template<typename A>
-using AllocatorPropagateOnContainerCopyAssignment
-    = typename detail::PropagateOnContainerCopyAssignmentBase<A>::Type;
+constexpr bool AllocatorPropagateOnContainerCopyAssignment
+    = detail::PropagateOnContainerCopyAssignmentBase<A>;
 
 /* allocator propagate on container move assignment */
 
@@ -789,26 +784,23 @@ namespace detail {
     template<typename T>
     struct PropagateOnContainerMoveAssignmentTest {
         template<typename U> static char test(
-            typename U::PropagateOnContainerMoveAssignment * = 0);
+            decltype(U::PropagateOnContainerMoveAssignment) * = 0);
         template<typename U> static  int test(...);
         static constexpr bool value = (sizeof(test<T>(0)) == 1);
     };
 
     template<typename A, bool = PropagateOnContainerMoveAssignmentTest<
         A
-    >::value> struct PropagateOnContainerMoveAssignmentBase {
-        using Type = False;
-    };
+    >::value> constexpr bool PropagateOnContainerMoveAssignmentBase = false;
 
     template<typename A>
-    struct PropagateOnContainerMoveAssignmentBase<A, true> {
-        using Type = typename A::PropagateOnContainerMoveAssignment;
-    };
+    constexpr bool PropagateOnContainerMoveAssignmentBase<A, true>
+        = A::PropagateOnContainerMoveAssignment;
 } /* namespace detail */
 
 template<typename A>
-using AllocatorPropagateOnContainerMoveAssignment
-    = typename detail::PropagateOnContainerMoveAssignmentBase<A>::Type;
+constexpr bool AllocatorPropagateOnContainerMoveAssignment
+    = detail::PropagateOnContainerMoveAssignmentBase<A>;
 
 /* allocator propagate on container swap */
 
@@ -816,49 +808,42 @@ namespace detail {
     template<typename T>
     struct PropagateOnContainerSwapTest {
         template<typename U> static char test(
-            typename U::PropagateOnContainerSwap * = 0);
+            decltype(U::PropagateOnContainerSwap) * = 0);
         template<typename U> static  int test(...);
         static constexpr bool value = (sizeof(test<T>(0)) == 1);
     };
 
     template<typename A, bool = PropagateOnContainerSwapTest<A>::value>
-    struct PropagateOnContainerSwapBase {
-        using Type = False;
-    };
+    constexpr bool PropagateOnContainerSwapBase = false;
 
     template<typename A>
-    struct PropagateOnContainerSwapBase<A, true> {
-        using Type = typename A::PropagateOnContainerSwap;
-    };
+    constexpr bool PropagateOnContainerSwapBase<A, true>
+        = A::PropagateOnContainerSwap;
 } /* namespace detail */
 
 template<typename A>
-using AllocatorPropagateOnContainerSwap
-    = typename detail::PropagateOnContainerSwapBase<A>::Type;
+constexpr bool AllocatorPropagateOnContainerSwap
+    = detail::PropagateOnContainerSwapBase<A>;
 
 /* allocator is always equal */
 
 namespace detail {
     template<typename T>
     struct IsAlwaysEqualTest {
-        template<typename U> static char test(typename U::IsAlwaysEqual * = 0);
+        template<typename U> static char test(decltype(U::IsAlwaysEqual) * = 0);
         template<typename U> static  int test(...);
         static constexpr bool value = (sizeof(test<T>(0)) == 1);
     };
 
     template<typename A, bool = IsAlwaysEqualTest<A>::value>
-    struct IsAlwaysEqualBase {
-        using Type = Constant<bool, IsEmpty<A>>;
-    };
+    constexpr bool IsAlwaysEqualBase = IsEmpty<A>;
 
     template<typename A>
-    struct IsAlwaysEqualBase<A, true> {
-        using Type = typename A::IsAlwaysEqual;
-    };
+    constexpr bool IsAlwaysEqualBase<A, true> = A::IsAlwaysEqual;
 } /* namespace detail */
 
 template<typename A>
-using AllocatorIsAlwaysEqual = typename detail::IsAlwaysEqualBase<A>::Type;
+constexpr bool AllocatorIsAlwaysEqual = detail::IsAlwaysEqualBase<A>;
 
 /* allocator allocate */
 
@@ -878,12 +863,11 @@ namespace detail {
         -> False;
 
     template<typename A, typename S, typename CVP>
-    struct AllocateHintTest: Constant<bool,
-        IsSame<decltype(allocate_hint_test(declval<A>(),
-                                           declval<S>(),
-                                           declval<CVP>())), True
-        >
-    > {};
+    constexpr bool AllocateHintTest
+        = IsSame<decltype(allocate_hint_test(declval<A>(),
+                                             declval<S>(),
+                                             declval<CVP>())), True
+        >;
 
     template<typename A>
     inline AllocatorPointer<A> allocate(A &a, AllocatorSize<A> n,
@@ -904,10 +888,9 @@ template<typename A>
 inline AllocatorPointer<A>
 allocator_allocate(A &a, AllocatorSize<A> n,
                    AllocatorConstVoidPointer<A> h) {
-    return detail::allocate(a, n, h,
-        detail::AllocateHintTest<
+    return detail::allocate(a, n, h, BoolConstant<detail::AllocateHintTest<
             A, AllocatorSize<A>, AllocatorConstVoidPointer<A>
-        >());
+    >>());
 }
 
 /* allocator deallocate */
@@ -931,12 +914,11 @@ namespace detail {
         -> False;
 
     template<typename A, typename T, typename ...Args>
-    struct ConstructTest: Constant<bool,
-        IsSame< decltype(construct_test(declval<A>(),
-                                       declval<T>(),
-                                       declval<Args>()...)), True
-        >
-    > {};
+    constexpr bool ConstructTest
+        = IsSame<decltype(construct_test(declval<A>(),
+                                         declval<T>(),
+                                         declval<Args>()...)), True
+        >;
 
     template<typename A, typename T, typename ...Args>
     inline void construct(True, A &a, T *p, Args &&...args) {
@@ -951,8 +933,8 @@ namespace detail {
 
 template<typename A, typename T, typename ...Args>
 inline void allocator_construct(A &a, T *p, Args &&...args) {
-    detail::construct(detail::ConstructTest<A, T *, Args...>(), a, p,
-        forward<Args>(args)...);
+    detail::construct(BoolConstant<detail::ConstructTest<A, T *, Args...>>(),
+                      a, p, forward<Args>(args)...);
 }
 
 /* allocator destroy */
@@ -965,9 +947,8 @@ namespace detail {
     auto destroy_test(const A &, P &&) -> False;
 
     template<typename A, typename P>
-    struct DestroyTest: Constant<bool,
-        IsSame<decltype(destroy_test(declval<A>(), declval<P>())), True>
-    > {};
+    constexpr bool DestroyTest
+        = IsSame<decltype(destroy_test(declval<A>(), declval<P>())), True>;
 
     template<typename A, typename T>
     inline void destroy(True, A &a, T *p) {
@@ -982,7 +963,7 @@ namespace detail {
 
 template<typename A, typename T>
 inline void allocator_destroy(A &a, T *p) {
-    detail::destroy(detail::DestroyTest<A, T *>(), a, p);
+    detail::destroy(BoolConstant<detail::DestroyTest<A, T *>>(), a, p);
 }
 
 /* allocator max size */
@@ -995,9 +976,8 @@ namespace detail {
     auto alloc_max_size_test(const A &) -> False;
 
     template<typename A>
-    struct AllocMaxSizeTest: Constant<bool,
-        IsSame<decltype(alloc_max_size_test(declval<A &>())), True>
-    > {};
+    constexpr bool AllocMaxSizeTest
+        = IsSame<decltype(alloc_max_size_test(declval<A &>())), True>;
 
     template<typename A>
     inline AllocatorSize<A> alloc_max_size(True, const A &a) {
@@ -1012,7 +992,9 @@ namespace detail {
 
 template<typename A>
 inline AllocatorSize<A> allocator_max_size(const A &a) {
-    return detail::alloc_max_size(detail::AllocMaxSizeTest<const A>(), a);
+    return detail::alloc_max_size(BoolConstant<
+        detail::AllocMaxSizeTest<const A>
+    >(), a);
 }
 
 /* allocator container copy */
@@ -1025,9 +1007,8 @@ namespace detail {
     auto alloc_copy_test(const A &) -> False;
 
     template<typename A>
-    struct AllocCopyTest: Constant<bool,
-        IsSame<decltype(alloc_copy_test(declval<A &>())), True>
-    > {};
+    constexpr bool AllocCopyTest
+        = IsSame<decltype(alloc_copy_test(declval<A &>())), True>;
 
     template<typename A>
     inline AllocatorType<A> alloc_container_copy(True, const A &a) {
@@ -1042,8 +1023,8 @@ namespace detail {
 
 template<typename A>
 inline AllocatorType<A> allocator_container_copy(const A &a) {
-    return detail::alloc_container_copy(detail::AllocCopyTest<
-        const A
+    return detail::alloc_container_copy(BoolConstant<
+        detail::AllocCopyTest<const A>
     >(), a);
 }
 

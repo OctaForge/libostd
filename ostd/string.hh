@@ -340,7 +340,7 @@ public:
     StringBase &operator=(const StringBase &v) {
         if (this == &v) return *this;
         clear();
-        if (AllocatorPropagateOnContainerCopyAssignment<A>::value) {
+        if (AllocatorPropagateOnContainerCopyAssignment<A>) {
             if ((p_buf.second() != v.p_buf.second()) && p_cap) {
                 allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
                 p_cap = 0;
@@ -360,7 +360,7 @@ public:
     StringBase &operator=(StringBase &&v) {
         clear();
         if (p_cap) allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
-        if (AllocatorPropagateOnContainerMoveAssignment<A>::value)
+        if (AllocatorPropagateOnContainerMoveAssignment<A>)
             p_buf.second() = v.p_buf.second();
         p_len = v.p_len;
         p_cap = v.p_cap;
@@ -542,7 +542,7 @@ public:
         detail::swap_adl(p_len, v.p_len);
         detail::swap_adl(p_cap, v.p_cap);
         detail::swap_adl(p_buf.first(), v.p_buf.first());
-        if (AllocatorPropagateOnContainerSwap<A>::value)
+        if (AllocatorPropagateOnContainerSwap<A>)
             detail::swap_adl(p_buf.second(), v.p_buf.second());
     }
 

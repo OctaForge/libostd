@@ -420,7 +420,7 @@ protected:
 
         Hashtable &operator=(const Hashtable &ht) {
             clear();
-            if (AllocatorPropagateOnContainerCopyAssignment<A>::value) {
+            if (AllocatorPropagateOnContainerCopyAssignment<A>) {
                 if ((get_cpalloc() != ht.get_cpalloc()) && p_size) {
                     allocator_deallocate(get_cpalloc(),
                         p_data.first(), p_size + 1);
@@ -443,7 +443,7 @@ protected:
             swap_adl(p_unused, ht.p_unused);
             swap_adl(p_data.first(), ht.p_data.first());
             swap_adl(p_data.second().second(), ht.p_data.second().second());
-            if (AllocatorPropagateOnContainerMoveAssignment<A>::value)
+            if (AllocatorPropagateOnContainerMoveAssignment<A>)
                 swap_adl(p_data.second().first(), ht.p_data.second().first());
             return *this;
         }
@@ -466,7 +466,7 @@ protected:
             swap_adl(p_unused, ht.p_unused);
             swap_adl(p_data.first(), ht.p_data.first());
             swap_adl(p_data.second().second(), ht.p_data.second().second());
-            if (AllocatorPropagateOnContainerSwap<A>::value)
+            if (AllocatorPropagateOnContainerSwap<A>)
                 swap_adl(p_data.second().first(), ht.p_data.second().first());
         }
 
