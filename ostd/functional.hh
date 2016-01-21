@@ -696,14 +696,10 @@ namespace detail {
     };
 
     template<typename, typename>
-    struct IsValidFunctor {
-        static constexpr bool value = false;
-    };
+    constexpr bool IsValidFunctor = false;
 
     template<typename R, typename ...A>
-    struct IsValidFunctor<Function<R(A...)>, R(A...)> {
-        static constexpr bool value = false;
-    };
+    constexpr bool IsValidFunctor<Function<R(A...)>, R(A...)> = false;
 
     template<typename T>
     T func_to_functor(T &&f) {
@@ -722,19 +718,17 @@ namespace detail {
         return mem_fn(f);
     }
 
+    struct ValidFunctorNat {};
+
+    template<typename U, typename ...A>
+    static decltype(func_to_functor(declval<U>()) (declval<A>()...))
+        valid_functor_test(U *);
+    template<typename, typename ...>
+    static ValidFunctorNat valid_functor_test(...);
+
     template<typename T, typename R, typename ...A>
-    struct IsValidFunctor<T, R(A...)> {
-        struct Nat {};
-
-        template<typename U>
-        static decltype(func_to_functor(declval<U>()) (declval<A>()...))
-            test(U *);
-        template<typename>
-        static Nat test(...);
-
-        static constexpr bool value
-            = IsConvertible<decltype(test<T>(nullptr)), R>;
-    };
+    constexpr bool IsValidFunctor<T, R(A...)>
+        = IsConvertible<decltype(valid_functor_test<T, A...>(nullptr)), R>;
 
     template<typename T>
     using FunctorType = decltype(func_to_functor(declval<T>()));
@@ -755,7 +749,7 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
     }
 
     template<typename T, typename = EnableIf<
-        detail::IsValidFunctor<T, R(Args...)>::value
+        detail::IsValidFunctor<T, R(Args...)>
     >> Function(T f) {
         if (func_is_null(f)) {
             init_empty();
@@ -801,7 +795,7 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
     }
 
     template<typename A, typename T, typename = EnableIf<
-        detail::IsValidFunctor<T, R(Args...)>::value
+        detail::IsValidFunctor<T, R(Args...)>
     >> Function(AllocatorArg, const A &a, T f) {
         if (func_is_null(f)) {
             init_empty();
@@ -905,16 +899,15 @@ namespace detail {
         using Obj = Function<R(A...)>;
     };
 
-    template<typename F>
-    struct DcFuncTest {
-        template<typename FF>
-        static char test(typename DcLambdaTypes<FF>::Ptr);
-        template<typename FF>
-        static int test(...);
-        static constexpr bool value = (sizeof(test<F>(declval<F>())) == 1);
-    };
+    template<typename FF>
+    static char dc_func_test(typename DcLambdaTypes<FF>::Ptr);
+    template<typename FF>
+    static int dc_func_test(...);
 
-    template<typename F, bool = DcFuncTest<F>::value>
+    template<typename F>
+    constexpr bool DcFuncTest = (sizeof(dc_func_test<F>(declval<F>())) == 1);
+
+    template<typename F, bool = DcFuncTest<F>>
     struct DcFuncTypeObjBase {
         using Type = typename DcLambdaTypes<F>::Obj;
     };

@@ -53,19 +53,17 @@ OSTD_RANGE_TRAIT(Difference)
 #undef OSTD_RANGE_TRAIT
 
 namespace detail {
-    template<typename T>
-    struct IsRangeTest {
-        template<typename U> static char test(typename U::Category *,
-                                              typename U::Size *,
-                                              typename U::Difference *,
-                                              typename U::Value *,
-                                              RemoveReference<
-                                                  typename U::Reference
-                                              > *);
-        template<typename U> static  int test(...);
-        static constexpr bool value
-            = (sizeof(test<T>(0, 0, 0, 0, 0)) == sizeof(char));
-    };
+    template<typename U> static char is_range_test(typename U::Category *,
+                                                   typename U::Size *,
+                                                   typename U::Difference *,
+                                                   typename U::Value *,
+                                                   RemoveReference<
+                                                       typename U::Reference
+                                                   > *);
+    template<typename U> static int is_range_test(...);
+
+    template<typename T> constexpr bool IsRangeTest
+        = (sizeof(is_range_test<T>(0, 0, 0, 0, 0)) == sizeof(char));
 }
 
 // is input range
@@ -74,7 +72,7 @@ namespace detail {
     template<typename T> constexpr bool IsInputRangeCore
         = IsConvertible<RangeCategory<T>, InputRangeTag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>::value>
+    template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsInputRangeBase = false;
 
     template<typename T>
@@ -90,7 +88,7 @@ namespace detail {
     template<typename T> constexpr bool IsForwardRangeCore
         = IsConvertible<RangeCategory<T>, ForwardRangeTag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>::value>
+    template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsForwardRangeBase = false;
 
     template<typename T>
@@ -106,7 +104,7 @@ namespace detail {
     template<typename T> constexpr bool IsBidirectionalRangeCore
         = IsConvertible<RangeCategory<T>, BidirectionalRangeTag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>::value>
+    template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsBidirectionalRangeBase = false;
 
     template<typename T>
@@ -123,7 +121,7 @@ namespace detail {
     template<typename T> constexpr bool IsRandomAccessRangeCore
         = IsConvertible<RangeCategory<T>, RandomAccessRangeTag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>::value>
+    template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsRandomAccessRangeBase = false;
 
     template<typename T>
@@ -140,7 +138,7 @@ namespace detail {
     template<typename T> constexpr bool IsFiniteRandomAccessRangeCore
         = IsConvertible<RangeCategory<T>, FiniteRandomAccessRangeTag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>::value>
+    template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsFiniteRandomAccessRangeBase = false;
 
     template<typename T>
@@ -162,7 +160,7 @@ namespace detail {
     template<typename T> constexpr bool IsContiguousRangeCore
         = IsConvertible<RangeCategory<T>, ContiguousRangeTag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>::value>
+    template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsContiguousRangeBase = false;
 
     template<typename T>
@@ -191,7 +189,7 @@ namespace detail {
                detail::OutputRangeTest<T,       RangeValue<T> &&>::value ||
                detail::OutputRangeTest<T,       RangeValue<T>   >::value));
 
-    template<typename T, bool = detail::IsRangeTest<T>::value>
+    template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsOutputRangeBase = false;
 
     template<typename T>

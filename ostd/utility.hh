@@ -262,29 +262,29 @@ namespace detail {
     template<typename T, typename U,
         bool = IsSame<RemoveCv<T>, RemoveCv<U>>,
         bool = IsEmpty<T>, bool = IsEmpty<U>
-    > struct CompressedPairSwitch;
+    > constexpr Size CompressedPairSwitch = detail::Undefined<T>();
 
     /* neither empty */
     template<typename T, typename U, bool Same>
-    struct CompressedPairSwitch<T, U, Same, false, false> { enum { value = 0 }; };
+    constexpr Size CompressedPairSwitch<T, U, Same, false, false> = 0;
 
     /* first empty */
     template<typename T, typename U, bool Same>
-    struct CompressedPairSwitch<T, U, Same, true, false> { enum { value = 1 }; };
+    constexpr Size CompressedPairSwitch<T, U, Same, true, false> = 1;
 
     /* second empty */
     template<typename T, typename U, bool Same>
-    struct CompressedPairSwitch<T, U, Same, false, true> { enum { value = 2 }; };
+    constexpr Size CompressedPairSwitch<T, U, Same, false, true> = 2;
 
     /* both empty, not the same */
     template<typename T, typename U>
-    struct CompressedPairSwitch<T, U, false, true, true> { enum { value = 3 }; };
+    constexpr Size CompressedPairSwitch<T, U, false, true, true> = 3;
 
     /* both empty and same */
     template<typename T, typename U>
-    struct CompressedPairSwitch<T, U, true, true, true> { enum { value = 1 }; };
+    constexpr Size CompressedPairSwitch<T, U, true, true, true> = 1;
 
-    template<typename T, typename U, Size = CompressedPairSwitch<T, U>::value>
+    template<typename T, typename U, Size = CompressedPairSwitch<T, U>>
     struct CompressedPairBase;
 
     template<typename T, typename U>

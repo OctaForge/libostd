@@ -130,17 +130,12 @@ namespace detail {
     static constexpr Size CHUNK_LOWER_BOUND = 32;
     static constexpr Size CHUNK_UPPER_BOUND = 128;
 
-    template<typename E, Size N>
-    struct HashChainAlign {
-        static constexpr Size csize = sizeof(HashChain<E>[N]) + sizeof(void *);
-        static constexpr Size value = ((csize % CACHE_LINE_SIZE) == 0)
-            ? N : HashChainAlign<E, N + 1>::value;
-    };
+    template<typename E, Size N> constexpr Size HashChainAlign
+        = (((sizeof(HashChain<E>[N]) + sizeof(void *)) % CACHE_LINE_SIZE) == 0)
+            ? N : HashChainAlign<E, N + 1>;
 
     template<typename E>
-    struct HashChainAlign<E, CHUNK_UPPER_BOUND> {
-        static constexpr Size value = CHUNK_UPPER_BOUND;
-    };
+    constexpr Size HashChainAlign<E, CHUNK_UPPER_BOUND> = CHUNK_UPPER_BOUND;
 
     template<Size N, bool B>
     struct HashChainPad;
@@ -156,7 +151,7 @@ namespace detail {
     template<Size N>
     struct HashPad: HashChainPad<N, N % CACHE_LINE_SIZE == 0> {};
 
-    template<typename E, Size V = HashChainAlign<E, CHUNK_LOWER_BOUND>::value,
+    template<typename E, Size V = HashChainAlign<E, CHUNK_LOWER_BOUND>,
              bool P = (V == CHUNK_UPPER_BOUND)
     > struct HashChunk;
 
