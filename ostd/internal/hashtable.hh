@@ -121,21 +121,21 @@ public:
 namespace detail {
     /* Use template metaprogramming to figure out a correct number
      * of elements to use per chunk for proper cache alignment
-     * (i.e. sizeof(Chunk) % CACHE_LINE_SIZE == 0).
+     * (i.e. sizeof(Chunk) % CacheLineSize == 0).
      *
      * If this is not possible, use the upper bound and pad the
      * structure with some extra bytes.
      */
-    static constexpr Size CACHE_LINE_SIZE = 64;
-    static constexpr Size CHUNK_LOWER_BOUND = 32;
-    static constexpr Size CHUNK_UPPER_BOUND = 128;
+    static constexpr Size CacheLineSize = 64;
+    static constexpr Size ChunkLowerBound = 32;
+    static constexpr Size ChunkUpperBound = 128;
 
     template<typename E, Size N> constexpr Size HashChainAlign
-        = (((sizeof(HashChain<E>[N]) + sizeof(void *)) % CACHE_LINE_SIZE) == 0)
+        = (((sizeof(HashChain<E>[N]) + sizeof(void *)) % CacheLineSize) == 0)
             ? N : HashChainAlign<E, N + 1>;
 
     template<typename E>
-    constexpr Size HashChainAlign<E, CHUNK_UPPER_BOUND> = CHUNK_UPPER_BOUND;
+    constexpr Size HashChainAlign<E, ChunkUpperBound> = ChunkUpperBound;
 
     template<Size N, bool B>
     struct HashChainPad;
@@ -145,14 +145,14 @@ namespace detail {
 
     template<Size N>
     struct HashChainPad<N, false> {
-        byte pad[CACHE_LINE_SIZE - (N % CACHE_LINE_SIZE)];
+        byte pad[CacheLineSize - (N % CacheLineSize)];
     };
 
     template<Size N>
-    struct HashPad: HashChainPad<N, N % CACHE_LINE_SIZE == 0> {};
+    struct HashPad: HashChainPad<N, N % CacheLineSize == 0> {};
 
-    template<typename E, Size V = HashChainAlign<E, CHUNK_LOWER_BOUND>,
-             bool P = (V == CHUNK_UPPER_BOUND)
+    template<typename E, Size V = HashChainAlign<E, ChunkLowerBound>,
+             bool P = (V == ChunkUpperBound)
     > struct HashChunk;
 
     template<typename E, Size V>

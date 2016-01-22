@@ -33,9 +33,9 @@ enum class FileType {
 struct FileInfo;
 
 #ifdef OSTD_PLATFORM_WIN32
-static constexpr char PATH_SEPARATOR = '\\';
+static constexpr char PathSeparator = '\\';
 #else
-static constexpr char PATH_SEPARATOR = '/';
+static constexpr char PathSeparator = '/';
 #endif
 
 #ifdef OSTD_PLATFORM_WIN32
@@ -148,7 +148,7 @@ private:
         p_path = path;
         ConstCharRange r = p_path.iter();
 
-        ConstCharRange found = find_last(r, PATH_SEPARATOR);
+        ConstCharRange found = find_last(r, PathSeparator);
         if (found.empty())
             p_slash = npos;
         else
@@ -326,7 +326,7 @@ private:
         if (!p_de)
             return FileInfo();
         String ap = p_path;
-        ap += PATH_SEPARATOR;
+        ap += PathSeparator;
         ap += (const char *)p_de->d_name;
         return FileInfo(ap);
     }
@@ -464,7 +464,7 @@ private:
         if (empty())
             return FileInfo();
         String ap = p_path;
-        ap += PATH_SEPARATOR;
+        ap += PathSeparator;
         ap += (const char *)p_data.cFileName;
         return FileInfo(ap);
     }
@@ -516,7 +516,7 @@ namespace detail {
         template<typename T, typename ...A>
         static void join(String &s, const T &a, const A &...b) {
             s += a;
-            s += PATH_SEPARATOR;
+            s += PathSeparator;
             PathJoin<I - 1>::join(s, b...);
         }
     };
