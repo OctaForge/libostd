@@ -125,10 +125,10 @@ struct Thread {
             abort();
     }
 
-    operator bool() const { return joinable(); }
+    explicit operator bool() const { return joinable(); }
     bool joinable() const { return p_thread != 0; }
 
-    NativeHandle native_handle() const { return p_thread; }
+    NativeHandle native_handle() { return p_thread; }
 
     detail::ThreadId get_id() {
         return p_thread;
