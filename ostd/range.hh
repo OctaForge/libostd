@@ -1009,6 +1009,11 @@ PointerRange<T> iter(T (&array)[N]) {
     return PointerRange<T>(array, N);
 }
 
+template<typename T, Size N>
+PointerRange<const T> iter(const T (&array)[N]) {
+    return PointerRange<const T>(array, N);
+}
+
 namespace detail {
     struct PtrNat {};
 }
