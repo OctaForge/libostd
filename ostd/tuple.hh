@@ -177,8 +177,11 @@ namespace detail {
     template<typename ...A>
     inline void tuple_swallow(A &&...) {}
 
-    template<bool ...A> constexpr bool TupleAll
-        = IsSame<TupleAll<A...>, TupleAll<(A, true)...>>;
+    template<bool ...A>
+    constexpr bool TupleAll = true;
+
+    template<bool B, bool ...A>
+    constexpr bool TupleAll<B, A...> = B && TupleAll<A...>;
 
     template<typename T>
     constexpr bool TupleAllDefaultConstructible = detail::Undefined<T>();

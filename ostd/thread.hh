@@ -11,6 +11,8 @@
 
 #include "ostd/memory.hh"
 #include "ostd/platform.hh"
+#include "ostd/type_traits.hh"
+#include "ostd/tuple.hh"
 
 namespace ostd {
 
@@ -72,10 +74,21 @@ namespace this_thread {
 }
 
 namespace detail {
+    template<typename T>
+    inline Decay<T> decay_copy(T &&v) {
+        return forward<T>(v);
+    }
+
+    template<typename F, typename ...A, Size ...I>
+    inline void thread_exec(Tuple<F, A...> &tup, detail::TupleIndices<I...>) {
+        ostd::get<0>(tup)(ostd::move(ostd::get<I>(tup))...);
+    }
+
     template<typename F>
     inline int thread_proxy(void *ptr) {
         Box<F> fptr((F *)ptr);
-        (*fptr)();
+        using Index = detail::MakeTupleIndices<TupleSize<F>, 1>;
+        detail::thread_exec(*fptr, Index());
         return 0;
     }
 }
@@ -86,10 +99,13 @@ struct Thread {
     Thread(): p_thread(0) {}
     Thread(Thread &&o): p_thread(o.p_thread) { o.p_thread = 0; }
 
-    template<typename F>
-    Thread(F &&func) {
-        Box<F> p(new F(func));
-        int res = thrd_create(&p_thread, &detail::thread_proxy<F>, p.get());
+    template<typename F, typename ...A,
+             typename = EnableIf<!IsSame<Decay<F>, Thread>>>
+    Thread(F &&func, A &&...args) {
+        using FuncT = Tuple<Decay<F>, Decay<A>...>;
+        Box<FuncT> p(new FuncT(detail::decay_copy(forward<F>(func)),
+                               detail::decay_copy(forward<A>(args))...));
+        int res = thrd_create(&p_thread, &detail::thread_proxy<FuncT>, p.get());
         if (res == thrd_success)
             p.release();
         else
