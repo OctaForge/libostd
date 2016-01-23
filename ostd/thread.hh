@@ -71,6 +71,10 @@ namespace this_thread {
     inline void yield() {
         thrd_yield();
     }
+
+    inline void exit() {
+        thrd_exit(0);
+    }
 }
 
 namespace detail {

@@ -86,7 +86,7 @@ struct UniqueLock {
     UniqueLock(): p_mtx(nullptr), p_owns(false) {}
 
     explicit UniqueLock(MutexType &m): p_mtx(&m), p_owns(true) {
-        m->lock();
+        m.lock();
     }
 
     UniqueLock(MutexType &m, DeferLock): p_mtx(&m), p_owns(false) {}
@@ -136,6 +136,13 @@ struct UniqueLock {
         int ret = p_mtx->try_lock();
         if (!ret) return 0;
         p_owns = (ret == 1);
+        return ret;
+    }
+
+    bool unlock() {
+        if (!p_mtx || p_owns) return false;
+        bool ret = p_mtx->unlock();
+        if (ret) p_owns = false;
         return ret;
     }
 
