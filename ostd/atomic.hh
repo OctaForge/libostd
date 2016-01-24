@@ -41,22 +41,20 @@ namespace detail {
     int test_atomic_assignable(...);
 
     template<typename T, typename U>
-    struct CanAtomicAssign {
-        static constexpr bool value
-            = (sizeof(test_atomic_assignable<T, U>(1)) == sizeof(char));
-    };
+    constexpr bool CanAtomicAssign
+        = (sizeof(test_atomic_assignable<T, U>(1)) == sizeof(char));
 
     template<typename T>
     static inline EnableIf<
-        CanAtomicAssign<volatile AtomicBase<T> *, T>::value
+        CanAtomicAssign<volatile AtomicBase<T> *, T>
     > atomic_init(volatile AtomicBase<T> *a, T v) {
         a->p_value = v;
     }
 
     template<typename T>
     static inline EnableIf<
-        !CanAtomicAssign<volatile AtomicBase<T> *, T>::value &&
-         CanAtomicAssign<         AtomicBase<T> *, T>::value
+        !CanAtomicAssign<volatile AtomicBase<T> *, T> &&
+         CanAtomicAssign<         AtomicBase<T> *, T>
     > atomic_init(volatile AtomicBase<T> *a, T v) {
         volatile char *to  = (volatile char *)(&a->p_value);
         volatile char *end = to + sizeof(T);
