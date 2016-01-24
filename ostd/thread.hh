@@ -7,7 +7,7 @@
 #define OSTD_THREAD_HH
 
 #include <stdlib.h>
-#include <threads.h>
+#include <pthread.h>
 
 #include "ostd/memory.hh"
 #include "ostd/platform.hh"
@@ -54,26 +54,26 @@ namespace detail {
             return !(a < b);
         }
     private:
-        ThreadId(thrd_t t): p_thread(t) {}
+        ThreadId(pthread_t t): p_thread(t) {}
 
         friend struct ostd::Thread;
         friend ThreadId ostd::this_thread::get_id();
 
-        thrd_t p_thread;
+        pthread_t p_thread;
     };
 }
 
 namespace this_thread {
     inline ostd::detail::ThreadId get_id() {
-        return thrd_current();
+        return pthread_self();
     }
 
     inline void yield() {
-        thrd_yield();
+        sched_yield();
     }
 
     inline void exit() {
-        thrd_exit(0);
+        pthread_exit(nullptr);
     }
 }
 
@@ -89,16 +89,16 @@ namespace detail {
     }
 
     template<typename F>
-    inline int thread_proxy(void *ptr) {
+    inline void *thread_proxy(void *ptr) {
         Box<F> fptr((F *)ptr);
         using Index = detail::MakeTupleIndices<TupleSize<F>, 1>;
         detail::thread_exec(*fptr, Index());
-        return 0;
+        return nullptr;
     }
 }
 
 struct Thread {
-    using NativeHandle = thrd_t;
+    using NativeHandle = pthread_t;
 
     Thread(): p_thread(0) {}
     Thread(Thread &&o): p_thread(o.p_thread) { o.p_thread = 0; }
@@ -109,8 +109,8 @@ struct Thread {
         using FuncT = Tuple<Decay<F>, Decay<A>...>;
         Box<FuncT> p(new FuncT(detail::decay_copy(forward<F>(func)),
                                detail::decay_copy(forward<A>(args))...));
-        int res = thrd_create(&p_thread, &detail::thread_proxy<FuncT>, p.get());
-        if (res == thrd_success)
+        int res = pthread_create(&p_thread, 0, &detail::thread_proxy<FuncT>, p.get());
+        if (!res)
             p.release();
         else
             p_thread = 0;
@@ -139,31 +139,27 @@ struct Thread {
     }
 
     bool join() {
-        if (!joinable())
-            return false;
-        thrd_t cur = p_thread;
+        auto ret = pthread_join(p_thread, nullptr);
         p_thread = 0;
-        return thrd_join(cur, nullptr) == thrd_success;
+        return !ret;
     }
 
     bool detach() {
-        if (!joinable())
-            return false;
-        if (thrd_detach(p_thread) == thrd_success) {
-            p_thread = 0;
-            return true;
-        }
-        return false;
+        bool ret = false;
+        if (p_thread)
+            ret = !pthread_detach(p_thread);
+        p_thread = 0;
+        return ret;
     }
 
     void swap(Thread &other) {
-        thrd_t cur = p_thread;
+        auto cur = p_thread;
         p_thread = other.p_thread;
         other.p_thread = cur;
     }
 
 private:
-    thrd_t p_thread;
+    pthread_t p_thread;
 };
 
 } /* namespace ostd */
