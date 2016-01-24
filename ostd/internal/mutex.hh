@@ -7,53 +7,41 @@
 #define OSTD_INTERNAL_MUTEX_HH
 
 #include <stdlib.h>
-#include <threads.h>
+#include <pthread.h>
 
 #include "ostd/utility.hh"
 
 namespace ostd {
 
 struct Mutex {
-    using NativeHandle = mtx_t *;
+    using NativeHandle = pthread_mutex_t *;
 
-    Mutex() {
-        if (mtx_init(&p_mtx, mtx_plain) != thrd_success)
-            p_mtx = 0;
-    }
+    constexpr Mutex(): p_mtx(PTHREAD_MUTEX_INITIALIZER) {}
 
     ~Mutex() {
-        if (p_mtx)
-            mtx_destroy(&p_mtx);
+        pthread_mutex_destroy(&p_mtx);
     }
 
     Mutex(const Mutex &) = delete;
     Mutex &operator=(const Mutex &) = delete;
 
     bool lock() {
-        if (!p_mtx)
-            return false;
-        return mtx_lock(&p_mtx) == thrd_success;
+        return !pthread_mutex_lock(&p_mtx);
     }
 
     int try_lock() {
-        if (!p_mtx)
-            return 0;
-        int ret = mtx_trylock(&p_mtx);
-        if (ret == thrd_busy)
-            return -1;
-        return 1;
+        /* TODO handle return value correctly */
+        return pthread_mutex_trylock(&p_mtx);
     }
 
     bool unlock() {
-        if (!p_mtx)
-            return false;
-        return mtx_unlock(&p_mtx) == thrd_success;
+        return !pthread_mutex_unlock(&p_mtx);
     }
 
     NativeHandle native_handle() { return &p_mtx; }
 
 private:
-    mtx_t p_mtx;
+    pthread_mutex_t p_mtx;
 };
 
 struct DeferLock {};
@@ -93,12 +81,12 @@ struct UniqueLock {
 
     UniqueLock(MutexType &m, TryToLock): p_mtx(&m) {
         int ret = m.try_lock();
-        if (!ret) {
+        if (ret) {
             p_mtx = nullptr;
             p_owns = false;
             return;
         }
-        p_owns = (ret == 1);
+        p_owns = (ret == 0);
     }
 
     UniqueLock(MutexType &m, AdoptLock): p_mtx(&m), p_owns(true) {}
@@ -132,10 +120,10 @@ struct UniqueLock {
     }
 
     int try_lock() {
-        if (!p_mtx || p_owns) return 0;
+        if (!p_mtx || p_owns) return 1;
         int ret = p_mtx->try_lock();
-        if (!ret) return 0;
-        p_owns = (ret == 1);
+        if (ret) return ret;
+        p_owns = (ret == 0);
         return ret;
     }
 
@@ -168,39 +156,35 @@ private:
 };
 
 struct Condition {
-    using NativeHandle = cnd_t *;
+    using NativeHandle = pthread_cond_t *;
 
-    Condition() {
-        if (cnd_init(&p_cnd) != thrd_success)
-            p_cnd = 0;
-    }
+    constexpr Condition(): p_cnd(PTHREAD_COND_INITIALIZER) {}
 
     Condition(const Condition &) = delete;
     Condition &operator=(const Condition &) = delete;
 
     ~Condition() {
-        if (p_cnd) cnd_destroy(&p_cnd);
+        pthread_cond_destroy(&p_cnd);
     }
 
     bool signal() {
-        if (!p_cnd) return false;
-        return cnd_signal(&p_cnd) == thrd_success;
+        return !pthread_cond_signal(&p_cnd);
     }
 
     bool broadcast() {
-        if (!p_cnd) return false;
-        return cnd_broadcast(&p_cnd) == thrd_success;
+        return !pthread_cond_broadcast(&p_cnd);
     }
 
     bool wait(UniqueLock<Mutex> &l) {
-        if (!p_cnd) return false;
-        return cnd_wait(&p_cnd, l.mutex()->native_handle()) == thrd_success;
+        if (!l.owns_lock())
+            return false;
+        return !pthread_cond_wait(&p_cnd, l.mutex()->native_handle());
     }
 
     NativeHandle native_handle() { return &p_cnd; }
 
 private:
-    cnd_t p_cnd;
+    pthread_cond_t p_cnd;
 };
 
 } /* namespace ostd */
