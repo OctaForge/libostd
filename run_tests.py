@@ -1,19 +1,19 @@
 from sys import stdout, exit
-from os import listdir, remove, name as osname
+from os import listdir, remove, name as osname, getenv
 from os.path import splitext, join as joinp
 import subprocess as sp
 
 # configuration - you can modify this
 
-COMPILER = "c++"
+COMPILER = getenv("CXX", "c++")
 CXXFLAGS = [
     "-std=c++14",
     "-Wall", "-Wextra",
     "-Wno-missing-braces", # clang false positive
     "-I."
-]
+] + getenv("CXXFLAGS", "").split()
 COLORS = (osname != "nt")
-TESTDIR = "tests"
+TESTDIR = getenv("TESTDIR", "tests")
 SRCEXT = ".cc"
 
 # don't modify past these lines
