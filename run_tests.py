@@ -8,7 +8,7 @@ import subprocess as sp
 COMPILER = getenv("CXX", "c++")
 CXXFLAGS = [
     "-std=c++14",
-    "-Wall", "-Wextra",
+    "-Wall", "-Wextra", "-Wshadow",
     "-Wno-missing-braces", # clang false positive
     "-I."
 ] + getenv("CXXFLAGS", "").split()

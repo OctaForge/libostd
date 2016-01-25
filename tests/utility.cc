@@ -7,24 +7,24 @@ using namespace ostd;
 struct Foo {
     int x;
     Foo(): x(5) {}
-    Foo(int x): x(x) {}
-    Foo(const Foo &x): x(x.x) {}
-    Foo(Foo &&x): x(x.x) { x.x = 0; }
-    Foo &operator=(int _x) {
-        x = _x;
+    Foo(int v): x(v) {}
+    Foo(const Foo &o): x(o.x) {}
+    Foo(Foo &&o): x(o.x) { o.x = 0; }
+    Foo &operator=(int v) {
+        x = v;
         return *this;
     }
 };
 
 struct NotSwappable {
     int i;
-    NotSwappable(int i): i(i) {}
+    NotSwappable(int v): i(v) {}
 };
 
 struct Swappable {
     int i;
     bool swapped;
-    Swappable(int i): i(i), swapped(false) {}
+    Swappable(int v): i(v), swapped(false) {}
     void swap(Swappable &v) {
         auto j = i;
         i = v.i;
