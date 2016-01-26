@@ -13,6 +13,7 @@
 #define NOMINMAX
 #include <windows.h>
 #else
+#include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #endif
