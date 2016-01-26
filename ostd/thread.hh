@@ -9,6 +9,13 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#ifndef OSTD_PLATFORM_WIN32
+#include <unistd.h>
+#else
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #include "ostd/memory.hh"
 #include "ostd/platform.hh"
 #include "ostd/type_traits.hh"
@@ -156,6 +163,22 @@ struct Thread {
         auto cur = p_thread;
         p_thread = other.p_thread;
         other.p_thread = cur;
+    }
+
+    static ostd::uint hardware_concurrency() {
+        static ostd::uint count = 0;
+        if (count <= 0) {
+#ifdef OSTD_PLATFORM_WIN32
+            SYSTEM_INFO info;
+            GetSystemInfo(&info);
+            count = info.dwNumberOfProcessors;
+#elif defined(_SC_NPROCESSORS_ONLN)
+            count = ostd::uint(sysconf(_SC_NPROCESSORS_ONLN));
+#endif
+            if (count <= 0)
+                count = 1;
+        }
+        return count;
     }
 
 private:

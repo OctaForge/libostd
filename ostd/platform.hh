@@ -6,6 +6,7 @@
 #ifndef OSTD_PLATFORM_HH
 #define OSTD_PLATFORM_HH
 
+#include <stdlib.h>
 #include <stdint.h>
 
 #if defined(WIN32) || defined(_WIN32) || (defined(__WIN32) && !defined(__CYGWIN__))
@@ -69,13 +70,6 @@
 #  else
 #    define OSTD_BYTE_ORDER OSTD_ENDIAN_LIL
 #  endif
-#endif
-
-#ifndef OSTD_PLATFORM_WIN32
-#include <unistd.h>
-#else
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #endif
 
 #ifdef OSTD_PLATFORM_WIN32
@@ -146,22 +140,6 @@ inline uint64_t endian_swap64(uint64_t x) {
 }
 
 #endif
-
-inline int cpu_count_get() {
-    static int count = 0;
-    if (count <= 0) {
-#ifdef OSTD_PLATFORM_WIN32
-        SYSTEM_INFO info;
-        GetSystemInfo(&info);
-        count = info.dwNumberOfProcessors;
-#elif defined(_SC_NPROCESSORS_ONLN)
-        count = int(sysconf(_SC_NPROCESSORS_ONLN));
-#endif
-        if (count <= 0)
-            count = 1;
-    }
-    return count;
-}
 
 }
 
