@@ -7,12 +7,9 @@
 #define OSTD_FILESYSTEM_HH
 
 #include "ostd/platform.hh"
+#include "ostd/internal/win32.hh"
 
-#ifdef OSTD_PLATFORM_WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-#else
+#ifdef OSTD_PLATFORM_POSIX
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>

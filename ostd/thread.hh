@@ -9,16 +9,14 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#ifndef OSTD_PLATFORM_WIN32
+#include "ostd/platform.hh"
+#include "ostd/internal/win32.hh"
+
+#ifdef OSTD_PLATFORM_POSIX
 #include <unistd.h>
-#else
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
 #endif
 
 #include "ostd/memory.hh"
-#include "ostd/platform.hh"
 #include "ostd/type_traits.hh"
 #include "ostd/tuple.hh"
 
