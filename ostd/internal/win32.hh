@@ -6,9 +6,7 @@
 #ifndef OSTD_INTERNAL_WIN32_HH
 #define OSTD_INTERNAL_WIN32_HH
 
-#include "ostd/platform.hh"
-
-#ifdef OSTD_PLATFORM_WIN32
+#if defined(WIN32) || defined(_WIN32) || (defined(__WIN32) && !defined(__CYGWIN__))
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
