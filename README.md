@@ -1,7 +1,7 @@
 # octastd
 
-OctaSTD is a collection of C++ utilities to aid the upcoming OctaForge C++
-API. It provides containers (dynamic arrays etc) as well as other utilities.
+OctaSTD is a new "standard library" for C++14. It provides containers
+(dynamic arrays etc) as well as other utilities.
 
 Documentation for OctaSTD can be found at https://wiki.octaforge.org/docs/octastd.
 
