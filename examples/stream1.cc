@@ -1,5 +1,5 @@
 #include <ostd/functional.hh>
-#include <ostd/stream.hh>
+#include <ostd/io.hh>
 
 using namespace ostd;
 

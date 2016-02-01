@@ -1,6 +1,6 @@
 #include <ostd/algorithm.hh>
 #include <ostd/string.hh>
-#include <ostd/stream.hh>
+#include <ostd/io.hh>
 
 using namespace ostd;
 
