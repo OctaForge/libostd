@@ -17,8 +17,8 @@ int main() {
 
     /* alrogithm: filter */
     writeln("range filter test");
-    auto v = { 5, 5, 5, 5, 5, 10, 15, 4, 8, 2 };
-    for (int i: filter(iter(v), [](int v) { return v > 5; }))
+    auto il = { 5, 5, 5, 5, 5, 10, 15, 4, 8, 2 };
+    for (int i: filter(iter(il), [](int v) { return v > 5; }))
         writeln(i);
 
     /* generate string ABCDEF */

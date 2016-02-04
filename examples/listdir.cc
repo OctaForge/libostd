@@ -9,7 +9,7 @@ void list_dirs(ConstCharRange path, int off = 0) {
     for (auto v: ds.iter()) {
         if (v.type() != FileType::directory)
             continue;
-        for (int i: range(off)) write(' ');
+        for (int i = 0; i < off; ++i) write(' ');
         writeln(v.filename());
         list_dirs(v.path(), off + 1);
     }
