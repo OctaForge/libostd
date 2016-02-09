@@ -1,4 +1,4 @@
-EXAMPLES_CXXFLAGS = -std=c++14 -Wall -Wextra -Wshadow -I.
+EXAMPLES_CXXFLAGS = -O2 -g -std=c++14 -Wall -Wextra -Wshadow -I.
 
 EXAMPLES_OBJ = \
 	examples/format.o \
