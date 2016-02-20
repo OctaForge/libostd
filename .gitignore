@@ -1,0 +1,8 @@
+*.o
+*.core
+example/format
+example/listdir
+example/range
+example/signal
+example/stream1
+example/stream2
