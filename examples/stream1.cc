@@ -13,7 +13,7 @@ int main() {
     wtest.close();
 
     FileStream rtest("test.bin", StreamMode::read);
-    printf("stream size: %zu\n", rtest.size());
+    writefln("stream size: %d", rtest.size());
 
     for (Uint32 x: map(rtest.iter<Uint32>(), FromBigEndian<Uint32>()))
         print_result(x);
