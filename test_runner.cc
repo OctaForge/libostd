@@ -40,20 +40,17 @@ int main() {
 #endif
     };
 
-    String cxxf = cxxflags;
-    cxxf += get_env("CXXFLAGS", "");
-
+    ConstCharRange userflags = get_env("CXXFLAGS", "");
     int nsuccess = 0, nfailed = 0;
 
     auto print_result = [&colors, &nsuccess, &nfailed]
                         (ConstCharRange modname, ConstCharRange fmsg = nullptr) {
+        write(modname, "...\t");
         if (!fmsg.empty()) {
-            writeln(modname, "...\t", colors["red"], colors["bold"],
-                    "(", fmsg, ")", colors["end"]);
+            writeln(colors["red"], colors["bold"], "(", fmsg, ")", colors["end"]);
             ++nfailed;
         } else {
-            writeln(modname, "...\t", colors["green"], colors["bold"],
-                    "(success)", colors["end"]);
+            writeln(colors["green"], colors["bold"], "(success)", colors["end"]);
             ++nsuccess;
         }
     };
@@ -77,7 +74,11 @@ int main() {
         cxxcmd += " -o ";
         cxxcmd += exepath;
         cxxcmd += " ";
-        cxxcmd += cxxf;
+        cxxcmd += cxxflags;
+        if (!userflags.empty()) {
+            cxxcmd += " ";
+            cxxcmd += userflags;
+        }
 
         int ret = system(cxxcmd.data());
         if (ret) {

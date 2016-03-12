@@ -11,7 +11,6 @@ EXAMPLES_OBJ = \
 all: examples
 
 examples: $(EXAMPLES_OBJ)
-test_runner: test_runner.o
 
 .cc:
 	$(CXX) $(CXXFLAGS) $(OSTD_CXXFLAGS) -o $@ $<
