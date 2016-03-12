@@ -1,17 +1,23 @@
-EXAMPLES_CXXFLAGS = -O2 -g -std=c++14 -Wall -Wextra -Wshadow -I.
+OSTD_CXXFLAGS = -O2 -g -std=c++14 -Wall -Wextra -Wshadow -I.
 
 EXAMPLES_OBJ = \
-	examples/format.o \
-	examples/listdir.o \
-	examples/range.o \
-	examples/signal.o \
-	examples/stream1.o \
-	examples/stream2.o
+	examples/format \
+	examples/listdir \
+	examples/range \
+	examples/signal \
+	examples/stream1 \
+	examples/stream2
+
+all: examples
 
 examples: $(EXAMPLES_OBJ)
+test_runner: test_runner.o
 
-.cc.o:
-	$(CXX) $(CXXFLAGS) $(EXAMPLES_CXXFLAGS) -o $@ $<
+.cc:
+	$(CXX) $(CXXFLAGS) $(OSTD_CXXFLAGS) -o $@ $<
+
+test: test_runner
+	@./test_runner
 
 clean:
-	rm -f $(EXAMPLES_OBJ)
+	rm -f $(EXAMPLES_OBJ) test_runner
