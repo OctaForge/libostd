@@ -25,9 +25,8 @@ int main() {
     /* configurable section */
 
     auto compiler = environ::get("CXX").value_or("c++");
-    auto cxxflags = "-std=c++14 -Wall -Wextra -Wshadow "
-                    "-Wno-missing-braces " /* clang false positive */
-                    "-I.";
+    auto cxxflags = "-std=c++14 -I. -Wall -Wextra -Wshadow "
+                    "-Wno-missing-braces"; /* clang false positive */
     auto testdir = environ::get("TESTDIR").value_or("tests");
     auto srcext = ".cc";
 
@@ -41,7 +40,7 @@ int main() {
     auto print_result = [&](ConstCharRange fmsg = nullptr) {
         write(modname, "...\t");
         if (!fmsg.empty()) {
-            writeln(ColorRed, ColorBold, "(", fmsg, ")", ColorEnd);
+            writeln(ColorRed, ColorBold, '(', fmsg, ')', ColorEnd);
             ++nfailed;
         } else {
             writeln(ColorGreen, ColorBold, "(success)", ColorEnd);
@@ -64,7 +63,7 @@ int main() {
         format(cxxcmd, "%s %s%s%s -o %s %s", compiler, testdir, PathSeparator,
                v.filename(), exepath, cxxflags);
         if (!userflags.empty()) {
-            cxxcmd.get() += " ";
+            cxxcmd.get() += ' ';
             cxxcmd.get() += userflags;
         }
 
