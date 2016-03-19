@@ -866,10 +866,6 @@ public:
     TempCString(CharRangeBase<const T> input, char *sbuf, Size bufsize)
     : p_buf(nullptr), p_allocated(false) {
         if (!input.size()) return;
-        if (input[input.size() - 1] == '\0') {
-            p_buf = (T *)input.data();
-            return;
-        }
         if (input.size() >= bufsize) {
             p_buf = new T[input.size() + 1];
             p_allocated = true;
