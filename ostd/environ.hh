@@ -17,14 +17,7 @@ namespace environ {
 
 inline Maybe<ConstCharRange> get(ConstCharRange name) {
     char buf[256];
-    const char *ret = nullptr;
-    if (name.size() < sizeof(buf)) {
-        memcpy(buf, name.data(), name.size());
-        buf[name.size()] = '\0';
-        ret = getenv(buf);
-    } else {
-        ret = getenv(String(name).data());
-    }
+    const char *ret = getenv(to_temp_cstr(name, buf, sizeof(buf)).get());
     if (!ret) return ostd::nothing;
     return ostd::move(ConstCharRange(ret));
 }

@@ -850,6 +850,57 @@ String to_string(std::initializer_list<T> init) {
     return to_string(iter(init));
 }
 
+template<typename T>
+struct TempCString {
+private:
+    T *p_buf;
+    bool p_allocated;
+
+public:
+    TempCString() = delete;
+    TempCString(const TempCString &) = delete;
+    TempCString(TempCString &&s): p_buf(s.p_buf), p_allocated(s.p_allocated) {
+        s.p_buf = nullptr;
+        s.p_allocated = false;
+    }
+    TempCString(CharRangeBase<const T> input, char *sbuf, Size bufsize)
+    : p_buf(nullptr), p_allocated(false) {
+        if (!input.size()) return;
+        if (input[input.size() - 1] == '\0') {
+            p_buf = (T *)input.data();
+            return;
+        }
+        if (input.size() >= bufsize) {
+            p_buf = new T[input.size() + 1];
+            p_allocated = true;
+        } else p_buf = sbuf;
+        memcpy(p_buf, input.data(), input.size());
+        p_buf[input.size()] = '\0';
+    }
+    ~TempCString() {
+        if (p_allocated) delete[] p_buf;
+    }
+
+    TempCString &operator=(const TempCString &) = delete;
+    TempCString &operator=(TempCString &&s) {
+        swap(s);
+        return *this;
+    }
+
+    operator const T *() const { return p_buf; }
+    const T *get() const { return p_buf; }
+
+    void swap(TempCString &s) {
+        detail::swap_adl(p_buf, s.p_buf);
+        detail::swap_adl(p_allocated, s.p_allocated);
+    }
+};
+
+inline TempCString<char> to_temp_cstr(ConstCharRange input,
+                                      char *buf, Size bufsize) {
+    return TempCString<char>(input, buf, bufsize);
+}
+
 } /* namespace ostd */
 
 #endif
