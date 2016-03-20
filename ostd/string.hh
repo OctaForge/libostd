@@ -863,7 +863,7 @@ public:
         s.p_buf = nullptr;
         s.p_allocated = false;
     }
-    TempCString(CharRangeBase<const T> input, char *sbuf, Size bufsize)
+    TempCString(CharRangeBase<const T> input, T *sbuf, Size bufsize)
     : p_buf(nullptr), p_allocated(false) {
         if (!input.size()) return;
         if (input.size() >= bufsize) {
