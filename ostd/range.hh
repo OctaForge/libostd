@@ -488,7 +488,7 @@ template<typename B, typename C, typename V, typename R = V &,
         return (on - n);
     }
 
-    Size copy(RemoveCv<Value> *p, Size n = -1) {
+    Size copy(RemoveConst<Value> *p, Size n = -1) {
         B r(*((B *)this));
         Size on = n;
         for (; n && !r.empty(); --n) {
@@ -991,7 +991,7 @@ public:
         return orange.put_n(p_beg, c);
     }
 
-    Size copy(RemoveCv<T> *p, Size n = -1) {
+    Size copy(RemoveConst<T> *p, Size n = -1) {
         Size c = size();
         if (n < c) c = n;
         return copy(PointerRange(p, c), c);
