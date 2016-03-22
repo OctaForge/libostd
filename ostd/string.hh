@@ -853,7 +853,7 @@ String to_string(std::initializer_list<T> init) {
 template<typename R>
 struct TempCString {
 private:
-    using Value = RemoveConst<RangeValue<R>>;
+    using Value = RemoveCv<RangeValue<R>>;
     Value *p_buf;
     bool p_allocated;
 
@@ -893,7 +893,7 @@ public:
 };
 
 template<typename R>
-inline TempCString<R> to_temp_cstr(R input, RemoveConst<RangeValue<R>> *buf,
+inline TempCString<R> to_temp_cstr(R input, RemoveCv<RangeValue<R>> *buf,
                                    Size bufsize) {
     return TempCString<R>(input, buf, bufsize);
 }
