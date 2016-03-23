@@ -145,6 +145,13 @@ public:
         return true;
     }
 
+    Size put_n(const T *p, Size n) {
+        Size an = ostd::min(n, size());
+        memcpy(p_beg, p, an * sizeof(T));
+        p_beg += an;
+        return an;
+    }
+
     T *data() { return p_beg; }
     const T *data() const { return p_beg; }
 

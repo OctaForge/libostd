@@ -477,12 +477,13 @@ template<typename B, typename C, typename V, typename R = V &,
         return (on - n);
     }
 
-    template<typename OR, typename = EnableIf<IsOutputRange<OR>>>
-    Size copy(OR &&orange, Size n = -1) {
+    template<typename OR>
+    EnableIf<IsOutputRange<OR>, Size> copy(OR &&orange, Size n = -1) {
         B r(*((B *)this));
         Size on = n;
         for (; n && !r.empty(); --n) {
-            orange.put(r.front());
+            if (!orange.put(r.front()))
+                break;
             r.pop_front();
         }
         return (on - n);
@@ -984,8 +985,8 @@ public:
         return ret;
     }
 
-    template<typename R, typename = EnableIf<IsOutputRange<R>>>
-    Size copy(R &&orange, Size n = -1) {
+    template<typename R>
+    EnableIf<IsOutputRange<R>, Size> copy(R &&orange, Size n = -1) {
         Size c = size();
         if (n < c) c = n;
         return orange.put_n(p_beg, c);
@@ -994,6 +995,10 @@ public:
     Size copy(RemoveCv<T> *p, Size n = -1) {
         Size c = size();
         if (n < c) c = n;
+        if (IsPod<T>) {
+            memcpy(p_beg, data(), c * sizeof(T));
+            return c;
+        }
         return copy(PointerRange(p, c), c);
     }
 
