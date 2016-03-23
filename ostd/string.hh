@@ -165,6 +165,17 @@ public:
         return ret ? ret : (size() - s.size());
     }
 
+    template<typename R>
+    EnableIf<IsOutputRange<R>, Size> copy(R &&orange, Size n = -1) {
+        return orange.put_n(data(), ostd::min(n, size()));
+    }
+
+    Size copy(RemoveCv<T> *p, Size n = -1) {
+        Size c = ostd::min(n, size());
+        memcpy(p, data(), c * sizeof(T));
+        return c;
+    }
+
 private:
     T *p_beg, *p_end;
 };
