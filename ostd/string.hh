@@ -871,8 +871,7 @@ String to_string(std::initializer_list<T> init) {
 template<typename R>
 struct TempCString {
 private:
-    using Value = RemoveCv<RangeValue<R>>;
-    Value *p_buf;
+    RemoveCv<RangeValue<R>> *p_buf;
     bool p_allocated;
 
 public:
@@ -882,11 +881,11 @@ public:
         s.p_buf = nullptr;
         s.p_allocated = false;
     }
-    TempCString(R input, Value *sbuf, Size bufsize)
+    TempCString(R input, RemoveCv<RangeValue<R>> *sbuf, Size bufsize)
     : p_buf(nullptr), p_allocated(false) {
         if (input.empty()) return;
         if (input.size() >= bufsize) {
-            p_buf = new Value[input.size() + 1];
+            p_buf = new RemoveCv<RangeValue<R>>[input.size() + 1];
             p_allocated = true;
         } else p_buf = sbuf;
         p_buf[input.copy(p_buf)] = '\0';
@@ -901,8 +900,8 @@ public:
         return *this;
     }
 
-    operator const Value *() const { return p_buf; }
-    const Value *get() const { return p_buf; }
+    operator const RemoveCv<RangeValue<R>> *() const { return p_buf; }
+    const RemoveCv<RangeValue<R>> *get() const { return p_buf; }
 
     void swap(TempCString &s) {
         detail::swap_adl(p_buf, s.p_buf);
