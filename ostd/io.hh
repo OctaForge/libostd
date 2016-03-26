@@ -16,13 +16,12 @@
 namespace ostd {
 
 enum class StreamMode {
-    read, write, append,
-    update = 1 << 2
+    read = 0, write, append, read_u, write_u, append_u
 };
 
 namespace detail {
     static const char *filemodes[] = {
-        "rb", "wb", "ab", nullptr, "rb+", "wb+", "ab+"
+        "rb", "wb", "ab", "rb+", "wb+", "ab+"
     };
 }
 
