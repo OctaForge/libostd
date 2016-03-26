@@ -19,7 +19,7 @@ int main() {
     copy(smpl.iter(), wtest.iter());
     wtest.close();
 
-    FileStream test("test.txt", StreamMode::read);
+    FileStream test("test.txt");
 
     writeln("## WHOLE FILE READ ##\n");
 

@@ -34,7 +34,7 @@ struct FileStream: Stream {
         s.p_owned = false;
     }
 
-    FileStream(ConstCharRange path, StreamMode mode): p_f() {
+    FileStream(ConstCharRange path, StreamMode mode = StreamMode::read): p_f() {
         open(path, mode);
     }
 
@@ -49,7 +49,7 @@ struct FileStream: Stream {
         return *this;
     }
 
-    bool open(ConstCharRange path, StreamMode mode) {
+    bool open(ConstCharRange path, StreamMode mode = StreamMode::read) {
         if (p_f || (path.size() > FILENAME_MAX)) return false;
         char buf[FILENAME_MAX + 1];
         memcpy(buf, &path[0], path.size());
