@@ -1095,8 +1095,8 @@ namespace detail {
     };
 }
 
-template<typename T, typename U, typename ...V>
-using CommonType = typename detail::CommonTypeBase<T, U, V...>::Type;
+template<typename ...A>
+using CommonType = typename detail::CommonTypeBase<A...>::Type;
 
 /* aligned storage */
 

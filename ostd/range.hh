@@ -13,6 +13,7 @@
 #include "ostd/types.hh"
 #include "ostd/utility.hh"
 #include "ostd/type_traits.hh"
+#include "ostd/tuple.hh"
 
 namespace ostd {
 
@@ -1213,6 +1214,130 @@ public:
 template<typename T>
 ChunksRange<T> chunks(const T &it, RangeSize<T> chs) {
     return ChunksRange<T>(it, chs);
+}
+
+namespace detail {
+    template<Size I, Size N>
+    struct TupleEmptyRanges {
+        template<typename T>
+        static bool empty(const T &tup) {
+            if (!ostd::get<I>(tup).empty())
+                return false;
+            return TupleEmptyRanges<I + 1, N>::empty(tup);
+        }
+    };
+
+    template<Size N>
+    struct TupleEmptyRanges<N, N> {
+        template<typename T>
+        static bool empty(const T &) {
+            return true;
+        }
+    };
+
+    template<Size I, Size N>
+    struct TupleEqualRanges {
+        template<typename T>
+        static bool equal(const T &tup1, const T &tup2) {
+            if (!ostd::get<I>(tup1).equals_front(ostd::get<I>(tup2)))
+                return false;
+            return TupleEqualRanges<I + 1, N>::empty(tup1, tup2);
+        }
+    };
+
+    template<Size N>
+    struct TupleEqualRanges<N, N> {
+        template<typename T>
+        static bool equal(const T &, const T &) {
+            return true;
+        }
+    };
+
+    template<Size I, Size N>
+    struct TuplePopRanges {
+        template<typename T>
+        static bool pop(T &tup) {
+            if (!ostd::get<I>(tup).empty()) {
+                return ostd::get<I>(tup).pop_front();
+            }
+            return TuplePopRanges<I + 1, N>::pop(tup);
+        }
+    };
+
+    template<Size N>
+    struct TuplePopRanges<N, N> {
+        template<typename T>
+        static bool pop(T &) {
+            return false;
+        }
+    };
+
+    template<Size I, Size N, typename T>
+    struct TupleRangeFront {
+        template<typename U>
+        static T front(const U &tup) {
+            if (!ostd::get<I>(tup).empty()) {
+                return ostd::get<I>(tup).front();
+            }
+            return TupleRangeFront<I + 1, N, T>::front(tup);
+        }
+    };
+
+    template<Size N, typename T>
+    struct TupleRangeFront<N, N, T> {
+        template<typename U>
+        static T front(const U &tup) {
+            return ostd::get<0>(tup).front();
+        }
+    };
+}
+
+template<typename ...R>
+struct JoinRange: InputRange<JoinRange<R...>,
+    CommonType<ForwardRangeTag, RangeCategory<R>...>,
+    CommonType<RangeValue<R>...>, CommonType<RangeReference<R>...>,
+    CommonType<RangeSize<R>...>, CommonType<RangeDifference<R>...>> {
+private:
+    Tuple<R...> p_ranges;
+public:
+    JoinRange() = delete;
+    JoinRange(const R &...ranges): p_ranges(ranges...) {}
+    JoinRange(R &&...ranges): p_ranges(forward<R>(ranges)...) {}
+    JoinRange(const JoinRange &v): p_ranges(v.p_ranges) {}
+    JoinRange(JoinRange &&v): p_ranges(move(v.p_ranges)) {}
+
+    JoinRange &operator=(const JoinRange &v) {
+        p_ranges = v.p_ranges;
+        return *this;
+    }
+
+    JoinRange &operator=(JoinRange &&v) {
+        p_ranges = move(v.p_ranges);
+        return *this;
+    }
+
+    bool empty() const {
+        return detail::TupleEmptyRanges<0, sizeof...(R)>::empty(p_ranges);
+    }
+
+    bool equals_front(const JoinRange &r) const {
+        return detail::TupleEqualRanges<0, sizeof...(R)>::equal(p_ranges,
+            r.p_ranges);
+    }
+
+    bool pop_front() {
+        return detail::TuplePopRanges<0, sizeof...(R)>::pop(p_ranges);
+    }
+
+    CommonType<RangeReference<R>...> front() const {
+        return detail::TupleRangeFront<0, sizeof...(R),
+            CommonType<RangeReference<R>...>>::front(p_ranges);
+    }
+};
+
+template<typename R1, typename R2, typename ...R>
+JoinRange<R1, R2, R...> join(R1 r1, R2 r2, R ...rr) {
+    return JoinRange<R1, R2, R...>(move(r1), move(r2), move(rr)...);
 }
 
 template<typename T>
