@@ -29,9 +29,8 @@ int main() {
     auto x = { 11, 22, 33 };
     auto y = { 44, 55, 66 };
     auto z = { 77, 88, 99 };
-    for (auto i: join(iter(x), iter(y), iter(z))) {
+    for (auto i: join(iter(x), iter(y), iter(z)))
         writeln(i);
-    }
 
     /* chunk a range into subranges - prints
      * {11, 22, 33}
@@ -41,4 +40,12 @@ int main() {
     auto cr = { 11, 22, 33, 44, 55, 66, 77, 88, 99 };
     for (auto r: chunks(iter(cr), 3))
         writeln(r);
+
+    /* {11, 44, 77}, {22, 55, 88}, {33, 66, 99} */
+    for (auto v: zip(iter(x), iter(y), iter(z)))
+        writeln(v);
+
+    /* 2-tuple zip uses Pair */
+    for (auto v: zip(iter({ 5, 10, 15, 20 }), iter({ 6, 11, 16, 21 })))
+        writeln(v.first, ", ", v.second);
 }

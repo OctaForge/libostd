@@ -850,9 +850,49 @@ template<typename T, typename U> struct ToString<Pair<T, U>> {
     using Result = String;
     String operator()(const Argument &v) {
         String ret("{");
-        ret += ToString<RemoveReference<RemoveCv<T>>>()(v.first);
+        ret += ToString<RemoveCv<RemoveReference<T>>>()(v.first);
         ret += ", ";
-        ret += ToString<RemoveReference<RemoveCv<U>>>()(v.second);
+        ret += ToString<RemoveCv<RemoveReference<U>>>()(v.second);
+        ret += "}";
+        return ret;
+    }
+};
+
+namespace detail {
+    template<Size I, Size N>
+    struct TupleToString {
+        template<typename T>
+        static void append(String &ret, const T &tup) {
+            ret += ", ";
+            ret += ToString<RemoveCv<RemoveReference<
+                decltype(ostd::get<I>(tup))>>>()(ostd::get<I>(tup));
+            TupleToString<I + 1, N>::append(ret, tup);
+        }
+    };
+
+    template<Size N>
+    struct TupleToString<N, N> {
+        template<typename T>
+        static void append(String &, const T &) {}
+    };
+
+    template<Size N>
+    struct TupleToString<0, N> {
+        template<typename T>
+        static void append(String &ret, const T &tup) {
+            ret += ToString<RemoveCv<RemoveReference<
+                decltype(ostd::get<0>(tup))>>>()(ostd::get<0>(tup));
+            TupleToString<1, N>::append(ret, tup);
+        }
+    };
+}
+
+template<typename ...T> struct ToString<Tuple<T...>> {
+    using Argument = Tuple<T...>;
+    using Result = String;
+    String operator()(const Argument &v) {
+        String ret("{");
+        detail::TupleToString<0, sizeof...(T)>::append(ret, v);
         ret += "}";
         return ret;
     }
@@ -860,7 +900,7 @@ template<typename T, typename U> struct ToString<Pair<T, U>> {
 
 template<typename T>
 typename ToString<T>::Result to_string(const T &v) {
-    return ToString<RemoveReference<RemoveCv<T>>>()(v);
+    return ToString<RemoveCv<RemoveReference<T>>>()(v);
 }
 
 template<typename T>

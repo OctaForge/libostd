@@ -1218,17 +1218,17 @@ ChunksRange<T> chunks(const T &it, RangeSize<T> chs) {
 
 namespace detail {
     template<Size I, Size N>
-    struct TupleEmptyRanges {
+    struct JoinRangeEmpty {
         template<typename T>
         static bool empty(const T &tup) {
             if (!ostd::get<I>(tup).empty())
                 return false;
-            return TupleEmptyRanges<I + 1, N>::empty(tup);
+            return JoinRangeEmpty<I + 1, N>::empty(tup);
         }
     };
 
     template<Size N>
-    struct TupleEmptyRanges<N, N> {
+    struct JoinRangeEmpty<N, N> {
         template<typename T>
         static bool empty(const T &) {
             return true;
@@ -1236,17 +1236,17 @@ namespace detail {
     };
 
     template<Size I, Size N>
-    struct TupleEqualRanges {
+    struct TupleRangeEqual {
         template<typename T>
         static bool equal(const T &tup1, const T &tup2) {
             if (!ostd::get<I>(tup1).equals_front(ostd::get<I>(tup2)))
                 return false;
-            return TupleEqualRanges<I + 1, N>::empty(tup1, tup2);
+            return TupleRangeEqual<I + 1, N>::equal(tup1, tup2);
         }
     };
 
     template<Size N>
-    struct TupleEqualRanges<N, N> {
+    struct TupleRangeEqual<N, N> {
         template<typename T>
         static bool equal(const T &, const T &) {
             return true;
@@ -1254,18 +1254,18 @@ namespace detail {
     };
 
     template<Size I, Size N>
-    struct TuplePopRanges {
+    struct JoinRangePop {
         template<typename T>
         static bool pop(T &tup) {
             if (!ostd::get<I>(tup).empty()) {
                 return ostd::get<I>(tup).pop_front();
             }
-            return TuplePopRanges<I + 1, N>::pop(tup);
+            return JoinRangePop<I + 1, N>::pop(tup);
         }
     };
 
     template<Size N>
-    struct TuplePopRanges<N, N> {
+    struct JoinRangePop<N, N> {
         template<typename T>
         static bool pop(T &) {
             return false;
@@ -1273,18 +1273,18 @@ namespace detail {
     };
 
     template<Size I, Size N, typename T>
-    struct TupleRangeFront {
+    struct JoinRangeFront {
         template<typename U>
         static T front(const U &tup) {
             if (!ostd::get<I>(tup).empty()) {
                 return ostd::get<I>(tup).front();
             }
-            return TupleRangeFront<I + 1, N, T>::front(tup);
+            return JoinRangeFront<I + 1, N, T>::front(tup);
         }
     };
 
     template<Size N, typename T>
-    struct TupleRangeFront<N, N, T> {
+    struct JoinRangeFront<N, N, T> {
         template<typename U>
         static T front(const U &tup) {
             return ostd::get<0>(tup).front();
@@ -1317,20 +1317,20 @@ public:
     }
 
     bool empty() const {
-        return detail::TupleEmptyRanges<0, sizeof...(R)>::empty(p_ranges);
+        return detail::JoinRangeEmpty<0, sizeof...(R)>::empty(p_ranges);
     }
 
     bool equals_front(const JoinRange &r) const {
-        return detail::TupleEqualRanges<0, sizeof...(R)>::equal(p_ranges,
+        return detail::TupleRangeEqual<0, sizeof...(R)>::equal(p_ranges,
             r.p_ranges);
     }
 
     bool pop_front() {
-        return detail::TuplePopRanges<0, sizeof...(R)>::pop(p_ranges);
+        return detail::JoinRangePop<0, sizeof...(R)>::pop(p_ranges);
     }
 
     CommonType<RangeReference<R>...> front() const {
-        return detail::TupleRangeFront<0, sizeof...(R),
+        return detail::JoinRangeFront<0, sizeof...(R),
             CommonType<RangeReference<R>...>>::front(p_ranges);
     }
 };
@@ -1338,6 +1338,118 @@ public:
 template<typename R1, typename R2, typename ...R>
 JoinRange<R1, R2, R...> join(R1 r1, R2 r2, R ...rr) {
     return JoinRange<R1, R2, R...>(move(r1), move(r2), move(rr)...);
+}
+
+namespace detail {
+    template<typename ...T>
+    struct ZipValueType {
+        using Type = Tuple<T...>;
+    };
+
+    template<typename T, typename U>
+    struct ZipValueType<T, U> {
+        using Type = Pair<T, U>;
+    };
+
+    template<typename ...T>
+    using ZipValue = typename detail::ZipValueType<T...>::Type;
+
+    template<Size I, Size N>
+    struct ZipRangeEmpty {
+        template<typename T>
+        static bool empty(const T &tup) {
+            if (ostd::get<I>(tup).empty())
+                return true;
+            return ZipRangeEmpty<I + 1, N>::empty(tup);
+        }
+    };
+
+    template<Size N>
+    struct ZipRangeEmpty<N, N> {
+        template<typename T>
+        static bool empty(const T &) {
+            return false;
+        }
+    };
+
+    template<Size I, Size N>
+    struct ZipRangePop {
+        template<typename T>
+        static bool pop(T &tup) {
+            return ostd::get<I>(tup).pop_front() &&
+                   ZipRangePop<I + 1, N>::pop(tup);
+        }
+    };
+
+    template<Size N>
+    struct ZipRangePop<N, N> {
+        template<typename T>
+        static bool pop(T &) {
+            return true;
+        }
+    };
+
+    template<typename ...T>
+    struct ZipRangeFront {
+        template<typename U, Size ...I>
+        static ZipValue<T...> tup_get(const U &tup, detail::TupleIndices<I...>) {
+            return ZipValue<T...>(ostd::get<I>(tup).front()...);
+        }
+
+        template<typename U>
+        static ZipValue<T...> front(const U &tup) {
+            using Index = detail::MakeTupleIndices<sizeof...(T)>;
+            return ZipRangeFront<T...>::tup_get(tup, Index());
+        }
+    };
+}
+
+template<typename ...R>
+struct ZipRange: InputRange<ZipRange<R...>,
+    CommonType<ForwardRangeTag, RangeCategory<R>...>,
+    detail::ZipValue<RangeReference<R>...>,
+    detail::ZipValue<RangeReference<R>...>,
+    CommonType<RangeSize<R>...>, CommonType<RangeDifference<R>...>> {
+private:
+    Tuple<R...> p_ranges;
+public:
+    ZipRange() = delete;
+    ZipRange(const R &...ranges): p_ranges(ranges...) {}
+    ZipRange(R &&...ranges): p_ranges(forward<R>(ranges)...) {}
+    ZipRange(const ZipRange &v): p_ranges(v.p_ranges) {}
+    ZipRange(ZipRange &&v): p_ranges(move(v.p_ranges)) {}
+
+    ZipRange &operator=(const ZipRange &v) {
+        p_ranges = v.p_ranges;
+        return *this;
+    }
+
+    ZipRange &operator=(ZipRange &&v) {
+        p_ranges = move(v.p_ranges);
+        return *this;
+    }
+
+    bool empty() const {
+        return detail::ZipRangeEmpty<0, sizeof...(R)>::empty(p_ranges);
+    }
+
+    bool equals_front(const ZipRange &r) const {
+        return detail::TupleRangeEqual<0, sizeof...(R)>::equal(p_ranges,
+            r.p_ranges);
+    }
+
+    bool pop_front() {
+        return detail::ZipRangePop<0, sizeof...(R)>::pop(p_ranges);
+    }
+
+    detail::ZipValue<RangeReference<R>...> front() const {
+        return detail::ZipRangeFront<RangeReference<R>...>::front(p_ranges);
+    }
+};
+
+template<typename R1, typename R2, typename ...R>
+ZipRange<R1, R2, R...> zip(R1 r1, R2 r2, R ...rr) {
+    return ZipRange<R1, R2, R...>(move(r1), move(r2), move(rr)...);
 }
 
 template<typename T>
