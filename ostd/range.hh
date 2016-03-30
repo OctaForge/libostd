@@ -1407,7 +1407,7 @@ namespace detail {
 template<typename ...R>
 struct ZipRange: InputRange<ZipRange<R...>,
     CommonType<ForwardRangeTag, RangeCategory<R>...>,
-    detail::ZipValue<RangeReference<R>...>,
+    detail::ZipValue<RangeValue<R>...>,
     detail::ZipValue<RangeReference<R>...>,
     CommonType<RangeSize<R>...>, CommonType<RangeDifference<R>...>> {
 private:
