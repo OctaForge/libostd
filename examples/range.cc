@@ -44,6 +44,11 @@ int main() {
     for (auto r: chunks(iter(cr), 3))
         writeln(r);
 
+    /* take test, prints only first 4 */
+    writeln("range take test");
+    for (auto r: take(iter(cr), 4))
+        writeln(r);
+
     /* {11, 44, 77}, {22, 55, 88}, {33, 66, 99} */
     writeln("range zip test");
     for (auto v: zip(iter(x), iter(y), iter(z)))
