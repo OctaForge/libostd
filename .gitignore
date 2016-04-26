@@ -1,9 +1,10 @@
 *.o
 *.core
-example/format
-example/listdir
-example/range
-example/signal
-example/stream1
-example/stream2
+examples/format
+examples/listdir
+examples/range
+examples/signal
+examples/stream1
+examples/stream2
+examples/range_pipe
 test_runner

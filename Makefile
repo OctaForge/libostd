@@ -4,6 +4,7 @@ EXAMPLES_OBJ = \
 	examples/format \
 	examples/listdir \
 	examples/range \
+	examples/range_pipe \
 	examples/signal \
 	examples/stream1 \
 	examples/stream2
