@@ -485,12 +485,12 @@ template<typename B, typename C, typename V, typename R = V &,
     }
 
     template<typename R1, typename ...RR>
-    JoinRange<B, R1, RR...> join(R1 r1, RR ...rr) {
+    JoinRange<B, R1, RR...> join(R1 r1, RR ...rr) const {
         return JoinRange<B, R1, RR...>(iter(), move(r1), move(rr)...);
     }
 
     template<typename R1, typename ...RR>
-    ZipRange<B, R1, RR...> zip(R1 r1, RR ...rr) {
+    ZipRange<B, R1, RR...> zip(R1 r1, RR ...rr) const {
         return ZipRange<B, R1, RR...>(iter(), move(r1), move(rr)...);
     }
 
@@ -585,36 +585,36 @@ inline auto operator|(const R &range, F &&func) -> decltype(func(range)) {
 }
 
 inline auto reverse() {
-    return [](auto obj) { return obj.reverse(); };
+    return [](auto &obj) { return obj.reverse(); };
 }
 
 inline auto movable() {
-    return [](auto obj) { return obj.movable(); };
+    return [](auto &obj) { return obj.movable(); };
 }
 
 inline auto enumerate() {
-    return [](auto obj) { return obj.enumerate(); };
+    return [](auto &obj) { return obj.enumerate(); };
 }
 
 template<typename T>
 inline auto take(T n) {
-    return [n](auto obj) { return obj.take(n); };
+    return [n](auto &obj) { return obj.take(n); };
 }
 
 template<typename T>
 inline auto chunks(T n) {
-    return [n](auto obj) { return obj.chunks(n); };
+    return [n](auto &obj) { return obj.chunks(n); };
 }
 
 /* TODO: can't use generalized captures on packs so gotta workaround */
 template<typename R1, typename ...R>
 inline auto join(R1 r1, R ...rr) {
-    return [=](auto obj) mutable { return obj.join(move(r1), move(rr)...); };
+    return [=](auto &obj) mutable { return obj.join(move(r1), move(rr)...); };
 }
 
 template<typename R1, typename ...R>
 inline auto zip(R1 r1, R ...rr) {
-    return [=](auto obj) mutable { return obj.zip(move(r1), move(rr)...); };
+    return [=](auto &obj) mutable { return obj.zip(move(r1), move(rr)...); };
 }
 
 template<typename T>
