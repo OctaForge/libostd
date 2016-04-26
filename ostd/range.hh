@@ -386,7 +386,7 @@ public:
 };
 
 template<typename R>
-RangeDifference<R> operator-(const R &lhs, const R &rhs) {
+inline RangeDifference<R> operator-(const R &lhs, const R &rhs) {
     return rhs.distance(lhs);
 }
 
@@ -422,6 +422,11 @@ namespace detail {
 
 template<typename> struct ReverseRange;
 template<typename> struct MoveRange;
+template<typename> struct EnumeratedRange;
+template<typename> struct TakeRange;
+template<typename> struct ChunksRange;
+template<typename ...> struct JoinRange;
+template<typename ...> struct ZipRange;
 
 template<typename B, typename C, typename V, typename R = V &,
          typename S = Size, typename D = Ptrdiff
@@ -465,6 +470,28 @@ template<typename B, typename C, typename V, typename R = V &,
 
     MoveRange<B> movable() const {
         return MoveRange<B>(iter());
+    }
+
+    EnumeratedRange<B> enumerate() const {
+        return EnumeratedRange<B>(iter());
+    }
+
+    TakeRange<B> take(Size n) const {
+        return TakeRange<B>(iter(), n);
+    }
+
+    ChunksRange<B> chunks(Size n) const {
+        return ChunksRange<B>(iter(), n);
+    }
+
+    template<typename R1, typename ...RR>
+    JoinRange<B, R1, RR...> join(R1 r1, RR ...rr) {
+        return JoinRange<B, R1, RR...>(iter(), move(r1), move(rr)...);
+    }
+
+    template<typename R1, typename ...RR>
+    ZipRange<B, R1, RR...> zip(R1 r1, RR ...rr) {
+        return ZipRange<B, R1, RR...>(iter(), move(r1), move(rr)...);
     }
 
     RangeHalf<B> half() const {
@@ -552,18 +579,55 @@ template<typename B, typename C, typename V, typename R = V &,
     explicit operator bool() const { return !((B *)this)->empty(); }
 };
 
+template<typename R, typename F, typename = EnableIf<IsInputRange<R>>>
+inline auto operator|(const R &range, F &&func) -> decltype(func(range)) {
+    return func(range);
+}
+
+inline auto reverse() {
+    return [](auto obj) { return obj.reverse(); };
+}
+
+inline auto movable() {
+    return [](auto obj) { return obj.movable(); };
+}
+
+inline auto enumerate() {
+    return [](auto obj) { return obj.enumerate(); };
+}
+
 template<typename T>
-auto iter(T &r) -> decltype(r.iter()) {
+inline auto take(T n) {
+    return [n](auto obj) { return obj.take(n); };
+}
+
+template<typename T>
+inline auto chunks(T n) {
+    return [n](auto obj) { return obj.chunks(n); };
+}
+
+template<typename R1, typename ...R>
+inline auto join(R1 r1, R ...rr) {
+    return [=](auto obj) mutable { return obj.join(move(r1), move(rr)...); };
+}
+
+template<typename R1, typename ...R>
+inline auto zip(R1 r1, R ...rr) {
+    return [=](auto obj) mutable { return obj.zip(move(r1), move(rr)...); };
+}
+
+template<typename T>
+inline auto iter(T &r) -> decltype(r.iter()) {
     return r.iter();
 }
 
 template<typename T>
-auto iter(const T &r) -> decltype(r.iter()) {
+inline auto iter(const T &r) -> decltype(r.iter()) {
     return r.iter();
 }
 
 template<typename T>
-auto citer(const T &r) -> decltype(r.iter()) {
+inline auto citer(const T &r) -> decltype(r.iter()) {
     return r.iter();
 }
 
@@ -849,12 +913,12 @@ private:
 };
 
 template<typename T>
-NumberRange<T> range(T a, T b, T step = T(1)) {
+inline NumberRange<T> range(T a, T b, T step = T(1)) {
     return NumberRange<T>(a, b, step);
 }
 
 template<typename T>
-NumberRange<T> range(T v) {
+inline NumberRange<T> range(T v) {
     return NumberRange<T>(v);
 }
 
@@ -1011,12 +1075,12 @@ private:
 };
 
 template<typename T, Size N>
-PointerRange<T> iter(T (&array)[N]) {
+inline PointerRange<T> iter(T (&array)[N]) {
     return PointerRange<T>(array, N);
 }
 
 template<typename T, Size N>
-PointerRange<const T> iter(const T (&array)[N]) {
+inline PointerRange<const T> iter(const T (&array)[N]) {
     return PointerRange<const T>(array, N);
 }
 
@@ -1025,14 +1089,14 @@ namespace detail {
 }
 
 template<typename T, typename U>
-PointerRange<T> iter(T *a, U b, EnableIf<
+inline PointerRange<T> iter(T *a, U b, EnableIf<
     (IsPointer<U> || IsNullPointer<U>) && IsConvertible<U, T *>, detail::PtrNat
 > = detail::PtrNat()) {
     return PointerRange<T>(a, b);
 }
 
 template<typename T>
-PointerRange<T> iter(T *a, ostd::Size b) {
+inline PointerRange<T> iter(T *a, ostd::Size b) {
     return PointerRange<T>(a, b);
 }
 
@@ -1113,11 +1177,6 @@ public:
 };
 
 template<typename T>
-EnumeratedRange<T> enumerate(const T &it) {
-    return EnumeratedRange<T>(it);
-}
-
-template<typename T>
 struct TakeRange: InputRange<TakeRange<T>,
     CommonType<RangeCategory<T>, ForwardRangeTag>,
     RangeValue<T>, RangeReference<T>, RangeSize<T>
@@ -1167,11 +1226,6 @@ public:
 };
 
 template<typename T>
-TakeRange<T> take(const T &it, RangeSize<T> n) {
-    return TakeRange<T>(it, n);
-}
-
-template<typename T>
 struct ChunksRange: InputRange<ChunksRange<T>,
     CommonType<RangeCategory<T>, ForwardRangeTag>,
     TakeRange<T>, TakeRange<T>, RangeSize<T>
@@ -1208,13 +1262,8 @@ public:
         return p_range.pop_front_n(p_chunksize * n) / p_chunksize;
     }
 
-    TakeRange<T> front() const { return take(p_range, p_chunksize); }
+    TakeRange<T> front() const { return p_range.take(p_chunksize); }
 };
-
-template<typename T>
-ChunksRange<T> chunks(const T &it, RangeSize<T> chs) {
-    return ChunksRange<T>(it, chs);
-}
 
 namespace detail {
     template<Size I, Size N>
@@ -1335,11 +1384,6 @@ public:
     }
 };
 
-template<typename R1, typename R2, typename ...R>
-JoinRange<R1, R2, R...> join(R1 r1, R2 r2, R ...rr) {
-    return JoinRange<R1, R2, R...>(move(r1), move(r2), move(rr)...);
-}
-
 namespace detail {
     template<typename ...T>
     struct ZipValueType {
@@ -1447,11 +1491,6 @@ public:
     }
 };
 
-template<typename R1, typename R2, typename ...R>
-ZipRange<R1, R2, R...> zip(R1 r1, R2 r2, R ...rr) {
-    return ZipRange<R1, R2, R...>(move(r1), move(r2), move(rr)...);
-}
-
 template<typename T>
 struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value,
     typename T::Reference, typename T::Size, typename T::Difference> {
@@ -1505,12 +1544,12 @@ private:
 };
 
 template<typename T>
-AppenderRange<T> appender() {
+inline AppenderRange<T> appender() {
     return AppenderRange<T>();
 }
 
 template<typename T>
-AppenderRange<T> appender(T &&v) {
+inline AppenderRange<T> appender(T &&v) {
     return AppenderRange<T>(forward<T>(v));
 }
 

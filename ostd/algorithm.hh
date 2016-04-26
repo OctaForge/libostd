@@ -558,6 +558,10 @@ MapRange<R, F, detail::MapReturnType<R, F>> map(R range, F func) {
         func);
 }
 
+template<typename F> auto map(F func) {
+    return [f = move(func)](auto obj) { return map(obj, f); };
+}
+
 template<typename T, typename F>
 struct FilterRange: InputRange<
     FilterRange<T, F>, CommonType<RangeCategory<T>, ForwardRangeTag>,
@@ -625,6 +629,10 @@ namespace detail {
 template<typename R, typename P>
 FilterRange<R, detail::FilterPred<R, P>> filter(R range, P pred) {
     return FilterRange<R, P>(range, pred);
+}
+
+template<typename F> auto filter(F func) {
+    return [f = move(func)](auto obj) { return filter(obj, f); };
 }
 
 } /* namespace ostd */

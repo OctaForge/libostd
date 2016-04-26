@@ -31,7 +31,7 @@ int main() {
     auto x = { 11, 22, 33 };
     auto y = { 44, 55, 66 };
     auto z = { 77, 88, 99 };
-    for (auto i: join(iter(x), iter(y), iter(z)))
+    for (auto i: iter(x).join(iter(y), iter(z)))
         writeln(i);
 
     /* chunk a range into subranges - prints
@@ -41,21 +41,21 @@ int main() {
      */
     writeln("range chunk test");
     auto cr = { 11, 22, 33, 44, 55, 66, 77, 88, 99 };
-    for (auto r: chunks(iter(cr), 3))
+    for (auto r: iter(cr).chunks(3))
         writeln(r);
 
     /* take test, prints only first 4 */
     writeln("range take test");
-    for (auto r: take(iter(cr), 4))
+    for (auto r: iter(cr).take(4))
         writeln(r);
 
     /* {11, 44, 77}, {22, 55, 88}, {33, 66, 99} */
     writeln("range zip test");
-    for (auto v: zip(iter(x), iter(y), iter(z)))
+    for (auto v: iter(x).zip(iter(y), iter(z)))
         writeln(v);
 
     /* 2-tuple zip uses Pair */
     writeln("2-tuple range zip");
-    for (auto v: zip(iter({ 5, 10, 15, 20 }), iter({ 6, 11, 16, 21 })))
+    for (auto v: iter({ 5, 10, 15, 20 }).zip(iter({ 6, 11, 16, 21 })))
         writeln(v.first, ", ", v.second);
 }

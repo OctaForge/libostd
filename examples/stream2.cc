@@ -30,7 +30,7 @@ int main() {
 
     writeln("\n## PART FILE READ ##\n");
 
-    String ts2(take(test.iter(), 25));
+    String ts2(test.iter().take(25));
     writefln("-- str beg --\n%s\n-- str end --", ts2);
 
     return 0;
