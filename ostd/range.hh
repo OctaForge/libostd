@@ -606,6 +606,7 @@ inline auto chunks(T n) {
     return [n](auto obj) { return obj.chunks(n); };
 }
 
+/* TODO: can't use generalized captures on packs so gotta workaround */
 template<typename R1, typename ...R>
 inline auto join(R1 r1, R ...rr) {
     return [=](auto obj) mutable { return obj.join(move(r1), move(rr)...); };
