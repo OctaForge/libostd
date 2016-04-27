@@ -34,13 +34,14 @@ inline SDL_RWops *stream_to_rwops(Stream &s) {
     }
     rwr->read = [](SDL_RWops *rw, void *buf, Size size, Size nb) -> Size {
         Stream *is = (Stream *)rw->hidden.unknown.data1;
-        return f->read_bytes(buf, size * nb) / size;
+        return is->read_bytes(buf, size * nb) / size;
     }
     rwr->write = [](SDL_RWops *rw, const void *buf, Size size, Size nb) -> Size {
         Stream *is = (Stream *)rw->hidden.unknown.data1;
-        return f->write_bytes(buf, size * nb) / size;
+        return is->write_bytes(buf, size * nb) / size;
     }
-    rw->close = [](SDL_RWops *) -> int { return 0; }
+    rwr->close = [](SDL_RWops *) -> int { return 0; }
+    return rwr;
 }
 
 }
