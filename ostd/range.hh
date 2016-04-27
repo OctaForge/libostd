@@ -580,7 +580,7 @@ template<typename B, typename C, typename V, typename R = V &,
 };
 
 template<typename R, typename F, typename = EnableIf<IsInputRange<R>>>
-inline auto operator|(const R &range, F &&func) -> decltype(func(range)) {
+inline auto operator|(const R &range, F func) {
     return func(range);
 }
 
@@ -606,15 +606,14 @@ inline auto chunks(T n) {
     return [n](auto &obj) { return obj.chunks(n); };
 }
 
-/* TODO: can't use generalized captures on packs so gotta workaround */
 template<typename R1, typename ...R>
 inline auto join(R1 r1, R ...rr) {
-    return [=](auto &obj) mutable { return obj.join(move(r1), move(rr)...); };
+    return [&](auto &obj) { return obj.join(move(r1), move(rr)...); };
 }
 
 template<typename R1, typename ...R>
 inline auto zip(R1 r1, R ...rr) {
-    return [=](auto &obj) mutable { return obj.zip(move(r1), move(rr)...); };
+    return [&](auto &obj) { return obj.zip(move(r1), move(rr)...); };
 }
 
 template<typename T>

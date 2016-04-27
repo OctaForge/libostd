@@ -30,7 +30,7 @@ inline R partition(R range, U pred) {
 }
 
 template<typename F> inline auto partition(F func) {
-    return [&func](auto &obj) mutable { return partition(obj, func); };
+    return [&func](auto &obj) { return partition(obj, move(func)); };
 }
 
 template<typename R, typename P>
@@ -42,9 +42,7 @@ inline bool is_partitioned(R range, P pred) {
 }
 
 template<typename F> inline bool is_partitioned(F func) {
-    return [&func](auto &obj) mutable {
-        return is_partitioned(obj, move(func));
-    };
+    return [&func](auto &obj) { return is_partitioned(obj, move(func)); };
 }
 
 /* sorting */
@@ -258,7 +256,7 @@ inline F for_each(R range, F func) {
 }
 
 template<typename F> inline auto for_each(F func) {
-    return [&func](auto &obj) mutable {
+    return [&func](auto &obj) {
         for (; !obj.empty(); obj.pop_front())
             func(obj.front());
         return move(func);
@@ -273,7 +271,7 @@ inline bool all_of(R range, P pred) {
 }
 
 template<typename F> inline auto all_of(F func) {
-    return [&func](auto &obj) mutable { return all_of(obj, move(func)); };
+    return [&func](auto &obj) { return all_of(obj, move(func)); };
 }
 
 template<typename R, typename P>
@@ -284,7 +282,7 @@ inline bool any_of(R range, P pred) {
 }
 
 template<typename F> inline auto any_of(F func) {
-    return [&func](auto &obj) mutable { return any_of(obj, move(func)); };
+    return [&func](auto &obj) { return any_of(obj, move(func)); };
 }
 
 template<typename R, typename P>
@@ -295,7 +293,7 @@ inline bool none_of(R range, P pred) {
 }
 
 template<typename F> inline auto none_of(F func) {
-    return [&func](auto &obj) mutable { return none_of(obj, move(func)); };
+    return [&func](auto &obj) { return none_of(obj, move(func)); };
 }
 
 template<typename R, typename T>
@@ -337,7 +335,7 @@ inline R find_if(R range, P pred) {
 }
 
 template<typename F> inline auto find_if(F func) {
-    return [&func](auto &obj) mutable { return find_if(obj, move(func)); };
+    return [&func](auto &obj) { return find_if(obj, move(func)); };
 }
 
 template<typename R, typename P>
@@ -349,7 +347,7 @@ inline R find_if_not(R range, P pred) {
 }
 
 template<typename F> inline auto find_if_not(F func) {
-    return [&func](auto &obj) mutable { return find_if_not(obj, move(func)); };
+    return [&func](auto &obj) { return find_if_not(obj, move(func)); };
 }
 
 template<typename R1, typename R2, typename C>
@@ -393,7 +391,7 @@ inline RangeSize<R> count_if(R range, P pred) {
 }
 
 template<typename F> inline auto count_if(F func) {
-    return [&func](auto &obj) mutable { return count_if(obj, move(func)); };
+    return [&func](auto &obj) { return count_if(obj, move(func)); };
 }
 
 template<typename R, typename P>
@@ -406,7 +404,7 @@ inline RangeSize<R> count_if_not(R range, P pred) {
 }
 
 template<typename F> inline auto count_if_not(F func) {
-    return [&func](auto &obj) mutable { return count_if_not(obj, move(func)); };
+    return [&func](auto &obj) { return count_if_not(obj, move(func)); };
 }
 
 template<typename R>
@@ -420,7 +418,7 @@ inline bool equal(R range1, R range2) {
 }
 
 template<typename R> inline bool equal(R range) {
-    return [&range](auto &obj) mutable { return equal(obj, move(range)); };
+    return [&range](auto &obj) { return equal(obj, move(range)); };
 }
 
 template<typename R>
@@ -429,7 +427,7 @@ R slice_until(R range1, R range2) {
 }
 
 template<typename R> inline auto slice_until(R range) {
-    return [&range](auto &obj) mutable { return slice_until(obj, move(range)); };
+    return [&range](auto &obj) { return slice_until(obj, move(range)); };
 }
 
 /* algos that modify ranges or work with output ranges */
@@ -523,7 +521,7 @@ inline T foldl(R range, T init, F func) {
 }
 
 template<typename T> inline auto foldl(T init) {
-    return [&init](auto &obj) mutable { return foldl(obj, move(init)); };
+    return [&init](auto &obj) { return foldl(obj, move(init)); };
 }
 
 template<typename R, typename T>
@@ -541,7 +539,7 @@ inline T foldr(R range, T init, F func) {
 }
 
 template<typename T> inline auto foldr(T init) {
-    return [&init](auto &obj) mutable { return foldr(obj, move(init)); };
+    return [&init](auto &obj) { return foldr(obj, move(init)); };
 }
 
 template<typename T, typename F, typename R>
@@ -633,7 +631,7 @@ inline MapRange<R, F, detail::MapReturnType<R, F>> map(R range, F func) {
 }
 
 template<typename F> inline auto map(F func) {
-    return [&func](auto &obj) mutable { return map(obj, move(func)); };
+    return [&func](auto &obj) { return map(obj, move(func)); };
 }
 
 template<typename T, typename F>
@@ -706,7 +704,7 @@ inline FilterRange<R, detail::FilterPred<R, P>> filter(R range, P pred) {
 }
 
 template<typename F> inline auto filter(F func) {
-    return [&func](auto &obj) mutable { return filter(obj, move(func)); };
+    return [&func](auto &obj) { return filter(obj, move(func)); };
 }
 
 } /* namespace ostd */
