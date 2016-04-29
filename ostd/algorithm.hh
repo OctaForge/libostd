@@ -128,13 +128,20 @@ namespace detail {
 } /* namespace detail */
 
 template<typename R, typename C>
-inline void sort(R range, C compare) {
+inline R sort_cmp(R range, C compare) {
     detail::introsort(range, compare);
+    return range;
+}
+template<typename C> inline auto sort(C compare) {
+    return [&compare](auto &obj) { return sort(obj, move(compare)); };
 }
 
 template<typename R>
-inline void sort(R range) {
-    sort(range, Less<RangeValue<R>>());
+inline R sort(R range) {
+    return sort_cmp(range, Less<RangeValue<R>>());
+}
+inline auto sort() {
+    return [](auto &obj) { return sort(obj); };
 }
 
 /* min/max(_element) */
