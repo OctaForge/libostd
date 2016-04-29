@@ -144,7 +144,7 @@ inline const T &min(const T &a, const T &b) {
     return (a < b) ? a : b;
 }
 template<typename T, typename C>
-inline const T &min(const T &a, const T &b, C compare) {
+inline const T &min_cmp(const T &a, const T &b, C compare) {
     return compare(a, b) ? a : b;
 }
 
@@ -153,7 +153,7 @@ inline const T &max(const T &a, const T &b) {
     return (a < b) ? b : a;
 }
 template<typename T, typename C>
-inline const T &max(const T &a, const T &b, C compare) {
+inline const T &max_cmp(const T &a, const T &b, C compare) {
     return compare(a, b) ? b : a;
 }
 
@@ -166,12 +166,18 @@ inline R min_element(R range) {
     return r;
 }
 template<typename R, typename C>
-inline R min_element(R range, C compare) {
+inline R min_element_cmp(R range, C compare) {
     R r = range;
     for (; !range.empty(); range.pop_front())
-        if (ostd::min(r.front(), range.front(), compare) == range.front())
+        if (ostd::min_cmp(r.front(), range.front(), compare) == range.front())
             r = range;
     return r;
+}
+inline auto min_element() {
+    return [](auto &obj) { return min_element(obj); };
+}
+template<typename C> inline auto min_element_cmp(C compare) {
+    return [&compare](auto &obj) { return min_element_cmp(obj, move(compare)); };
 }
 
 template<typename R>
@@ -183,12 +189,18 @@ inline R max_element(R range) {
     return r;
 }
 template<typename R, typename C>
-inline R max_element(R range, C compare) {
+inline R max_element_cmp(R range, C compare) {
     R r = range;
     for (; !range.empty(); range.pop_front())
-        if (ostd::max(r.front(), range.front(), compare) == range.front())
+        if (ostd::max_cmp(r.front(), range.front(), compare) == range.front())
             r = range;
     return r;
+}
+inline auto max_element() {
+    return [](auto &obj) { return max_element(obj); };
+}
+template<typename C> inline auto max_element_cmp(C compare) {
+    return [&compare](auto &obj) { return max_element_cmp(obj, move(compare)); };
 }
 
 template<typename T>
@@ -196,8 +208,8 @@ inline T min(std::initializer_list<T> il) {
     return ostd::min_element(ostd::iter(il)).front();
 }
 template<typename T, typename C>
-inline T min(std::initializer_list<T> il, C compare) {
-    return ostd::min_element(ostd::iter(il), compare).front();
+inline T min_cmp(std::initializer_list<T> il, C compare) {
+    return ostd::min_element_cmp(ostd::iter(il), compare).front();
 }
 
 template<typename T>
@@ -206,8 +218,8 @@ inline T max(std::initializer_list<T> il) {
 }
 
 template<typename T, typename C>
-inline T max(std::initializer_list<T> il, C compare) {
-    return ostd::max_element(ostd::iter(il), compare).front();
+inline T max_cmp(std::initializer_list<T> il, C compare) {
+    return ostd::max_element_cmp(ostd::iter(il), compare).front();
 }
 
 /* clamp */
@@ -219,7 +231,7 @@ inline T clamp(const T &v, const U &lo, const U &hi) {
 
 template<typename T, typename U, typename C>
 inline T clamp(const T &v, const U &lo, const U &hi, C compare) {
-    return ostd::max(T(lo), ostd::min(v, T(hi), compare), compare);
+    return ostd::max_cmp(T(lo), ostd::min_cmp(v, T(hi), compare), compare);
 }
 
 /* lexicographical compare */
@@ -234,9 +246,12 @@ inline bool lexicographical_compare(R1 range1, R2 range2) {
     }
     return (range1.empty() && !range2.empty());
 }
+template<typename R> inline auto lexicographical_compare(R range) {
+    return [&range](auto &obj) { return lexicographical_compare(obj, move(range)); };
+}
 
 template<typename R1, typename R2, typename C>
-inline bool lexicographical_compare(R1 range1, R2 range2, C compare) {
+inline bool lexicographical_compare_cmp(R1 range1, R2 range2, C compare) {
     while (!range1.empty() && !range2.empty()) {
         if (compare(range1.front(), range2.front())) return true;
         if (compare(range2.front(), range1.front())) return false;
@@ -244,6 +259,12 @@ inline bool lexicographical_compare(R1 range1, R2 range2, C compare) {
         range2.pop_front();
     }
     return (range1.empty() && !range2.empty());
+}
+template<typename R, typename C>
+inline auto lexicographical_compare_cmp(R range, C compare) {
+    return [&range, &compare](auto &obj) {
+        return lexicographical_compare_cmp(obj, move(range), move(compare));
+    };
 }
 
 /* algos that don't change the range */
@@ -351,12 +372,18 @@ template<typename F> inline auto find_if_not(F func) {
 }
 
 template<typename R1, typename R2, typename C>
-inline R1 find_one_of(R1 range, R2 values, C compare) {
+inline R1 find_one_of_cmp(R1 range, R2 values, C compare) {
     for (; !range.empty(); range.pop_front())
         for (R2 rv = values; !rv.empty(); rv.pop_front())
             if (compare(range.front(), rv.front()))
                 return range;
     return range;
+}
+template<typename R, typename C>
+inline auto find_one_of_cmp(R values, C compare) {
+    return [&values, &compare](auto &obj) {
+        return find_one_of_cmp(obj, move(values), move(compare));
+    };
 }
 
 template<typename R1, typename R2>
@@ -366,6 +393,11 @@ inline R1 find_one_of(R1 range, R2 values) {
             if (range.front() == rv.front())
                 return range;
     return range;
+}
+template<typename R> inline auto find_one_of(R values) {
+    return [&values](auto &obj) {
+        return find_one_of(obj, move(values));
+    };
 }
 
 template<typename R, typename T>
