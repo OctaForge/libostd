@@ -132,8 +132,8 @@ inline R sort_cmp(R range, C compare) {
     detail::introsort(range, compare);
     return range;
 }
-template<typename C> inline auto sort(C compare) {
-    return [&compare](auto &obj) { return sort(obj, move(compare)); };
+template<typename C> inline auto sort_cmp(C compare) {
+    return [&compare](auto &obj) { return sort_cmp(obj, move(compare)); };
 }
 
 template<typename R>
