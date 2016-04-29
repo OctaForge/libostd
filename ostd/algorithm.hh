@@ -553,7 +553,7 @@ inline T foldl(R range, T init) {
 }
 
 template<typename R, typename T, typename F>
-inline T foldl(R range, T init, F func) {
+inline T foldl_f(R range, T init, F func) {
     for (; !range.empty(); range.pop_front())
         init = func(init, range.front());
     return init;
@@ -561,6 +561,11 @@ inline T foldl(R range, T init, F func) {
 
 template<typename T> inline auto foldl(T init) {
     return [&init](auto &obj) { return foldl(obj, move(init)); };
+}
+template<typename T, typename F> inline auto foldl_f(T init, F func) {
+    return [&init, &func](auto &obj) {
+        return foldl_f(obj, move(init), move(func));
+    };
 }
 
 template<typename R, typename T>
@@ -571,7 +576,7 @@ inline T foldr(R range, T init) {
 }
 
 template<typename R, typename T, typename F>
-inline T foldr(R range, T init, F func) {
+inline T foldr_f(R range, T init, F func) {
     for (; !range.empty(); range.pop_back())
         init = func(init, range.back());
     return init;
@@ -579,6 +584,11 @@ inline T foldr(R range, T init, F func) {
 
 template<typename T> inline auto foldr(T init) {
     return [&init](auto &obj) { return foldr(obj, move(init)); };
+}
+template<typename T, typename F> inline auto foldr_f(T init, F func) {
+    return [&init, &func](auto &obj) {
+        return foldr_f(obj, move(init), move(func));
+    };
 }
 
 template<typename T, typename F, typename R>
