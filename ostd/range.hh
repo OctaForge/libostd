@@ -606,16 +606,48 @@ inline auto chunks(T n) {
     return [n](auto &&obj) { return obj.chunks(n); };
 }
 
+namespace detail {
+    template<typename T, typename ...R, Size ...I>
+    inline auto join_proxy(T &&obj, Tuple<R &&...> &tup, TupleIndices<I...>) {
+        return obj.join(forward<R>(get<I>(tup))...);
+    }
+
+    template<typename T, typename ...R, Size ...I>
+    inline auto zip_proxy(T &&obj, Tuple<R &&...> &tup, TupleIndices<I...>) {
+        return obj.zip(forward<R>(get<I>(tup))...);
+    }
+}
+
+template<typename R>
+inline auto join(R &&range) {
+    return [range = forward<R>(range)](auto &&obj) mutable {
+        return obj.join(forward<R>(range));
+    };
+}
+
 template<typename R1, typename ...R>
 inline auto join(R1 &&r1, R &&...rr) {
-    /* TODO find a way to avoid a copy here with varargs */
-    return [=](auto &&obj) { return obj.join(move(r1), move(rr)...); };
+    return [ranges = forward_as_tuple(forward<R1>(r1), forward<R>(rr)...)]
+           (auto &&obj) mutable {
+        using Index = detail::MakeTupleIndices<sizeof...(R) + 1>;
+        return detail::join_proxy(forward<decltype(obj)>(obj), ranges, Index());
+    };
+}
+
+template<typename R>
+inline auto zip(R &&range) {
+    return [range = forward<R>(range)](auto &&obj) mutable {
+        return obj.zip(forward<R>(range));
+    };
 }
 
 template<typename R1, typename ...R>
 inline auto zip(R1 &&r1, R &&...rr) {
-    /* TODO find a way to avoid a copy here with varargs */
-    return [=](auto &&obj) { return obj.zip(move(r1), move(rr)...); };
+    return [ranges = forward_as_tuple(forward<R1>(r1), forward<R>(rr)...)]
+           (auto &&obj) mutable {
+        using Index = detail::MakeTupleIndices<sizeof...(R) + 1>;
+        return detail::zip_proxy(forward<decltype(obj)>(obj), ranges, Index());
+    };
 }
 
 template<typename T>
