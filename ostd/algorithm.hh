@@ -597,12 +597,13 @@ struct MapRange: InputRange<
 > {
 private:
     T p_range;
-    FunctionMakeDefaultConstructible<F> p_func;
+    F p_func;
 
 public:
     MapRange() = delete;
-    MapRange(const T &range, const F &func):
-        p_range(range), p_func(func) {}
+    template<typename FF>
+    MapRange(const T &range, FF &&func):
+        p_range(range), p_func(forward<FF>(func)) {}
     MapRange(const MapRange &it):
         p_range(it.p_range), p_func(it.p_func) {}
     MapRange(MapRange &&it):
@@ -675,8 +676,7 @@ namespace detail {
 
 template<typename R, typename F>
 inline MapRange<R, F, detail::MapReturnType<R, F>> map(R range, F func) {
-    return MapRange<R, F, detail::MapReturnType<R, F>>(range,
-        func);
+    return MapRange<R, F, detail::MapReturnType<R, F>>(range, move(func));
 }
 
 template<typename F> inline auto map(F func) {
@@ -690,7 +690,7 @@ struct FilterRange: InputRange<
 > {
 private:
     T p_range;
-    FunctionMakeDefaultConstructible<F> p_pred;
+    F p_pred;
 
     void advance_valid() {
         while (!p_range.empty() && !p_pred(front())) p_range.pop_front();
@@ -699,8 +699,8 @@ private:
 public:
     FilterRange() = delete;
     template<typename P>
-    FilterRange(const T &range, const P &pred): p_range(range),
-    p_pred(pred) {
+    FilterRange(const T &range, P &&pred): p_range(range),
+    p_pred(forward<P>(pred)) {
         advance_valid();
     }
     FilterRange(const FilterRange &it): p_range(it.p_range),
