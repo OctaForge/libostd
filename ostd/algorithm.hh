@@ -41,7 +41,7 @@ inline bool is_partitioned(R range, P pred) {
     return true;
 }
 
-template<typename F> inline bool is_partitioned(F func) {
+template<typename F> inline auto is_partitioned(F func) {
     return [func = move(func)](auto &obj) { return is_partitioned(obj, move(func)); };
 }
 
