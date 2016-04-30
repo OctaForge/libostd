@@ -608,12 +608,12 @@ inline auto chunks(T n) {
 
 namespace detail {
     template<typename T, typename ...R, Size ...I>
-    inline auto join_proxy(T &&obj, Tuple<R &&...> &tup, TupleIndices<I...>) {
+    inline auto join_proxy(T &&obj, Tuple<R &&...> &&tup, TupleIndices<I...>) {
         return obj.join(forward<R>(get<I>(tup))...);
     }
 
     template<typename T, typename ...R, Size ...I>
-    inline auto zip_proxy(T &&obj, Tuple<R &&...> &tup, TupleIndices<I...>) {
+    inline auto zip_proxy(T &&obj, Tuple<R &&...> &&tup, TupleIndices<I...>) {
         return obj.zip(forward<R>(get<I>(tup))...);
     }
 }
@@ -630,7 +630,8 @@ inline auto join(R1 &&r1, R &&...rr) {
     return [ranges = forward_as_tuple(forward<R1>(r1), forward<R>(rr)...)]
            (auto &&obj) mutable {
         using Index = detail::MakeTupleIndices<sizeof...(R) + 1>;
-        return detail::join_proxy(forward<decltype(obj)>(obj), ranges, Index());
+        return detail::join_proxy(forward<decltype(obj   )>(obj),
+                                  forward<decltype(ranges)>(ranges), Index());
     };
 }
 
@@ -646,7 +647,8 @@ inline auto zip(R1 &&r1, R &&...rr) {
     return [ranges = forward_as_tuple(forward<R1>(r1), forward<R>(rr)...)]
            (auto &&obj) mutable {
         using Index = detail::MakeTupleIndices<sizeof...(R) + 1>;
-        return detail::zip_proxy(forward<decltype(obj)>(obj), ranges, Index());
+        return detail::zip_proxy(forward<decltype(obj   )>(obj),
+                                 forward<decltype(ranges)>(ranges), Index());
     };
 }
 
