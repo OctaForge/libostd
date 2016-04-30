@@ -608,12 +608,14 @@ inline auto chunks(T n) {
 
 template<typename R1, typename ...R>
 inline auto join(R1 r1, R ...rr) {
-    return [&](auto &obj) { return obj.join(move(r1), move(rr)...); };
+    /* TODO find a way to avoid a copy here with varargs */
+    return [=](auto &obj) { return obj.join(move(r1), move(rr)...); };
 }
 
 template<typename R1, typename ...R>
 inline auto zip(R1 r1, R ...rr) {
-    return [&](auto &obj) { return obj.zip(move(r1), move(rr)...); };
+    /* TODO find a way to avoid a copy here with varargs */
+    return [=](auto &obj) { return obj.zip(move(r1), move(rr)...); };
 }
 
 template<typename T>
