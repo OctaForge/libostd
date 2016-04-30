@@ -580,42 +580,42 @@ template<typename B, typename C, typename V, typename R = V &,
 };
 
 template<typename R, typename F, typename = EnableIf<IsInputRange<R>>>
-inline auto operator|(const R &range, F func) {
-    return func(range);
+inline auto operator|(R &&range, F &&func) {
+    return func(forward<R>(range));
 }
 
 inline auto reverse() {
-    return [](auto &obj) { return obj.reverse(); };
+    return [](auto &&obj) { return obj.reverse(); };
 }
 
 inline auto movable() {
-    return [](auto &obj) { return obj.movable(); };
+    return [](auto &&obj) { return obj.movable(); };
 }
 
 inline auto enumerate() {
-    return [](auto &obj) { return obj.enumerate(); };
+    return [](auto &&obj) { return obj.enumerate(); };
 }
 
 template<typename T>
 inline auto take(T n) {
-    return [n](auto &obj) { return obj.take(n); };
+    return [n](auto &&obj) { return obj.take(n); };
 }
 
 template<typename T>
 inline auto chunks(T n) {
-    return [n](auto &obj) { return obj.chunks(n); };
+    return [n](auto &&obj) { return obj.chunks(n); };
 }
 
 template<typename R1, typename ...R>
-inline auto join(R1 r1, R ...rr) {
+inline auto join(R1 &&r1, R &&...rr) {
     /* TODO find a way to avoid a copy here with varargs */
-    return [=](auto &obj) { return obj.join(move(r1), move(rr)...); };
+    return [=](auto &&obj) { return obj.join(move(r1), move(rr)...); };
 }
 
 template<typename R1, typename ...R>
-inline auto zip(R1 r1, R ...rr) {
+inline auto zip(R1 &&r1, R &&...rr) {
     /* TODO find a way to avoid a copy here with varargs */
-    return [=](auto &obj) { return obj.zip(move(r1), move(rr)...); };
+    return [=](auto &&obj) { return obj.zip(move(r1), move(rr)...); };
 }
 
 template<typename T>
