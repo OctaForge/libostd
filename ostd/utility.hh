@@ -231,6 +231,10 @@ namespace detail {
         static const T &get(const Pair<T, U> &p) { return p.first; }
         template<typename T, typename U>
         static T &&get(Pair<T, U> &&p) { return forward<T>(p.first); }
+        template<typename T, typename U>
+        static const T &&get(const Pair<T, U> &&p) {
+            return forward<const T>(p.first);
+        }
     };
 
     template<> struct GetPair<1> {
@@ -240,6 +244,10 @@ namespace detail {
         static const U &get(const Pair<T, U> &p) { return p.second; }
         template<typename T, typename U>
         static U &&get(Pair<T, U> &&p) { return forward<U>(p.second); }
+        template<typename T, typename U>
+        static const T &&get(const Pair<T, U> &&p) {
+            return forward<const T>(p.second);
+        }
     };
 }
 
@@ -255,6 +263,11 @@ const TupleElement<I, Pair<T, U>> &get(const Pair<T, U> &p) {
 
 template<Size I, typename T, typename U>
 TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) {
+    return detail::GetPair<I>::get(move(p));
+}
+
+template<Size I, typename T, typename U>
+const TupleElement<I, Pair<T, U>> &&get(const Pair<T, U> &&p) {
     return detail::GetPair<I>::get(move(p));
 }
 

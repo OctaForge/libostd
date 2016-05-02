@@ -277,6 +277,9 @@ class Tuple {
     template<Size I, typename ...T>
     friend TupleElement<I, Tuple<T...>> &&get(Tuple<T...> &&);
 
+    template<Size I, typename ...T>
+    friend const TupleElement<I, Tuple<T...>> &&get(const Tuple<T...> &&);
+
 public:
     template<bool D = true, typename = EnableIf<
         detail::TupleAll<(D && IsDefaultConstructible<A>)...>
@@ -421,7 +424,13 @@ inline const TupleElement<I, Tuple<A...>> &get(const Tuple<A...> &t) {
 template<Size I, typename ...A>
 inline TupleElement<I, Tuple<A...>> &&get(Tuple<A...> &&t) {
     using Type = TupleElement<I, Tuple<A...>>;
-    return ((detail::TupleLeaf<I, Type> &&)t.p_base).get();
+    return (Type &&)(((detail::TupleLeaf<I, Type> &&)t.p_base).get());
+}
+
+template<Size I, typename ...A>
+inline const TupleElement<I, Tuple<A...>> &&get(const Tuple<A...> &&t) {
+    using Type = TupleElement<I, Tuple<A...>>;
+    return (const Type &&)(((const detail::TupleLeaf<I, Type> &&)t.p_base).get());
 }
 
 /* tie */

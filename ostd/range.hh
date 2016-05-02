@@ -609,12 +609,12 @@ inline auto chunks(T n) {
 namespace detail {
     template<typename T, typename ...R, Size ...I>
     inline auto join_proxy(T &&obj, Tuple<R &&...> &&tup, TupleIndices<I...>) {
-        return obj.join(forward<R>(get<I>(tup))...);
+        return obj.join(forward<R>(get<I>(forward<Tuple<R &&...>>(tup)))...);
     }
 
     template<typename T, typename ...R, Size ...I>
     inline auto zip_proxy(T &&obj, Tuple<R &&...> &&tup, TupleIndices<I...>) {
-        return obj.zip(forward<R>(get<I>(tup))...);
+        return obj.zip(forward<R>(get<I>(forward<Tuple<R &&...>>(tup)))...);
     }
 }
 

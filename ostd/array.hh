@@ -96,7 +96,12 @@ const TupleElement<I, Array<T, N>> &get(const Array<T, N> &a) {
 
 template<Size I, typename T, Size N>
 TupleElement<I, Array<T, N>> &&get(Array<T, N> &&a) {
-    return a[I];
+    return move(a.p_buf[I]);
+}
+
+template<Size I, typename T, Size N>
+const TupleElement<I, Array<T, N>> &&get(const Array<T, N> &&a) {
+    return move(a.p_buf[I]);
 }
 
 template<typename T, Size N>
