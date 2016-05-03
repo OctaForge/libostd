@@ -1,3 +1,6 @@
+#include <time.h>
+
+#include <ostd/array.hh>
 #include <ostd/range.hh>
 #include <ostd/io.hh>
 #include <ostd/algorithm.hh>
@@ -53,4 +56,25 @@ int main() {
     writeln("2-tuple range zip");
     for (auto v: iter({ 5, 10, 15, 20 }) | zip(iter({ 6, 11, 16, 21 })))
         writeln(v.first, ", ", v.second);
+
+    /* more complex pipe */
+    writeln("several piped algorithms");
+
+    srand(time(0));
+    Array<int, 100> arr;
+    generate(arr.iter(), []() { return rand() % 128; });
+
+    auto r = arr.iter()
+        | sort()
+        | filter([](auto v) { return v >= 65 && v <= 90; })
+        |    map([](auto v) { return char(v); });
+
+    writeln(String(r));
+
+    /* "list comprehensions" */
+    writeln("list initialization");
+
+    Vector<int> test(range(20) | filter([](int v) { return v % 2 == 0; })
+                               |    map([](int v) { return v * 2; }));
+    writeln(test);
 }
