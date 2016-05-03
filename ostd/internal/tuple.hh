@@ -56,48 +56,48 @@ template<typename T> constexpr bool IsTupleLike<const volatile T> = IsTupleLike<
 template<typename ...A> constexpr bool IsTupleLike<Tuple<A...>> = true;
 
 template<Size I, typename ...A>
-TupleElement<I, Tuple<A...>> &get(Tuple<A...> &);
+inline TupleElement<I, Tuple<A...>> &get(Tuple<A...> &);
 
 template<Size I, typename ...A>
-const TupleElement<I, Tuple<A...>> &get(const Tuple<A...> &);
+inline const TupleElement<I, Tuple<A...>> &get(const Tuple<A...> &);
 
 template<Size I, typename ...A>
-TupleElement<I, Tuple<A...>> &&get(Tuple<A...> &&);
+inline TupleElement<I, Tuple<A...>> &&get(Tuple<A...> &&);
 
 template<Size I, typename ...A>
-const TupleElement<I, Tuple<A...>> &&get(const Tuple<A...> &&);
+inline const TupleElement<I, Tuple<A...>> &&get(const Tuple<A...> &&);
 
 /* pair specializations */
 
 template<typename T, typename U> constexpr bool IsTupleLike<Pair<T, U>> = true;
 
 template<Size I, typename T, typename U>
-TupleElement<I, Pair<T, U>> &get(Pair<T, U> &);
+inline TupleElement<I, Pair<T, U>> &get(Pair<T, U> &);
 
 template<Size I, typename T, typename U>
-const TupleElement<I, Pair<T, U>> &get(const Pair<T, U> &);
+inline const TupleElement<I, Pair<T, U>> &get(const Pair<T, U> &);
 
 template<Size I, typename T, typename U>
-TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&);
+inline TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&);
 
 template<Size I, typename T, typename U>
-const TupleElement<I, Pair<T, U>> &&get(const Pair<T, U> &&);
+inline const TupleElement<I, Pair<T, U>> &&get(const Pair<T, U> &&);
 
 /* array specializations */
 
 template<typename T, Size I> constexpr bool IsTupleLike<Array<T, I>> = true;
 
 template<Size I, typename T, Size S>
-T &get(Array<T, S> &);
+inline T &get(Array<T, S> &);
 
 template<Size I, typename T, Size S>
-const T &get(const Array<T, S> &);
+inline const T &get(const Array<T, S> &);
 
 template<Size I, typename T, Size S>
-T &&get(Array<T, S> &&);
+inline T &&get(Array<T, S> &&);
 
 template<Size I, typename T, Size S>
-const T &&get(const Array<T, S> &&);
+inline const T &&get(const Array<T, S> &&);
 
 /* make tuple indices */
 

@@ -252,22 +252,22 @@ namespace detail {
 }
 
 template<Size I, typename T, typename U>
-TupleElement<I, Pair<T, U>> &get(Pair<T, U> &p) {
+inline TupleElement<I, Pair<T, U>> &get(Pair<T, U> &p) {
     return detail::GetPair<I>::get(p);
 }
 
 template<Size I, typename T, typename U>
-const TupleElement<I, Pair<T, U>> &get(const Pair<T, U> &p) {
+inline const TupleElement<I, Pair<T, U>> &get(const Pair<T, U> &p) {
     return detail::GetPair<I>::get(p);
 }
 
 template<Size I, typename T, typename U>
-TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) {
+inline TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) {
     return detail::GetPair<I>::get(move(p));
 }
 
 template<Size I, typename T, typename U>
-const TupleElement<I, Pair<T, U>> &&get(const Pair<T, U> &&p) {
+inline const TupleElement<I, Pair<T, U>> &&get(const Pair<T, U> &&p) {
     return detail::GetPair<I>::get(move(p));
 }
 
