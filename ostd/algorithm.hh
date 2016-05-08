@@ -661,7 +661,7 @@ struct MapRange: InputRange<
 > {
 private:
     T p_range;
-    F p_func;
+    Decay<F> p_func;
 
 public:
     MapRange() = delete;
@@ -757,7 +757,7 @@ struct FilterRange: InputRange<
 > {
 private:
     T p_range;
-    F p_pred;
+    Decay<F> p_pred;
 
     void advance_valid() {
         while (!p_range.empty() && !p_pred(front())) p_range.pop_front();
@@ -816,7 +816,7 @@ namespace detail {
 
 template<typename R, typename P>
 inline FilterRange<R, detail::FilterPred<R, P>> filter(R range, P pred) {
-    return FilterRange<R, P>(range, pred);
+    return FilterRange<R, P>(range, move(pred));
 }
 
 template<typename F>
