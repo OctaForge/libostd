@@ -910,7 +910,19 @@ String to_string(std::initializer_list<T> init) {
 
 /* TODO: rvalue ref versions for rhs when we have efficient prepend */
 
-inline String operator+(ConstCharRange lhs, ConstCharRange rhs) {
+inline String operator+(const String &lhs, ConstCharRange rhs) {
+    String ret(lhs); ret += rhs; return ret;
+}
+
+inline String operator+(ConstCharRange lhs, const String &rhs) {
+    String ret(lhs); ret += rhs; return ret;
+}
+
+inline String operator+(const String &lhs, char rhs) {
+    String ret(lhs); ret += rhs; return ret;
+}
+
+inline String operator+(char lhs, const String &rhs) {
     String ret(lhs); ret += rhs; return ret;
 }
 
@@ -918,16 +930,8 @@ inline String operator+(String &&lhs, ConstCharRange rhs) {
     String ret(move(lhs)); ret += rhs; return ret;
 }
 
-inline String operator+(ConstCharRange lhs, char rhs) {
-    String ret(lhs); ret += rhs; return ret;
-}
-
 inline String operator+(String &&lhs, char rhs) {
     String ret(move(lhs)); ret += rhs; return ret;
-}
-
-inline String operator+(char lhs, ConstCharRange rhs) {
-    String ret(lhs); ret += rhs; return ret;
 }
 
 template<typename R>
