@@ -528,10 +528,7 @@ public:
         return append(r);
     }
     StringBase &operator+=(T c) {
-        reserve(p_len + 1);
-        p_buf.first()[p_len++] = c;
-        p_buf.first()[p_len] = '\0';
-        return *this;
+        return append(1, c);
     }
     template<typename R>
     StringBase &operator+=(const R &v) {
