@@ -502,7 +502,7 @@ public:
     }
 
     StringBase &append(Size n, T c) {
-        if (!n) return;
+        if (!n) return *this;
         reserve(p_len + n);
         for (Size i = 0; i < n; ++n) p_buf.first()[p_len + i] = c;
         p_len += n;
