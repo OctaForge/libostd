@@ -7,7 +7,7 @@ using namespace ostd;
 int main() {
     writeln("writing sample file...");
 
-    FileStream wtest("test.txt", StreamMode::write);
+    FileStream wtest{"test.txt", StreamMode::write};
 
     String smpl = "This is a test file for later read.\n"
                   "It contains some sample text in order to see whether "
@@ -19,18 +19,18 @@ int main() {
     copy(smpl.iter(), wtest.iter());
     wtest.close();
 
-    FileStream test("test.txt");
+    FileStream test{"test.txt"};
 
     writeln("## WHOLE FILE READ ##\n");
 
-    String ts1(test.iter());
+    String ts1{test.iter()};
     writefln("-- str beg --\n%s-- str end --", ts1);
 
     test.seek(0);
 
     writeln("\n## PART FILE READ ##\n");
 
-    String ts2(test.iter().take(25));
+    String ts2{test.iter().take(25)};
     writefln("-- str beg --\n%s\n-- str end --", ts2);
 
     return 0;

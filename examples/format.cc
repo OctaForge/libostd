@@ -72,12 +72,12 @@ int main() {
     writefln("[ %#(<%d|%f|%s>%|, %) ]", xt);
 
     /* custom format */
-    writefln("%s", Foo());
-    writefln("%i", Foo());
+    writefln("%s", Foo{});
+    writefln("%i", Foo{});
 
     /* custom format via method */
-    writefln("%s", Bar());
-    writefln("%i", Bar());
+    writefln("%s", Bar{});
+    writefln("%i", Bar{});
 
     /* format into string */
     auto s = appender<String>();
