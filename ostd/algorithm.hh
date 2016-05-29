@@ -55,7 +55,7 @@ inline auto is_partitioned(F &&func) {
 
 namespace detail {
     template<typename R, typename C>
-    static void insort(R range, C compare) {
+    static void insort(R range, C &compare) {
         RangeSize<R> rlen = range.size();
         for (RangeSize<R> i = 1; i < rlen; ++i) {
             RangeSize<R> j = i;
@@ -70,7 +70,7 @@ namespace detail {
 
     template<typename R, typename C>
     static void hs_sift_down(R range, RangeSize<R> s,
-    RangeSize<R> e, C compare) {
+                             RangeSize<R> e, C &compare) {
         RangeSize<R> r = s;
         while ((r * 2 + 1) <= e) {
             RangeSize<R> ch = r * 2 + 1;
@@ -87,7 +87,7 @@ namespace detail {
     }
 
     template<typename R, typename C>
-    static void heapsort(R range, C compare) {
+    static void heapsort(R range, C &compare) {
         RangeSize<R> len = range.size();
         RangeSize<R> st = (len - 2) / 2;
         for (;;) {
@@ -103,7 +103,7 @@ namespace detail {
     }
 
     template<typename R, typename C>
-    static void introloop(R range, C compare, RangeSize<R> depth) {
+    static void introloop(R range, C &compare, RangeSize<R> depth) {
         if (range.size() <= 10) {
             detail::insort(range, compare);
             return;
@@ -127,7 +127,7 @@ namespace detail {
     }
 
     template<typename R, typename C>
-    inline void introsort(R range, C compare) {
+    inline void introsort(R range, C &compare) {
         detail::introloop(range, compare, RangeSize<R>(2
             * (log(range.size()) / log(2))));
     }
