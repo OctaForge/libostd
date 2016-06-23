@@ -21,29 +21,29 @@ struct Array {
     using Difference = Ptrdiff;
     using Value = T;
     using Reference = T &;
-    using ConstReference = const T &;
+    using ConstReference = T const &;
     using Pointer = T *;
-    using ConstPointer = const T *;
+    using ConstPointer = T const *;
     using Range = PointerRange<T>;
-    using ConstRange = PointerRange<const T>;
+    using ConstRange = PointerRange<T const>;
 
     T &operator[](Size i) { return p_buf[i]; }
-    const T &operator[](Size i) const { return p_buf[i]; }
+    T const &operator[](Size i) const { return p_buf[i]; }
 
     T *at(Size i) {
         if (!in_range(i)) return nullptr;
         return &p_buf[i];
     }
-    const T *at(Size i) const {
+    T const *at(Size i) const {
         if (!in_range(i)) return nullptr;
         return &p_buf[i];
     }
 
     T &front() { return p_buf[0]; }
-    const T &front() const { return p_buf[0]; }
+    T const &front() const { return p_buf[0]; }
 
     T &back() { return p_buf[(N > 0) ? (N - 1) : 0]; }
-    const T &back() const { return p_buf[(N > 0) ? (N - 1) : 0]; }
+    T const &back() const { return p_buf[(N > 0) ? (N - 1) : 0]; }
 
     Size size() const { return N; }
     Size max_size() const { return Size(~0) / sizeof(T); }
@@ -90,7 +90,7 @@ inline TupleElement<I, Array<T, N>> &get(Array<T, N> &a) {
 }
 
 template<Size I, typename T, Size N>
-inline const TupleElement<I, Array<T, N>> &get(const Array<T, N> &a) {
+inline TupleElement<I, Array<T, N>> const &get(Array<T, N> const &a) {
     return a[I];
 }
 
@@ -100,37 +100,37 @@ inline TupleElement<I, Array<T, N>> &&get(Array<T, N> &&a) {
 }
 
 template<Size I, typename T, Size N>
-inline const TupleElement<I, Array<T, N>> &&get(const Array<T, N> &&a) {
+inline TupleElement<I, Array<T, N>> const &&get(Array<T, N> const &&a) {
     return move(a.p_buf[I]);
 }
 
 template<typename T, Size N>
-inline bool operator==(const Array<T, N> &x, const Array<T, N> &y) {
+inline bool operator==(Array<T, N> const &x, Array<T, N> const &y) {
     return equal(x.iter(), y.iter());
 }
 
 template<typename T, Size N>
-inline bool operator!=(const Array<T, N> &x, const Array<T, N> &y) {
+inline bool operator!=(Array<T, N> const &x, Array<T, N> const &y) {
     return !(x == y);
 }
 
 template<typename T, Size N>
-inline bool operator<(const Array<T, N> &x, const Array<T, N> &y) {
+inline bool operator<(Array<T, N> const &x, Array<T, N> const &y) {
     return lexicographical_compare(x.iter(), y.iter());
 }
 
 template<typename T, Size N>
-inline bool operator>(const Array<T, N> &x, const Array<T, N> &y) {
+inline bool operator>(Array<T, N> const &x, Array<T, N> const &y) {
     return (y < x);
 }
 
 template<typename T, Size N>
-inline bool operator<=(const Array<T, N> &x, const Array<T, N> &y) {
+inline bool operator<=(Array<T, N> const &x, Array<T, N> const &y) {
     return !(y < x);
 }
 
 template<typename T, Size N>
-inline bool operator>=(const Array<T, N> &x, const Array<T, N> &y) {
+inline bool operator>=(Array<T, N> const &x, Array<T, N> const &y) {
     return !(x < y);
 }
 

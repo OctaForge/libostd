@@ -36,7 +36,7 @@ namespace detail {
 
         constexpr MaybeStorage(): p_null_state('\0') {}
 
-        MaybeStorage(const MaybeStorage &v): p_engaged(v.p_engaged) {
+        MaybeStorage(MaybeStorage const &v): p_engaged(v.p_engaged) {
             if (p_engaged) ::new(address_of(p_value)) Value(v.p_value);
         }
 
@@ -45,7 +45,7 @@ namespace detail {
                 ::new(address_of(p_value)) Value(move(v.p_value));
         }
 
-        constexpr MaybeStorage(const Value &v): p_value(v), p_engaged(true) {}
+        constexpr MaybeStorage(Value const &v): p_value(v), p_engaged(true) {}
         constexpr MaybeStorage(Value &&v): p_value(move(v)), p_engaged(true) {}
 
         template<typename ...A> constexpr MaybeStorage(InPlace, A &&...args):
@@ -68,7 +68,7 @@ namespace detail {
 
         constexpr MaybeStorage(): p_null_state('\0') {}
 
-        MaybeStorage(const MaybeStorage &v): p_engaged(v.p_engaged) {
+        MaybeStorage(MaybeStorage const &v): p_engaged(v.p_engaged) {
             if (p_engaged) ::new(address_of(p_value)) Value(v.p_value);
         }
 
@@ -77,7 +77,7 @@ namespace detail {
                 ::new(address_of(p_value)) Value(move(v.p_value));
         }
 
-        constexpr MaybeStorage(const Value &v): p_value(v), p_engaged(true) {}
+        constexpr MaybeStorage(Value const &v): p_value(v), p_engaged(true) {}
         constexpr MaybeStorage(Value &&v):
             p_value(move(v)), p_engaged(true) {}
 
@@ -105,10 +105,10 @@ public:
         "Initialization of Maybe with a non-destructible object is not allowed.");
 
     constexpr Maybe() {}
-    Maybe(const Maybe &) = default;
+    Maybe(Maybe const &) = default;
     Maybe(Maybe &&) = default;
     constexpr Maybe(Nothing) {}
-    constexpr Maybe(const Value &v): Base(v) {}
+    constexpr Maybe(Value const &v): Base(v) {}
     constexpr Maybe(Value &&v): Base(move(v)) {}
 
     template<typename ...A, typename = EnableIf<IsConstructible<T, A...>>>
@@ -131,7 +131,7 @@ public:
         return *this;
     }
 
-    Maybe &operator=(const Maybe &v) {
+    Maybe &operator=(Maybe const &v) {
         if (this->p_engaged == v.p_engaged) {
             if (this->p_engaged) this->p_value = v.p_value;
         } else {
@@ -189,7 +189,7 @@ public:
         this->p_engaged = true;
     }
 
-    constexpr const Value *operator->() const {
+    constexpr Value const *operator->() const {
         return address_of(this->p_value);
     }
 
@@ -197,7 +197,7 @@ public:
         return address_of(this->p_value);
     }
 
-    constexpr const Value &operator*() const {
+    constexpr Value const &operator*() const {
         return this->p_value;
     }
 
@@ -207,7 +207,7 @@ public:
 
     constexpr explicit operator bool() const { return this->p_engaged; }
 
-    constexpr const Value &value() const {
+    constexpr Value const &value() const {
         return this->p_value;
     }
 
@@ -257,156 +257,156 @@ public:
 /* maybe vs maybe */
 
 template<typename T>
-inline constexpr bool operator==(const Maybe<T> &a, const Maybe<T> &b) {
+inline constexpr bool operator==(Maybe<T> const &a, Maybe<T> const &b) {
     return (bool(a) != bool(b)) ? false : (!bool(a) ? true : (*a == *b));
 }
 
 template<typename T>
-inline constexpr bool operator!=(const Maybe<T> &a, const Maybe<T> &b) {
+inline constexpr bool operator!=(Maybe<T> const &a, Maybe<T> const &b) {
     return !(a == b);
 }
 
 template<typename T>
-inline constexpr bool operator<(const Maybe<T> &a, const Maybe<T> &b) {
+inline constexpr bool operator<(Maybe<T> const &a, Maybe<T> const &b) {
     return !bool(b) ? false : (!bool(a) ? true : (*a < *b));
 }
 
 template<typename T>
-inline constexpr bool operator>(const Maybe<T> &a, const Maybe<T> &b) {
+inline constexpr bool operator>(Maybe<T> const &a, Maybe<T> const &b) {
     return b < a;
 }
 
 template<typename T>
-inline constexpr bool operator<=(const Maybe<T> &a, const Maybe<T> &b) {
+inline constexpr bool operator<=(Maybe<T> const &a, Maybe<T> const &b) {
     return !(b < a);
 }
 
 template<typename T>
-inline constexpr bool operator>=(const Maybe<T> &a, const Maybe<T> &b) {
+inline constexpr bool operator>=(Maybe<T> const &a, Maybe<T> const &b) {
     return !(a < b);
 }
 
 /* maybe vs nothing */
 
 template<typename T>
-inline constexpr bool operator==(const Maybe<T> &v, Nothing) {
+inline constexpr bool operator==(Maybe<T> const &v, Nothing) {
     return !bool(v);
 }
 
 template<typename T>
-inline constexpr bool operator==(Nothing, const Maybe<T> &v) {
+inline constexpr bool operator==(Nothing, Maybe<T> const &v) {
     return !bool(v);
 }
 
 template<typename T>
-inline constexpr bool operator!=(const Maybe<T> &v, Nothing) {
+inline constexpr bool operator!=(Maybe<T> const &v, Nothing) {
     return bool(v);
 }
 
 template<typename T>
-inline constexpr bool operator!=(Nothing, const Maybe<T> &v) {
+inline constexpr bool operator!=(Nothing, Maybe<T> const &v) {
     return bool(v);
 }
 
 template<typename T>
-inline constexpr bool operator<(const Maybe<T> &, Nothing) {
+inline constexpr bool operator<(Maybe<T> const &, Nothing) {
     return false;
 }
 
 template<typename T>
-inline constexpr bool operator<(Nothing, const Maybe<T> &v) {
+inline constexpr bool operator<(Nothing, Maybe<T> const &v) {
     return bool(v);
 }
 
 template<typename T>
-inline constexpr bool operator<=(const Maybe<T> &v, Nothing) {
+inline constexpr bool operator<=(Maybe<T> const &v, Nothing) {
     return !bool(v);
 }
 
 template<typename T>
-inline constexpr bool operator<=(Nothing, const Maybe<T> &) {
+inline constexpr bool operator<=(Nothing, Maybe<T> const &) {
     return true;
 }
 
 template<typename T>
-inline constexpr bool operator>(const Maybe<T> &v, Nothing) {
+inline constexpr bool operator>(Maybe<T> const &v, Nothing) {
     return bool(v);
 }
 
 template<typename T>
-inline constexpr bool operator>(Nothing, const Maybe<T> &) {
+inline constexpr bool operator>(Nothing, Maybe<T> const &) {
     return false;
 }
 
 template<typename T>
-inline constexpr bool operator>=(const Maybe<T> &, Nothing) {
+inline constexpr bool operator>=(Maybe<T> const &, Nothing) {
     return true;
 }
 
 template<typename T>
-inline constexpr bool operator>=(Nothing, const Maybe<T> &v) {
+inline constexpr bool operator>=(Nothing, Maybe<T> const &v) {
     return !bool(v);
 }
 
 /* maybe vs T */
 
 template<typename T>
-inline constexpr bool operator==(const Maybe<T> &a, const T &b) {
+inline constexpr bool operator==(Maybe<T> const &a, T const &b) {
     return bool(a) ? (*a == b) : false;
 }
 
 template<typename T>
-inline constexpr bool operator==(const T &b, const Maybe<T> &a) {
+inline constexpr bool operator==(T const &b, Maybe<T> const &a) {
     return bool(a) ? (*a == b) : false;
 }
 
 template<typename T>
-inline constexpr bool operator!=(const Maybe<T> &a, const T &b) {
+inline constexpr bool operator!=(Maybe<T> const &a, T const &b) {
     return bool(a) ? !(*a == b) : true;
 }
 
 template<typename T>
-inline constexpr bool operator!=(const T &b, const Maybe<T> &a) {
+inline constexpr bool operator!=(T const &b, Maybe<T> const &a) {
     return bool(a) ? !(*a == b) : true;
 }
 
 template<typename T>
-inline constexpr bool operator<(const Maybe<T> &a, const T &b) {
+inline constexpr bool operator<(Maybe<T> const &a, T const &b) {
     return bool(a) ? Less<T>()(*a, b) : true;
 }
 
 template<typename T>
-inline constexpr bool operator<(const T &b, const Maybe<T> &a) {
+inline constexpr bool operator<(T const &b, Maybe<T> const &a) {
     return bool(a) ? Less<T>()(b, *a) : false;
 }
 
 template<typename T>
-inline constexpr bool operator<=(const Maybe<T> &a, const T &b) {
+inline constexpr bool operator<=(Maybe<T> const &a, T const &b) {
     return !(a > b);
 }
 
 template<typename T>
-inline constexpr bool operator<=(const T &b, const Maybe<T> &a) {
+inline constexpr bool operator<=(T const &b, Maybe<T> const &a) {
     return !(b > a);
 }
 
 template<typename T>
-inline constexpr bool operator>(const Maybe<T> &a, const T &b) {
+inline constexpr bool operator>(Maybe<T> const &a, T const &b) {
     return bool(a) ? (b < a) : true;
 }
 
 template<typename T>
-inline constexpr bool operator>(const T &b, const Maybe<T> &a) {
+inline constexpr bool operator>(T const &b, Maybe<T> const &a) {
     return bool(a) ? (a < b) : true;
 }
 
 template<typename T>
-inline constexpr bool operator>=(const Maybe<T> &a, const T &b) {
+inline constexpr bool operator>=(Maybe<T> const &a, T const &b) {
     return !(a < b);
 }
 
 template<typename T>
-inline constexpr bool operator>=(const T &b, const Maybe<T> &a) {
+inline constexpr bool operator>=(T const &b, Maybe<T> const &a) {
     return !(b < a);
 }
 

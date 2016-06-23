@@ -18,9 +18,9 @@ namespace ostd {
 
 namespace detail {
     template<typename K, typename T, typename A> struct MapBase {
-        using Element = Pair<const K, T>;
+        using Element = Pair<K const, T>;
 
-        static inline const K &get_key(Element &e) {
+        static inline K const &get_key(Element &e) {
             return e.first;
         }
         static inline T &get_data(Element &e) {
@@ -41,11 +41,11 @@ namespace detail {
         typename K, typename T, typename H,
         typename C, typename A, bool IsMultihash
     > struct MapImpl: detail::Hashtable<detail::MapBase<K, T, A>,
-        Pair<const K, T>, K, T, H, C, A, IsMultihash
+        Pair<K const, T>, K, T, H, C, A, IsMultihash
     > {
     private:
         using Base = detail::Hashtable<detail::MapBase<K, T, A>,
-            Pair<const K, T>, K, T, H, C, A, IsMultihash
+            Pair<K const, T>, K, T, H, C, A, IsMultihash
         >;
 
     public:
@@ -55,40 +55,40 @@ namespace detail {
         using Difference = Ptrdiff;
         using Hasher = H;
         using KeyEqual = C;
-        using Value = Pair<const K, T>;
+        using Value = Pair<K const, T>;
         using Reference = Value &;
         using Pointer = AllocatorPointer<A>;
         using ConstPointer = AllocatorConstPointer<A>;
-        using Range = HashRange<Pair<const K, T>>;
-        using ConstRange = HashRange<const Pair<const K, T>>;
-        using LocalRange = BucketRange<Pair<const K, T>>;
-        using ConstLocalRange = BucketRange<const Pair<const K, T>>;
+        using Range = HashRange<Pair<K const, T>>;
+        using ConstRange = HashRange<Pair<K const, T> const>;
+        using LocalRange = BucketRange<Pair<K const, T>>;
+        using ConstLocalRange = BucketRange<Pair<K const, T> const>;
         using Allocator = A;
 
-        explicit MapImpl(Size size, const H &hf = H(),
-            const C &eqf = C(), const A &alloc = A()
+        explicit MapImpl(Size size, H const &hf = H(),
+            C const &eqf = C(), A const &alloc = A()
         ): Base(size, hf, eqf, alloc) {}
 
         MapImpl(): MapImpl(0) {}
-        explicit MapImpl(const A &alloc): MapImpl(0, H(), C(), alloc) {}
+        explicit MapImpl(A const &alloc): MapImpl(0, H(), C(), alloc) {}
 
-        MapImpl(Size size, const A &alloc):
+        MapImpl(Size size, A const &alloc):
             MapImpl(size, H(), C(), alloc) {}
-        MapImpl(Size size, const H &hf, const A &alloc):
+        MapImpl(Size size, H const &hf, A const &alloc):
             MapImpl(size, hf, C(), alloc) {}
 
-        MapImpl(const MapImpl &m): Base(m,
+        MapImpl(MapImpl const &m): Base(m,
             allocator_container_copy(m.get_alloc())) {}
 
-        MapImpl(const MapImpl &m, const A &alloc): Base(m, alloc) {}
+        MapImpl(MapImpl const &m, A const &alloc): Base(m, alloc) {}
 
         MapImpl(MapImpl &&m): Base(move(m)) {}
-        MapImpl(MapImpl &&m, const A &alloc): Base(move(m), alloc) {}
+        MapImpl(MapImpl &&m, A const &alloc): Base(move(m), alloc) {}
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-        >> MapImpl(R range, Size size = 0, const H &hf = H(),
-            const C &eqf = C(), const A &alloc = A()
+        >> MapImpl(R range, Size size = 0, H const &hf = H(),
+            C const &eqf = C(), A const &alloc = A()
         ): Base(size ? size : detail::estimate_hrsize(range),
                    hf, eqf, alloc) {
             for (; !range.empty(); range.pop_front())
@@ -97,25 +97,25 @@ namespace detail {
         }
 
         template<typename R>
-        MapImpl(R range, Size size, const A &alloc)
+        MapImpl(R range, Size size, A const &alloc)
         : MapImpl(range, size, H(), C(), alloc) {}
 
         template<typename R>
-        MapImpl(R range, Size size, const H &hf, const A &alloc)
+        MapImpl(R range, Size size, H const &hf, A const &alloc)
         : MapImpl(range, size, hf, C(), alloc) {}
 
         MapImpl(InitializerList<Value> init, Size size = 0,
-            const H &hf = H(), const C &eqf = C(), const A &alloc = A()
+            H const &hf = H(), C const &eqf = C(), A const &alloc = A()
         ): MapImpl(iter(init), size, hf, eqf, alloc) {}
 
-        MapImpl(InitializerList<Value> init, Size size, const A &alloc)
+        MapImpl(InitializerList<Value> init, Size size, A const &alloc)
         : MapImpl(iter(init), size, H(), C(), alloc) {}
 
-        MapImpl(InitializerList<Value> init, Size size, const H &hf,
-            const A &alloc
+        MapImpl(InitializerList<Value> init, Size size, H const &hf,
+            A const &alloc
         ): MapImpl(iter(init), size, hf, C(), alloc) {}
 
-        MapImpl &operator=(const MapImpl &m) {
+        MapImpl &operator=(MapImpl const &m) {
             Base::operator=(m);
             return *this;
         }
@@ -137,16 +137,16 @@ namespace detail {
             return *this;
         }
 
-        T *at(const K &key) {
+        T *at(K const &key) {
             static_assert(!IsMultihash, "at() only allowed on regular maps");
             return Base::access(key);
         }
-        const T *at(const K &key) const {
+        T const *at(K const &key) const {
             static_assert(!IsMultihash, "at() only allowed on regular maps");
             return Base::access(key);
         }
 
-        T &operator[](const K &key) {
+        T &operator[](K const &key) {
             static_assert(!IsMultihash, "operator[] only allowed on regular maps");
             return Base::access_or_insert(key);
         }
@@ -165,14 +165,14 @@ template<
     typename K, typename T,
     typename H = ToHash<K>,
     typename C = EqualWithCstr<K>,
-    typename A = Allocator<Pair<const K, T>>
+    typename A = Allocator<Pair<K const, T>>
 > using Map = detail::MapImpl<K, T, H, C, A, false>;
 
 template<
     typename K, typename T,
     typename H = ToHash<K>,
     typename C = EqualWithCstr<K>,
-    typename A = Allocator<Pair<const K, T>>
+    typename A = Allocator<Pair<K const, T>>
 > using Multimap = detail::MapImpl<K, T, H, C, A, true>;
 
 } /* namespace ostd */

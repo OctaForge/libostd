@@ -20,7 +20,7 @@ namespace ostd {
 
 #define OSTD_DEFINE_BINARY_OP(name, op, RT) \
 template<typename T> struct name { \
-    RT operator()(const T &x, const T &y) const { \
+    RT operator()(T const &x, T const &y) const { \
         return x op y; \
     } \
     using FirstArgument = T; \
@@ -71,7 +71,7 @@ namespace detail {
 template<typename T> struct EqualWithCstr {
     using FirstArgument = T;
     using SecondArgument = T;
-    bool operator()(const T &x, const T &y) const {
+    bool operator()(T const &x, T const &y) const {
         return x == y;
     }
 };
@@ -79,13 +79,13 @@ template<typename T> struct EqualWithCstr {
 template<typename T> struct EqualWithCstr<T *>: detail::CharEqual<T> {};
 
 template<typename T> struct LogicalNot {
-    bool operator()(const T &x) const { return !x; }
+    bool operator()(T const &x) const { return !x; }
     using Argument = T;
     using Result = bool;
 };
 
 template<typename T> struct Negate {
-    bool operator()(const T &x) const { return -x; }
+    bool operator()(T const &x) const { return -x; }
     using Argument = T;
     using Result = T;
 };
@@ -95,10 +95,10 @@ template<typename T> struct BinaryNegate {
     using SecondArgument = typename T::SecondArgument;
     using Result = bool;
 
-    explicit BinaryNegate(const T &f): p_fn(f) {}
+    explicit BinaryNegate(T const &f): p_fn(f) {}
 
-    bool operator()(const FirstArgument &x,
-                    const SecondArgument &y) {
+    bool operator()(FirstArgument const &x,
+                    SecondArgument const &y) {
         return !p_fn(x, y);
     }
 private:
@@ -109,19 +109,19 @@ template<typename T> struct UnaryNegate {
     using Argument = typename T::Argument;
     using Result = bool;
 
-    explicit UnaryNegate(const T &f): p_fn(f) {}
-    bool operator()(const Argument &x) {
+    explicit UnaryNegate(T const &f): p_fn(f) {}
+    bool operator()(Argument const &x) {
         return !p_fn(x);
     }
 private:
     T p_fn;
 };
 
-template<typename T> UnaryNegate<T> not1(const T &fn) {
+template<typename T> UnaryNegate<T> not1(T const &fn) {
     return UnaryNegate<T>(fn);
 }
 
-template<typename T> BinaryNegate<T> not2(const T &fn) {
+template<typename T> BinaryNegate<T> not2(T const &fn) {
     return BinaryNegate<T>(fn);
 }
 
@@ -210,7 +210,7 @@ template<typename T> struct ToHash {
     using Argument = T;
     using Result = Size;
 
-    Size operator()(const T &v) const {
+    Size operator()(T const &v) const {
         return v.to_hash();
     }
 };
@@ -262,11 +262,11 @@ namespace detail {
         static constexpr Size offset = Size(14695981039346656037u);
     };
 
-    inline Size mem_hash(const void *p, Size l) {
+    inline Size mem_hash(void const *p, Size l) {
         using Consts = FnvConstants<sizeof(Size)>;
-        const byte *d = (const byte *)p;
+        byte const *d = (byte const *)p;
         Size h = Consts::offset;
-        for (const byte *it = d, *end = d + l; it != end; ++it) {
+        for (byte const *it = d, *end = d + l; it != end; ++it) {
             h ^= *it;
             h *= Consts::prime;
         }
@@ -306,7 +306,7 @@ namespace detail {
         Size operator()(T v) const {
             union { T v; struct { Size h1, h2; }; } u;
             u.v = v;
-            return mem_hash((const void *)&u, sizeof(u));
+            return mem_hash((void const *)&u, sizeof(u));
         }
     };
 
@@ -317,7 +317,7 @@ namespace detail {
         Size operator()(T v) const {
             union { T v; struct { Size h1, h2, h3; }; } u;
             u.v = v;
-            return mem_hash((const void *)&u, sizeof(u));
+            return mem_hash((void const *)&u, sizeof(u));
         }
     };
 
@@ -328,7 +328,7 @@ namespace detail {
         Size operator()(T v) const {
             union { T v; struct { Size h1, h2, h3, h4; }; } u;
             u.v = v;
-            return mem_hash((const void *)&u, sizeof(u));
+            return mem_hash((void const *)&u, sizeof(u));
         }
     };
 } /* namespace detail */
@@ -379,7 +379,7 @@ namespace detail {
         Size operator()(T *v) const {
             union { T *v; Size h; } u;
             u.v = v;
-            return detail::mem_hash((const void *)&u, sizeof(u));
+            return detail::mem_hash((void const *)&u, sizeof(u));
         }
     };
 
@@ -395,7 +395,7 @@ namespace detail {
 template<typename T> struct ToHash<T *>: detail::ToHashPtr<T> {};
 
 template<typename T>
-typename ToHash<T>::Result to_hash(const T &v) {
+typename ToHash<T>::Result to_hash(T const &v) {
     return ToHash<T>()(v);
 }
 
@@ -406,10 +406,10 @@ struct ReferenceWrapper {
     using Type = T;
 
     ReferenceWrapper(T &v): p_ptr(address_of(v)) {}
-    ReferenceWrapper(const ReferenceWrapper &) = default;
+    ReferenceWrapper(ReferenceWrapper const &) = default;
     ReferenceWrapper(T &&) = delete;
 
-    ReferenceWrapper &operator=(const ReferenceWrapper &) = default;
+    ReferenceWrapper &operator=(ReferenceWrapper const &) = default;
 
     operator T &() const { return *p_ptr; }
     T &get() const { return *p_ptr; }
@@ -426,17 +426,17 @@ template<typename T>
 ReferenceWrapper<T> ref(ReferenceWrapper<T> v) {
     return ReferenceWrapper<T>(v);
 }
-template<typename T> void ref(const T &&) = delete;
+template<typename T> void ref(T const &&) = delete;
 
 template<typename T>
-ReferenceWrapper<const T> cref(const T &v) {
+ReferenceWrapper<T const> cref(T const &v) {
     return ReferenceWrapper<T>(v);
 }
 template<typename T>
-ReferenceWrapper<const T> cref(ReferenceWrapper<T> v) {
+ReferenceWrapper<T const> cref(ReferenceWrapper<T> v) {
     return ReferenceWrapper<T>(v);
 }
-template<typename T> void cref(const T &&) = delete;
+template<typename T> void cref(T const &&) = delete;
 
 /* mem_fn */
 
@@ -456,12 +456,12 @@ namespace detail {
     template<typename T, typename R, typename ...A>
     struct MemTypes<T, R(A...) const> {
         using Result = R;
-        using Argument = const T;
+        using Argument = T const;
     };
     template<typename T, typename R, typename A>
     struct MemTypes<T, R(A) const> {
         using Result = R;
-        using FirstArgument = const T;
+        using FirstArgument = T const;
         using SecondArgument = A;
     };
 
@@ -476,7 +476,7 @@ namespace detail {
             return ((obj).*(p_ptr))(forward<A>(args)...);
         }
         template<typename... A>
-        auto operator()(const T &obj, A &&...args) ->
+        auto operator()(T const &obj, A &&...args) ->
           decltype(((obj).*(p_ptr))(forward<A>(args)...)) const {
             return ((obj).*(p_ptr))(forward<A>(args)...);
         }
@@ -486,7 +486,7 @@ namespace detail {
             return ((obj)->*(p_ptr))(forward<A>(args)...);
         }
         template<typename... A>
-        auto operator()(const T *obj, A &&...args) ->
+        auto operator()(T const *obj, A &&...args) ->
           decltype(((obj)->*(p_ptr))(forward<A>(args)...)) const {
             return ((obj)->*(p_ptr))(forward<A>(args)...);
         }
@@ -518,22 +518,22 @@ namespace detail {
 
     struct FmStorage {
         FunctorData data;
-        const FunctionManager *manager;
+        FunctionManager const *manager;
 
         template<typename A>
         A &get_alloc() {
             union {
-                const FunctionManager **m;
+                FunctionManager const **m;
                 A *alloc;
             } u;
             u.m = &manager;
             return *u.alloc;
         }
         template<typename A>
-        const A &get_alloc() const {
+        A const &get_alloc() const {
             union {
-                const FunctionManager * const *m;
-                const A *alloc;
+                FunctionManager const * const *m;
+                A const *alloc;
             } u;
             u.m = &manager;
             return *u.alloc;
@@ -543,7 +543,7 @@ namespace detail {
     template<typename T, typename A, typename E = void>
     struct FunctorDataManager {
         template<typename R, typename ...Args>
-        static R call(const FunctorData &s, Args ...args) {
+        static R call(FunctorData const &s, Args ...args) {
             return ((T &)s)(forward<Args>(args)...);
         }
 
@@ -559,9 +559,9 @@ namespace detail {
             get_ref(s).~T();
         }
 
-        static T &get_ref(const FmStorage &s) {
+        static T &get_ref(FmStorage const &s) {
             union {
-                const FunctorData *data;
+                FunctorData const *data;
                 T *ret;
             } u;
             u.data = &s.data;
@@ -572,7 +572,7 @@ namespace detail {
     template<typename T, typename A>
     struct FunctorDataManager<T, A, EnableIf<!FunctorInPlace<T>>> {
         template<typename R, typename ...Args>
-        static R call(const FunctorData &s, Args ...args) {
+        static R call(FunctorData const &s, Args ...args) {
             return (*(AllocatorPointer<A> &)s)(forward<Args>(args)...);
         }
 
@@ -596,7 +596,7 @@ namespace detail {
             ptr = nullptr;
         }
 
-        static T &get_ref(const FmStorage &s) {
+        static T &get_ref(FmStorage const &s) {
             return *get_ptr_ref(s);
         }
 
@@ -604,13 +604,13 @@ namespace detail {
             return (AllocatorPointer<A> &)(s.data);
         }
 
-        static AllocatorPointer<A> &get_ptr_ref(const FmStorage &s) {
+        static AllocatorPointer<A> &get_ptr_ref(FmStorage const &s) {
             return (AllocatorPointer<A> &)(s.data);
         }
     };
 
     template<typename T, typename A>
-    static const FunctionManager &get_default_fm();
+    static FunctionManager const &get_default_fm();
 
     template<typename T, typename A>
     static void create_fm(FmStorage &s, A &&a) {
@@ -632,14 +632,14 @@ namespace detail {
         void (* const call_move_and_destroyf)(FmStorage &lhs,
             FmStorage &&rhs);
         void (* const call_copyf)(FmStorage &lhs,
-            const FmStorage &rhs);
+            FmStorage const &rhs);
         void (* const call_copyf_fo)(FmStorage &lhs,
-            const FmStorage &rhs);
+            FmStorage const &rhs);
         void (* const call_destroyf)(FmStorage &s);
 
         template<typename T, typename A>
         static void call_move_and_destroy(FmStorage &lhs,
-        FmStorage &&rhs) {
+                                          FmStorage &&rhs) {
             using Spec = FunctorDataManager<T, A>;
             Spec::move_f(lhs, move(rhs));
             Spec::destroy_f(rhs.get_alloc<A>(), rhs);
@@ -649,7 +649,7 @@ namespace detail {
 
         template<typename T, typename A>
         static void call_copy(FmStorage &lhs,
-        const FmStorage &rhs) {
+                              FmStorage const &rhs) {
             using Spec = FunctorDataManager<T, A>;
             create_fm<T, A>(lhs, A(rhs.get_alloc<A>()));
             Spec::store_f(lhs, Spec::get_ref(rhs));
@@ -657,7 +657,7 @@ namespace detail {
 
         template<typename T, typename A>
         static void call_copy_fo(FmStorage &lhs,
-        const FmStorage &rhs) {
+                                 FmStorage const &rhs) {
             using Spec = FunctorDataManager<T, A>;
             Spec::store_f(lhs, Spec::get_ref(rhs));
         }
@@ -671,8 +671,8 @@ namespace detail {
     };
 
     template<typename T, typename A>
-    inline static const FunctionManager &get_default_fm() {
-        static const FunctionManager def_manager
+    inline static FunctionManager const &get_default_fm() {
+        static FunctionManager const def_manager
             = FunctionManager::create_default_manager<T, A>();
         return def_manager;
     }
@@ -744,7 +744,7 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
         swap(f);
     }
 
-    Function(const Function &f): p_call(f.p_call) {
+    Function(Function const &f): p_call(f.p_call) {
         f.p_stor.manager->call_copyf(p_stor, f.p_stor);
     }
 
@@ -760,21 +760,21 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
     }
 
     template<typename A>
-    Function(AllocatorArg, const A &) { init_empty(); }
+    Function(AllocatorArg, A const &) { init_empty(); }
 
     template<typename A>
-    Function(AllocatorArg, const A &, Nullptr) { init_empty(); }
+    Function(AllocatorArg, A const &, Nullptr) { init_empty(); }
 
     template<typename A>
-    Function(AllocatorArg, const A &, Function &&f) {
+    Function(AllocatorArg, A const &, Function &&f) {
         init_empty();
         swap(f);
     }
 
     template<typename A>
-    Function(AllocatorArg, const A &a, const Function &f):
+    Function(AllocatorArg, A const &a, Function const &f):
     p_call(f.p_call) {
-        const detail::FunctionManager *mfa
+        detail::FunctionManager const *mfa
             = &detail::get_default_fm<AllocatorValue<A>, A>();
         if (f.p_stor.manager == mfa) {
             detail::create_fm<AllocatorValue<A>, A>(p_stor, A(a));
@@ -783,7 +783,7 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
         }
 
         using AA = AllocatorRebind<A, Function>;
-        const detail::FunctionManager *mff
+        detail::FunctionManager const *mff
             = &detail::get_default_fm<Function, AA>();
         if (f.p_stor.manager == mff) {
             detail::create_fm<Function, AA>(p_stor, AA(a));
@@ -796,7 +796,7 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
 
     template<typename A, typename T, typename = EnableIf<
         detail::IsValidFunctor<T, R(Args...)>
-    >> Function(AllocatorArg, const A &a, T f) {
+    >> Function(AllocatorArg, A const &a, T f) {
         if (func_is_null(f)) {
             init_empty();
             return;
@@ -814,7 +814,7 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
         return *this;
     }
 
-    Function &operator=(const Function &f) {
+    Function &operator=(Function const &f) {
         p_stor.manager->call_destroyf(p_stor);
         swap(Function(f));
         return *this;
@@ -825,7 +825,7 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
     }
 
     template<typename F, typename A>
-    void assign(F &&f, const A &a) {
+    void assign(F &&f, A const &a) {
         Function(allocator_arg, a, forward<F>(f)).swap(*this);
     }
 
@@ -841,7 +841,7 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
 
 private:
     detail::FmStorage p_stor;
-    R (*p_call)(const detail::FunctorData &, Args...);
+    R (*p_call)(detail::FunctorData const &, Args...);
 
     template<typename T, typename A>
     void initialize(T &&f, A &&a) {
@@ -860,7 +860,7 @@ private:
     }
 
     template<typename T>
-    static bool func_is_null(const T &) { return false; }
+    static bool func_is_null(T const &) { return false; }
 
     static bool func_is_null(R (* const &fptr)(Args...)) {
         return fptr == nullptr;
@@ -878,16 +878,16 @@ private:
 };
 
 template<typename T>
-bool operator==(Nullptr, const Function<T> &rhs) { return !rhs; }
+bool operator==(Nullptr, Function<T> const &rhs) { return !rhs; }
 
 template<typename T>
-bool operator==(const Function<T> &lhs, Nullptr) { return !lhs; }
+bool operator==(Function<T> const &lhs, Nullptr) { return !lhs; }
 
 template<typename T>
-bool operator!=(Nullptr, const Function<T> &rhs) { return rhs; }
+bool operator!=(Nullptr, Function<T> const &rhs) { return rhs; }
 
 template<typename T>
-bool operator!=(const Function<T> &lhs, Nullptr) { return lhs; }
+bool operator!=(Function<T> const &lhs, Nullptr) { return lhs; }
 
 namespace detail {
     template<typename F>

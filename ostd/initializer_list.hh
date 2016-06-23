@@ -16,17 +16,17 @@ namespace std {
 
 template<typename T>
 class initializer_list {
-    const T *p_buf;
+    T const *p_buf;
     ostd::Size p_len;
 
-    constexpr initializer_list(const T *v, ostd::Size n): p_buf(v), p_len(n) {}
+    constexpr initializer_list(T const *v, ostd::Size n): p_buf(v), p_len(n) {}
 public:
     constexpr initializer_list(): p_buf(nullptr), p_len(0) {}
 
     constexpr ostd::Size size() const { return p_len; }
 
-    constexpr const T *begin() const { return p_buf; }
-    constexpr const T *end() const { return p_buf + p_len; }
+    constexpr T const *begin() const { return p_buf; }
+    constexpr T const *end() const { return p_buf + p_len; }
 };
 
 }
@@ -39,13 +39,13 @@ namespace ostd {
 template<typename T> using InitializerList = std::initializer_list<T>;
 
 template<typename T>
-PointerRange<const T> iter(std::initializer_list<T> init) {
-    return PointerRange<const T>(init.begin(), init.end());
+PointerRange<T const> iter(std::initializer_list<T> init) {
+    return PointerRange<T const>(init.begin(), init.end());
 }
 
 template<typename T>
-PointerRange<const T> citer(std::initializer_list<T> init) {
-    return PointerRange<const T>(init.begin(), init.end());
+PointerRange<T const> citer(std::initializer_list<T> init) {
+    return PointerRange<T const>(init.begin(), init.end());
 }
 
 }

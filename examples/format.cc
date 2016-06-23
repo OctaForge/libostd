@@ -12,7 +12,7 @@ struct Foo {
 
 /* implementing formatting for custom objects - external function */
 template<typename R>
-bool to_format(const Foo &, R &writer, const FormatSpec &fs) {
+bool to_format(Foo const &, R &writer, FormatSpec const &fs) {
     switch (fs.spec()) {
     case 'i':
         writer.put_string("Foo1");
@@ -27,7 +27,7 @@ bool to_format(const Foo &, R &writer, const FormatSpec &fs) {
 struct Bar {
     /* implementing formatting for custom objects - method */
     template<typename R>
-    bool to_format(R &writer, const FormatSpec &fs) const {
+    bool to_format(R &writer, FormatSpec const &fs) const {
         switch (fs.spec()) {
         case 'i':
             writer.put_string("Bar1");
@@ -64,7 +64,7 @@ int main() {
     writefln("{ %-#(%s: %d, %) }", m);
 
     /* tuple format test */
-    Tuple<int, float, const char *> xt[] = {
+    Tuple<int, float, char const *> xt[] = {
         make_tuple(5, 3.14f, "foo"),
         make_tuple(3, 1.23f, "bar"),
         make_tuple(9, 8.66f, "baz")

@@ -16,8 +16,8 @@ namespace detail {
     struct SignalBase {
         SignalBase(C *cl): p_class(cl), p_funcs(nullptr), p_nfuncs(0) {}
 
-        SignalBase(const SignalBase &ev): p_class(ev.p_class),
-                                        p_nfuncs(ev.p_nfuncs) {
+        SignalBase(SignalBase const &ev): p_class(ev.p_class),
+                                          p_nfuncs(ev.p_nfuncs) {
             using Func = Function<void(C &, A...)>;
             Func *nbuf = (Func *)new byte[sizeof(Func) * p_nfuncs];
             for (Size i = 0; i < p_nfuncs; ++i)
@@ -30,7 +30,7 @@ namespace detail {
             swap(ev);
         }
 
-        SignalBase &operator=(const SignalBase &ev) {
+        SignalBase &operator=(SignalBase const &ev) {
             using Func = Function<void(C &, A...)>;
             p_class = ev.p_class;
             p_nfuncs = ev.p_nfuncs;
@@ -118,10 +118,10 @@ private:
     Base p_base;
 public:
     Signal(C *cl): p_base(cl) {}
-    Signal(const Signal &ev): p_base(ev.p_base) {}
+    Signal(Signal const &ev): p_base(ev.p_base) {}
     Signal(Signal &&ev): p_base(move(ev.p_base)) {}
 
-    Signal &operator=(const Signal &ev) {
+    Signal &operator=(Signal const &ev) {
         p_base = ev.p_base;
         return *this;
     }
@@ -151,16 +151,16 @@ public:
 };
 
 template<typename C, typename ...A>
-struct Signal<const C, A...> {
+struct Signal<C const, A...> {
 private:
-    using Base = detail::SignalBase<const C, A...>;
+    using Base = detail::SignalBase<C const, A...>;
     Base p_base;
 public:
     Signal(C *cl): p_base(cl) {}
-    Signal(const Signal &ev): p_base(ev.p_base) {}
+    Signal(Signal const &ev): p_base(ev.p_base) {}
     Signal(Signal &&ev): p_base(move(ev.p_base)) {}
 
-    Signal &operator=(const Signal &ev) {
+    Signal &operator=(Signal const &ev) {
         p_base = ev.p_base;
         return *this;
     }

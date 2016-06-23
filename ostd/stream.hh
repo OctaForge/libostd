@@ -37,7 +37,7 @@ namespace detail {
     template<Size N>
     struct FormatOutRange: OutputRange<FormatOutRange<N>, char> {
         FormatOutRange(char *ibuf): buf(ibuf), idx(0) {}
-        FormatOutRange(const FormatOutRange &r): buf(r.buf), idx(r.idx) {}
+        FormatOutRange(FormatOutRange const &r): buf(r.buf), idx(r.idx) {}
         char *buf;
         Size idx;
         bool put(char v) {
@@ -68,8 +68,8 @@ private:
     }
 
     template<typename T>
-    inline bool write_impl(const T &v, EnableIf<
-        !IsConstructible<ConstCharRange, const T &>, StNat
+    inline bool write_impl(T const &v, EnableIf<
+        !IsConstructible<ConstCharRange, T const &>, StNat
     > = StNat()) {
         return write(ostd::to_string(v));
     }
@@ -99,7 +99,7 @@ public:
     virtual bool flush() { return true; }
 
     virtual Size read_bytes(void *, Size) { return 0; }
-    virtual Size write_bytes(const void *, Size) { return 0; }
+    virtual Size write_bytes(void const *, Size) { return 0; }
 
     virtual int getchar() {
         byte c;
@@ -112,27 +112,27 @@ public:
     }
 
     template<typename T>
-    bool write(const T &v) {
+    bool write(T const &v) {
         return write_impl(v);
     }
 
     template<typename T, typename ...A>
-    bool write(const T &v, const A &...args) {
+    bool write(T const &v, A const &...args) {
         return write(v) && write(args...);
     }
 
     template<typename T>
-    bool writeln(const T &v) {
+    bool writeln(T const &v) {
         return write(v) && putchar('\n');
     }
 
     template<typename T, typename ...A>
-    bool writeln(const T &v, const A &...args) {
+    bool writeln(T const &v, A const &...args) {
         return write(v) && write(args...) && putchar('\n');
     }
 
     template<typename ...A>
-    bool writef(ConstCharRange fmt, const A &...args) {
+    bool writef(ConstCharRange fmt, A const &...args) {
         char buf[512];
         Ptrdiff need = format(detail::FormatOutRange<sizeof(buf)>(buf),
             fmt, args...);
@@ -147,14 +147,14 @@ public:
     }
 
     template<typename ...A>
-    bool writefln(ConstCharRange fmt, const A &...args) {
+    bool writefln(ConstCharRange fmt, A const &...args) {
         return writef(fmt, args...) && putchar('\n');
     }
 
     template<typename T = char>
     StreamRange<T> iter();
 
-    template<typename T> Size put(const T *v, Size count) {
+    template<typename T> Size put(T const *v, Size count) {
         return write_bytes(v, count * sizeof(T)) / sizeof(T);
     }
 
@@ -182,7 +182,7 @@ struct StreamRange<T, true>: InputRange<
 > {
     StreamRange() = delete;
     StreamRange(Stream &s): p_stream(&s), p_size(s.size()) {}
-    StreamRange(const StreamRange &r): p_stream(r.p_stream), p_size(r.p_size) {}
+    StreamRange(StreamRange const &r): p_stream(r.p_stream), p_size(r.p_size) {}
 
     bool empty() const {
         return (p_size - p_stream->tell()) < StreamOffset(sizeof(T));
@@ -200,7 +200,7 @@ struct StreamRange<T, true>: InputRange<
         return val;
     }
 
-    bool equals_front(const StreamRange &s) const {
+    bool equals_front(StreamRange const &s) const {
         return p_stream->tell() == s.p_stream->tell();
     }
 
@@ -210,7 +210,7 @@ struct StreamRange<T, true>: InputRange<
         return (v == sizeof(T));
     }
 
-    Size put_n(const T *p, Size n) {
+    Size put_n(T const *p, Size n) {
         return p_stream->put(p, n);
     }
 

@@ -19,22 +19,22 @@ namespace ostd {
 
 namespace detail {
     template<typename T>
-    using KeysetKeyRet = decltype(declval<const T &>().get_key());
+    using KeysetKeyRet = decltype(declval<T const &>().get_key());
     template<typename T>
-    using KeysetKey = const Decay<KeysetKeyRet<T>>;
+    using KeysetKey = Decay<KeysetKeyRet<T>> const;
 
     template<typename T, typename A> struct KeysetBase {
         using Key = KeysetKey<T>;
 
         using RetKey = Conditional<IsReference<KeysetKeyRet<T>>, Key &, Key>;
-        static inline RetKey get_key(const T &e) {
+        static inline RetKey get_key(T const &e) {
             return e.get_key();
         }
         static inline T &get_data(T &e) {
             return e;
         }
         template<typename U>
-        static inline void set_key(T &, const U &, A &) {}
+        static inline void set_key(T &, U const &, A &) {}
         static inline void swap_elem(T &a, T &b) { swap_adl(a, b); }
     };
 
@@ -60,35 +60,35 @@ namespace detail {
         using Pointer = AllocatorPointer<A>;
         using ConstPointer = AllocatorConstPointer<A>;
         using Range = HashRange<T>;
-        using ConstRange = HashRange<const T>;
+        using ConstRange = HashRange<T const>;
         using LocalRange = BucketRange<T>;
-        using ConstLocalRange = BucketRange<const T>;
+        using ConstLocalRange = BucketRange<T const>;
         using Allocator = A;
 
-        explicit KeysetImpl(Size size, const H &hf = H(),
-            const C &eqf = C(), const A &alloc = A()
+        explicit KeysetImpl(Size size, H const &hf = H(),
+            C const &eqf = C(), A const &alloc = A()
         ): Base(size, hf, eqf, alloc) {}
 
         KeysetImpl(): KeysetImpl(0) {}
-        explicit KeysetImpl(const A &alloc): KeysetImpl(0, H(), C(), alloc) {}
+        explicit KeysetImpl(A const &alloc): KeysetImpl(0, H(), C(), alloc) {}
 
-        KeysetImpl(Size size, const A &alloc):
+        KeysetImpl(Size size, A const &alloc):
             KeysetImpl(size, H(), C(), alloc) {}
-        KeysetImpl(Size size, const H &hf, const A &alloc):
+        KeysetImpl(Size size, H const &hf, A const &alloc):
             KeysetImpl(size, hf, C(), alloc) {}
 
-        KeysetImpl(const KeysetImpl &m): Base(m,
+        KeysetImpl(KeysetImpl const &m): Base(m,
             allocator_container_copy(m.get_alloc())) {}
 
-        KeysetImpl(const KeysetImpl &m, const A &alloc): Base(m, alloc) {}
+        KeysetImpl(KeysetImpl const &m, A const &alloc): Base(m, alloc) {}
 
         KeysetImpl(KeysetImpl &&m): Base(move(m)) {}
-        KeysetImpl(KeysetImpl &&m, const A &alloc): Base(move(m), alloc) {}
+        KeysetImpl(KeysetImpl &&m, A const &alloc): Base(move(m), alloc) {}
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-        >> KeysetImpl(R range, Size size = 0, const H &hf = H(),
-            const C &eqf = C(), const A &alloc = A()
+        >> KeysetImpl(R range, Size size = 0, H const &hf = H(),
+            C const &eqf = C(), A const &alloc = A()
         ): Base(size ? size : detail::estimate_hrsize(range),
                    hf, eqf, alloc) {
             for (; !range.empty(); range.pop_front())
@@ -97,25 +97,25 @@ namespace detail {
         }
 
         template<typename R>
-        KeysetImpl(R range, Size size, const A &alloc)
+        KeysetImpl(R range, Size size, A const &alloc)
         : KeysetImpl(range, size, H(), C(), alloc) {}
 
         template<typename R>
-        KeysetImpl(R range, Size size, const H &hf, const A &alloc)
+        KeysetImpl(R range, Size size, H const &hf, A const &alloc)
         : KeysetImpl(range, size, hf, C(), alloc) {}
 
         KeysetImpl(InitializerList<Value> init, Size size = 0,
-            const H &hf = H(), const C &eqf = C(), const A &alloc = A()
+            H const &hf = H(), C const &eqf = C(), A const &alloc = A()
         ): KeysetImpl(iter(init), size, hf, eqf, alloc) {}
 
-        KeysetImpl(InitializerList<Value> init, Size size, const A &alloc)
+        KeysetImpl(InitializerList<Value> init, Size size, A const &alloc)
         : KeysetImpl(iter(init), size, H(), C(), alloc) {}
 
-        KeysetImpl(InitializerList<Value> init, Size size, const H &hf,
-            const A &alloc
+        KeysetImpl(InitializerList<Value> init, Size size, H const &hf,
+            A const &alloc
         ): KeysetImpl(iter(init), size, hf, C(), alloc) {}
 
-        KeysetImpl &operator=(const KeysetImpl &m) {
+        KeysetImpl &operator=(KeysetImpl const &m) {
             Base::operator=(m);
             return *this;
         }
@@ -137,16 +137,16 @@ namespace detail {
             return *this;
         }
 
-        T *at(const Key &key) {
+        T *at(Key const &key) {
             static_assert(!IsMultihash, "at() only allowed on regular keysets");
             return Base::access(key);
         }
-        const T *at(const Key &key) const {
+        T const *at(Key const &key) const {
             static_assert(!IsMultihash, "at() only allowed on regular keysets");
             return Base::access(key);
         }
 
-        T &operator[](const Key &key) {
+        T &operator[](Key const &key) {
             static_assert(!IsMultihash, "operator[] only allowed on regular keysets");
             return Base::access_or_insert(key);
         }

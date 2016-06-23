@@ -17,7 +17,7 @@ namespace ostd {
 
 template<typename T> constexpr T *address_of(T &v) {
     return reinterpret_cast<T *>(&const_cast<char &>
-        (reinterpret_cast<const volatile char &>(v)));
+        (reinterpret_cast<char const volatile &>(v)));
 }
 
 /* pointer traits */
@@ -181,7 +181,7 @@ template<typename T>
 struct DefaultDelete {
     constexpr DefaultDelete() = default;
 
-    template<typename U> DefaultDelete(const DefaultDelete<U> &) {};
+    template<typename U> DefaultDelete(DefaultDelete<U> const &) {};
 
     void operator()(T *p) const {
         delete p;
@@ -192,7 +192,7 @@ template<typename T>
 struct DefaultDelete<T[]> {
     constexpr DefaultDelete() = default;
 
-    template<typename U> DefaultDelete(const DefaultDelete<U[]> &) {};
+    template<typename U> DefaultDelete(DefaultDelete<U[]> const &) {};
 
     void operator()(T *p) const {
         delete[] p;
@@ -234,7 +234,7 @@ private:
     struct Nat { int x; };
 
     using Dref = RemoveReference<D> &;
-    using Dcref = const RemoveReference<D> &;
+    using Dcref = RemoveReference<D> const &;
 
 public:
     constexpr Box(): p_stor(nullptr, D()) {
@@ -248,7 +248,7 @@ public:
         static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
 
-    Box(Pointer p, Conditional<IsReference<D>, D, AddLvalueReference<const D>> d):
+    Box(Pointer p, Conditional<IsReference<D>, D, AddLvalueReference<D const>> d):
         p_stor(p, d) {}
 
     Box(Pointer p, RemoveReference<D> &&d):
@@ -347,7 +347,7 @@ private:
     struct Nat { int x; };
 
     using Dref = RemoveReference<D> &;
-    using Dcref = const RemoveReference<D> &;
+    using Dcref = RemoveReference<D> const &;
 
 public:
     constexpr Box(): p_stor(nullptr, D()) {
@@ -364,11 +364,11 @@ public:
     }
 
     template<typename U> Box(U p, Conditional<
-        IsReference<D>, D, AddLvalueReference<const D>
+        IsReference<D>, D, AddLvalueReference<D const>
     > d, EnableIf<detail::SameOrLessCvQualified<U, Pointer>, Nat> = Nat()):
         p_stor(p, d) {}
 
-    Box(Nullptr, Conditional<IsReference<D>, D, AddLvalueReference<const D>> d):
+    Box(Nullptr, Conditional<IsReference<D>, D, AddLvalueReference<D const>> d):
         p_stor(nullptr, d) {}
 
     template<typename U> Box(U p, RemoveReference<D> &&d,
@@ -495,15 +495,15 @@ template<typename> struct Allocator;
 template<> struct Allocator<void> {
     using Value = void;
     using Pointer = void *;
-    using ConstPointer = const void *;
+    using ConstPointer = void const *;
 
     template<typename U> using Rebind = Allocator<U>;
 };
 
-template<> struct Allocator<const void> {
-    using Value = const void;
-    using Pointer = const void *;
-    using ConstPointer = const void *;
+template<> struct Allocator<void const> {
+    using Value = void const;
+    using Pointer = void const *;
+    using ConstPointer = void const *;
 
     template<typename U> using Rebind = Allocator<U>;
 };
@@ -513,14 +513,14 @@ template<typename T> struct Allocator {
     using Difference = Ptrdiff;
     using Value = T;
     using Reference = T &;
-    using ConstReference = const T &;
+    using ConstReference = T const &;
     using Pointer = T *;
-    using ConstPointer = const T *;
+    using ConstPointer = T const *;
 
     template<typename U> using Rebind = Allocator<U>;
 
     Allocator() {}
-    template<typename U> Allocator(const Allocator<U> &) {}
+    template<typename U> Allocator(Allocator<U> const &) {}
 
     Pointer address(Reference v) const {
         return address_of(v);
@@ -545,19 +545,19 @@ template<typename T> struct Allocator {
     void destroy(Pointer p) { p->~T(); }
 };
 
-template<typename T> struct Allocator<const T> {
+template<typename T> struct Allocator<T const> {
     using Size = ostd::Size;
     using Difference = Ptrdiff;
-    using Value = const T;
-    using Reference = const T &;
-    using ConstReference = const T &;
-    using Pointer = const T *;
-    using ConstPointer = const T *;
+    using Value = T const;
+    using Reference = T const &;
+    using ConstReference = T const &;
+    using Pointer = T const *;
+    using ConstPointer = T const *;
 
     template<typename U> using Rebind = Allocator<U>;
 
     Allocator() {}
-    template<typename U> Allocator(const Allocator<U> &) {}
+    template<typename U> Allocator(Allocator<U> const &) {}
 
     ConstPointer address(ConstReference v) const {
         return address_of(v);
@@ -580,12 +580,12 @@ template<typename T> struct Allocator<const T> {
 };
 
 template<typename T, typename U>
-bool operator==(const Allocator<T> &, const Allocator<U> &) {
+bool operator==(Allocator<T> const &, Allocator<U> const &) {
     return true;
 }
 
 template<typename T, typename U>
-bool operator!=(const Allocator<T> &, const Allocator<U> &) {
+bool operator!=(Allocator<T> const &, Allocator<U> const &) {
     return false;
 }
 
@@ -608,7 +608,7 @@ namespace detail {
 
     template<typename T, typename P, typename A>
     struct ConstPointer<T, P, A, false> {
-        using Type = PointerRebind<P, const T>;
+        using Type = PointerRebind<P, T const>;
     };
 
     template<typename T>
@@ -644,7 +644,7 @@ namespace detail {
 
     template<typename P, typename A>
     struct ConstVoidPointer<P, A, false> {
-        using Type = PointerRebind<P, const void>;
+        using Type = PointerRebind<P, void const>;
     };
 
     template<typename T>
@@ -859,7 +859,7 @@ namespace detail {
         -> decltype(a.allocate(sz, p), True());
 
     template<typename A, typename S, typename CVP>
-    auto allocate_hint_test(const A &, S &&, CVP &&)
+    auto allocate_hint_test(A const &, S &&, CVP &&)
         -> False;
 
     template<typename A, typename S, typename CVP>
@@ -910,7 +910,7 @@ namespace detail {
             True());
 
     template<typename A, typename T, typename ...Args>
-    auto construct_test(const A &, T *, Args &&...)
+    auto construct_test(A const &, T *, Args &&...)
         -> False;
 
     template<typename A, typename T, typename ...Args>
@@ -944,7 +944,7 @@ namespace detail {
     auto destroy_test(A &&a, P &&p) -> decltype(a.destroy(p), True());
 
     template<typename A, typename P>
-    auto destroy_test(const A &, P &&) -> False;
+    auto destroy_test(A const &, P &&) -> False;
 
     template<typename A, typename P>
     constexpr bool DestroyTest
@@ -973,27 +973,27 @@ namespace detail {
     auto alloc_max_size_test(A &&a) -> decltype(a.max_size(), True());
 
     template<typename A>
-    auto alloc_max_size_test(const A &) -> False;
+    auto alloc_max_size_test(A const &) -> False;
 
     template<typename A>
     constexpr bool AllocMaxSizeTest
         = IsSame<decltype(alloc_max_size_test(declval<A &>())), True>;
 
     template<typename A>
-    inline AllocatorSize<A> alloc_max_size(True, const A &a) {
+    inline AllocatorSize<A> alloc_max_size(True, A const &a) {
         return a.max_size();
     }
 
     template<typename A>
-    inline AllocatorSize<A> alloc_max_size(False, const A &) {
+    inline AllocatorSize<A> alloc_max_size(False, A const &) {
         return AllocatorSize<A>(~0);
     }
 } /* namespace detail */
 
 template<typename A>
-inline AllocatorSize<A> allocator_max_size(const A &a) {
+inline AllocatorSize<A> allocator_max_size(A const &a) {
     return detail::alloc_max_size(BoolConstant<
-        detail::AllocMaxSizeTest<const A>
+        detail::AllocMaxSizeTest<A const>
     >(), a);
 }
 
@@ -1004,27 +1004,27 @@ namespace detail {
     auto alloc_copy_test(A &&a) -> decltype(a.container_copy(), True());
 
     template<typename A>
-    auto alloc_copy_test(const A &) -> False;
+    auto alloc_copy_test(A const &) -> False;
 
     template<typename A>
     constexpr bool AllocCopyTest
         = IsSame<decltype(alloc_copy_test(declval<A &>())), True>;
 
     template<typename A>
-    inline AllocatorType<A> alloc_container_copy(True, const A &a) {
+    inline AllocatorType<A> alloc_container_copy(True, A const &a) {
         return a.container_copy();
     }
 
     template<typename A>
-    inline AllocatorType<A> alloc_container_copy(False, const A &a) {
+    inline AllocatorType<A> alloc_container_copy(False, A const &a) {
         return a;
     }
 } /* namespace detail */
 
 template<typename A>
-inline AllocatorType<A> allocator_container_copy(const A &a) {
+inline AllocatorType<A> allocator_container_copy(A const &a) {
     return detail::alloc_container_copy(BoolConstant<
-        detail::AllocCopyTest<const A>
+        detail::AllocCopyTest<A const>
     >(), a);
 }
 

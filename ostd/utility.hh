@@ -96,30 +96,30 @@ struct Pair {
     Pair() = default;
     ~Pair() = default;
 
-    Pair(const Pair &) = default;
+    Pair(Pair const &) = default;
     Pair(Pair &&) = default;
 
-    Pair(const T &x, const U &y): first(x), second(y) {}
+    Pair(T const &x, U const &y): first(x), second(y) {}
 
     template<typename TT, typename UU>
     Pair(TT &&x, UU &&y):
         first(forward<TT>(x)), second(forward<UU>(y)) {}
 
     template<typename TT, typename UU>
-    Pair(const Pair<TT, UU> &v): first(v.first), second(v.second) {}
+    Pair(Pair<TT, UU> const &v): first(v.first), second(v.second) {}
 
     template<typename TT, typename UU>
     Pair(Pair<TT, UU> &&v):
         first(move(v.first)), second(move(v.second)) {}
 
-    Pair &operator=(const Pair &v) {
+    Pair &operator=(Pair const &v) {
         first = v.first;
         second = v.second;
         return *this;
     }
 
     template<typename TT, typename UU>
-    Pair &operator=(const Pair<TT, UU> &v) {
+    Pair &operator=(Pair<TT, UU> const &v) {
         first = v.first;
         second = v.second;
         return *this;
@@ -173,17 +173,17 @@ inline Pair<typename detail::MakePairRet<T>::Type,
 }
 
 template<typename T, typename U>
-inline constexpr bool operator==(const Pair<T, U> &x, const Pair<T, U> &y) {
+inline constexpr bool operator==(Pair<T, U> const &x, Pair<T, U> const &y) {
     return (x.first == y.first) && (x.second == y.second);
 }
 
 template<typename T, typename U>
-inline constexpr bool operator!=(const Pair<T, U> &x, const Pair<T, U> &y) {
+inline constexpr bool operator!=(Pair<T, U> const &x, Pair<T, U> const &y) {
     return (x.first != y.first) || (x.second != y.second);
 }
 
 template<typename T, typename U>
-inline constexpr bool operator<(const Pair<T, U> &x, const Pair<T, U> &y) {
+inline constexpr bool operator<(Pair<T, U> const &x, Pair<T, U> const &y) {
     return (x.first < y.first)
         ? true
         : ((y.first < x.first)
@@ -194,17 +194,17 @@ inline constexpr bool operator<(const Pair<T, U> &x, const Pair<T, U> &y) {
 }
 
 template<typename T, typename U>
-inline constexpr bool operator>(const Pair<T, U> &x, const Pair<T, U> &y) {
+inline constexpr bool operator>(Pair<T, U> const &x, Pair<T, U> const &y) {
     return (y < x);
 }
 
 template<typename T, typename U>
-inline constexpr bool operator<=(const Pair<T, U> &x, const Pair<T, U> &y) {
+inline constexpr bool operator<=(Pair<T, U> const &x, Pair<T, U> const &y) {
     return !(y < x);
 }
 
 template<typename T, typename U>
-inline constexpr bool operator>=(const Pair<T, U> &x, const Pair<T, U> &y) {
+inline constexpr bool operator>=(Pair<T, U> const &x, Pair<T, U> const &y) {
     return !(x < y);
 }
 
@@ -228,12 +228,12 @@ namespace detail {
         template<typename T, typename U>
         static T &get(Pair<T, U> &p) { return p.first; }
         template<typename T, typename U>
-        static const T &get(const Pair<T, U> &p) { return p.first; }
+        static T const &get(Pair<T, U> const &p) { return p.first; }
         template<typename T, typename U>
         static T &&get(Pair<T, U> &&p) { return forward<T>(p.first); }
         template<typename T, typename U>
-        static const T &&get(const Pair<T, U> &&p) {
-            return forward<const T>(p.first);
+        static T const &&get(Pair<T, U> const &&p) {
+            return forward<T const>(p.first);
         }
     };
 
@@ -241,12 +241,12 @@ namespace detail {
         template<typename T, typename U>
         static U &get(Pair<T, U> &p) { return p.second; }
         template<typename T, typename U>
-        static const U &get(const Pair<T, U> &p) { return p.second; }
+        static U const &get(Pair<T, U> const &p) { return p.second; }
         template<typename T, typename U>
         static U &&get(Pair<T, U> &&p) { return forward<U>(p.second); }
         template<typename T, typename U>
-        static const T &&get(const Pair<T, U> &&p) {
-            return forward<const T>(p.second);
+        static T const &&get(Pair<T, U> const &&p) {
+            return forward<T const>(p.second);
         }
     };
 }
@@ -257,7 +257,7 @@ inline TupleElement<I, Pair<T, U>> &get(Pair<T, U> &p) {
 }
 
 template<Size I, typename T, typename U>
-inline const TupleElement<I, Pair<T, U>> &get(const Pair<T, U> &p) {
+inline TupleElement<I, Pair<T, U>> const &get(Pair<T, U> const &p) {
     return detail::GetPair<I>::get(p);
 }
 
@@ -267,7 +267,7 @@ inline TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) {
 }
 
 template<Size I, typename T, typename U>
-inline const TupleElement<I, Pair<T, U>> &&get(const Pair<T, U> &&p) {
+inline TupleElement<I, Pair<T, U>> const &&get(Pair<T, U> const &&p) {
     return detail::GetPair<I>::get(move(p));
 }
 
@@ -310,10 +310,10 @@ namespace detail {
                                             p_second(forward<UU>(b)) {}
 
         T &first() { return p_first; }
-        const T &first() const { return p_first; }
+        T const &first() const { return p_first; }
 
         U &second() { return p_second; }
-        const U &second() const { return p_second; }
+        U const &second() const { return p_second; }
 
         void swap(CompressedPairBase &v) {
             swap_adl(p_first, v.p_first);
@@ -330,10 +330,10 @@ namespace detail {
                                             p_second(forward<UU>(b)) {}
 
         T &first() { return *this; }
-        const T &first() const { return *this; }
+        T const &first() const { return *this; }
 
         U &second() { return p_second; }
-        const U &second() const { return p_second; }
+        U const &second() const { return p_second; }
 
         void swap(CompressedPairBase &v) {
             swap_adl(p_second, v.p_second);
@@ -349,10 +349,10 @@ namespace detail {
                                             p_first(forward<TT>(a)) {}
 
         T &first() { return p_first; }
-        const T &first() const { return p_first; }
+        T const &first() const { return p_first; }
 
         U &second() { return *this; }
-        const U &second() const { return *this; }
+        U const &second() const { return *this; }
 
         void swap(CompressedPairBase &v) {
             swap_adl(p_first, v.p_first);
@@ -366,10 +366,10 @@ namespace detail {
                                             U(forward<UU>(b)) {}
 
         T &first() { return *this; }
-        const T &first() const { return *this; }
+        T const &first() const { return *this; }
 
         U &second() { return *this; }
-        const U &second() const { return *this; }
+        U const &second() const { return *this; }
 
         void swap(CompressedPairBase &) {}
     };
@@ -383,10 +383,10 @@ namespace detail {
                                              forward<UU>(b)) {}
 
         T &first() { return Base::first(); }
-        const T &first() const { return Base::first(); }
+        T const &first() const { return Base::first(); }
 
         U &second() { return Base::second(); }
-        const U &second() const { return Base::second(); }
+        U const &second() const { return Base::second(); }
 
         void swap(CompressedPair &v) {
             Base::swap(v);

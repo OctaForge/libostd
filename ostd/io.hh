@@ -20,14 +20,14 @@ enum class StreamMode {
 };
 
 namespace detail {
-    static const char *filemodes[] = {
+    static char const *filemodes[] = {
         "rb", "wb", "ab", "rb+", "wb+", "ab+"
     };
 }
 
 struct FileStream: Stream {
     FileStream(): p_f(), p_owned(false) {}
-    FileStream(const FileStream &) = delete;
+    FileStream(FileStream const &) = delete;
     FileStream(FileStream &&s): p_f(s.p_f), p_owned(s.p_owned) {
         s.p_f = nullptr;
         s.p_owned = false;
@@ -41,7 +41,7 @@ struct FileStream: Stream {
 
     ~FileStream() { close(); }
 
-    FileStream &operator=(const FileStream &) = delete;
+    FileStream &operator=(FileStream const &) = delete;
     FileStream &operator=(FileStream &&s) {
         close();
         swap(s);
@@ -100,7 +100,7 @@ struct FileStream: Stream {
         return fread(buf, 1, count, p_f);
     }
 
-    Size write_bytes(const void *buf, Size count) {
+    Size write_bytes(void const *buf, Size count) {
         return fwrite(buf, 1, count, p_f);
     }
 
@@ -138,39 +138,39 @@ namespace detail {
     }
 
     template<typename T>
-    inline void write_impl(const T &v, EnableIf<
-        !IsConstructible<ConstCharRange, const T &>, IoNat
+    inline void write_impl(T const &v, EnableIf<
+        !IsConstructible<ConstCharRange, T const &>, IoNat
     > = IoNat()) {
         write(ostd::to_string(v));
     }
 }
 
 template<typename T>
-inline void write(const T &v) {
+inline void write(T const &v) {
     detail::write_impl(v);
 }
 
 template<typename T, typename ...A>
-inline void write(const T &v, const A &...args) {
+inline void write(T const &v, A const &...args) {
     write(v);
     write(args...);
 }
 
 template<typename T>
-inline void writeln(const T &v) {
+inline void writeln(T const &v) {
     write(v);
     putc('\n', ::stdout);
 }
 
 template<typename T, typename ...A>
-inline void writeln(const T &v, const A &...args) {
+inline void writeln(T const &v, A const &...args) {
     write(v);
     write(args...);
     putc('\n', ::stdout);
 }
 
 template<typename ...A>
-inline void writef(ConstCharRange fmt, const A &...args) {
+inline void writef(ConstCharRange fmt, A const &...args) {
     char buf[512];
     Ptrdiff need = format(detail::FormatOutRange<sizeof(buf)>(buf),
         fmt, args...);
@@ -186,7 +186,7 @@ inline void writef(ConstCharRange fmt, const A &...args) {
 }
 
 template<typename ...A>
-inline void writefln(ConstCharRange fmt, const A &...args) {
+inline void writefln(ConstCharRange fmt, A const &...args) {
     writef(fmt, args...);
     putc('\n', ::stdout);
 }

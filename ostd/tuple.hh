@@ -37,17 +37,17 @@ namespace detail {
         }
 
         template<typename A>
-        TupleLeaf(Constant<int, 0>, const A &): p_value() {
+        TupleLeaf(Constant<int, 0>, A const &): p_value() {
             static_assert(!IsReference<H>,
                 "attempt to default construct a reference element in a tuple");
         }
         template<typename A>
-        TupleLeaf(Constant<int, 1>, const A &a): p_value(allocator_arg, a) {
+        TupleLeaf(Constant<int, 1>, A const &a): p_value(allocator_arg, a) {
             static_assert(!IsReference<H>,
                 "attempt to default construct a reference element in a tuple");
         }
         template<typename A>
-        TupleLeaf(Constant<int, 2>, const A &a): p_value(a) {
+        TupleLeaf(Constant<int, 2>, A const &a): p_value(a) {
             static_assert(!IsReference<H>,
                 "attempt to default construct a reference element in a tuple");
         }
@@ -67,7 +67,7 @@ namespace detail {
         }
 
         template<typename T, typename A>
-        explicit TupleLeaf(Constant<int, 0>, const A &, T &&t):
+        explicit TupleLeaf(Constant<int, 0>, A const &, T &&t):
                            p_value(forward<T>(t)) {
             static_assert(!IsLvalueReference<H> ||
                           (IsLvalueReference<H> &&
@@ -78,7 +78,7 @@ namespace detail {
         }
 
         template<typename T, typename A>
-        explicit TupleLeaf(Constant<int, 1>, const A &a, T &&t):
+        explicit TupleLeaf(Constant<int, 1>, A const &a, T &&t):
                            p_value(allocator_arg, a, forward<T>(t)) {
             static_assert(!IsLvalueReference<H> ||
                           (IsLvalueReference<H> &&
@@ -89,7 +89,7 @@ namespace detail {
         }
 
         template<typename T, typename A>
-        explicit TupleLeaf(Constant<int, 2>, const A &a, T &&t):
+        explicit TupleLeaf(Constant<int, 2>, A const &a, T &&t):
                            p_value(forward<T>(t), a) {
             static_assert(!IsLvalueReference<H> ||
                           (IsLvalueReference<H> &&
@@ -99,7 +99,7 @@ namespace detail {
             "attempt to construct a reference element in a tuple with an rvalue");
         }
 
-        TupleLeaf(const TupleLeaf &) = default;
+        TupleLeaf(TupleLeaf const &) = default;
         TupleLeaf(TupleLeaf &&) = default;
 
         template<typename T>
@@ -113,10 +113,10 @@ namespace detail {
         }
 
         H &get() { return p_value; }
-        const H &get() const { return p_value; }
+        H const &get() const { return p_value; }
 
     private:
-        TupleLeaf &operator=(const TupleLeaf &);
+        TupleLeaf &operator=(TupleLeaf const &);
         H p_value;
     };
 
@@ -125,32 +125,32 @@ namespace detail {
         constexpr TupleLeaf() {}
 
         template<typename A>
-        TupleLeaf(Constant<int, 0>, const A &) {}
+        TupleLeaf(Constant<int, 0>, A const &) {}
 
         template<typename A>
-        TupleLeaf(Constant<int, 1>, const A &a):
+        TupleLeaf(Constant<int, 1>, A const &a):
             H(allocator_arg, a) {}
 
         template<typename A>
-        TupleLeaf(Constant<int, 2>, const A &a): H(a) {}
+        TupleLeaf(Constant<int, 2>, A const &a): H(a) {}
 
         template<typename T, typename = EnableIf<
             !IsSame<Decay<T>, TupleLeaf> && IsConstructible<H, T>
         >> explicit TupleLeaf(T &&t): H(forward<T>(t)) {}
 
         template<typename T, typename A>
-        explicit TupleLeaf(Constant<int, 0>, const A &, T &&t):
+        explicit TupleLeaf(Constant<int, 0>, A const &, T &&t):
             H(forward<T>(t)) {}
 
         template<typename T, typename A>
-        explicit TupleLeaf(Constant<int, 1>, const A &a, T &&t):
+        explicit TupleLeaf(Constant<int, 1>, A const &a, T &&t):
             H(allocator_arg, a, forward<T>(t)) {}
 
         template<typename T, typename A>
-        explicit TupleLeaf(Constant<int, 2>, const A &a, T &&t):
+        explicit TupleLeaf(Constant<int, 2>, A const &a, T &&t):
             H(forward<T>(t), a) {}
 
-        TupleLeaf(const TupleLeaf &) = default;
+        TupleLeaf(TupleLeaf const &) = default;
         TupleLeaf(TupleLeaf &&) = default;
 
         template<typename T>
@@ -164,10 +164,10 @@ namespace detail {
         }
 
         H &get() { return (H &)*this; }
-        const H &get() const { return (const H &)*this; }
+        H const &get() const { return (H const &)*this; }
 
     private:
-        TupleLeaf &operator=(const TupleLeaf &);
+        TupleLeaf &operator=(TupleLeaf const &);
     };
 } /* namespace detail */
 
@@ -210,7 +210,7 @@ namespace detail {
 
         template<typename Alloc, Size ...Ia, typename ...Aa,
                  Size ...Ib, typename ...Ab, typename ...T>
-        explicit TupleBase(AllocatorArg, const Alloc &a,
+        explicit TupleBase(AllocatorArg, Alloc const &a,
                            TupleIndices<Ia...>, TupleTypes<Aa...>,
                            TupleIndices<Ib...>, TupleTypes<Ab...>,
                            T &&...t):
@@ -227,7 +227,7 @@ namespace detail {
 
         template<typename Alloc, typename T, typename = EnableIf<
             TupleConvertible<T, Tuple<A...>>
-        >> TupleBase(AllocatorArg, const Alloc &a, T &&t):
+        >> TupleBase(AllocatorArg, Alloc const &a, T &&t):
             TupleLeaf<I, A>(UsesAllocatorConstructor<
                 A, Alloc, TupleElement<I, MakeTupleTypes<T>>
             >, a, forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t)))...
@@ -242,18 +242,18 @@ namespace detail {
             return *this;
         }
 
-        TupleBase(const TupleBase &) = default;
+        TupleBase(TupleBase const &) = default;
         TupleBase(TupleBase &&) = default;
 
-        TupleBase &operator=(const TupleBase &t) {
-            tuple_swallow(TupleLeaf<I, A>::operator=(((const TupleLeaf<I,
-                A> &)t).get())...);
+        TupleBase &operator=(TupleBase const &t) {
+            tuple_swallow(TupleLeaf<I, A>::operator=(((TupleLeaf<I,A>
+                const &)t).get())...);
             return *this;
         }
 
         TupleBase &operator=(TupleBase &&t) {
             tuple_swallow(TupleLeaf<I, A>::operator=(forward<A>
-                (((const TupleLeaf<I, A> &)t).get()))...);
+                (((TupleLeaf<I, A> const &)t).get()))...);
             return *this;
         }
 
@@ -272,27 +272,27 @@ class Tuple {
     friend TupleElement<I, Tuple<T...>> &get(Tuple<T...> &);
 
     template<Size I, typename ...T>
-    friend const TupleElement<I, Tuple<T...>> &get(const Tuple<T...> &);
+    friend TupleElement<I, Tuple<T...>> const &get(Tuple<T...> const &);
 
     template<Size I, typename ...T>
     friend TupleElement<I, Tuple<T...>> &&get(Tuple<T...> &&);
 
     template<Size I, typename ...T>
-    friend const TupleElement<I, Tuple<T...>> &&get(const Tuple<T...> &&);
+    friend TupleElement<I, Tuple<T...>> const &&get(Tuple<T...> const &&);
 
 public:
     template<bool D = true, typename = EnableIf<
         detail::TupleAll<(D && IsDefaultConstructible<A>)...>
     >> Tuple() {}
 
-    explicit Tuple(const A &...t):
+    explicit Tuple(A const &...t):
         p_base(detail::MakeTupleIndices<sizeof...(A)>(),
                detail::MakeTupleTypes<Tuple, sizeof...(A)>(),
                detail::MakeTupleIndices<0>(),
                detail::MakeTupleTypes<Tuple, 0>(), t...) {}
 
     template<typename Alloc>
-    Tuple(AllocatorArg, const Alloc &a, const A &...t):
+    Tuple(AllocatorArg, Alloc const &a, A const &...t):
         p_base(allocator_arg, a,
             detail::MakeTupleIndices<sizeof...(A)>(),
             detail::MakeTupleTypes<Tuple, sizeof...(A)>(),
@@ -367,7 +367,7 @@ public:
                                               : sizeof...(A)
             >
         >
-    >> Tuple(AllocatorArg, const Alloc &a, T &&...t):
+    >> Tuple(AllocatorArg, Alloc const &a, T &&...t):
         p_base(allocator_arg, a, detail::MakeTupleIndices<sizeof...(T)>(),
                detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
                detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
@@ -385,7 +385,7 @@ public:
 
     template<typename Alloc, typename T, typename = EnableIf<
         detail::TupleConvertible<T, Tuple>
-    >> Tuple(AllocatorArg, const Alloc &a, T &&t):
+    >> Tuple(AllocatorArg, Alloc const &a, T &&t):
         p_base(allocator_arg, a, forward<T>(t)) {}
 
     template<typename T, typename = EnableIf<detail::TupleAssignable<T, Tuple>>>
@@ -402,8 +402,8 @@ public:
 template<> class Tuple<> {
 public:
     constexpr Tuple() {}
-    template<typename A> Tuple(AllocatorArg, const A &) {}
-    template<typename A> Tuple(AllocatorArg, const A &, const Tuple &) {}
+    template<typename A> Tuple(AllocatorArg, A const &) {}
+    template<typename A> Tuple(AllocatorArg, A const &, Tuple const &) {}
     void swap(Tuple &) {}
 };
 
@@ -416,9 +416,9 @@ inline TupleElement<I, Tuple<A...>> &get(Tuple<A...> &t) {
 }
 
 template<Size I, typename ...A>
-inline const TupleElement<I, Tuple<A...>> &get(const Tuple<A...> &t) {
+inline TupleElement<I, Tuple<A...>> const &get(Tuple<A...> const &t) {
     using Type = TupleElement<I, Tuple<A...>>;
-    return ((const detail::TupleLeaf<I, Type> &)t.p_base).get();
+    return ((detail::TupleLeaf<I, Type> const &)t.p_base).get();
 }
 
 template<Size I, typename ...A>
@@ -428,9 +428,9 @@ inline TupleElement<I, Tuple<A...>> &&get(Tuple<A...> &&t) {
 }
 
 template<Size I, typename ...A>
-inline const TupleElement<I, Tuple<A...>> &&get(const Tuple<A...> &&t) {
+inline TupleElement<I, Tuple<A...>> const &&get(Tuple<A...> const &&t) {
     using Type = TupleElement<I, Tuple<A...>>;
-    return (const Type &&)(((const detail::TupleLeaf<I, Type> &&)t.p_base).get());
+    return (Type const &&)(((detail::TupleLeaf<I, Type> const &&)t.p_base).get());
 }
 
 /* tie */
@@ -445,11 +445,11 @@ inline Tuple<T &...> tie(T &...t) {
 namespace detail {
     struct Ignore {
         template<typename T>
-        const Ignore &operator=(T &&) const { return *this; }
+        Ignore const &operator=(T &&) const { return *this; }
     };
 }
 
-static const detail::Ignore ignore = detail::Ignore();
+static detail::Ignore const ignore = detail::Ignore();
 
 /* make tuple */
 
@@ -489,7 +489,7 @@ namespace detail {
     template<Size I>
     struct TupleEqual {
         template<typename T, typename U>
-        bool operator()(const T &x, const U &y) {
+        bool operator()(T const &x, U const &y) {
             return TupleEqual<I - 1>()(x, y) && (get<I>(x) == get<I>(y));
         }
     };
@@ -497,19 +497,19 @@ namespace detail {
     template<>
     struct TupleEqual<0> {
         template<typename T, typename U>
-        bool operator()(const T &, const U &) {
+        bool operator()(T const &, U const &) {
             return true;
         }
     };
 }
 
 template<typename ...T, typename ...U>
-inline bool operator==(const Tuple<T...> &x, const Tuple<U...> &y) {
+inline bool operator==(Tuple<T...> const &x, Tuple<U...> const &y) {
     return detail::TupleEqual<sizeof...(T)>(x, y);
 }
 
 template<typename ...T, typename ...U>
-inline bool operator!=(const Tuple<T...> &x, const Tuple<U...> &y) {
+inline bool operator!=(Tuple<T...> const &x, Tuple<U...> const &y) {
     return !(x == y);
 }
 
@@ -517,7 +517,7 @@ namespace detail {
     template<Size I>
     struct TupleLess {
         template<typename T, typename U>
-        bool operator()(const T &x, const U &y) {
+        bool operator()(T const &x, U const &y) {
             constexpr Size J = TupleSize<T> - I;
             if (get<J>(x) < get<J>(y)) return true;
             if (get<J>(y) < get<J>(x)) return false;
@@ -528,29 +528,29 @@ namespace detail {
     template<>
     struct TupleLess<0> {
         template<typename T, typename U>
-        bool operator()(const T &, const U &) {
+        bool operator()(T const &, U const &) {
             return true;
         }
     };
 }
 
 template<typename ...T, typename ...U>
-inline bool operator<(const Tuple<T...> &x, const Tuple<U...> &y) {
+inline bool operator<(Tuple<T...> const &x, Tuple<U...> const &y) {
     return detail::TupleLess<sizeof...(T)>(x, y);
 }
 
 template<typename ...T, typename ...U>
-inline bool operator>(const Tuple<T...> &x, const Tuple<U...> &y) {
+inline bool operator>(Tuple<T...> const &x, Tuple<U...> const &y) {
     return y < x;
 }
 
 template<typename ...T, typename ...U>
-inline bool operator<=(const Tuple<T...> &x, const Tuple<U...> &y) {
+inline bool operator<=(Tuple<T...> const &x, Tuple<U...> const &y) {
     return !(y < x);
 }
 
 template<typename ...T, typename ...U>
-inline bool operator>=(const Tuple<T...> &x, const Tuple<U...> &y) {
+inline bool operator>=(Tuple<T...> const &x, Tuple<U...> const &y) {
     return !(x < y);
 }
 

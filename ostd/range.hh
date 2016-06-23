@@ -186,9 +186,9 @@ namespace detail {
     template<typename T> constexpr bool IsOutputRangeCore
         = IsConvertible<RangeCategory<T>, OutputRangeTag> ||
           (IsInputRange<T> &&
-              (detail::OutputRangeTest<T, const RangeValue<T>  &>::value ||
-               detail::OutputRangeTest<T,       RangeValue<T> &&>::value ||
-               detail::OutputRangeTest<T,       RangeValue<T>   >::value));
+              (detail::OutputRangeTest<T, RangeValue<T> const &>::value ||
+               detail::OutputRangeTest<T, RangeValue<T>      &&>::value ||
+               detail::OutputRangeTest<T, RangeValue<T>        >::value));
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsOutputRangeBase = false;
@@ -205,7 +205,7 @@ namespace detail {
     template<typename T>
     struct RangeIterator {
         RangeIterator(): p_range() {}
-        explicit RangeIterator(const T &range) {
+        explicit RangeIterator(T const &range) {
             ::new(&get_ref()) T(range);
         }
         explicit RangeIterator(T &&range) {
@@ -221,7 +221,7 @@ namespace detail {
         bool operator!=(RangeIterator) const { return !get_ref().empty(); }
     private:
         T &get_ref() { return *((T *)&p_range); }
-        const T &get_ref() const { return *((T *)&p_range); }
+        T const &get_ref() const { return *((T *)&p_range); }
         AlignedStorage<sizeof(T), alignof(T)> p_range;
     };
 }
@@ -271,15 +271,15 @@ public:
     using Range = T;
 
     RangeHalf() = delete;
-    RangeHalf(const T &range): p_range(range) {}
+    RangeHalf(T const &range): p_range(range) {}
 
     template<typename U, typename = EnableIf<IsConvertible<U, T>>>
-    RangeHalf(const RangeHalf<U> &half): p_range(half.p_range) {}
+    RangeHalf(RangeHalf<U> const &half): p_range(half.p_range) {}
 
-    RangeHalf(const RangeHalf &half): p_range(half.p_range) {}
+    RangeHalf(RangeHalf const &half): p_range(half.p_range) {}
     RangeHalf(RangeHalf &&half): p_range(move(half.p_range)) {}
 
-    RangeHalf &operator=(const RangeHalf &half) {
+    RangeHalf &operator=(RangeHalf const &half) {
         p_range = half.p_range;
         return *this;
     }
@@ -310,18 +310,18 @@ public:
         return p_range.front();
     }
 
-    RangeDifference<T> distance(const RangeHalf &half) const {
+    RangeDifference<T> distance(RangeHalf const &half) const {
         return p_range.distance_front(half.p_range);
     }
 
-    bool equals(const RangeHalf &half) const {
+    bool equals(RangeHalf const &half) const {
         return p_range.equals_front(half.p_range);
     }
 
-    bool operator==(const RangeHalf &half) const {
+    bool operator==(RangeHalf const &half) const {
         return equals(half);
     }
-    bool operator!=(const RangeHalf &half) const {
+    bool operator!=(RangeHalf const &half) const {
         return !equals(half);
     }
 
@@ -377,16 +377,16 @@ public:
 
     T iter() const { return p_range; }
 
-    HalfRange<RangeHalf> iter(const RangeHalf &other) const {
+    HalfRange<RangeHalf> iter(RangeHalf const &other) const {
         return HalfRange<RangeHalf>(*this, other);
     }
 
     RangeValue<T> *data() { return p_range.data(); }
-    const RangeValue<T> *data() const { return p_range.data(); }
+    RangeValue<T> const *data() const { return p_range.data(); }
 };
 
 template<typename R>
-inline RangeDifference<R> operator-(const R &lhs, const R &rhs) {
+inline RangeDifference<R> operator-(R const &lhs, R const &rhs) {
     return rhs.distance(lhs);
 }
 
@@ -438,7 +438,7 @@ template<typename B, typename C, typename V, typename R = V &,
     using Reference = R;
 
     detail::RangeIterator<B> begin() const {
-        return detail::RangeIterator<B>((const B &)*this);
+        return detail::RangeIterator<B>((B const &)*this);
     }
     detail::RangeIterator<B> end() const {
         return detail::RangeIterator<B>();
@@ -498,7 +498,7 @@ template<typename B, typename C, typename V, typename R = V &,
         return RangeHalf<B>(iter());
     }
 
-    Size put_n(const Value *p, Size n) {
+    Size put_n(Value const *p, Size n) {
         B &r = *((B *)this);
         Size on = n;
         for (; n && r.put(*p++); --n);
@@ -539,7 +539,7 @@ template<typename B, typename C, typename V, typename R = V &,
         return *((B *)this);
     }
     B operator++(int) {
-        B tmp(*((const B *)this));
+        B tmp(*((B const *)this));
         ((B *)this)->pop_front();
         return tmp;
     }
@@ -549,18 +549,18 @@ template<typename B, typename C, typename V, typename R = V &,
         return *((B *)this);
     }
     B operator--(int) {
-        B tmp(*((const B *)this));
+        B tmp(*((B const *)this));
         ((B *)this)->push_front();
         return tmp;
     }
 
     B operator+(Difference n) const {
-        B tmp(*((const B *)this));
+        B tmp(*((B const *)this));
         tmp.pop_front_n(n);
         return tmp;
     }
     B operator-(Difference n) const {
-        B tmp(*((const B *)this));
+        B tmp(*((B const *)this));
         tmp.push_front_n(n);
         return tmp;
     }
@@ -658,12 +658,12 @@ inline auto iter(T &r) -> decltype(r.iter()) {
 }
 
 template<typename T>
-inline auto iter(const T &r) -> decltype(r.iter()) {
+inline auto iter(T const &r) -> decltype(r.iter()) {
     return r.iter();
 }
 
 template<typename T>
-inline auto citer(const T &r) -> decltype(r.iter()) {
+inline auto citer(T const &r) -> decltype(r.iter()) {
     return r.iter();
 }
 
@@ -676,7 +676,7 @@ template<typename B, typename V, typename R = V &,
     using Value = V;
     using Reference = R;
 
-    Size put_n(const Value *p, Size n) {
+    Size put_n(Value const *p, Size n) {
         B &r = *((B *)this);
         Size on = n;
         for (; n && r.put(*p++); --n);
@@ -698,16 +698,16 @@ private:
     T p_end;
 public:
     HalfRange() = delete;
-    HalfRange(const HalfRange &range): p_beg(range.p_beg),
+    HalfRange(HalfRange const &range): p_beg(range.p_beg),
         p_end(range.p_end) {}
     HalfRange(HalfRange &&range): p_beg(move(range.p_beg)),
         p_end(move(range.p_end)) {}
-    HalfRange(const T &beg, const T &end): p_beg(beg),
+    HalfRange(T const &beg, T const &end): p_beg(beg),
         p_end(end) {}
     HalfRange(T &&beg, T &&end): p_beg(move(beg)),
         p_end(move(end)) {}
 
-    HalfRange &operator=(const HalfRange &range) {
+    HalfRange &operator=(HalfRange const &range) {
         p_beg = range.p_beg;
         p_end = range.p_end;
         return *this;
@@ -739,17 +739,17 @@ public:
     RangeReference<Rtype> front() const { return *p_beg; }
     RangeReference<Rtype> back() const { return *(p_end - 1); }
 
-    bool equals_front(const HalfRange &range) const {
+    bool equals_front(HalfRange const &range) const {
         return p_beg == range.p_beg;
     }
-    bool equals_back(const HalfRange &range) const {
+    bool equals_back(HalfRange const &range) const {
         return p_end == range.p_end;
     }
 
-    RangeDifference<Rtype> distance_front(const HalfRange &range) const {
+    RangeDifference<Rtype> distance_front(HalfRange const &range) const {
         return range.p_beg - p_beg;
     }
-    RangeDifference<Rtype> distance_back(const HalfRange &range) const {
+    RangeDifference<Rtype> distance_back(HalfRange const &range) const {
         return range.p_end - p_end;
     }
 
@@ -764,7 +764,7 @@ public:
         return p_beg[idx];
     }
 
-    bool put(const RangeValue<Rtype> &v) {
+    bool put(RangeValue<Rtype> const &v) {
         return p_beg.range().put(v);
     }
     bool put(RangeValue<Rtype> &&v) {
@@ -772,7 +772,7 @@ public:
     }
 
     RangeValue<Rtype> *data() { return p_beg.data(); }
-    const RangeValue<Rtype> *data() const { return p_beg.data(); }
+    RangeValue<Rtype> const *data() const { return p_beg.data(); }
 };
 
 template<typename T>
@@ -788,11 +788,11 @@ private:
 
 public:
     ReverseRange() = delete;
-    ReverseRange(const T &range): p_range(range) {}
-    ReverseRange(const ReverseRange &it): p_range(it.p_range) {}
+    ReverseRange(T const &range): p_range(range) {}
+    ReverseRange(ReverseRange const &it): p_range(it.p_range) {}
     ReverseRange(ReverseRange &&it): p_range(move(it.p_range)) {}
 
-    ReverseRange &operator=(const ReverseRange &v) {
+    ReverseRange &operator=(ReverseRange const &v) {
         p_range = v.p_range;
         return *this;
     }
@@ -800,7 +800,7 @@ public:
         p_range = move(v.p_range);
         return *this;
     }
-    ReverseRange &operator=(const T &v) {
+    ReverseRange &operator=(T const &v) {
         p_range = v;
         return *this;
     }
@@ -812,17 +812,17 @@ public:
     bool empty() const { return p_range.empty(); }
     Rsize size() const { return p_range.size(); }
 
-    bool equals_front(const ReverseRange &r) const {
+    bool equals_front(ReverseRange const &r) const {
     return p_range.equals_back(r.p_range);
     }
-    bool equals_back(const ReverseRange &r) const {
+    bool equals_back(ReverseRange const &r) const {
         return p_range.equals_front(r.p_range);
     }
 
-    RangeDifference<T> distance_front(const ReverseRange &r) const {
+    RangeDifference<T> distance_front(ReverseRange const &r) const {
         return -p_range.distance_back(r.p_range);
     }
-    RangeDifference<T> distance_back(const ReverseRange &r) const {
+    RangeDifference<T> distance_back(ReverseRange const &r) const {
         return -p_range.distance_front(r.p_range);
     }
 
@@ -863,11 +863,11 @@ private:
 
 public:
     MoveRange() = delete;
-    MoveRange(const T &range): p_range(range) {}
-    MoveRange(const MoveRange &it): p_range(it.p_range) {}
+    MoveRange(T const &range): p_range(range) {}
+    MoveRange(MoveRange const &it): p_range(it.p_range) {}
     MoveRange(MoveRange &&it): p_range(move(it.p_range)) {}
 
-    MoveRange &operator=(const MoveRange &v) {
+    MoveRange &operator=(MoveRange const &v) {
         p_range = v.p_range;
         return *this;
     }
@@ -875,7 +875,7 @@ public:
         p_range = move(v.p_range);
         return *this;
     }
-    MoveRange &operator=(const T &v) {
+    MoveRange &operator=(T const &v) {
         p_range = v;
         return *this;
     }
@@ -887,17 +887,17 @@ public:
     bool empty() const { return p_range.empty(); }
     Rsize size() const { return p_range.size(); }
 
-    bool equals_front(const MoveRange &r) const {
+    bool equals_front(MoveRange const &r) const {
         return p_range.equals_front(r.p_range);
     }
-    bool equals_back(const MoveRange &r) const {
+    bool equals_back(MoveRange const &r) const {
         return p_range.equals_back(r.p_range);
     }
 
-    RangeDifference<T> distance_front(const MoveRange &r) const {
+    RangeDifference<T> distance_front(MoveRange const &r) const {
         return p_range.distance_front(r.p_range);
     }
-    RangeDifference<T> distance_back(const MoveRange &r) const {
+    RangeDifference<T> distance_back(MoveRange const &r) const {
         return p_range.distance_back(r.p_range);
     }
 
@@ -922,14 +922,14 @@ public:
         return MoveRange<T>(p_range.slice(start, end));
     }
 
-    bool put(const Rval &v) { return p_range.put(v); }
+    bool put(Rval const &v) { return p_range.put(v); }
     bool put(Rval &&v) { return p_range.put(move(v)); }
 };
 
 template<typename T>
 struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T, T> {
     NumberRange() = delete;
-    NumberRange(const NumberRange &it): p_a(it.p_a), p_b(it.p_b),
+    NumberRange(NumberRange const &it): p_a(it.p_a), p_b(it.p_b),
         p_step(it.p_step) {}
     NumberRange(T a, T b, T step = T(1)): p_a(a), p_b(b),
         p_step(step) {}
@@ -937,7 +937,7 @@ struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T, T> {
 
     bool empty() const { return p_a * p_step >= p_b * p_step; }
 
-    bool equals_front(const NumberRange &range) const {
+    bool equals_front(NumberRange const &range) const {
         return p_a == range.p_a;
     }
 
@@ -974,9 +974,9 @@ public:
     PointerRange(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
 
     template<typename U, typename = EnableIf<IsConvertible<U *, T *>>>
-    PointerRange(const PointerRange<U> &v): p_beg(&v[0]), p_end(&v[v.size()]) {}
+    PointerRange(PointerRange<U> const &v): p_beg(&v[0]), p_end(&v[v.size()]) {}
 
-    PointerRange &operator=(const PointerRange &v) {
+    PointerRange &operator=(PointerRange const &v) {
         p_beg = v.p_beg;
         p_end = v.p_end;
         return *this;
@@ -1010,11 +1010,11 @@ public:
 
     T &front() const { return *p_beg; }
 
-    bool equals_front(const PointerRange &range) const {
+    bool equals_front(PointerRange const &range) const {
         return p_beg == range.p_beg;
     }
 
-    Ptrdiff distance_front(const PointerRange &range) const {
+    Ptrdiff distance_front(PointerRange const &range) const {
         return range.p_beg - p_beg;
     }
 
@@ -1044,11 +1044,11 @@ public:
 
     T &back() const { return *(p_end - 1); }
 
-    bool equals_back(const PointerRange &range) const {
+    bool equals_back(PointerRange const &range) const {
         return p_end == range.p_end;
     }
 
-    Ptrdiff distance_back(const PointerRange &range) const {
+    Ptrdiff distance_back(PointerRange const &range) const {
         return range.p_end - p_end;
     }
 
@@ -1062,7 +1062,7 @@ public:
     T &operator[](Size i) const { return p_beg[i]; }
 
     /* satisfy OutputRange */
-    bool put(const T &v) {
+    bool put(T const &v) {
         if (empty()) return false;
         *(p_beg++) = v;
         return true;
@@ -1073,7 +1073,7 @@ public:
         return true;
     }
 
-    Size put_n(const T *p, Size n) {
+    Size put_n(T const *p, Size n) {
         Size ret = size();
         if (n < ret) ret = n;
         if (IsPod<T>) {
@@ -1104,7 +1104,7 @@ public:
     }
 
     T *data() { return p_beg; }
-    const T *data() const { return p_beg; }
+    T const *data() const { return p_beg; }
 
 private:
     T *p_beg, *p_end;
@@ -1116,8 +1116,8 @@ inline PointerRange<T> iter(T (&array)[N]) {
 }
 
 template<typename T, Size N>
-inline PointerRange<const T> iter(const T (&array)[N]) {
-    return PointerRange<const T>(array, N);
+inline PointerRange<T const> iter(T const (&array)[N]) {
+    return PointerRange<T const>(array, N);
 }
 
 namespace detail {
@@ -1158,15 +1158,15 @@ private:
 public:
     EnumeratedRange() = delete;
 
-    EnumeratedRange(const T &range): p_range(range), p_index(0) {}
+    EnumeratedRange(T const &range): p_range(range), p_index(0) {}
 
-    EnumeratedRange(const EnumeratedRange &it):
+    EnumeratedRange(EnumeratedRange const &it):
         p_range(it.p_range), p_index(it.p_index) {}
 
     EnumeratedRange(EnumeratedRange &&it):
         p_range(move(it.p_range)), p_index(it.p_index) {}
 
-    EnumeratedRange &operator=(const EnumeratedRange &v) {
+    EnumeratedRange &operator=(EnumeratedRange const &v) {
         p_range = v.p_range;
         p_index = v.p_index;
         return *this;
@@ -1176,7 +1176,7 @@ public:
         p_index = v.p_index;
         return *this;
     }
-    EnumeratedRange &operator=(const T &v) {
+    EnumeratedRange &operator=(T const &v) {
         p_range = v;
         p_index = 0;
         return *this;
@@ -1189,7 +1189,7 @@ public:
 
     bool empty() const { return p_range.empty(); }
 
-    bool equals_front(const EnumeratedRange &r) const {
+    bool equals_front(EnumeratedRange const &r) const {
         return p_range.equals_front(r.p_range);
     }
 
@@ -1222,14 +1222,14 @@ private:
     RangeSize<T> p_remaining;
 public:
     TakeRange() = delete;
-    TakeRange(const T &range, RangeSize<T> rem): p_range(range),
+    TakeRange(T const &range, RangeSize<T> rem): p_range(range),
         p_remaining(rem) {}
-    TakeRange(const TakeRange &it): p_range(it.p_range),
+    TakeRange(TakeRange const &it): p_range(it.p_range),
         p_remaining(it.p_remaining) {}
     TakeRange(TakeRange &&it): p_range(move(it.p_range)),
         p_remaining(it.p_remaining) {}
 
-    TakeRange &operator=(const TakeRange &v) {
+    TakeRange &operator=(TakeRange const &v) {
         p_range = v.p_range; p_remaining = v.p_remaining; return *this;
     }
     TakeRange &operator=(TakeRange &&v) {
@@ -1256,7 +1256,7 @@ public:
 
     RangeReference<T> front() const { return p_range.front(); }
 
-    bool equals_front(const TakeRange &r) const {
+    bool equals_front(TakeRange const &r) const {
         return p_range.equals_front(r.p_range);
     }
 };
@@ -1271,14 +1271,14 @@ private:
     RangeSize<T> p_chunksize;
 public:
     ChunksRange() = delete;
-    ChunksRange(const T &range, RangeSize<T> chs): p_range(range),
+    ChunksRange(T const &range, RangeSize<T> chs): p_range(range),
         p_chunksize(chs) {}
-    ChunksRange(const ChunksRange &it): p_range(it.p_range),
+    ChunksRange(ChunksRange const &it): p_range(it.p_range),
         p_chunksize(it.p_chunksize) {}
     ChunksRange(ChunksRange &&it): p_range(move(it.p_range)),
         p_chunksize(it.p_chunksize) {}
 
-    ChunksRange &operator=(const ChunksRange &v) {
+    ChunksRange &operator=(ChunksRange const &v) {
         p_range = v.p_range; p_chunksize = v.p_chunksize; return *this;
     }
     ChunksRange &operator=(ChunksRange &&v) {
@@ -1289,7 +1289,7 @@ public:
 
     bool empty() const { return p_range.empty(); }
 
-    bool equals_front(const ChunksRange &r) const {
+    bool equals_front(ChunksRange const &r) const {
         return p_range.equals_front(r.p_range);
     }
 
@@ -1305,7 +1305,7 @@ namespace detail {
     template<Size I, Size N>
     struct JoinRangeEmpty {
         template<typename T>
-        static bool empty(const T &tup) {
+        static bool empty(T const &tup) {
             if (!ostd::get<I>(tup).empty())
                 return false;
             return JoinRangeEmpty<I + 1, N>::empty(tup);
@@ -1315,7 +1315,7 @@ namespace detail {
     template<Size N>
     struct JoinRangeEmpty<N, N> {
         template<typename T>
-        static bool empty(const T &) {
+        static bool empty(T const &) {
             return true;
         }
     };
@@ -1323,7 +1323,7 @@ namespace detail {
     template<Size I, Size N>
     struct TupleRangeEqual {
         template<typename T>
-        static bool equal(const T &tup1, const T &tup2) {
+        static bool equal(T const &tup1, T const &tup2) {
             if (!ostd::get<I>(tup1).equals_front(ostd::get<I>(tup2)))
                 return false;
             return TupleRangeEqual<I + 1, N>::equal(tup1, tup2);
@@ -1333,7 +1333,7 @@ namespace detail {
     template<Size N>
     struct TupleRangeEqual<N, N> {
         template<typename T>
-        static bool equal(const T &, const T &) {
+        static bool equal(T const &, T const &) {
             return true;
         }
     };
@@ -1360,7 +1360,7 @@ namespace detail {
     template<Size I, Size N, typename T>
     struct JoinRangeFront {
         template<typename U>
-        static T front(const U &tup) {
+        static T front(U const &tup) {
             if (!ostd::get<I>(tup).empty()) {
                 return ostd::get<I>(tup).front();
             }
@@ -1371,7 +1371,7 @@ namespace detail {
     template<Size N, typename T>
     struct JoinRangeFront<N, N, T> {
         template<typename U>
-        static T front(const U &tup) {
+        static T front(U const &tup) {
             return ostd::get<0>(tup).front();
         }
     };
@@ -1386,12 +1386,12 @@ private:
     Tuple<R...> p_ranges;
 public:
     JoinRange() = delete;
-    JoinRange(const R &...ranges): p_ranges(ranges...) {}
+    JoinRange(R const &...ranges): p_ranges(ranges...) {}
     JoinRange(R &&...ranges): p_ranges(forward<R>(ranges)...) {}
-    JoinRange(const JoinRange &v): p_ranges(v.p_ranges) {}
+    JoinRange(JoinRange const &v): p_ranges(v.p_ranges) {}
     JoinRange(JoinRange &&v): p_ranges(move(v.p_ranges)) {}
 
-    JoinRange &operator=(const JoinRange &v) {
+    JoinRange &operator=(JoinRange const &v) {
         p_ranges = v.p_ranges;
         return *this;
     }
@@ -1405,7 +1405,7 @@ public:
         return detail::JoinRangeEmpty<0, sizeof...(R)>::empty(p_ranges);
     }
 
-    bool equals_front(const JoinRange &r) const {
+    bool equals_front(JoinRange const &r) const {
         return detail::TupleRangeEqual<0, sizeof...(R)>::equal(p_ranges,
             r.p_ranges);
     }
@@ -1437,7 +1437,7 @@ namespace detail {
     template<Size I, Size N>
     struct ZipRangeEmpty {
         template<typename T>
-        static bool empty(const T &tup) {
+        static bool empty(T const &tup) {
             if (ostd::get<I>(tup).empty())
                 return true;
             return ZipRangeEmpty<I + 1, N>::empty(tup);
@@ -1447,7 +1447,7 @@ namespace detail {
     template<Size N>
     struct ZipRangeEmpty<N, N> {
         template<typename T>
-        static bool empty(const T &) {
+        static bool empty(T const &) {
             return false;
         }
     };
@@ -1472,12 +1472,12 @@ namespace detail {
     template<typename ...T>
     struct ZipRangeFront {
         template<typename U, Size ...I>
-        static ZipValue<T...> tup_get(const U &tup, detail::TupleIndices<I...>) {
+        static ZipValue<T...> tup_get(U const &tup, detail::TupleIndices<I...>) {
             return ZipValue<T...>(ostd::get<I>(tup).front()...);
         }
 
         template<typename U>
-        static ZipValue<T...> front(const U &tup) {
+        static ZipValue<T...> front(U const &tup) {
             using Index = detail::MakeTupleIndices<sizeof...(T)>;
             return ZipRangeFront<T...>::tup_get(tup, Index());
         }
@@ -1494,12 +1494,12 @@ private:
     Tuple<R...> p_ranges;
 public:
     ZipRange() = delete;
-    ZipRange(const R &...ranges): p_ranges(ranges...) {}
+    ZipRange(R const &...ranges): p_ranges(ranges...) {}
     ZipRange(R &&...ranges): p_ranges(forward<R>(ranges)...) {}
-    ZipRange(const ZipRange &v): p_ranges(v.p_ranges) {}
+    ZipRange(ZipRange const &v): p_ranges(v.p_ranges) {}
     ZipRange(ZipRange &&v): p_ranges(move(v.p_ranges)) {}
 
-    ZipRange &operator=(const ZipRange &v) {
+    ZipRange &operator=(ZipRange const &v) {
         p_ranges = v.p_ranges;
         return *this;
     }
@@ -1513,7 +1513,7 @@ public:
         return detail::ZipRangeEmpty<0, sizeof...(R)>::empty(p_ranges);
     }
 
-    bool equals_front(const ZipRange &r) const {
+    bool equals_front(ZipRange const &r) const {
         return detail::TupleRangeEqual<0, sizeof...(R)>::equal(p_ranges,
             r.p_ranges);
     }
@@ -1531,12 +1531,12 @@ template<typename T>
 struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value,
     typename T::Reference, typename T::Size, typename T::Difference> {
     AppenderRange(): p_data() {}
-    AppenderRange(const T &v): p_data(v) {}
+    AppenderRange(T const &v): p_data(v) {}
     AppenderRange(T &&v): p_data(move(v)) {}
-    AppenderRange(const AppenderRange &v): p_data(v.p_data) {}
+    AppenderRange(AppenderRange const &v): p_data(v.p_data) {}
     AppenderRange(AppenderRange &&v): p_data(move(v.p_data)) {}
 
-    AppenderRange &operator=(const AppenderRange &v) {
+    AppenderRange &operator=(AppenderRange const &v) {
         p_data = v.p_data;
         return *this;
     }
@@ -1546,7 +1546,7 @@ struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value,
         return *this;
     }
 
-    AppenderRange &operator=(const T &v) {
+    AppenderRange &operator=(T const &v) {
         p_data = v;
         return *this;
     }

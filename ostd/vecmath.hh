@@ -18,7 +18,7 @@ struct Vec2 {
     };
 
     Vec2(): x(0), y(0) {}
-    Vec2(const Vec2 &v): x(v.x), y(v.y) {}
+    Vec2(Vec2 const &v): x(v.x), y(v.y) {}
     Vec2(T v): x(v), y(v) {}
     Vec2(T x, T y): x(x), y(y) {}
 
@@ -29,7 +29,7 @@ struct Vec2 {
         x += v; y += v;
         return *this;
     }
-    Vec2 &add(const Vec2 &o) {
+    Vec2 &add(Vec2 const &o) {
         x += o.x; y += o.y;
         return *this;
     }
@@ -38,7 +38,7 @@ struct Vec2 {
         x -= v; y -= v;
         return *this;
     }
-    Vec2 &sub(const Vec2 &o) {
+    Vec2 &sub(Vec2 const &o) {
         x -= o.x; y -= o.y;
         return *this;
     }
@@ -47,7 +47,7 @@ struct Vec2 {
         x *= v; y *= v;
         return *this;
     }
-    Vec2 &mul(const Vec2 &o) {
+    Vec2 &mul(Vec2 const &o) {
         x *= o.x; y *= o.y;
         return *this;
     }
@@ -56,7 +56,7 @@ struct Vec2 {
         x /= v; y /= v;
         return *this;
     }
-    Vec2 &div(const Vec2 &o) {
+    Vec2 &div(Vec2 const &o) {
         x /= o.x; y /= o.y;
         return *this;
     }
@@ -70,63 +70,63 @@ struct Vec2 {
         return (x == 0) && (y == 0);
     }
 
-    T dot(const Vec2<T> &o) const {
+    T dot(Vec2<T> const &o) const {
         return (x * o.x) + (y * o.y);
     }
 };
 
 template<typename T>
-inline bool operator==(const Vec2<T> &a, const Vec2<T> &b) {
+inline bool operator==(Vec2<T> const &a, Vec2<T> const &b) {
     return (a.x == b.x) && (a.y == b.y);
 }
 
 template<typename T>
-inline bool operator!=(const Vec2<T> &a, const Vec2<T> &b) {
+inline bool operator!=(Vec2<T> const &a, Vec2<T> const &b) {
     return (a.x != b.x) || (a.y != b.y);
 }
 
 template<typename T>
-inline Vec2<T> operator+(const Vec2<T> &a, const Vec2<T> &b) {
+inline Vec2<T> operator+(Vec2<T> const &a, Vec2<T> const &b) {
     return Vec2<T>(a).add(b);
 }
 
 template<typename T>
-inline Vec2<T> operator+(const Vec2<T> &a, T b) {
+inline Vec2<T> operator+(Vec2<T> const &a, T b) {
     return Vec2<T>(a).add(b);
 }
 
 template<typename T>
-inline Vec2<T> operator-(const Vec2<T> &a, const Vec2<T> &b) {
+inline Vec2<T> operator-(Vec2<T> const &a, Vec2<T> const &b) {
     return Vec2<T>(a).sub(b);
 }
 
 template<typename T>
-inline Vec2<T> operator-(const Vec2<T> &a, T b) {
+inline Vec2<T> operator-(Vec2<T> const &a, T b) {
     return Vec2<T>(a).sub(b);
 }
 
 template<typename T>
-inline Vec2<T> operator*(const Vec2<T> &a, const Vec2<T> &b) {
+inline Vec2<T> operator*(Vec2<T> const &a, Vec2<T> const &b) {
     return Vec2<T>(a).mul(b);
 }
 
 template<typename T>
-inline Vec2<T> operator*(const Vec2<T> &a, T b) {
+inline Vec2<T> operator*(Vec2<T> const &a, T b) {
     return Vec2<T>(a).mul(b);
 }
 
 template<typename T>
-inline Vec2<T> operator/(const Vec2<T> &a, const Vec2<T> &b) {
+inline Vec2<T> operator/(Vec2<T> const &a, Vec2<T> const &b) {
     return Vec2<T>(a).div(b);
 }
 
 template<typename T>
-inline Vec2<T> operator/(const Vec2<T> &a, T b) {
+inline Vec2<T> operator/(Vec2<T> const &a, T b) {
     return Vec2<T>(a).div(b);
 }
 
 template<typename T>
-inline Vec2<T> operator-(const Vec2<T> &a) {
+inline Vec2<T> operator-(Vec2<T> const &a) {
     return Vec2<T>(a).neg();
 }
 
@@ -144,7 +144,7 @@ struct Vec3 {
     };
 
     Vec3(): x(0), y(0), z(0) {}
-    Vec3(const Vec3 &v): x(v.x), y(v.y), z(v.z) {}
+    Vec3(Vec3 const &v): x(v.x), y(v.y), z(v.z) {}
     Vec3(T v): x(v), y(v), z(v) {}
     Vec3(T x, T y, T z): x(x), y(y), z(z) {}
 
@@ -155,7 +155,7 @@ struct Vec3 {
         x += v; y += v; z += v;
         return *this;
     }
-    Vec3 &add(const Vec3 &o) {
+    Vec3 &add(Vec3 const &o) {
         x += o.x; y += o.y; z += o.z;
         return *this;
     }
@@ -164,7 +164,7 @@ struct Vec3 {
         x -= v; y -= v; z -= v;
         return *this;
     }
-    Vec3 &sub(const Vec3 &o) {
+    Vec3 &sub(Vec3 const &o) {
         x -= o.x; y -= o.y; z -= o.z;
         return *this;
     }
@@ -173,7 +173,7 @@ struct Vec3 {
         x *= v; y *= v; z *= v;
         return *this;
     }
-    Vec3 &mul(const Vec3 &o) {
+    Vec3 &mul(Vec3 const &o) {
         x *= o.x; y *= o.y; z *= o.z;
         return *this;
     }
@@ -182,7 +182,7 @@ struct Vec3 {
         x /= v; y /= v; z /= v;
         return *this;
     }
-    Vec3 &div(const Vec3 &o) {
+    Vec3 &div(Vec3 const &o) {
         x /= o.x; y /= o.y; z /= o.z;
         return *this;
     }
@@ -196,63 +196,63 @@ struct Vec3 {
         return (x == 0) && (y == 0) && (z == 0);
     }
 
-    T dot(const Vec3<T> &o) const {
+    T dot(Vec3<T> const &o) const {
         return (x * o.x) + (y * o.y) + (z * o.z);
     }
 };
 
 template<typename T>
-inline bool operator==(const Vec3<T> &a, const Vec3<T> &b) {
+inline bool operator==(Vec3<T> const &a, Vec3<T> const &b) {
     return (a.x == b.x) && (a.y == b.y) && (a.z == b.z);
 }
 
 template<typename T>
-inline bool operator!=(const Vec3<T> &a, const Vec3<T> &b) {
+inline bool operator!=(Vec3<T> const &a, Vec3<T> const &b) {
     return (a.x != b.x) || (a.y != b.y) || (a.z != b.z);
 }
 
 template<typename T>
-inline Vec3<T> operator+(const Vec3<T> &a, const Vec3<T> &b) {
+inline Vec3<T> operator+(Vec3<T> const &a, Vec3<T> const &b) {
     return Vec3<T>(a).add(b);
 }
 
 template<typename T>
-inline Vec3<T> operator+(const Vec3<T> &a, T b) {
+inline Vec3<T> operator+(Vec3<T> const &a, T b) {
     return Vec3<T>(a).add(b);
 }
 
 template<typename T>
-inline Vec3<T> operator-(const Vec3<T> &a, const Vec3<T> &b) {
+inline Vec3<T> operator-(Vec3<T> const &a, Vec3<T> const &b) {
     return Vec3<T>(a).sub(b);
 }
 
 template<typename T>
-inline Vec3<T> operator-(const Vec3<T> &a, T b) {
+inline Vec3<T> operator-(Vec3<T> const &a, T b) {
     return Vec3<T>(a).sub(b);
 }
 
 template<typename T>
-inline Vec3<T> operator*(const Vec3<T> &a, const Vec3<T> &b) {
+inline Vec3<T> operator*(Vec3<T> const &a, Vec3<T> const &b) {
     return Vec3<T>(a).mul(b);
 }
 
 template<typename T>
-inline Vec3<T> operator*(const Vec3<T> &a, T b) {
+inline Vec3<T> operator*(Vec3<T> const &a, T b) {
     return Vec3<T>(a).mul(b);
 }
 
 template<typename T>
-inline Vec3<T> operator/(const Vec3<T> &a, const Vec3<T> &b) {
+inline Vec3<T> operator/(Vec3<T> const &a, Vec3<T> const &b) {
     return Vec3<T>(a).div(b);
 }
 
 template<typename T>
-inline Vec3<T> operator/(const Vec3<T> &a, T b) {
+inline Vec3<T> operator/(Vec3<T> const &a, T b) {
     return Vec3<T>(a).div(b);
 }
 
 template<typename T>
-inline Vec3<T> operator-(const Vec3<T> &a) {
+inline Vec3<T> operator-(Vec3<T> const &a) {
     return Vec3<T>(a).neg();
 }
 
@@ -270,7 +270,7 @@ struct Vec4 {
     };
 
     Vec4(): x(0), y(0), z(0), w(0) {}
-    Vec4(const Vec4 &v): x(v.x), y(v.y), z(v.z), w(v.w) {}
+    Vec4(Vec4 const &v): x(v.x), y(v.y), z(v.z), w(v.w) {}
     Vec4(T v): x(v), y(v), z(v), w(v) {}
     Vec4(T x, T y, T z, T w): x(x), y(y), z(z), w(w) {}
 
@@ -281,7 +281,7 @@ struct Vec4 {
         x += v; y += v; z += v; w += v;
         return *this;
     }
-    Vec4 &add(const Vec4 &o) {
+    Vec4 &add(Vec4 const &o) {
         x += o.x; y += o.y; z += o.z; w += o.w;
         return *this;
     }
@@ -290,7 +290,7 @@ struct Vec4 {
         x -= v; y -= v; z -= v; w -= v;
         return *this;
     }
-    Vec4 &sub(const Vec4 &o) {
+    Vec4 &sub(Vec4 const &o) {
         x -= o.x; y -= o.y; z -= o.z; w -= o.w;
         return *this;
     }
@@ -299,7 +299,7 @@ struct Vec4 {
         x *= v; y *= v; z *= v; w *= v;
         return *this;
     }
-    Vec4 &mul(const Vec4 &o) {
+    Vec4 &mul(Vec4 const &o) {
         x *= o.x; y *= o.y; z *= o.z; w *= o.w;
         return *this;
     }
@@ -308,7 +308,7 @@ struct Vec4 {
         x /= v; y /= v; z /= v; w /= v;
         return *this;
     }
-    Vec4 &div(const Vec4 &o) {
+    Vec4 &div(Vec4 const &o) {
         x /= o.x; y /= o.y; z /= o.z; w /= o.w;
         return *this;
     }
@@ -322,63 +322,63 @@ struct Vec4 {
         return (x == 0) && (y == 0) && (z == 0) && (w == 0);
     }
 
-    T dot(const Vec4<T> &o) const {
+    T dot(Vec4<T> const &o) const {
         return (x * o.x) + (y * o.y) + (z * o.z) + (w * o.w);
     }
 };
 
 template<typename T>
-inline bool operator==(const Vec4<T> &a, const Vec4<T> &b) {
+inline bool operator==(Vec4<T> const &a, Vec4<T> const &b) {
     return (a.x == b.x) && (a.y == b.y) && (a.z == b.z) && (a.w == b.w);
 }
 
 template<typename T>
-inline bool operator!=(const Vec4<T> &a, const Vec4<T> &b) {
+inline bool operator!=(Vec4<T> const &a, Vec4<T> const &b) {
     return (a.x != b.x) || (a.y != b.y) || (a.z != b.z) || (a.w != b.w);
 }
 
 template<typename T>
-inline Vec4<T> operator+(const Vec4<T> &a, const Vec4<T> &b) {
+inline Vec4<T> operator+(Vec4<T> const &a, Vec4<T> const &b) {
     return Vec4<T>(a).add(b);
 }
 
 template<typename T>
-inline Vec4<T> operator+(const Vec4<T> &a, T b) {
+inline Vec4<T> operator+(Vec4<T> const &a, T b) {
     return Vec4<T>(a).add(b);
 }
 
 template<typename T>
-inline Vec4<T> operator-(const Vec4<T> &a, const Vec4<T> &b) {
+inline Vec4<T> operator-(Vec4<T> const &a, Vec4<T> const &b) {
     return Vec4<T>(a).sub(b);
 }
 
 template<typename T>
-inline Vec4<T> operator-(const Vec4<T> &a, T b) {
+inline Vec4<T> operator-(Vec4<T> const &a, T b) {
     return Vec4<T>(a).sub(b);
 }
 
 template<typename T>
-inline Vec4<T> operator*(const Vec4<T> &a, const Vec4<T> &b) {
+inline Vec4<T> operator*(Vec4<T> const &a, Vec4<T> const &b) {
     return Vec4<T>(a).mul(b);
 }
 
 template<typename T>
-inline Vec4<T> operator*(const Vec4<T> &a, T b) {
+inline Vec4<T> operator*(Vec4<T> const &a, T b) {
     return Vec4<T>(a).mul(b);
 }
 
 template<typename T>
-inline Vec4<T> operator/(const Vec4<T> &a, const Vec4<T> &b) {
+inline Vec4<T> operator/(Vec4<T> const &a, Vec4<T> const &b) {
     return Vec4<T>(a).div(b);
 }
 
 template<typename T>
-inline Vec4<T> operator/(const Vec4<T> &a, T b) {
+inline Vec4<T> operator/(Vec4<T> const &a, T b) {
     return Vec4<T>(a).div(b);
 }
 
 template<typename T>
-inline Vec4<T> operator-(const Vec4<T> &a) {
+inline Vec4<T> operator-(Vec4<T> const &a) {
     return Vec4<T>(a).neg();
 }
 

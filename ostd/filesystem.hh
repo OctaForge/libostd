@@ -38,7 +38,7 @@ static constexpr char PathSeparator = '/';
 
 #ifdef OSTD_PLATFORM_WIN32
 namespace detail {
-    inline time_t filetime_to_time_t(const FILETIME &ft) {
+    inline time_t filetime_to_time_t(FILETIME const &ft) {
         ULARGE_INTEGER ul;
         ul.LowPart  = ft.dwLowDateTime;
         ul.HighPart = ft.dwHighDateTime;
@@ -54,7 +54,7 @@ inline void path_normalize(CharRange) {
 struct FileInfo {
     FileInfo() {}
 
-    FileInfo(const FileInfo &i):
+    FileInfo(FileInfo const &i):
         p_slash(i.p_slash), p_dot(i.p_dot), p_type(i.p_type),
         p_path(i.p_path), p_atime(i.p_atime), p_mtime(i.p_mtime),
         p_ctime(i.p_ctime) {}
@@ -72,7 +72,7 @@ struct FileInfo {
         init_from_str(path);
     }
 
-    FileInfo &operator=(const FileInfo &i) {
+    FileInfo &operator=(FileInfo const &i) {
         p_slash = i.p_slash;
         p_dot = i.p_dot;
         p_type = i.p_type;
@@ -215,7 +215,7 @@ struct DirectoryStream {
     friend struct DirectoryRange;
 
     DirectoryStream(): p_d(), p_de(), p_dev(), p_path() {}
-    DirectoryStream(const DirectoryStream &) = delete;
+    DirectoryStream(DirectoryStream const &) = delete;
     DirectoryStream(DirectoryStream &&s): p_d(s.p_d), p_de(s.p_de),
                                           p_dev(s.p_dev),
                                           p_path(move(s.p_path)) {
@@ -230,7 +230,7 @@ struct DirectoryStream {
 
     ~DirectoryStream() { close(); }
 
-    DirectoryStream &operator=(const DirectoryStream &) = delete;
+    DirectoryStream &operator=(DirectoryStream const &) = delete;
     DirectoryStream &operator=(DirectoryStream &&s) {
         close();
         swap(s);
@@ -325,7 +325,7 @@ private:
             return FileInfo();
         String ap = p_path;
         ap += PathSeparator;
-        ap += (const char *)p_de->d_name;
+        ap += (char const *)p_de->d_name;
         return FileInfo(ap);
     }
 
@@ -341,7 +341,7 @@ struct DirectoryStream {
     friend struct DirectoryRange;
 
     DirectoryStream(): p_handle(INVALID_HANDLE_VALUE), p_data(), p_path() {}
-    DirectoryStream(const DirectoryStream &) = delete;
+    DirectoryStream(DirectoryStream const &) = delete;
     DirectoryStream(DirectoryStream &&s): p_handle(s.p_handle),
                                           p_data(s.p_data),
                                           p_path(move(s.p_path)) {
@@ -355,7 +355,7 @@ struct DirectoryStream {
 
     ~DirectoryStream() { close(); }
 
-    DirectoryStream &operator=(const DirectoryStream &) = delete;
+    DirectoryStream &operator=(DirectoryStream const &) = delete;
     DirectoryStream &operator=(DirectoryStream &&s) {
         close();
         swap(s);
@@ -463,7 +463,7 @@ private:
             return FileInfo();
         String ap = p_path;
         ap += PathSeparator;
-        ap += (const char *)p_data.cFileName;
+        ap += (char const *)p_data.cFileName;
         return FileInfo(ap);
     }
 
@@ -478,9 +478,9 @@ struct DirectoryRange: InputRange<
 > {
     DirectoryRange() = delete;
     DirectoryRange(DirectoryStream &s): p_stream(&s) {}
-    DirectoryRange(const DirectoryRange &r): p_stream(r.p_stream) {}
+    DirectoryRange(DirectoryRange const &r): p_stream(r.p_stream) {}
 
-    DirectoryRange &operator=(const DirectoryRange &r) {
+    DirectoryRange &operator=(DirectoryRange const &r) {
         p_stream = r.p_stream;
         return *this;
     }
@@ -497,7 +497,7 @@ struct DirectoryRange: InputRange<
         return p_stream->front();
     }
 
-    bool equals_front(const DirectoryRange &s) const {
+    bool equals_front(DirectoryRange const &s) const {
         return p_stream == s.p_stream;
     }
 
@@ -512,7 +512,7 @@ inline DirectoryRange DirectoryStream::iter() {
 namespace detail {
     template<Size I> struct PathJoin {
         template<typename T, typename ...A>
-        static void join(String &s, const T &a, const A &...b) {
+        static void join(String &s, T const &a, A const &...b) {
             s += a;
             s += PathSeparator;
             PathJoin<I - 1>::join(s, b...);
@@ -521,14 +521,14 @@ namespace detail {
 
     template<> struct PathJoin<1> {
         template<typename T>
-        static void join(String &s, const T &a) {
+        static void join(String &s, T const &a) {
             s += a;
         }
     };
 }
 
 template<typename ...A>
-inline FileInfo path_join(const A &...args) {
+inline FileInfo path_join(A const &...args) {
     String path;
     detail::PathJoin<sizeof...(A)>::join(path, args...);
     path_normalize(path.iter());

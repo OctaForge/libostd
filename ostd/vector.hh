@@ -59,7 +59,7 @@ class Vector {
         }
     }
 
-    void copy_contents(const Vector &v) {
+    void copy_contents(Vector const &v) {
         if (IsPod<T>) {
             memcpy(p_buf.first(), v.p_buf.first(), p_len * sizeof(T));
         } else {
@@ -76,17 +76,16 @@ public:
     using Difference = Ptrdiff;
     using Value = T;
     using Reference = T &;
-    using ConstReference = const T &;
+    using ConstReference = T const &;
     using Pointer = AllocatorPointer<A>;
     using ConstPointer = AllocatorConstPointer<A>;
     using Range = PointerRange<T>;
-    using ConstRange = PointerRange<const T>;
+    using ConstRange = PointerRange<T const>;
     using Allocator = A;
 
-    Vector(const A &a = A()): p_len(0), p_cap(0), p_buf(nullptr, a) {}
+    Vector(A const &a = A()): p_len(0), p_cap(0), p_buf(nullptr, a) {}
 
-    explicit Vector(Size n, const T &val = T(),
-    const A &al = A()): Vector(al) {
+    explicit Vector(Size n, T const &val = T(), A const &al = A()): Vector(al) {
         if (!n) return;
         p_buf.first() = allocator_allocate(p_buf.second(), n);
         p_len = p_cap = n;
@@ -95,14 +94,14 @@ public:
             allocator_construct(p_buf.second(), cur++, val);
     }
 
-    Vector(const Vector &v): p_len(0), p_cap(0), p_buf(nullptr,
+    Vector(Vector const &v): p_len(0), p_cap(0), p_buf(nullptr,
     allocator_container_copy(v.p_buf.second())) {
         reserve(v.p_cap);
         p_len = v.p_len;
         copy_contents(v);
     }
 
-    Vector(const Vector &v, const A &a): p_len(0), p_cap(0), p_buf(nullptr, a) {
+    Vector(Vector const &v, A const &a): p_len(0), p_cap(0), p_buf(nullptr, a) {
         reserve(v.p_cap);
         p_len = v.p_len;
         copy_contents(v);
@@ -114,7 +113,7 @@ public:
         v.p_len = v.p_cap = 0;
     }
 
-    Vector(Vector &&v, const A &a): p_len(0), p_cap(0), p_buf(nullptr, a) {
+    Vector(Vector &&v, A const &a): p_len(0), p_cap(0), p_buf(nullptr, a) {
         if (a != v.p_buf.second()) {
             reserve(v.p_cap);
             p_len = v.p_len;
@@ -136,7 +135,7 @@ public:
         v.p_len = v.p_cap = 0;
     }
 
-    Vector(ConstRange r, const A &a = A()): Vector(a) {
+    Vector(ConstRange r, A const &a = A()): Vector(a) {
         reserve(r.size());
         if (IsPod<T>) {
             memcpy(p_buf.first(), &r[0], r.size() * sizeof(T));
@@ -147,12 +146,12 @@ public:
         p_len = r.size();
     }
 
-    Vector(InitializerList<T> v, const A &a = A()):
+    Vector(InitializerList<T> v, A const &a = A()):
         Vector(ConstRange(v.begin(), v.size()), a) {}
 
     template<typename R, typename = EnableIf<
         IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-    >> Vector(R range, const A &a = A()): Vector(a) {
+    >> Vector(R range, A const &a = A()): Vector(a) {
         ctor_from_range(range);
     }
 
@@ -170,7 +169,7 @@ public:
         p_len = 0;
     }
 
-    Vector &operator=(const Vector &v) {
+    Vector &operator=(Vector const &v) {
         if (this == &v) return *this;
         clear();
         if (AllocatorPropagateOnContainerCopyAssignment<A>) {
@@ -225,7 +224,7 @@ public:
         return *this;
     }
 
-    void resize(Size n, const T &v = T()) {
+    void resize(Size n, T const &v = T()) {
         if (!n) {
             clear();
             return;
@@ -272,18 +271,18 @@ public:
     }
 
     T &operator[](Size i) { return p_buf.first()[i]; }
-    const T &operator[](Size i) const { return p_buf.first()[i]; }
+    T const &operator[](Size i) const { return p_buf.first()[i]; }
 
     T *at(Size i) {
         if (!in_range(i)) return nullptr;
         return &p_buf.first()[i];
     }
-    const T *at(Size i) const {
+    T const *at(Size i) const {
         if (!in_range(i)) return nullptr;
         return &p_buf.first()[i];
     }
 
-    T &push(const T &v) {
+    T &push(T const &v) {
         if (p_len == p_cap) reserve(p_len + 1);
         allocator_construct(p_buf.second(), &p_buf.first()[p_len], v);
         return p_buf.first()[p_len++];
@@ -301,7 +300,7 @@ public:
         return p_buf.first()[p_len++];
     }
 
-    Range push_n(const T *v, Size n) {
+    Range push_n(T const *v, Size n) {
         reserve(p_len + n);
         if (IsPod<T>) {
             memcpy(p_buf.first() + p_len, v, n * sizeof(T));
@@ -331,13 +330,13 @@ public:
     }
 
     T &front() { return p_buf.first()[0]; }
-    const T &front() const { return p_buf.first()[0]; }
+    T const &front() const { return p_buf.first()[0]; }
 
     T &back() { return p_buf.first()[p_len - 1]; }
-    const T &back() const { return p_buf.first()[p_len - 1]; }
+    T const &back() const { return p_buf.first()[p_len - 1]; }
 
     Value *data() { return (Value *)p_buf.first(); }
-    const Value *data() const { return (const Value *)p_buf.first(); }
+    Value const *data() const { return (Value const *)p_buf.first(); }
 
     Size size() const { return p_len; }
     Size capacity() const { return p_cap; }
@@ -350,7 +349,7 @@ public:
 
     bool in_range(Size idx) { return idx < p_len; }
     bool in_range(int idx) { return idx >= 0 && Size(idx) < p_len; }
-    bool in_range(const Value *ptr) {
+    bool in_range(Value const *ptr) {
         return ptr >= p_buf.first() && ptr < &p_buf.first()[p_len];
     }
 
@@ -367,13 +366,13 @@ public:
         return Range(&p_buf.first()[idx], &p_buf.first()[p_len]);
     }
 
-    Range insert(Size idx, const T &v) {
+    Range insert(Size idx, T const &v) {
         insert_base(idx, 1);
         p_buf.first()[idx] = v;
         return Range(&p_buf.first()[idx], &p_buf.first()[p_len]);
     }
 
-    Range insert(Size idx, Size n, const T &v) {
+    Range insert(Size idx, Size n, T const &v) {
         insert_base(idx, n);
         for (Size i = 0; i < n; ++i) {
             p_buf.first()[idx + i] = v;
@@ -424,17 +423,17 @@ public:
 };
 
 template<typename T, typename A>
-inline bool operator==(const Vector<T, A> &x, const Vector<T, A> &y) {
+inline bool operator==(Vector<T, A> const &x, Vector<T, A> const &y) {
     return equal(x.iter(), y.iter());
 }
 
 template<typename T, typename A>
-inline bool operator!=(const Vector<T, A> &x, const Vector<T, A> &y) {
+inline bool operator!=(Vector<T, A> const &x, Vector<T, A> const &y) {
     return !(x == y);
 }
 
 template<typename T, typename A>
-inline bool operator<(const Vector<T, A> &x, const Vector<T, A> &y) {
+inline bool operator<(Vector<T, A> const &x, Vector<T, A> const &y) {
     using Range = typename Vector<T, A>::Range;
     Range range1 = x.iter(), range2 = y.iter();
     while (!range1.empty() && !range2.empty()) {
@@ -447,17 +446,17 @@ inline bool operator<(const Vector<T, A> &x, const Vector<T, A> &y) {
 }
 
 template<typename T, typename A>
-inline bool operator>(const Vector<T, A> &x, const Vector<T, A> &y) {
+inline bool operator>(Vector<T, A> const &x, Vector<T, A> const &y) {
     return (y < x);
 }
 
 template<typename T, typename A>
-inline bool operator<=(const Vector<T, A> &x, const Vector<T, A> &y) {
+inline bool operator<=(Vector<T, A> const &x, Vector<T, A> const &y) {
     return !(y < x);
 }
 
 template<typename T, typename A>
-inline bool operator>=(const Vector<T, A> &x, const Vector<T, A> &y) {
+inline bool operator>=(Vector<T, A> const &x, Vector<T, A> const &y) {
     return !(x < y);
 }
 

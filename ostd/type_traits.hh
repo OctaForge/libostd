@@ -261,12 +261,12 @@ template<typename T> constexpr bool IsAbstract = __is_abstract(T);
 /* is const */
 
 template<typename T>
-constexpr bool IsConst = IsSame<T, const T>;
+constexpr bool IsConst = IsSame<T, T const>;
 
 /* is volatile */
 
 template<typename T>
-constexpr bool IsVolatile = IsSame<T, volatile T>;
+constexpr bool IsVolatile = IsSame<T, T volatile>;
 
 /* is empty */
 
@@ -473,7 +473,7 @@ constexpr bool IsCopyAssignable = IsAssignable<
 template<typename T>
 constexpr bool IsMoveAssignable = IsAssignable<
     AddLvalueReference<T>,
-    const AddRvalueReference<T>
+    AddRvalueReference<T> const
 >;
 
 /* is destructible */
@@ -532,7 +532,7 @@ namespace detail {
         = __has_trivial_copy(T);
 
     template<typename T>
-    constexpr bool IsTriviallyConstructibleBase<T, const T &>
+    constexpr bool IsTriviallyConstructibleBase<T, T const &>
         = __has_trivial_copy(T);
 
     template<typename T>
@@ -552,7 +552,7 @@ template<typename T> constexpr bool IsTriviallyDefaultConstructible
 /* is trivially copy constructible */
 
 template<typename T> constexpr bool IsTriviallyCopyConstructible
-    = IsTriviallyConstructible<T, AddLvalueReference<const T>>;
+    = IsTriviallyConstructible<T, AddLvalueReference<T const>>;
 
 /* is trivially move constructible */
 
@@ -574,7 +574,7 @@ namespace detail {
         = __has_trivial_copy(T);
 
     template<typename T>
-    constexpr bool IsTriviallyAssignableBase<T, const T &>
+    constexpr bool IsTriviallyAssignableBase<T, T const &>
         = __has_trivial_copy(T);
 
     template<typename T>
@@ -589,7 +589,7 @@ constexpr bool IsTriviallyAssignable
 /* is trivially copy assignable */
 
 template<typename T> constexpr bool IsTriviallyCopyAssignable
-    = IsTriviallyAssignable<T, AddLvalueReference<const T>>;
+    = IsTriviallyAssignable<T, AddLvalueReference<T const>>;
 
 /* is trivially move assignable */
 
@@ -673,12 +673,12 @@ namespace detail {
     template<typename T>
     struct RemoveConstBase          { using Type = T; };
     template<typename T>
-    struct RemoveConstBase<const T> { using Type = T; };
+    struct RemoveConstBase<T const> { using Type = T; };
 
     template<typename T>
     struct RemoveVolatileBase             { using Type = T; };
     template<typename T>
-    struct RemoveVolatileBase<volatile T> { using Type = T; };
+    struct RemoveVolatileBase<T volatile> { using Type = T; };
 }
 
 template<typename T>
@@ -700,7 +700,7 @@ namespace detail {
     struct AddConstCore { using Type = T; };
 
     template<typename T> struct AddConstCore<T, false> {
-        using Type = const T;
+        using Type = T const;
     };
 
     template<typename T> struct AddConstBase {
@@ -711,7 +711,7 @@ namespace detail {
     struct AddVolatileCore { using Type = T; };
 
     template<typename T> struct AddVolatileCore<T, false> {
-        using Type = volatile T;
+        using Type = T volatile;
     };
 
     template<typename T> struct AddVolatileBase {
@@ -780,14 +780,14 @@ namespace detail {
     template<> struct AddLr<void> {
         using Type = void;
     };
-    template<> struct AddLr<const void> {
-        using Type = const void;
+    template<> struct AddLr<void const> {
+        using Type = void const;
     };
-    template<> struct AddLr<volatile void> {
-        using Type = volatile void;
+    template<> struct AddLr<void volatile> {
+        using Type = void volatile;
     };
-    template<> struct AddLr<const volatile void> {
-        using Type = const volatile void;
+    template<> struct AddLr<void const volatile> {
+        using Type = void const volatile;
     };
 }
 
@@ -798,14 +798,14 @@ namespace detail {
     template<> struct AddRr<void> {
         using Type = void;
     };
-    template<> struct AddRr<const void> {
-        using Type = const void;
+    template<> struct AddRr<void const> {
+        using Type = void const;
     };
-    template<> struct AddRr<volatile void> {
-        using Type = volatile void;
+    template<> struct AddRr<void volatile> {
+        using Type = void volatile;
     };
-    template<> struct AddRr<const volatile void> {
-        using Type = const volatile void;
+    template<> struct AddRr<void const volatile> {
+        using Type = void const volatile;
     };
 }
 
@@ -852,8 +852,8 @@ namespace detail {
     /* not a type */
     struct TlNat {
         TlNat() = delete;
-        TlNat(const TlNat &) = delete;
-        TlNat &operator=(const TlNat &) = delete;
+        TlNat(TlNat const &) = delete;
+        TlNat &operator=(TlNat const &) = delete;
         ~TlNat() = delete;
     };
 
@@ -891,32 +891,32 @@ namespace detail {
 
     template<typename T, typename U>
     struct ApplyCv<T, U, true, false> { /* const */
-        using Type = const U;
+        using Type = U const;
     };
 
     template<typename T, typename U>
     struct ApplyCv<T, U, false, true> { /* volatile */
-        using Type = volatile U;
+        using Type = U volatile;
     };
 
     template<typename T, typename U>
     struct ApplyCv<T, U, true, true> { /* const volatile */
-        using Type = const volatile U;
+        using Type = U const volatile;
     };
 
     template<typename T, typename U>
     struct ApplyCv<T &, U, true, false> { /* const */
-        using Type = const U &;
+        using Type = U const &;
     };
 
     template<typename T, typename U>
     struct ApplyCv<T &, U, false, true> { /* volatile */
-        using Type = volatile U &;
+        using Type = U volatile &;
     };
 
     template<typename T, typename U>
     struct ApplyCv<T &, U, true, true> { /* const volatile */
-        using Type = const volatile U &;
+        using Type = U const volatile &;
     };
 
     template<typename T, bool = IsIntegral<T> || IsEnum<T>>

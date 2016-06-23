@@ -156,20 +156,20 @@ inline auto sort() {
 /* min/max(_element) */
 
 template<typename T>
-inline const T &min(const T &a, const T &b) {
+inline T const &min(T const &a, T const &b) {
     return (a < b) ? a : b;
 }
 template<typename T, typename C>
-inline const T &min_cmp(const T &a, const T &b, C compare) {
+inline T const &min_cmp(T const &a, T const &b, C compare) {
     return compare(a, b) ? a : b;
 }
 
 template<typename T>
-inline const T &max(const T &a, const T &b) {
+inline T const &max(T const &a, T const &b) {
     return (a < b) ? b : a;
 }
 template<typename T, typename C>
-inline const T &max_cmp(const T &a, const T &b, C compare) {
+inline T const &max_cmp(T const &a, T const &b, C compare) {
     return compare(a, b) ? b : a;
 }
 
@@ -247,12 +247,12 @@ inline T max_cmp(std::initializer_list<T> il, C compare) {
 /* clamp */
 
 template<typename T, typename U>
-inline T clamp(const T &v, const U &lo, const U &hi) {
+inline T clamp(T const &v, U const &lo, U const &hi) {
     return ostd::max(T(lo), ostd::min(v, T(hi)));
 }
 
 template<typename T, typename U, typename C>
-inline T clamp(const T &v, const U &lo, const U &hi, C compare) {
+inline T clamp(T const &v, U const &lo, U const &hi, C compare) {
     return ostd::max_cmp(T(lo), ostd::min_cmp(v, T(hi), compare), compare);
 }
 
@@ -352,7 +352,7 @@ inline auto none_of(F &&func) {
 }
 
 template<typename R, typename T>
-inline R find(R range, const T &v) {
+inline R find(R range, T const &v) {
     for (; !range.empty(); range.pop_front())
         if (range.front() == v)
             break;
@@ -367,7 +367,7 @@ inline auto find(T &&v) {
 }
 
 template<typename R, typename T>
-inline R find_last(R range, const T &v) {
+inline R find_last(R range, T const &v) {
     range = find(range, v);
     if (!range.empty()) for (;;) {
         R prev = range;
@@ -449,7 +449,7 @@ inline auto find_one_of(R &&values) {
 }
 
 template<typename R, typename T>
-inline RangeSize<R> count(R range, const T &v) {
+inline RangeSize<R> count(R range, T const &v) {
     RangeSize<R> ret = 0;
     for (; !range.empty(); range.pop_front())
         if (range.front() == v)
@@ -574,7 +574,7 @@ inline R2 reverse_copy(R1 irange, R2 orange) {
 }
 
 template<typename R, typename T>
-inline void fill(R range, const T &v) {
+inline void fill(R range, T const &v) {
     for (; !range.empty(); range.pop_front())
         range.front() = v;
 }
@@ -666,14 +666,14 @@ private:
 public:
     MapRange() = delete;
     template<typename FF>
-    MapRange(const T &range, FF &&func):
+    MapRange(T const &range, FF &&func):
         p_range(range), p_func(forward<FF>(func)) {}
-    MapRange(const MapRange &it):
+    MapRange(MapRange const &it):
         p_range(it.p_range), p_func(it.p_func) {}
     MapRange(MapRange &&it):
         p_range(move(it.p_range)), p_func(move(it.p_func)) {}
 
-    MapRange &operator=(const MapRange &v) {
+    MapRange &operator=(MapRange const &v) {
         p_range = v.p_range;
         p_func  = v.p_func;
         return *this;
@@ -687,17 +687,17 @@ public:
     bool empty() const { return p_range.empty(); }
     RangeSize<T> size() const { return p_range.size(); }
 
-    bool equals_front(const MapRange &r) const {
+    bool equals_front(MapRange const &r) const {
         return p_range.equals_front(r.p_range);
     }
-    bool equals_back(const MapRange &r) const {
+    bool equals_back(MapRange const &r) const {
         return p_range.equals_front(r.p_range);
     }
 
-    RangeDifference<T> distance_front(const MapRange &r) const {
+    RangeDifference<T> distance_front(MapRange const &r) const {
         return p_range.distance_front(r.p_range);
     }
-    RangeDifference<T> distance_back(const MapRange &r) const {
+    RangeDifference<T> distance_back(MapRange const &r) const {
         return p_range.distance_back(r.p_range);
     }
 
@@ -766,11 +766,11 @@ private:
 public:
     FilterRange() = delete;
     template<typename P>
-    FilterRange(const T &range, P &&pred): p_range(range),
+    FilterRange(T const &range, P &&pred): p_range(range),
     p_pred(forward<P>(pred)) {
         advance_valid();
     }
-    FilterRange(const FilterRange &it): p_range(it.p_range),
+    FilterRange(FilterRange const &it): p_range(it.p_range),
     p_pred(it.p_pred) {
         advance_valid();
     }
@@ -779,7 +779,7 @@ public:
         advance_valid();
     }
 
-    FilterRange &operator=(const FilterRange &v) {
+    FilterRange &operator=(FilterRange const &v) {
         p_range = v.p_range;
         p_pred  = v.p_pred;
         advance_valid();
@@ -794,7 +794,7 @@ public:
 
     bool empty() const { return p_range.empty(); }
 
-    bool equals_front(const FilterRange &r) const {
+    bool equals_front(FilterRange const &r) const {
         return p_range.equals_front(r.p_range);
     }
 

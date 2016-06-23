@@ -62,7 +62,7 @@ namespace detail {
      * 7 .. string
      * 8 .. custom object
      */
-    static constexpr const byte fmt_specs[] = {
+    static constexpr byte const fmt_specs[] = {
         /* uppercase spec set */
         1, 3, 8, 8, /* A B C D */
         1, 1, 1, 8, /* E F G H */
@@ -88,11 +88,11 @@ namespace detail {
         0, 0, 0, 0, 0
     };
 
-    static constexpr const int fmt_bases[] = {
+    static constexpr int const fmt_bases[] = {
         0, 0, 0, 2, 8, 10, 16, 0
     };
 
-    static constexpr const char fmt_digits[2][16] = {
+    static constexpr char fmt_digits[2][16] = {
         {
             '0', '1', '2', '3', '4', '5', '6', '7',
             '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
@@ -103,14 +103,14 @@ namespace detail {
         }
     };
 
-    static constexpr const char *fmt_intpfx[2][4] = {
+    static constexpr char const *fmt_intpfx[2][4] = {
         { "0B", "0", "", "0X" },
         { "0b", "0", "", "0x" }
     };
 
     /* retrieve width/precision */
     template<typename T>
-    bool convert_arg_param(const T &val, int &param, EnableIf<
+    bool convert_arg_param(T const &val, int &param, EnableIf<
         IsIntegral<T>, bool
     > = true) {
         param = int(val);
@@ -118,7 +118,7 @@ namespace detail {
     }
 
     template<typename T>
-    bool convert_arg_param(const T &, int &, EnableIf<
+    bool convert_arg_param(T const &, int &, EnableIf<
         !IsIntegral<T>, bool
     > = true) {
         assert(false && "invalid argument for width/precision");
@@ -126,7 +126,7 @@ namespace detail {
     }
 
     template<typename T>
-    bool get_arg_param(Size idx, int &param, const T &val) {
+    bool get_arg_param(Size idx, int &param, T const &val) {
         if (idx) {
             assert(false && "not enough format args");
             return false;
@@ -134,8 +134,7 @@ namespace detail {
         return convert_arg_param(val, param);
     }
     template<typename T, typename ...A>
-    bool get_arg_param(Size idx, int &param, const T &val,
-                      const A &...args) {
+    bool get_arg_param(Size idx, int &param, T const &val, A const &...args) {
         if (idx) return get_arg_param(idx - 1, param, args...);
         return convert_arg_param(val, param);
     }
@@ -204,12 +203,12 @@ struct FormatSpec {
     bool arg_precision() const { return p_arg_precision; }
 
     template<typename ...A>
-    bool set_width(Size idx, const A &...args) {
+    bool set_width(Size idx, A const &...args) {
         return detail::get_arg_param(idx, p_width, args...);
     }
 
     template<typename ...A>
-    bool set_precision(Size idx, const A &...args) {
+    bool set_precision(Size idx, A const &...args) {
         return detail::get_arg_param(idx, p_precision, args...);
     }
 
@@ -399,16 +398,16 @@ protected:
 /* for custom container formatting */
 
 template<typename T, typename R, typename = EnableIf<
-    IsSame<decltype(declval<const T &>()
-        .to_format(declval<R &>(), declval<const FormatSpec &>())), bool
+    IsSame<decltype(declval<T const &>()
+        .to_format(declval<R &>(), declval<FormatSpec const &>())), bool
     >
->> inline bool to_format(const T &v, R &writer, const FormatSpec &fs) {
+>> inline bool to_format(T const &v, R &writer, FormatSpec const &fs) {
     return v.to_format(writer, fs);
 }
 
 namespace detail {
     template<typename R, typename T>
-    inline Ptrdiff write_u(R &writer, const FormatSpec *fl, bool neg, T val) {
+    inline Ptrdiff write_u(R &writer, FormatSpec const *fl, bool neg, T val) {
         char buf[20];
         Ptrdiff r = 0;
         Size n = 0;
@@ -434,7 +433,7 @@ namespace detail {
         bool sign = neg + lsgn + lsp;
         r += sign;
 
-        const char *pfx = nullptr;
+        char const *pfx = nullptr;
         int pfxlen = 0;
         if (flags & FMT_FLAG_HASH && spec != 'd') {
             pfx = detail::fmt_intpfx[spec >= 'a'][specn - 3];
@@ -458,7 +457,7 @@ namespace detail {
 
     template<typename R, typename ...A>
     static Ptrdiff format_impl(R &writer, Size &fmtn, bool escape,
-                               ConstCharRange fmt, const A &...args);
+                               ConstCharRange fmt, A const &...args);
 
     template<typename T, typename = RangeOf<T>>
     static True test_fmt_range(int);
@@ -472,8 +471,8 @@ namespace detail {
     struct FmtTupleUnpacker {
         template<typename R, typename T, typename ...A>
         static inline Ptrdiff unpack(R &writer, Size &fmtn, bool esc,
-                                     ConstCharRange fmt, const T &item,
-                                     const A &...args) {
+                                     ConstCharRange fmt, T const &item,
+                                     A const &...args) {
             return FmtTupleUnpacker<I - 1>::unpack(writer, fmtn, esc, fmt,
                 item, get<I - 1>(item), args...);
         }
@@ -483,15 +482,15 @@ namespace detail {
     struct FmtTupleUnpacker<0> {
         template<typename R, typename T, typename ...A>
         static inline Ptrdiff unpack(R &writer, Size &fmtn, bool esc,
-                                     ConstCharRange fmt, const T &,
-                                     const A &...args) {
+                                     ConstCharRange fmt, T const &,
+                                     A const &...args) {
             return format_impl(writer, fmtn, esc, fmt, args...);
         }
     };
 
     template<typename R, typename T>
     inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc, bool,
-                                ConstCharRange fmt, const T &item,
+                                ConstCharRange fmt, T const &item,
                                 EnableIf<!IsTupleLike<T>, bool>
                                     = true) {
         return format_impl(writer, fmtn, esc, fmt, item);
@@ -500,7 +499,7 @@ namespace detail {
     template<typename R, typename T>
     inline Ptrdiff format_ritem(R &writer, Size &fmtn, bool esc,
                                 bool expandval, ConstCharRange fmt,
-                                const T &item,
+                                T const &item,
                                 EnableIf<IsTupleLike<T>, bool>
                                     = true) {
         if (expandval) {
@@ -511,10 +510,10 @@ namespace detail {
     }
 
     template<typename R, typename T>
-    inline Ptrdiff write_range(R &writer, const FormatSpec *fl,
+    inline Ptrdiff write_range(R &writer, FormatSpec const *fl,
                                bool escape, bool expandval,
                                ConstCharRange sep,
-                               const T &val,
+                               T const &val,
                                EnableIf<FmtRangeTest<T>, bool>
                                    = true) {
         auto range = ostd::iter(val);
@@ -542,8 +541,8 @@ namespace detail {
     }
 
     template<typename R, typename T>
-    inline Ptrdiff write_range(R &, const FormatSpec *, bool, bool,
-                               ConstCharRange, const T &,
+    inline Ptrdiff write_range(R &, FormatSpec const *, bool, bool,
+                               ConstCharRange, T const &,
                                EnableIf<!FmtRangeTest<T>, bool>
                                    = true) {
         assert(false && "invalid value for ranged format");
@@ -558,7 +557,7 @@ namespace detail {
     constexpr bool FmtTostrTest = decltype(test_fmt_tostr<T>(0))::value;
 
     /* non-printable escapes up to 0x20 (space) */
-    static constexpr const char *fmt_escapes[] = {
+    static constexpr char const *fmt_escapes[] = {
         "\\0"  , "\\x01", "\\x02", "\\x03", "\\x04", "\\x05",
         "\\x06", "\\a"  , "\\b"  , "\\t"  , "\\n"  , "\\v"  ,
         "\\f"  , "\\r"  , "\\x0E", "\\x0F", "\\x10", "\\x11",
@@ -570,7 +569,7 @@ namespace detail {
         nullptr, "\\\'"
     };
 
-    inline const char *escape_fmt_char(char v, char quote) {
+    inline char const *escape_fmt_char(char v, char quote) {
         if ((v >= 0 && v < 0x20) || (v == quote)) {
             return fmt_escapes[Size(v)];
         } else if (v == 0x7F) {
@@ -583,7 +582,7 @@ namespace detail {
         String ret;
         ret.push('"');
         while (!val.empty()) {
-            const char *esc = escape_fmt_char(val.front(), '"');
+            char const *esc = escape_fmt_char(val.front(), '"');
             if (esc)
                 ret.append(esc);
             else
@@ -595,9 +594,9 @@ namespace detail {
     }
 
     template<typename T, typename R>
-    static True test_tofmt(decltype(to_format(declval<const T &>(),
+    static True test_tofmt(decltype(to_format(declval<T const &>(),
                                               declval<R &>(),
-                                              declval<const FormatSpec &>())) *);
+                                              declval<FormatSpec const &>())) *);
 
     template<typename, typename>
     static False test_tofmt(...);
@@ -626,8 +625,8 @@ namespace detail {
 
         /* any string value */
         template<typename R, typename T>
-        Ptrdiff write(R &writer, bool escape, const T &val, EnableIf<
-            IsConstructible<ConstCharRange, const T &>, bool
+        Ptrdiff write(R &writer, bool escape, T const &val, EnableIf<
+            IsConstructible<ConstCharRange, T const &>, bool
         > = true) {
             if (this->spec() != 's') {
                 assert(false && "cannot print strings with the given spec");
@@ -644,14 +643,14 @@ namespace detail {
                 return -1;
             }
             if (escape) {
-                const char *esc = escape_fmt_char(val, '\'');
+                char const *esc = escape_fmt_char(val, '\'');
                 if (esc) {
                     char buf[6];
                     buf[0] = '\'';
                     Size elen = strlen(esc);
                     memcpy(buf + 1, esc, elen);
                     buf[elen + 1] = '\'';
-                    return write(writer, false, (const char *)buf, elen + 2);
+                    return write(writer, false, (char const *)buf, elen + 2);
                 }
             }
             Ptrdiff r = 1 + escape * 2;
@@ -738,9 +737,9 @@ namespace detail {
 
         /* generic value */
         template<typename R, typename T>
-        Ptrdiff write(R &writer, bool, const T &val, EnableIf<
+        Ptrdiff write(R &writer, bool, T const &val, EnableIf<
             !IsArithmetic<T> &&
-            !IsConstructible<ConstCharRange, const T &> &&
+            !IsConstructible<ConstCharRange, T const &> &&
             FmtTostrTest<T> && !FmtTofmtTest<T, TostrRange<R>>, bool
         > = true) {
             if (this->spec() != 's') {
@@ -752,7 +751,7 @@ namespace detail {
 
         /* custom format case */
         template<typename R, typename T>
-        Ptrdiff write(R &writer, bool, const T &val,
+        Ptrdiff write(R &writer, bool, T const &val,
             EnableIf<FmtTofmtTest<T, TostrRange<R>>, bool
         > = true) {
             TostrRange<R> sink(writer);
@@ -762,9 +761,9 @@ namespace detail {
 
         /* generic failure case */
         template<typename R, typename T>
-        Ptrdiff write(R &, bool, const T &, EnableIf<
+        Ptrdiff write(R &, bool, T const &, EnableIf<
             !IsArithmetic<T> &&
-            !IsConstructible<ConstCharRange, const T &> &&
+            !IsConstructible<ConstCharRange, T const &> &&
             !FmtTostrTest<T> && !FmtTofmtTest<T, TostrRange<R>>, bool
         > = true) {
             assert(false && "value cannot be formatted");
@@ -773,7 +772,7 @@ namespace detail {
 
         /* actual writer */
         template<typename R, typename T>
-        Ptrdiff write_arg(R &writer, Size idx, const T &val) {
+        Ptrdiff write_arg(R &writer, Size idx, T const &val) {
             if (idx) {
                 assert(false && "not enough format args");
                 return -1;
@@ -782,8 +781,8 @@ namespace detail {
         }
 
         template<typename R, typename T, typename ...A>
-        Ptrdiff write_arg(R &writer, Size idx, const T &val,
-                          const A &...args) {
+        Ptrdiff write_arg(R &writer, Size idx, T const &val,
+                          A const &...args) {
             if (idx) return write_arg(writer, idx - 1, args...);
             return write(writer, this->p_nested_escape, val);
         }
@@ -791,7 +790,7 @@ namespace detail {
         /* range writer */
         template<typename R, typename T>
         Ptrdiff write_range(R &writer, Size idx, bool expandval,
-                            ConstCharRange sep, const T &val) {
+                            ConstCharRange sep, T const &val) {
             if (idx) {
                 assert(false && "not enough format args");
                 return -1;
@@ -802,8 +801,8 @@ namespace detail {
 
         template<typename R, typename T, typename ...A>
         Ptrdiff write_range(R &writer, Size idx, bool expandval,
-                            ConstCharRange sep, const T &val,
-                            const A &...args) {
+                            ConstCharRange sep, T const &val,
+                            A const &...args) {
             if (idx) {
                 return write_range(writer, idx - 1, expandval, sep, args...);
             }
@@ -814,7 +813,7 @@ namespace detail {
 
     template<typename R, typename ...A>
     inline Ptrdiff format_impl(R &writer, Size &fmtn, bool escape,
-                               ConstCharRange fmt, const A &...args) {
+                               ConstCharRange fmt, A const &...args) {
         Size argidx = 1, retn = 0, twr = 0;
         Ptrdiff written = 0;
         detail::WriteSpec spec(fmt, escape);
@@ -885,12 +884,12 @@ namespace detail {
 
 template<typename R, typename ...A>
 inline Ptrdiff format(R &&writer, Size &fmtn, ConstCharRange fmt,
-                      const A &...args) {
+                      A const &...args) {
     return detail::format_impl(writer, fmtn, false, fmt, args...);
 }
 
 template<typename R, typename ...A>
-Ptrdiff format(R &&writer, ConstCharRange fmt, const A &...args) {
+Ptrdiff format(R &&writer, ConstCharRange fmt, A const &...args) {
     Size fmtn = 0;
     return format(writer, fmtn, fmt, args...);
 }

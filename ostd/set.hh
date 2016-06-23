@@ -18,14 +18,14 @@ namespace ostd {
 
 namespace detail {
     template<typename T, typename A> struct SetBase {
-        static inline const T &get_key(const T &e) {
+        static inline T const &get_key(T const &e) {
             return e;
         }
         static inline T &get_data(T &e) {
             return e;
         }
         template<typename U>
-        static inline void set_key(T &, const U &, A &) {}
+        static inline void set_key(T &, U const &, A &) {}
         static inline void swap_elem(T &a, T &b) { swap_adl(a, b); }
     };
 
@@ -49,35 +49,35 @@ namespace detail {
         using Pointer = AllocatorPointer<A>;
         using ConstPointer = AllocatorConstPointer<A>;
         using Range = HashRange<T>;
-        using ConstRange = HashRange<const T>;
+        using ConstRange = HashRange<T const>;
         using LocalRange = BucketRange<T>;
-        using ConstLocalRange = BucketRange<const T>;
+        using ConstLocalRange = BucketRange<T const>;
         using Allocator = A;
 
-        explicit SetImpl(Size size, const H &hf = H(),
-            const C &eqf = C(), const A &alloc = A()
+        explicit SetImpl(Size size, H const &hf = H(),
+            C const &eqf = C(), A const &alloc = A()
         ): Base(size, hf, eqf, alloc) {}
 
         SetImpl(): SetImpl(0) {}
-        explicit SetImpl(const A &alloc): SetImpl(0, H(), C(), alloc) {}
+        explicit SetImpl(A const &alloc): SetImpl(0, H(), C(), alloc) {}
 
-        SetImpl(Size size, const A &alloc):
+        SetImpl(Size size, A const &alloc):
             SetImpl(size, H(), C(), alloc) {}
-        SetImpl(Size size, const H &hf, const A &alloc):
+        SetImpl(Size size, H const &hf, A const &alloc):
             SetImpl(size, hf, C(), alloc) {}
 
-        SetImpl(const SetImpl &m): Base(m,
+        SetImpl(SetImpl const &m): Base(m,
             allocator_container_copy(m.get_alloc())) {}
 
-        SetImpl(const SetImpl &m, const A &alloc): Base(m, alloc) {}
+        SetImpl(SetImpl const &m, A const &alloc): Base(m, alloc) {}
 
         SetImpl(SetImpl &&m): Base(move(m)) {}
-        SetImpl(SetImpl &&m, const A &alloc): Base(move(m), alloc) {}
+        SetImpl(SetImpl &&m, A const &alloc): Base(move(m), alloc) {}
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-        >> SetImpl(R range, Size size = 0, const H &hf = H(),
-            const C &eqf = C(), const A &alloc = A()
+        >> SetImpl(R range, Size size = 0, H const &hf = H(),
+            C const &eqf = C(), A const &alloc = A()
         ): Base(size ? size : detail::estimate_hrsize(range),
                    hf, eqf, alloc) {
             for (; !range.empty(); range.pop_front())
@@ -86,25 +86,25 @@ namespace detail {
         }
 
         template<typename R>
-        SetImpl(R range, Size size, const A &alloc)
+        SetImpl(R range, Size size, A const &alloc)
         : SetImpl(range, size, H(), C(), alloc) {}
 
         template<typename R>
-        SetImpl(R range, Size size, const H &hf, const A &alloc)
+        SetImpl(R range, Size size, H const &hf, A const &alloc)
         : SetImpl(range, size, hf, C(), alloc) {}
 
         SetImpl(InitializerList<Value> init, Size size = 0,
-            const H &hf = H(), const C &eqf = C(), const A &alloc = A()
+            H const &hf = H(), C const &eqf = C(), A const &alloc = A()
         ): SetImpl(iter(init), size, hf, eqf, alloc) {}
 
-        SetImpl(InitializerList<Value> init, Size size, const A &alloc)
+        SetImpl(InitializerList<Value> init, Size size, A const &alloc)
         : SetImpl(iter(init), size, H(), C(), alloc) {}
 
-        SetImpl(InitializerList<Value> init, Size size, const H &hf,
-            const A &alloc
+        SetImpl(InitializerList<Value> init, Size size, H const &hf,
+            A const &alloc
         ): SetImpl(iter(init), size, hf, C(), alloc) {}
 
-        SetImpl &operator=(const SetImpl &m) {
+        SetImpl &operator=(SetImpl const &m) {
             Base::operator=(m);
             return *this;
         }
