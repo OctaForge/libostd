@@ -38,5 +38,11 @@ Currently supported OSes in OctaSTD are Linux, FreeBSD and OS X. Other
 systems that implement POSIX API will also work (if they don't, bug reports
 are welcome).
 
+OS X support requires Xcode 8 or newer to work. That is the first version to
+ship a Clang 3.8 based toolchain, so things will not compile with an older
+version of Xcode. Alternatively you are free to use any other supported
+compiler from other distribution channels (official Clang, homebrew gcc
+or clang, etc.).
+
 Windows is supported at least with the MinGW (gcc) and Clang compilers. MS
 Visual Studio is currently unsupported.
