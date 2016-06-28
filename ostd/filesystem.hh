@@ -243,7 +243,7 @@ struct DirectoryStream {
         memcpy(buf, &path[0], path.size());
         buf[path.size()] = '\0';
         p_d = opendir(buf);
-        if (!pop_front() || !skip_dots()) {
+        if (!pop_front()) {
             close();
             return false;
         }
@@ -275,7 +275,7 @@ struct DirectoryStream {
     bool rewind() {
         if (!p_d) return false;
         rewinddir(p_d);
-        if (!pop_front() || !skip_dots()) {
+        if (!pop_front()) {
             close();
             return false;
         }
@@ -305,19 +305,19 @@ private:
         if (!d) return false;
         if (readdir_r(d, dev, de))
             return false;
+        /* order of . and .. in the stream is not guaranteed, apparently...
+         * gotta check every time because of that
+         */
+        while (*de && (!strcmp((*de)->d_name, ".") ||
+                       !strcmp((*de)->d_name, ".."))) {
+            if (readdir_r(d, dev, de))
+                return false;
+        }
         return !!*de;
     }
 
     bool pop_front() {
         return pop_front(p_d, &p_dev, &p_de);
-    }
-
-    bool skip_dots() {
-        while (p_de && (!strcmp(p_de->d_name, ".") ||
-                        !strcmp(p_de->d_name, "..")))
-            if (readdir_r(p_d, &p_dev, &p_de))
-                return false;
-        return !!p_de;
     }
 
     FileInfo front() const {
