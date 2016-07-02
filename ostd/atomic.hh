@@ -56,9 +56,9 @@ namespace detail {
         !CanAtomicAssign<AtomicBase<T> volatile *, T> &&
          CanAtomicAssign<AtomicBase<T>          *, T>
     > atomic_init(AtomicBase<T> volatile *a, T v) {
-        char volatile *to  = (char volatile *)(&a->p_value);
+        char volatile *to  = reinterpret_cast<char volatile *>(&a->p_value);
         char volatile *end = to + sizeof(T);
-        char *from = (char *)(&v);
+        char *from = reinterpret_cast<char *>(&v);
         while (to != end) *to++ =*from++;
     }
 

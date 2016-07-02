@@ -264,7 +264,7 @@ namespace detail {
 
     inline Size mem_hash(void const *p, Size l) {
         using Consts = FnvConstants<sizeof(Size)>;
-        byte const *d = (byte const *)p;
+        byte const *d = static_cast<byte const *>(p);
         Size h = Consts::offset;
         for (byte const *it = d, *end = d + l; it != end; ++it) {
             h ^= *it;
@@ -306,7 +306,7 @@ namespace detail {
         Size operator()(T v) const {
             union { T v; struct { Size h1, h2; }; } u;
             u.v = v;
-            return mem_hash((void const *)&u, sizeof(u));
+            return mem_hash(static_cast<void const *>(&u), sizeof(u));
         }
     };
 
@@ -317,7 +317,7 @@ namespace detail {
         Size operator()(T v) const {
             union { T v; struct { Size h1, h2, h3; }; } u;
             u.v = v;
-            return mem_hash((void const *)&u, sizeof(u));
+            return mem_hash(static_cast<void const *>(&u), sizeof(u));
         }
     };
 
@@ -328,7 +328,7 @@ namespace detail {
         Size operator()(T v) const {
             union { T v; struct { Size h1, h2, h3, h4; }; } u;
             u.v = v;
-            return mem_hash((void const *)&u, sizeof(u));
+            return mem_hash(static_cast<void const *>(&u), sizeof(u));
         }
     };
 } /* namespace detail */
@@ -379,7 +379,7 @@ namespace detail {
         Size operator()(T *v) const {
             union { T *v; Size h; } u;
             u.v = v;
-            return detail::mem_hash((void const *)&u, sizeof(u));
+            return detail::mem_hash(static_cast<void const *>(&u), sizeof(u));
         }
     };
 
@@ -544,7 +544,8 @@ namespace detail {
     struct FunctorDataManager {
         template<typename R, typename ...Args>
         static R call(FunctorData const &s, Args ...args) {
-            return ((T &)s)(forward<Args>(args)...);
+            return (*reinterpret_cast<T *>(&const_cast<FunctorData &>(s)))(
+                forward<Args>(args)...);
         }
 
         static void store_f(FmStorage &s, T v) {
@@ -573,7 +574,8 @@ namespace detail {
     struct FunctorDataManager<T, A, EnableIf<!FunctorInPlace<T>>> {
         template<typename R, typename ...Args>
         static R call(FunctorData const &s, Args ...args) {
-            return (*(AllocatorPointer<A> &)s)(forward<Args>(args)...);
+            return (*reinterpret_cast<AllocatorPointer<A> &>(
+                const_cast<FunctorData &>(s)))(forward<Args>(args)...);
         }
 
         static void store_f(FmStorage &s, T v) {
@@ -601,11 +603,11 @@ namespace detail {
         }
 
         static AllocatorPointer<A> &get_ptr_ref(FmStorage &s) {
-            return (AllocatorPointer<A> &)(s.data);
+            return reinterpret_cast<AllocatorPointer<A> &>(s.data);
         }
 
         static AllocatorPointer<A> &get_ptr_ref(FmStorage const &s) {
-            return (AllocatorPointer<A> &)(s.data);
+            return reinterpret_cast<AllocatorPointer<A> &>(s.data);
         }
     };
 

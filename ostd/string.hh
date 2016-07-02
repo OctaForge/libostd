@@ -40,7 +40,8 @@ public:
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     template<typename U>
     CharRangeBase(U beg, EnableIf<IsConvertible<U, T *> && !IsArray<U>, Nat>
-        = Nat()): p_beg(beg), p_end((T *)beg + (beg ? strlen(beg) : 0)) {}
+        = Nat()): p_beg(beg), p_end(static_cast<T *>(beg)
+                                     + (beg ? strlen(beg) : 0)) {}
 
     CharRangeBase(Nullptr): p_beg(nullptr), p_end(nullptr) {}
 
@@ -262,7 +263,7 @@ public:
     using Allocator = A;
 
     StringBase(A const &a = A()): p_len(0), p_cap(0),
-        p_buf((Pointer)&p_len, a) {}
+        p_buf(reinterpret_cast<Pointer>(&p_len), a) {}
 
     explicit StringBase(Size n, T val = T(), A const &al = A()):
     StringBase(al) {
@@ -275,14 +276,15 @@ public:
     }
 
     StringBase(StringBase const &s): p_len(0), p_cap(0),
-    p_buf((Pointer)&p_len, allocator_container_copy(s.p_buf.second())) {
+    p_buf(reinterpret_cast<Pointer>(&p_len),
+          allocator_container_copy(s.p_buf.second())) {
         if (!s.p_len) return;
         reserve(s.p_len);
         p_len = s.p_len;
         memcpy(p_buf.first(), s.p_buf.first(), (p_len + 1) * sizeof(T));
     }
     StringBase(StringBase const &s, A const &a): p_len(0), p_cap(0),
-    p_buf((Pointer)&p_len, a) {
+    p_buf(reinterpret_cast<Pointer>(&p_len), a) {
         if (!s.p_len) return;
         reserve(s.p_len);
         p_len = s.p_len;
@@ -291,10 +293,10 @@ public:
     StringBase(StringBase &&s): p_len(s.p_len), p_cap(s.p_cap),
     p_buf(s.p_buf.first(), move(s.p_buf.second())) {
         s.p_len = s.p_cap = 0;
-        s.p_buf.first() = (Pointer)&s.p_len;
+        s.p_buf.first() = reinterpret_cast<Pointer>(&s.p_len);
     }
     StringBase(StringBase &&s, A const &a): p_len(0), p_cap(0),
-    p_buf((Pointer)&p_len, a) {
+    p_buf(reinterpret_cast<Pointer>(&p_len), a) {
         if (!s.p_len) return;
         if (a != s.p_buf.second()) {
             reserve(s.p_cap);
@@ -362,7 +364,7 @@ public:
             if ((p_buf.second() != v.p_buf.second()) && p_cap) {
                 allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
                 p_cap = 0;
-                p_buf.first() = (Pointer)&p_len;
+                p_buf.first() = reinterpret_cast<Pointer>(&p_len);
             }
             p_buf.second() = v.p_buf.second();
         }
@@ -371,7 +373,7 @@ public:
         if (p_len) {
             memcpy(p_buf.first(), v.p_buf.first(), p_len);
             p_buf.first()[p_len] = '\0';
-        } else p_buf.first() = (Pointer)&p_len;
+        } else p_buf.first() = reinterpret_cast<Pointer>(&p_len);
         return *this;
     }
 
@@ -384,7 +386,7 @@ public:
         p_cap = v.p_cap;
         p_buf.~StrPair();
         new (&p_buf) StrPair(v.disown(), move(v.p_buf.second()));
-        if (!p_cap) p_buf.first() = (Pointer)&p_len;
+        if (!p_cap) p_buf.first() = reinterpret_cast<Pointer>(&p_len);
         return *this;
     }
 
@@ -483,7 +485,7 @@ public:
         Pointer r = p_buf.first();
         p_buf.first() = nullptr;
         p_len = p_cap = 0;
-        return (Value *)r;
+        return reinterpret_cast<Value *>(r);
     }
 
     void push(T v) {
@@ -736,14 +738,14 @@ namespace detail {
         int n = snprintf(buf, sizeof(buf), fmt, v);
         s.clear();
         s.reserve(n);
-        if (n >= (int)sizeof(buf))
+        if (n >= int(sizeof(buf)))
             snprintf(s.data(), n + 1, fmt, v);
         else if (n > 0)
             memcpy(s.data(), buf, n + 1);
         else {
             s.clear();
         }
-        *((Size *)&s) = n;
+        *reinterpret_cast<Size *>(&s) = n;
     }
 }
 

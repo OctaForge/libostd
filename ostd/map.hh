@@ -32,8 +32,8 @@ namespace detail {
             allocator_construct(alloc, &e, forward<U>(key), move(T()));
         }
         static inline void swap_elem(Element &a, Element &b) {
-            swap_adl(*((K *)&a.first), *((K *)&b.first));
-            swap_adl(*((T *)&a.second), *((T *)&b.second));
+            swap_adl(const_cast<K &>(a.first), const_cast<K &>(b.first));
+            swap_adl(a.second, b.second);
         }
     };
 

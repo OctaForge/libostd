@@ -335,8 +335,10 @@ public:
     T &back() { return p_buf.first()[p_len - 1]; }
     T const &back() const { return p_buf.first()[p_len - 1]; }
 
-    Value *data() { return (Value *)p_buf.first(); }
-    Value const *data() const { return (Value const *)p_buf.first(); }
+    Value *data() { return reinterpret_cast<Value *>(p_buf.first()); }
+    Value const *data() const {
+        return reinterpret_cast<Value const *>(p_buf.first());
+    }
 
     Size size() const { return p_len; }
     Size capacity() const { return p_cap; }
@@ -357,7 +359,7 @@ public:
         Pointer r = p_buf.first();
         p_buf.first() = nullptr;
         p_len = p_cap = 0;
-        return (Value *)r;
+        return reinterpret_cast<Value *>(r);
     }
 
     Range insert(Size idx, T &&v) {

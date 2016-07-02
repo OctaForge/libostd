@@ -1,4 +1,4 @@
-OSTD_CXXFLAGS = -O2 -g -std=c++14 -Wall -Wextra -Wshadow -I.
+OSTD_CXXFLAGS = -O2 -g -std=c++14 -Wall -Wextra -Wshadow -Wold-style-cast -I.
 
 EXAMPLES_OBJ = \
 	examples/format \

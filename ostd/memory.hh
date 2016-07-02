@@ -532,14 +532,14 @@ template<typename T> struct Allocator {
     Size max_size() const { return Size(~0) / sizeof(T); }
 
     Pointer allocate(Size n, Allocator<void>::ConstPointer = nullptr) {
-        return (Pointer) ::new byte[n * sizeof(T)];
+        return reinterpret_cast<Pointer>(::new byte[n * sizeof(T)]);
     }
 
-    void deallocate(Pointer p, Size) { ::delete[] (byte *) p; }
+    void deallocate(Pointer p, Size) { ::delete[] reinterpret_cast<byte *>(p); }
 
     template<typename U, typename ...A>
     void construct(U *p, A &&...args) {
-        ::new((void *)p) U(forward<A>(args)...);
+        ::new(p) U(forward<A>(args)...);
     }
 
     void destroy(Pointer p) { p->~T(); }
@@ -566,14 +566,14 @@ template<typename T> struct Allocator<T const> {
     Size max_size() const { return Size(~0) / sizeof(T); }
 
     Pointer allocate(Size n, Allocator<void>::ConstPointer = nullptr) {
-        return (Pointer) ::new byte[n * sizeof(T)];
+        return reinterpret_cast<Pointer>(::new byte[n * sizeof(T)]);
     }
 
-    void deallocate(Pointer p, Size) { ::delete[] (byte *) p; }
+    void deallocate(Pointer p, Size) { ::delete[] reinterpret_cast<byte *>(p); }
 
     template<typename U, typename ...A>
     void construct(U *p, A &&...args) {
-        ::new((void *)p) U(forward<A>(args)...);
+        ::new(p) U(forward<A>(args)...);
     }
 
     void destroy(Pointer p) { p->~T(); }
@@ -927,7 +927,7 @@ namespace detail {
 
     template<typename A, typename T, typename ...Args>
     inline void construct(False, A &, T *p, Args &&...args) {
-        ::new ((void *)p) T(forward<Args>(args)...);
+        ::new (p) T(forward<Args>(args)...);
     }
 } /* namespace detail */
 

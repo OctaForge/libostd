@@ -19,7 +19,8 @@ namespace detail {
         SignalBase(SignalBase const &ev): p_class(ev.p_class),
                                           p_nfuncs(ev.p_nfuncs) {
             using Func = Function<void(C &, A...)>;
-            Func *nbuf = (Func *)new byte[sizeof(Func) * p_nfuncs];
+            byte *bufp = new byte[sizeof(Func) * p_nfuncs];
+            Func *nbuf = reinterpret_cast<Func *>(bufp);
             for (Size i = 0; i < p_nfuncs; ++i)
                 new (&nbuf[i]) Func(ev.p_funcs[i]);
             p_funcs = nbuf;
@@ -34,7 +35,8 @@ namespace detail {
             using Func = Function<void(C &, A...)>;
             p_class = ev.p_class;
             p_nfuncs = ev.p_nfuncs;
-            Func *nbuf = (Func *)new byte[sizeof(Func) * p_nfuncs];
+            byte *bufp = new byte[sizeof(Func) * p_nfuncs];
+            Func *nbuf = reinterpret_cast<Func *>(bufp);
             for (Size i = 0; i < p_nfuncs; ++i)
                 new (&nbuf[i]) Func(ev.p_funcs[i]);
             p_funcs = nbuf;
@@ -51,7 +53,7 @@ namespace detail {
         void clear() {
             for (Size i = 0; i < p_nfuncs; ++i)
                 p_funcs[i].~Function<void(C &, A...)>();
-            delete[] (byte *)p_funcs;
+            delete[] reinterpret_cast<byte *>(p_funcs);
             p_funcs = nullptr;
             p_nfuncs = 0;
         }
@@ -59,18 +61,20 @@ namespace detail {
         template<typename F>
         Size connect(F &&func) {
             using Func = Function<void(C &, A...)>;
-            for (Size i = 0; i < p_nfuncs; ++i)
+            for (Size i = 0; i < p_nfuncs; ++i) {
                 if (!p_funcs[i]) {
                     p_funcs[i] = forward<F>(func);
                     return i;
                 }
-            Func *nbuf = (Func *)new byte[sizeof(Func) * (p_nfuncs + 1)];
+            }
+            byte *bufp = new byte[sizeof(Func) * (p_nfuncs + 1)];
+            Func *nbuf = reinterpret_cast<Func *>(bufp);
             for (Size i = 0; i < p_nfuncs; ++i) {
                 new (&nbuf[i]) Func(move(p_funcs[i]));
                 p_funcs[i].~Func();
             }
             new (&nbuf[p_nfuncs]) Func(forward<F>(func));
-            delete[] (byte *)p_funcs;
+            delete[] reinterpret_cast<byte *>(p_funcs);
             p_funcs = nbuf;
             return p_nfuncs++;
         }

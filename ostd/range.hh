@@ -220,8 +220,8 @@ namespace detail {
         }
         bool operator!=(RangeIterator) const { return !get_ref().empty(); }
     private:
-        T &get_ref() { return *((T *)&p_range); }
-        T const &get_ref() const { return *((T *)&p_range); }
+        T &get_ref() { return *reinterpret_cast<T *>(&p_range); }
+        T const &get_ref() const { return *reinterpret_cast<T const *>(&p_range); }
         AlignedStorage<sizeof(T), alignof(T)> p_range;
     };
 }
@@ -438,30 +438,30 @@ template<typename B, typename C, typename V, typename R = V &,
     using Reference = R;
 
     detail::RangeIterator<B> begin() const {
-        return detail::RangeIterator<B>((B const &)*this);
+        return detail::RangeIterator<B>(*static_cast<B const *>(this));
     }
     detail::RangeIterator<B> end() const {
         return detail::RangeIterator<B>();
     }
 
     Size pop_front_n(Size n) {
-        return detail::pop_front_n<B>(*((B *)this), n);
+        return detail::pop_front_n<B>(*static_cast<B *>(this), n);
     }
 
     Size pop_back_n(Size n) {
-        return detail::pop_back_n<B>(*((B *)this), n);
+        return detail::pop_back_n<B>(*static_cast<B *>(this), n);
     }
 
     Size push_front_n(Size n) {
-        return detail::push_front_n<B>(*((B *)this), n);
+        return detail::push_front_n<B>(*static_cast<B *>(this), n);
     }
 
     Size push_back_n(Size n) {
-        return detail::push_back_n<B>(*((B *)this), n);
+        return detail::push_back_n<B>(*static_cast<B *>(this), n);
     }
 
     B iter() const {
-        return B(*((B *)this));
+        return B(*static_cast<B const *>(this));
     }
 
     ReverseRange<B> reverse() const {
@@ -499,7 +499,7 @@ template<typename B, typename C, typename V, typename R = V &,
     }
 
     Size put_n(Value const *p, Size n) {
-        B &r = *((B *)this);
+        B &r = *static_cast<B *>(this);
         Size on = n;
         for (; n && r.put(*p++); --n);
         return (on - n);
@@ -507,7 +507,7 @@ template<typename B, typename C, typename V, typename R = V &,
 
     template<typename OR>
     EnableIf<IsOutputRange<OR>, Size> copy(OR &&orange, Size n = -1) {
-        B r(*((B *)this));
+        B r(*static_cast<B const *>(this));
         Size on = n;
         for (; n && !r.empty(); --n) {
             if (!orange.put(r.front()))
@@ -518,7 +518,7 @@ template<typename B, typename C, typename V, typename R = V &,
     }
 
     Size copy(RemoveCv<Value> *p, Size n = -1) {
-        B r(*((B *)this));
+        B r(*static_cast<B const *>(this));
         Size on = n;
         for (; n && !r.empty(); --n) {
             *p++ = r.front();
@@ -531,52 +531,54 @@ template<typename B, typename C, typename V, typename R = V &,
      * this is sometimes convenient as it can be used within expressions */
 
     Reference operator*() const {
-        return ((B *)this)->front();
+        return static_cast<B const *>(this)->front();
     }
 
     B &operator++() {
-        ((B *)this)->pop_front();
-        return *((B *)this);
+        static_cast<B *>(this)->pop_front();
+        return *static_cast<B *>(this);
     }
     B operator++(int) {
-        B tmp(*((B const *)this));
-        ((B *)this)->pop_front();
+        B tmp(*static_cast<B const *>(this));
+        static_cast<B *>(this)->pop_front();
         return tmp;
     }
 
     B &operator--() {
-        ((B *)this)->push_front();
-        return *((B *)this);
+        static_cast<B *>(this)->push_front();
+        return *static_cast<B *>(this);
     }
     B operator--(int) {
-        B tmp(*((B const *)this));
-        ((B *)this)->push_front();
+        B tmp(*static_cast<B const *>(this));
+        static_cast<B *>(this)->push_front();
         return tmp;
     }
 
     B operator+(Difference n) const {
-        B tmp(*((B const *)this));
+        B tmp(*static_cast<B const *>(this));
         tmp.pop_front_n(n);
         return tmp;
     }
     B operator-(Difference n) const {
-        B tmp(*((B const *)this));
+        B tmp(*static_cast<B const *>(this));
         tmp.push_front_n(n);
         return tmp;
     }
 
     B &operator+=(Difference n) {
-        ((B *)this)->pop_front_n(n);
-        return *((B *)this);
+        static_cast<B *>(this)->pop_front_n(n);
+        return *static_cast<B *>(this);
     }
     B &operator-=(Difference n) {
-        ((B *)this)->push_front_n(n);
-        return *((B *)this);
+        static_cast<B *>(this)->push_front_n(n);
+        return *static_cast<B *>(this);
     }
 
     /* universal bool operator */
 
-    explicit operator bool() const { return !((B *)this)->empty(); }
+    explicit operator bool() const {
+        return !(static_cast<B const *>(this)->empty());
+    }
 };
 
 template<typename R, typename F, typename = EnableIf<IsInputRange<R>>>
@@ -677,7 +679,7 @@ template<typename B, typename V, typename R = V &,
     using Reference = R;
 
     Size put_n(Value const *p, Size n) {
-        B &r = *((B *)this);
+        B &r = *static_cast<B *>(this);
         Size on = n;
         for (; n && r.put(*p++); --n);
         return (on - n);

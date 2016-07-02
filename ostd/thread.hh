@@ -96,7 +96,7 @@ namespace detail {
 
     template<typename F>
     inline void *thread_proxy(void *ptr) {
-        Box<F> fptr((F *)ptr);
+        Box<F> fptr(static_cast<F *>(ptr));
         using Index = detail::MakeTupleIndices<TupleSize<F>, 1>;
         detail::thread_exec(*fptr, Index());
         return nullptr;

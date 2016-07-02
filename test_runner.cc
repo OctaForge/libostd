@@ -25,7 +25,7 @@ int main() {
     /* configurable section */
 
     auto compiler = environ::get("CXX").value_or("c++");
-    auto cxxflags = "-std=c++14 -I. -Wall -Wextra -Wshadow "
+    auto cxxflags = "-std=c++14 -I. -Wall -Wextra -Wshadow -Wold-style-cast "
                     "-Wno-missing-braces"; /* clang false positive */
     auto testdir = environ::get("TESTDIR").value_or("tests");
     auto srcext = ".cc";

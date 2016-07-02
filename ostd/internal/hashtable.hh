@@ -57,7 +57,7 @@ public:
     template<typename U>
     HashRange(const HashRange<U> &v, EnableIf<
         IsSame<RemoveCv<T>, RemoveCv<U>> && IsConvertible<U *, T *>, bool
-    > = true): p_node((Chain *)v.p_node) {}
+    > = true): p_node(const_cast<Chain *>(v.p_node)) {}
 
     HashRange &operator=(const HashRange &v) {
         p_node = v.p_node;
@@ -95,7 +95,8 @@ public:
     template<typename U>
     BucketRange(const BucketRange<U> &v, EnableIf<
         IsSame<RemoveCv<T>, RemoveCv<U>> && IsConvertible<U *, T *>, bool
-    > = true): p_node((Chain *)v.p_node), p_end((Chain *)v.p_end) {}
+    > = true): p_node(const_cast<Chain *>(v.p_node)),
+                p_end(const_cast<Chain *>(v.p_end)) {}
 
     BucketRange &operator=(const BucketRange &v) {
         p_node = v.p_node;
@@ -581,7 +582,7 @@ public:
 
         ConstRange find(const K &key) const {
             Size h = 0;
-            return ConstRange((detail::HashChain<const E> *)find(key, h));
+            return ConstRange(reinterpret_cast<detail::HashChain<const E> *>(find(key, h)));
         }
 
         float load_factor() const { return float(p_len) / p_size; }
@@ -622,12 +623,12 @@ public:
         ConstRange iter() const {
             using Chain = detail::HashChain<const E>;
             if (!p_len) return ConstRange();
-            return ConstRange((Chain *)*p_data.first());
+            return ConstRange(reinterpret_cast<Chain *>(*p_data.first()));
         }
         ConstRange citer() const {
             using Chain = detail::HashChain<const E>;
             if (!p_len) return ConstRange();
-            return ConstRange((Chain *)*p_data.first());
+            return ConstRange(reinterpret_cast<Chain *>(*p_data.first()));
         }
 
         LocalRange iter(Size n) {
@@ -637,14 +638,14 @@ public:
         ConstLocalRange iter(Size n) const {
             using Chain = detail::HashChain<const E>;
             if (n >= p_size) return ConstLocalRange();
-            return ConstLocalRange((Chain *)p_data.first()[n],
-                                   (Chain *)p_data.first()[n + 1]);
+            return ConstLocalRange(reinterpret_cast<Chain *>(p_data.first()[n]),
+                                   reinterpret_cast<Chain *>(p_data.first()[n + 1]));
         }
         ConstLocalRange citer(Size n) const {
             using Chain = detail::HashChain<const E>;
             if (n >= p_size) return ConstLocalRange();
-            return ConstLocalRange((Chain *)p_data.first()[n],
-                                   (Chain *)p_data.first()[n + 1]);
+            return ConstLocalRange(reinterpret_cast<Chain *>(p_data.first()[n]),
+                                   reinterpret_cast<Chain *>(p_data.first()[n + 1]));
         }
     };
 } /* namespace detail */

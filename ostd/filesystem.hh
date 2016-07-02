@@ -325,7 +325,7 @@ private:
             return FileInfo();
         String ap = p_path;
         ap += PathSeparator;
-        ap += (char const *)p_de->d_name;
+        ap += static_cast<char const *>(p_de->d_name);
         return FileInfo(ap);
     }
 

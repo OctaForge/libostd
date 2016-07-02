@@ -650,7 +650,9 @@ namespace detail {
                     Size elen = strlen(esc);
                     memcpy(buf + 1, esc, elen);
                     buf[elen + 1] = '\'';
-                    return write(writer, false, (char const *)buf, elen + 2);
+                    /* invoke proper overload via ptr */
+                    char const *bufp = buf;
+                    return write(writer, false, bufp, elen + 2);
                 }
             }
             Ptrdiff r = 1 + escape * 2;
@@ -680,7 +682,7 @@ namespace detail {
         > = true) {
             using UT = MakeUnsigned<T>;
             return detail::write_u(writer, this, val < 0,
-                (val < 0) ? (UT)(-val) : (UT)(val));
+                (val < 0) ? static_cast<UT>(-val) : static_cast<UT>(val));
         }
 
         /* unsigned integers */
@@ -714,11 +716,11 @@ namespace detail {
             char *dbuf = nullptr;
             if (Size(ret) >= sizeof(rbuf)) {
                 /* this should typically never happen */
-                dbuf = (char *)malloc(ret + 1);
+                dbuf = new char[ret + 1];
                 ret = snprintf(dbuf, ret + 1, buf, this->width(),
                     this->has_precision() ? this->precision() : 6, val);
                 writer.put_n(dbuf, ret);
-                free(dbuf);
+                delete[] dbuf;
             } else writer.put_n(rbuf, ret);
             return ret;
         }

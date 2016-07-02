@@ -163,8 +163,8 @@ namespace detail {
             swap_adl(get(), t.get());
         }
 
-        H &get() { return (H &)*this; }
-        H const &get() const { return (H const &)*this; }
+        H &get() { return *static_cast<H *>(this); }
+        H const &get() const { return *static_cast<H const *>(this); }
 
     private:
         TupleLeaf &operator=(TupleLeaf const &);
@@ -246,19 +246,19 @@ namespace detail {
         TupleBase(TupleBase &&) = default;
 
         TupleBase &operator=(TupleBase const &t) {
-            tuple_swallow(TupleLeaf<I, A>::operator=(((TupleLeaf<I,A>
-                const &)t).get())...);
+            tuple_swallow(TupleLeaf<I, A>::operator=((
+                static_cast<TupleLeaf<I, A> const &>(t)).get())...);
             return *this;
         }
 
         TupleBase &operator=(TupleBase &&t) {
             tuple_swallow(TupleLeaf<I, A>::operator=(forward<A>
-                (((TupleLeaf<I, A> const &)t).get()))...);
+                ((static_cast<TupleLeaf<I, A> &>(t)).get()))...);
             return *this;
         }
 
         void swap(TupleBase &t) {
-            tuple_swallow(TupleLeaf<I, A>::swap((TupleLeaf<I, A> &)t)...);
+            tuple_swallow(TupleLeaf<I, A>::swap(static_cast<TupleLeaf<I, A> &>(t))...);
         }
     };
 } /* namespace detail */
@@ -412,25 +412,27 @@ public:
 template<Size I, typename ...A>
 inline TupleElement<I, Tuple<A...>> &get(Tuple<A...> &t) {
     using Type = TupleElement<I, Tuple<A...>>;
-    return ((detail::TupleLeaf<I, Type> &)t.p_base).get();
+    return static_cast<detail::TupleLeaf<I, Type> &>(t.p_base).get();
 }
 
 template<Size I, typename ...A>
 inline TupleElement<I, Tuple<A...>> const &get(Tuple<A...> const &t) {
     using Type = TupleElement<I, Tuple<A...>>;
-    return ((detail::TupleLeaf<I, Type> const &)t.p_base).get();
+    return static_cast<detail::TupleLeaf<I, Type> const &>(t.p_base).get();
 }
 
 template<Size I, typename ...A>
 inline TupleElement<I, Tuple<A...>> &&get(Tuple<A...> &&t) {
     using Type = TupleElement<I, Tuple<A...>>;
-    return (Type &&)(((detail::TupleLeaf<I, Type> &&)t.p_base).get());
+    return static_cast<Type &&>(
+        static_cast<detail::TupleLeaf<I, Type> &&>(t.p_base).get());
 }
 
 template<Size I, typename ...A>
 inline TupleElement<I, Tuple<A...>> const &&get(Tuple<A...> const &&t) {
     using Type = TupleElement<I, Tuple<A...>>;
-    return (Type const &&)(((detail::TupleLeaf<I, Type> const &&)t.p_base).get());
+    return static_cast<Type const &&>(
+        static_cast<detail::TupleLeaf<I, Type> const &&>(t.p_base).get());
 }
 
 /* tie */
