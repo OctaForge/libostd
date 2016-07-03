@@ -11,7 +11,7 @@ Full C++14 support is required in your compiler.
 
 Compiler | Version
 -------- | -------
-gcc/g++  | 5+
+gcc/g++  | 5.4+, 6+
 clang    | 3.8+
 
 Other C++14 compliant compilers might work as well. OctaSTD does not utilize
@@ -26,6 +26,12 @@ While Clang 3.6 does implement a sufficient level of C++14 support, it suffers
 from a bug in its template variable implementation that prevents OctaSTD from
 functioning. Therefore version 3.8 or higher is necessary (where this bug was
 finally fixed).
+
+GCC has implemented a sufficient feature level of C++14 since version 5.1, but
+also is too buggy until version 5.4. Version 5.1 and 5.2 have template variable
+partial specialization issues and version 5.3 has an internal compiler error
+triggered by the tuple implementation. Version 5.4 appears to be the first one
+to compile this without issues. GCC 6.1 also appears to compile without problems.
 
 MSVC++ is currently unsupported. It is likely that it will never be supported,
 as MS recently introduced Clang frontend support in Visual Studio; however,
