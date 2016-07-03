@@ -439,6 +439,51 @@ constexpr bool IsMoveConstructible = IsConstructible<T,
     AddRvalueReference<T>
 >;
 
+/* is nothrow constructible */
+
+namespace detail {
+    template<bool, bool, typename T, typename ...A>
+    constexpr bool NothrowCtibleCore = false;
+
+    template<typename T, typename ...A>
+    constexpr bool NothrowCtibleCore<true, false, T, A...>
+        = noexcept(T(declval_in<A>()...));
+
+    template<typename T> void implicit_conv_to(T) noexcept {}
+
+    template<typename T, typename A>
+    constexpr bool NothrowCtibleCore<true, true, T, A>
+        = noexcept(ostd::detail::implicit_conv_to<T>(declval_in<A>()));
+
+    template<typename T, bool R, typename ...A>
+    constexpr bool NothrowCtibleCore<false, R, T, A...> = false;
+} /* namespace detail */
+
+template<typename T, typename ...A> constexpr bool IsNothrowConstructible
+    = detail::NothrowCtibleCore<IsConstructible<T, A...>, IsReference<T>, T, A...>;
+
+template<typename T, Size N> constexpr bool IsNothrowConstructible<T[N]>
+    = detail::NothrowCtibleCore<IsConstructible<T>, IsReference<T>, T>;
+
+/* is nothrow default constructible */
+
+template<typename T>
+constexpr bool IsNothrowDefaultConstructible = IsNothrowConstructible<T>;
+
+/* is nothrow copy constructible */
+
+template<typename T>
+constexpr bool IsNothrowCopyConstructible = IsNothrowConstructible<T,
+    AddLvalueReference<AddConst<T>>
+>;
+
+/* is nothrow move constructible */
+
+template<typename T>
+constexpr bool IsNothrowMoveConstructible = IsNothrowConstructible<T,
+    AddRvalueReference<T>
+>;
+
 /* is assignable */
 
 namespace detail {
@@ -474,6 +519,37 @@ template<typename T>
 constexpr bool IsMoveAssignable = IsAssignable<
     AddLvalueReference<T>,
     AddRvalueReference<T> const
+>;
+
+/* is nothrow assignable */
+
+namespace detail {
+    template<bool, typename T, typename A>
+    constexpr bool NothrowAssignableCore = false;
+
+    template<typename T, typename A>
+    constexpr bool NothrowAssignableCore<false, T, A> = false;
+
+    template<typename T, typename A>
+    constexpr bool NothrowAssignableCore<true, T, A>
+        = noexcept(declval_in<T>() = declval_in<A>());
+}
+
+template<typename T, typename A> constexpr bool IsNothrowAssignable
+    = detail::NothrowAssignableCore<IsAssignable<T, A>, T, A>;
+
+/* is nothrow copy assignable */
+
+template<typename T>
+constexpr bool IsNothrowCopyAssignable = IsNothrowAssignable<
+    AddLvalueReference<T>, AddLvalueReference<AddConst<T>>
+>;
+
+/* is nothrow move assignable */
+
+template<typename T>
+constexpr bool IsNothrowMoveAssignable = IsNothrowAssignable<
+    AddLvalueReference<T>, AddRvalueReference<T>
 >;
 
 /* is destructible */
@@ -516,6 +592,23 @@ namespace detail {
 
 template<typename T>
 constexpr bool IsDestructible = detail::IsDestructibleBase<T>;
+
+/* is nothrow destructible */
+
+namespace detail {
+    template<bool, typename> constexpr bool NothrowDtibleCore = false;
+
+    template<typename T> constexpr bool NothrowDtibleCore<false, T> = false;
+
+    template<typename T> constexpr bool NothrowDtibleCore<true, T>
+        = noexcept(declval_in<T>().~T());
+}
+
+template<typename T> constexpr bool IsNothrowDestructible
+    = detail::NothrowDtibleCore<IsDestructible<T>, T>;
+
+template<typename T, Size N> constexpr bool IsNothrowDestructible<T[N]>
+    = IsNothrowDestructible<T>;
 
 /* is trivially constructible */
 
