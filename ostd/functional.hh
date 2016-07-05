@@ -607,7 +607,8 @@ namespace detail {
         }
 
         static AllocatorPointer<A> &get_ptr_ref(FmStorage const &s) {
-            return reinterpret_cast<AllocatorPointer<A> &>(s.data);
+            return reinterpret_cast<AllocatorPointer<A> &>(
+                const_cast<FunctorData &>(s.data));
         }
     };
 
