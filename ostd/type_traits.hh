@@ -101,8 +101,10 @@ namespace detail {
     template<> constexpr bool IsIntegralBase<llong > = true;
     template<> constexpr bool IsIntegralBase<ullong> = true;
 
+#ifndef OSTD_TYPES_CHAR_16_32_NO_BUILTINS
     template<> constexpr bool IsIntegralBase<Char16> = true;
     template<> constexpr bool IsIntegralBase<Char32> = true;
+#endif
     template<> constexpr bool IsIntegralBase<Wchar > = true;
 }
 

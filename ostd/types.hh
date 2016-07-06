@@ -37,6 +37,7 @@ using Wchar = wchar_t;
 #if defined(_MSC_VER) && (_MSC_VER < 1900)
 using Char16 = uint16_t;
 using Char32 = uint32_t;
+#define OSTD_TYPES_CHAR_16_32_NO_BUILTINS 1
 #else
 using Char16 = char16_t;
 using Char32 = char32_t;
