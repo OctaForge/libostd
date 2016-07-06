@@ -53,8 +53,14 @@ struct FileStream: Stream {
         char buf[FILENAME_MAX + 1];
         memcpy(buf, &path[0], path.size());
         buf[path.size()] = '\0';
+        p_owned = false;
+#ifndef OSTD_PLATFORM_WIN32
         p_f = fopen(buf, detail::filemodes[Size(mode)]);
-        p_owned = true;
+#else
+        if (fopen_s(&p_f, buf, detail::filemodes[Size(mode)]) != 0)
+            return false;
+#endif
+        p_owned = !!p_f;
         return is_open();
     }
 

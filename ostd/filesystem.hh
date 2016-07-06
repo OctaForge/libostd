@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#else
+#include <direct.h>
 #endif
 
 #include "ostd/types.hh"
@@ -42,7 +44,7 @@ namespace detail {
         ULARGE_INTEGER ul;
         ul.LowPart  = ft.dwLowDateTime;
         ul.HighPart = ft.dwHighDateTime;
-        return (time_t)((ul.QuadPart / 10000000ULL) - 11644473600ULL);
+        return static_cast<time_t>((ul.QuadPart / 10000000ULL) - 11644473600ULL);
     }
 }
 #endif
@@ -130,7 +132,8 @@ private:
     void init_from_str(ConstCharRange path) {
 #ifdef OSTD_PLATFORM_WIN32
         WIN32_FILE_ATTRIBUTE_DATA attr;
-        if (!GetFileAttributesEx(path, GetFileExInfoStandard, &attr) ||
+        if (!GetFileAttributesEx(String(path).data(), GetFileExInfoStandard,
+                                 &attr) ||
             attr.dwFileAttributes == INVALID_FILE_ATTRIBUTES)
 #else
         struct stat st;
@@ -224,7 +227,7 @@ struct DirectoryStream {
         memset(&s.p_dev, 0, sizeof(s.p_dev));
     }
 
-    DirectoryStream(ConstCharRange path): p_d() {
+    DirectoryStream(ConstCharRange path): DirectoryStream() {
         open(path);
     }
 
@@ -349,7 +352,7 @@ struct DirectoryStream {
         memset(&s.p_data, 0, sizeof(s.p_data));
     }
 
-    DirectoryStream(ConstCharRange path): p_d() {
+    DirectoryStream(ConstCharRange path): DirectoryStream() {
         open(path);
     }
 
@@ -395,7 +398,7 @@ struct DirectoryStream {
         if (p_handle == INVALID_HANDLE_VALUE)
             return -1;
         WIN32_FIND_DATA wfd;
-        HANDLE *td = FindFirstFile(p_path.data(), &wfd);
+        HANDLE td = FindFirstFile(p_path.data(), &wfd);
         if (td == INVALID_HANDLE_VALUE)
             return -1;
         while (!strcmp(wfd.cFileName, ".") && !strcmp(wfd.cFileName, ".."))
@@ -440,8 +443,8 @@ struct DirectoryStream {
     }
 
     void swap(DirectoryStream &s) {
-        detail::swap_adl(p_d, s.p_d);
-        detail::swap_adl(p_de, s.p_de);
+        detail::swap_adl(p_handle, s.p_handle);
+        detail::swap_adl(p_data, s.p_data);
         detail::swap_adl(p_path, s.p_path);
     }
 
@@ -463,11 +466,11 @@ private:
             return FileInfo();
         String ap = p_path;
         ap += PathSeparator;
-        ap += (char const *)p_data.cFileName;
+        ap += static_cast<char const *>(p_data.cFileName);
         return FileInfo(ap);
     }
 
-    HANDLE *p_handle;
+    HANDLE p_handle;
     WIN32_FIND_DATA p_data;
     String p_path;
 };
