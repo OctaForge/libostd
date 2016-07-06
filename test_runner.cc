@@ -24,13 +24,13 @@ constexpr auto ColorEnd = "";
 int main() {
     /* configurable section */
 
-    auto compiler = environ::get("CXX").value_or("c++");
+    auto compiler = envvar::get("CXX").value_or("c++");
     auto cxxflags = "-std=c++14 -I. -Wall -Wextra -Wshadow -Wold-style-cast "
                     "-Wno-missing-braces"; /* clang false positive */
-    auto testdir = environ::get("TESTDIR").value_or("tests");
+    auto testdir = envvar::get("TESTDIR").value_or("tests");
     auto srcext = ".cc";
 
-    auto userflags = environ::get("CXXFLAGS").value_or("");
+    auto userflags = envvar::get("CXXFLAGS").value_or("");
 
     /* do not change past this point */
 
@@ -66,7 +66,6 @@ int main() {
             cxxcmd.get() += ' ';
             cxxcmd.get() += userflags;
         }
-
         int ret = system(cxxcmd.get().data());
         if (ret) {
             print_result("compile errror");

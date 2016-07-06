@@ -6,20 +6,41 @@
 #ifndef OSTD_ENVIRON_HH
 #define OSTD_ENVIRON_HH
 
+#include "ostd/platform.hh"
+#include "ostd/internal/win32.hh"
+
 #include <stdlib.h>
 #include <string.h>
 
 #include "ostd/maybe.hh"
 #include "ostd/string.hh"
 
-namespace ostd {
-namespace environ {
+/* TODO: make POSIX version thread safe, the Windows version is... */
 
-inline Maybe<ConstCharRange> get(ConstCharRange name) {
+namespace ostd {
+namespace envvar {
+
+inline Maybe<String> get(ConstCharRange name) {
     char buf[256];
-    char const *ret = getenv(to_temp_cstr(name, buf, sizeof(buf)).get());
+    auto tbuf = to_temp_cstr(name, buf, sizeof(buf));
+#ifndef OSTD_PLATFORM_WIN32
+    char const *ret = getenv(tbuf.get());
     if (!ret) return ostd::nothing;
-    return ostd::move(ConstCharRange(ret));
+    return ostd::move(String(ret));
+#else
+    String rbuf;
+    for (;;) {
+        auto ret = GetEnvironmentVariable(tbuf.get(), rbuf.data(),
+                                          rbuf.capacity() + 1);
+        if (!ret) return ostd::nothing;
+        if (ret <= rbuf.capacity()) {
+            rbuf.advance(ret);
+            break;
+        }
+        rbuf.reserve(ret - 1);
+    }
+    return ostd::move(rbuf);
+#endif
 }
 
 inline bool set(ConstCharRange name, ConstCharRange value,
@@ -33,7 +54,13 @@ inline bool set(ConstCharRange name, ConstCharRange value,
     buf[name.size()] = '\0';
     memcpy(&buf[name.size() + 1], value.data(), value.size());
     buf[name.size() + value.size() + 1] = '\0';
+#ifndef OSTD_PLATFORM_WIN32
     bool ret = !setenv(buf, &buf[name.size() + 1], update);
+#else
+    if (!update && GetEnvironmentVariable(buf, nullptr, 0))
+        return true;
+    bool ret = !!SetEnvironmentVariable(buf, &buf[name.size() + 1]);
+#endif
     if (alloc)
         delete[] buf;
     return ret;
@@ -44,12 +71,20 @@ inline bool unset(ConstCharRange name) {
     if (name.size() < sizeof(buf)) {
         memcpy(buf, name.data(), name.size());
         buf[name.size()] = '\0';
+#ifndef OSTD_PLATFORM_WIN32
         return !unsetenv(buf);
+#else
+        return !!SetEnvironmentVariable(buf, nullptr);
+#endif
     }
+#ifndef OSTD_PLATFORM_WIN32
     return !unsetenv(String(name).data());
+#else
+        return !!SetEnvironmentVariable(String(name).data(), nullptr);
+#endif
 }
 
-} /* namespace environ */
+} /* namespace envvar */
 } /* namespace ostd */
 
 #endif
