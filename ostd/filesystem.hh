@@ -366,21 +366,29 @@ struct DirectoryStream {
     }
 
     bool open(ConstCharRange path) {
-        if (p_handle || (path.size() >= 1024)) return false;
-        char buf[1024];
+        if (p_handle != INVALID_HANDLE_VALUE)
+            return false;
+        if ((path.size() >= 1024) || !path.size())
+            return false;
+        char buf[1026];
         memcpy(buf, &path[0], path.size());
-        buf[path.size()] = '\0';
+        char *bptr = &buf[path.size()];
+        /* if path ends with a slash, replace it */
+        bptr -= ((*(bptr - 1) == '\\') || (*(bptr - 1) == '/'));
+        /* include trailing zero */
+        memcpy(bptr, "\\*", 3);
         p_handle = FindFirstFile(buf, &p_data);
         if (p_handle == INVALID_HANDLE_VALUE)
             return false;
         while (!strcmp(p_data.cFileName, ".") ||
-               !strcmp(p_data.cFileName, ".."))
+               !strcmp(p_data.cFileName, "..")) {
             if (!FindNextFile(p_handle, &p_data)) {
                 FindClose(p_handle);
                 p_handle = INVALID_HANDLE_VALUE;
                 p_data.cFileName[0] = '\0';
                 return false;
             }
+        }
         p_path = path;
         return true;
     }
