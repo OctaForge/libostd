@@ -26,8 +26,21 @@ using ldouble = long double;
 /* keywords in c++, but aliased */
 
 using Wchar = wchar_t;
+
+/* while we do not support Visual Studio 2013, Clang on Windows by default
+ * pretends to be VS (with the default version being 2013). In this case,
+ * it also tries to be compatible (in order to not conflict with MS include
+ * headers) with said version, so it doesn't provide the builtins; so we work
+ * around this (same typedefs/behavior as VS 2013, of course not standards
+ * compliant but no way around it)
+ */
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+using Char16 = uint16_t;
+using Char32 = uint32_t;
+#else
 using Char16 = char16_t;
 using Char32 = char32_t;
+#endif
 
 /* nullptr type */
 

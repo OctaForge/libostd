@@ -124,9 +124,9 @@ private:
     bool p_owned;
 };
 
-static FileStream in(::stdin);
-static FileStream out(::stdout);
-static FileStream err(::stderr);
+static FileStream in(stdin);
+static FileStream out(stdout);
+static FileStream err(stderr);
 
 /* no need to call anything from FileStream, prefer simple calls... */
 
@@ -134,7 +134,7 @@ namespace detail {
     struct IoNat {};
 
     inline void write_impl(ConstCharRange s) {
-        fwrite(&s[0], 1, s.size(), ::stdout);
+        fwrite(&s[0], 1, s.size(), stdout);
     }
 
     template<typename T>
@@ -159,14 +159,14 @@ inline void write(T const &v, A const &...args) {
 template<typename T>
 inline void writeln(T const &v) {
     write(v);
-    putc('\n', ::stdout);
+    putc('\n', stdout);
 }
 
 template<typename T, typename ...A>
 inline void writeln(T const &v, A const &...args) {
     write(v);
     write(args...);
-    putc('\n', ::stdout);
+    putc('\n', stdout);
 }
 
 template<typename ...A>
@@ -176,19 +176,19 @@ inline void writef(ConstCharRange fmt, A const &...args) {
         fmt, args...);
     if (need < 0) return;
     else if (Size(need) < sizeof(buf)) {
-        fwrite(buf, 1, need, ::stdout);
+        fwrite(buf, 1, need, stdout);
         return;
     }
     Vector<char> s;
     s.reserve(need);
     format(detail::UnsafeWritefRange(s.data()), fmt, args...);
-    fwrite(s.data(), 1, need, ::stdout);
+    fwrite(s.data(), 1, need, stdout);
 }
 
 template<typename ...A>
 inline void writefln(ConstCharRange fmt, A const &...args) {
     writef(fmt, args...);
-    putc('\n', ::stdout);
+    putc('\n', stdout);
 }
 
 } /* namespace ostd */
