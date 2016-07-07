@@ -130,14 +130,14 @@ struct FileInfo {
 
 private:
     void init_from_str(ConstCharRange path) {
+        p_path = path;
 #ifdef OSTD_PLATFORM_WIN32
         WIN32_FILE_ATTRIBUTE_DATA attr;
-        if (!GetFileAttributesEx(String(path).data(), GetFileExInfoStandard,
-                                 &attr) ||
+        if (!GetFileAttributesEx(p_path.data(), GetFileExInfoStandard, &attr) ||
             attr.dwFileAttributes == INVALID_FILE_ATTRIBUTES)
 #else
         struct stat st;
-        if (stat(String(path).data(), &st) < 0)
+        if (stat(p_path.data(), &st) < 0)
 #endif
         {
             p_slash = p_dot = npos;
@@ -146,7 +146,6 @@ private:
             p_atime = p_mtime = p_ctime = 0;
             return;
         }
-        p_path = path;
         ConstCharRange r = p_path.iter();
 
         ConstCharRange found = find_last(r, PathSeparator);
