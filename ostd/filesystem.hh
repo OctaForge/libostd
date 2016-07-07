@@ -130,6 +130,7 @@ struct FileInfo {
 
 private:
     void init_from_str(ConstCharRange path) {
+        /* TODO: implement a version that will follow symbolic links */
         p_path = path;
 #ifdef OSTD_PLATFORM_WIN32
         WIN32_FILE_ATTRIBUTE_DATA attr;
@@ -137,7 +138,7 @@ private:
             attr.dwFileAttributes == INVALID_FILE_ATTRIBUTES)
 #else
         struct stat st;
-        if (stat(p_path.data(), &st) < 0)
+        if (lstat(p_path.data(), &st) < 0)
 #endif
         {
             p_slash = p_dot = npos;
