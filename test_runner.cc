@@ -58,6 +58,9 @@ int main() {
         String exepath = testdir;
         exepath += PathSeparator;
         exepath += modname;
+#ifdef OSTD_PLATFORM_WIN32
+        exepath += ".exe";
+#endif
 
         auto cxxcmd = appender<String>();
         format(cxxcmd, "%s %s%s%s -o %s %s", compiler, testdir, PathSeparator,
