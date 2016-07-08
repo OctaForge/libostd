@@ -18,9 +18,8 @@
 /* TODO: make POSIX version thread safe, the Windows version is... */
 
 namespace ostd {
-namespace envvar {
 
-inline Maybe<String> get(ConstCharRange name) {
+inline Maybe<String> env_get(ConstCharRange name) {
     char buf[256];
     auto tbuf = to_temp_cstr(name, buf, sizeof(buf));
 #ifndef OSTD_PLATFORM_WIN32
@@ -43,8 +42,8 @@ inline Maybe<String> get(ConstCharRange name) {
 #endif
 }
 
-inline bool set(ConstCharRange name, ConstCharRange value,
-                bool update = true) {
+inline bool env_set(ConstCharRange name, ConstCharRange value,
+                    bool update = true) {
     char sbuf[2048];
     char *buf = sbuf;
     bool alloc = (name.size() + value.size() + 2) > sizeof(sbuf);
@@ -66,7 +65,7 @@ inline bool set(ConstCharRange name, ConstCharRange value,
     return ret;
 }
 
-inline bool unset(ConstCharRange name) {
+inline bool env_unset(ConstCharRange name) {
     char buf[256];
     if (name.size() < sizeof(buf)) {
         memcpy(buf, name.data(), name.size());
@@ -84,7 +83,6 @@ inline bool unset(ConstCharRange name) {
 #endif
 }
 
-} /* namespace envvar */
 } /* namespace ostd */
 
 #endif
