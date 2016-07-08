@@ -23,20 +23,21 @@ to support these builtins. So far the 2 above-mentioned compilers support them
 (MSVC++ supports most of these as well).
 
 While Clang 3.6 does implement a sufficient level of C++14 support, it suffers
-from a bug in its template variable implementation that prevents OctaSTD from
+from a bug in its variable template implementation that prevents OctaSTD from
 functioning. Therefore version 3.8 or higher is necessary (where this bug was
 finally fixed).
 
 GCC has implemented a sufficient feature level of C++14 since version 5.1, but
-also is too buggy until version 5.4. Version 5.1 and 5.2 have template variable
+also is too buggy until version 5.4. Version 5.1 and 5.2 have variable template
 partial specialization issues and version 5.3 has an internal compiler error
 triggered by the tuple implementation. Version 5.4 appears to be the first one
 to compile this without issues. GCC 6.1 also appears to compile without problems.
 
-MSVC++ is currently unsupported. It is likely that it will never be supported,
-as MS recently introduced Clang frontend support in Visual Studio; however,
-if their own frontend gains all the necessary features, support will be
-considered.
+MSVC++ is currently unsupported. Support is currently being investigated and
+might be added at least for VS 2015 Update 2, assuming I don't run into any
+significant bugs or missing features. MSVC++ with Clang frontend will be
+supported once Microsoft updates it to Clang 3.8 (3.7 as is currently shipped
+suffers from the issue mentioned above).
 
 ## Supported operating systems
 
@@ -50,5 +51,5 @@ version of Xcode. Alternatively you are free to use any other supported
 compiler from other distribution channels (official Clang, homebrew gcc
 or clang, etc.).
 
-Windows is supported at least with the MinGW (gcc) and Clang compilers. MS
-Visual Studio is currently unsupported.
+Windows is supported with GCC (MinGW) and Clang. The MS C runtime is supported
+as well, so compiling with Clang targeting MSVC compatibility will work.
