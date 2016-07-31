@@ -17,7 +17,8 @@ namespace ostd {
 
 /* tuple size */
 
-template<typename ...T> constexpr Size TupleSize<Tuple<T...>> = sizeof...(T);
+template<typename ...T>
+constexpr Size TupleSize<Tuple<T...>> = sizeof...(T);
 
 /* tuple element */
 
@@ -32,71 +33,100 @@ namespace detail {
     template<Size I, typename H, bool = IsEmpty<H>>
     struct TupleLeaf {
         constexpr TupleLeaf(): p_value() {
-            static_assert(!IsReference<H>,
-                "attempt to default construct a reference element in a tuple");
+            static_assert(
+                !IsReference<H>,
+                "attempt to default construct a reference element in a tuple"
+            );
         }
 
         template<typename A>
         TupleLeaf(Constant<int, 0>, A const &): p_value() {
-            static_assert(!IsReference<H>,
-                "attempt to default construct a reference element in a tuple");
+            static_assert(
+                !IsReference<H>,
+                "attempt to default construct a reference element in a tuple"
+            );
         }
         template<typename A>
         TupleLeaf(Constant<int, 1>, A const &a): p_value(allocator_arg, a) {
-            static_assert(!IsReference<H>,
-                "attempt to default construct a reference element in a tuple");
+            static_assert(
+                !IsReference<H>,
+                "attempt to default construct a reference element in a tuple"
+            );
         }
         template<typename A>
         TupleLeaf(Constant<int, 2>, A const &a): p_value(a) {
-            static_assert(!IsReference<H>,
-                "attempt to default construct a reference element in a tuple");
+            static_assert(
+                !IsReference<H>,
+                "attempt to default construct a reference element in a tuple"
+            );
         }
 
         template<typename T, typename = EnableIf<
             !IsSame<Decay<T>, TupleLeaf> && IsConstructible<H, T>
         >>
         explicit TupleLeaf(T &&t): p_value(forward<T>(t)) {
-            static_assert(!IsReference<H> ||
-                          (IsLvalueReference<H> &&
-                           (IsLvalueReference<T> ||
-                            IsSame<RemoveReference<T>,
-                                   ReferenceWrapper<RemoveReference<H>>>)) ||
-                           (IsRvalueReference<H> &&
-                            !IsLvalueReference<T>),
-            "attempt to construct a reference element in a tuple with an rvalue");
+            static_assert(
+                !IsReference<H> || (
+                    IsLvalueReference<H> && (
+                        IsLvalueReference<T> || IsSame<
+                            RemoveReference<T>,
+                            ReferenceWrapper<RemoveReference<H>>
+                        >
+                    )
+                ) || (IsRvalueReference<H> && !IsLvalueReference<T>),
+                "attempt to construct a reference element in a tuple with an rvalue"
+            );
         }
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 0>, A const &, T &&t):
-                           p_value(forward<T>(t)) {
-            static_assert(!IsLvalueReference<H> ||
-                          (IsLvalueReference<H> &&
-                           (IsLvalueReference<T> ||
-                            IsSame<RemoveReference<T>,
-                                   ReferenceWrapper<RemoveReference<H>>>)),
-            "attempt to construct a reference element in a tuple with an rvalue");
+            p_value(forward<T>(t))
+        {
+            static_assert(
+                !IsLvalueReference<H> || (
+                    IsLvalueReference<H> && (
+                        IsLvalueReference<T> || IsSame<
+                            RemoveReference<T>,
+                            ReferenceWrapper<RemoveReference<H>>
+                        >
+                    )
+                ),
+                "attempt to construct a reference element in a tuple with an rvalue"
+            );
         }
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 1>, A const &a, T &&t):
-                           p_value(allocator_arg, a, forward<T>(t)) {
-            static_assert(!IsLvalueReference<H> ||
-                          (IsLvalueReference<H> &&
-                           (IsLvalueReference<T> ||
-                            IsSame<RemoveReference<T>,
-                                   ReferenceWrapper<RemoveReference<H>>>)),
-            "attempt to construct a reference element in a tuple with an rvalue");
+            p_value(allocator_arg, a, forward<T>(t))
+        {
+            static_assert(
+                !IsLvalueReference<H> || (
+                    IsLvalueReference<H> && (
+                        IsLvalueReference<T> || IsSame<
+                            RemoveReference<T>,
+                            ReferenceWrapper<RemoveReference<H>>
+                        >
+                    )
+                ),
+                "attempt to construct a reference element in a tuple with an rvalue"
+            );
         }
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 2>, A const &a, T &&t):
-                           p_value(forward<T>(t), a) {
-            static_assert(!IsLvalueReference<H> ||
-                          (IsLvalueReference<H> &&
-                           (IsLvalueReference<T> ||
-                            IsSame<RemoveReference<T>,
-                                   ReferenceWrapper<RemoveReference<H>>>)),
-            "attempt to construct a reference element in a tuple with an rvalue");
+            p_value(forward<T>(t), a)
+        {
+            static_assert(
+                !IsLvalueReference<H> || (
+                    IsLvalueReference<H> && (
+                        IsLvalueReference<T> || IsSame<
+                            RemoveReference<T>,
+                            ReferenceWrapper<RemoveReference<H>>
+                        >
+                    )
+                ),
+                "attempt to construct a reference element in a tuple with an rvalue"
+            );
         }
 
         TupleLeaf(TupleLeaf const &) = default;
@@ -129,26 +159,31 @@ namespace detail {
 
         template<typename A>
         TupleLeaf(Constant<int, 1>, A const &a):
-            H(allocator_arg, a) {}
+            H(allocator_arg, a)
+        {}
 
         template<typename A>
         TupleLeaf(Constant<int, 2>, A const &a): H(a) {}
 
         template<typename T, typename = EnableIf<
             !IsSame<Decay<T>, TupleLeaf> && IsConstructible<H, T>
-        >> explicit TupleLeaf(T &&t): H(forward<T>(t)) {}
+        >>
+        explicit TupleLeaf(T &&t): H(forward<T>(t)) {}
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 0>, A const &, T &&t):
-            H(forward<T>(t)) {}
+            H(forward<T>(t))
+        {}
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 1>, A const &a, T &&t):
-            H(allocator_arg, a, forward<T>(t)) {}
+            H(allocator_arg, a, forward<T>(t))
+        {}
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 2>, A const &a, T &&t):
-            H(forward<T>(t), a) {}
+            H(forward<T>(t), a)
+        {}
 
         TupleLeaf(TupleLeaf const &) = default;
         TupleLeaf(TupleLeaf &&) = default;
@@ -187,58 +222,73 @@ namespace detail {
     constexpr bool TupleAllDefaultConstructible = detail::Undefined<T>();
 
     template<typename ...A>
-    constexpr bool TupleAllDefaultConstructible<TupleTypes<A...>>
-        = TupleAll<IsDefaultConstructible<A>...>;
+    constexpr bool TupleAllDefaultConstructible<TupleTypes<A...>> =
+        TupleAll<IsDefaultConstructible<A>...>;
 }
 
 /* tuple implementation */
 
 namespace detail {
-    template<typename, typename ...> struct TupleBase;
+    template<typename, typename ...>
+    struct TupleBase;
 
     template<Size ...I, typename ...A>
     struct TupleBase<TupleIndices<I...>, A...>: TupleLeaf<I, A>... {
         constexpr TupleBase() {}
 
-        template<Size ...Ia, typename ...Aa,
-                 Size ...Ib, typename ...Ab, typename ...T>
-        explicit TupleBase(TupleIndices<Ia...>, TupleTypes<Aa...>,
-                           TupleIndices<Ib...>, TupleTypes<Ab...>,
-                           T &&...t):
+        template<
+            Size ...Ia, typename ...Aa, Size ...Ib,
+            typename ...Ab, typename ...T
+        >
+        explicit TupleBase(
+            TupleIndices<Ia...>, TupleTypes<Aa...>,
+            TupleIndices<Ib...>, TupleTypes<Ab...>, T &&...t
+        ):
             TupleLeaf<Ia, Aa>(forward<T>(t))...,
-            TupleLeaf<Ib, Ab>()... {}
+            TupleLeaf<Ib, Ab>()...
+        {}
 
-        template<typename Alloc, Size ...Ia, typename ...Aa,
-                 Size ...Ib, typename ...Ab, typename ...T>
-        explicit TupleBase(AllocatorArg, Alloc const &a,
-                           TupleIndices<Ia...>, TupleTypes<Aa...>,
-                           TupleIndices<Ib...>, TupleTypes<Ab...>,
-                           T &&...t):
-            TupleLeaf<Ia, Aa>(UsesAllocatorConstructor<Aa, Alloc, T>, a,
-                forward<T>(t))...,
+        template<
+            typename Alloc, Size ...Ia, typename ...Aa,
+            Size ...Ib, typename ...Ab, typename ...T
+        >
+        explicit TupleBase(
+            AllocatorArg, Alloc const &a,
+            TupleIndices<Ia...>, TupleTypes<Aa...>,
+            TupleIndices<Ib...>, TupleTypes<Ab...>, T &&...t
+        ):
+            TupleLeaf<Ia, Aa>(
+                UsesAllocatorConstructor<Aa, Alloc, T>, a,
+                forward<T>(t)
+            )...,
             TupleLeaf<Ib, Ab>(UsesAllocatorConstructor<Ab, Alloc>, a)...
         {}
 
         template<typename T, typename = EnableIf<
             TupleConstructible<T, Tuple<A...>>
-        >> TupleBase(T &&t): TupleLeaf<I, A>(forward<
-            TupleElement<I, MakeTupleTypes<T>>
-        >(get<I>(t)))... {}
+        >>
+        TupleBase(T &&t):
+            TupleLeaf<I, A>(
+                forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t))
+            )...
+        {}
 
         template<typename Alloc, typename T, typename = EnableIf<
             TupleConvertible<T, Tuple<A...>>
-        >> TupleBase(AllocatorArg, Alloc const &a, T &&t):
-            TupleLeaf<I, A>(UsesAllocatorConstructor<
-                A, Alloc, TupleElement<I, MakeTupleTypes<T>>
-            >, a, forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t)))...
+        >>
+        TupleBase(AllocatorArg, Alloc const &a, T &&t):
+            TupleLeaf<I, A>(
+                UsesAllocatorConstructor<
+                    A, Alloc, TupleElement<I, MakeTupleTypes<T>>
+                >, a, forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t))
+            )...
         {}
 
         template<typename T>
-        EnableIf<TupleAssignable<T, Tuple<A...>>, TupleBase &>
-        operator=(T &&t) {
-            tuple_swallow(TupleLeaf<I, A>::operator=(forward<
-                TupleElement<I, MakeTupleTypes<T>>
-            >(get<I>(t)))...);
+        EnableIf<TupleAssignable<T, Tuple<A...>>, TupleBase &> operator=(T &&t) {
+            tuple_swallow(TupleLeaf<I, A>::operator=(
+                forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t))
+            )...);
             return *this;
         }
 
@@ -246,19 +296,23 @@ namespace detail {
         TupleBase(TupleBase &&) = default;
 
         TupleBase &operator=(TupleBase const &t) {
-            tuple_swallow(TupleLeaf<I, A>::operator=((
-                static_cast<TupleLeaf<I, A> const &>(t)).get())...);
+            tuple_swallow(TupleLeaf<I, A>::operator=(
+                (static_cast<TupleLeaf<I, A> const &>(t)).get()
+            )...);
             return *this;
         }
 
         TupleBase &operator=(TupleBase &&t) {
-            tuple_swallow(TupleLeaf<I, A>::operator=(forward<A>
-                ((static_cast<TupleLeaf<I, A> &>(t)).get()))...);
+            tuple_swallow(TupleLeaf<I, A>::operator=(
+                forward<A>((static_cast<TupleLeaf<I, A> &>(t)).get())
+            )...);
             return *this;
         }
 
         void swap(TupleBase &t) {
-            tuple_swallow(TupleLeaf<I, A>::swap(static_cast<TupleLeaf<I, A> &>(t))...);
+            tuple_swallow(
+                TupleLeaf<I, A>::swap(static_cast<TupleLeaf<I, A> &>(t))...
+            );
         }
     };
 } /* namespace detail */
@@ -283,110 +337,130 @@ class Tuple {
 public:
     template<bool D = true, typename = EnableIf<
         detail::TupleAll<(D && IsDefaultConstructible<A>)...>
-    >> Tuple() {}
+    >>
+    Tuple() {}
 
     explicit Tuple(A const &...t):
-        p_base(detail::MakeTupleIndices<sizeof...(A)>(),
-               detail::MakeTupleTypes<Tuple, sizeof...(A)>(),
-               detail::MakeTupleIndices<0>(),
-               detail::MakeTupleTypes<Tuple, 0>(), t...) {}
-
-    template<typename Alloc>
-    Tuple(AllocatorArg, Alloc const &a, A const &...t):
-        p_base(allocator_arg, a,
+        p_base(
             detail::MakeTupleIndices<sizeof...(A)>(),
             detail::MakeTupleTypes<Tuple, sizeof...(A)>(),
             detail::MakeTupleIndices<0>(),
-            detail::MakeTupleTypes<Tuple, 0>(), t...) {}
+            detail::MakeTupleTypes<Tuple, 0>(), t...
+        )
+    {}
+
+    template<typename Alloc>
+    Tuple(AllocatorArg, Alloc const &a, A const &...t):
+        p_base(
+            allocator_arg, a,
+            detail::MakeTupleIndices<sizeof...(A)>(),
+            detail::MakeTupleTypes<Tuple, sizeof...(A)>(),
+            detail::MakeTupleIndices<0>(),
+            detail::MakeTupleTypes<Tuple, 0>(), t...
+        )
+    {}
 
     template<typename ...T, EnableIf<
         (sizeof...(T) <= sizeof...(A)) &&
         detail::TupleConvertible<
             Tuple<T...>,
-            detail::MakeTupleTypes<Tuple,
-                (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
-                                              : sizeof...(A)
+            detail::MakeTupleTypes<
+                Tuple,
+                (sizeof...(T) < sizeof...(A)) ? sizeof...(T) : sizeof...(A)
             >
         > &&
         detail::TupleAllDefaultConstructible<
-            detail::MakeTupleTypes<Tuple, sizeof...(A),
-                (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
-                                              : sizeof...(A)
+            detail::MakeTupleTypes<
+                Tuple, sizeof...(A),
+                (sizeof...(T) < sizeof...(A)) ? sizeof...(T) : sizeof...(A)
             >
         >, bool
     > = true>
     Tuple(T &&...t):
-        p_base(detail::MakeTupleIndices<sizeof...(T)>(),
-               detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
-               detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
-               detail::MakeTupleTypes<Tuple, sizeof...(A), sizeof...(T)>(),
-               forward<T>(t)...) {}
+        p_base(
+            detail::MakeTupleIndices<sizeof...(T)>(),
+            detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
+            detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
+            detail::MakeTupleTypes<Tuple, sizeof...(A), sizeof...(T)>(),
+            forward<T>(t)...
+        )
+    {}
 
     template<typename ...T, EnableIf<
         (sizeof...(T) <= sizeof...(A)) &&
         detail::TupleConstructible<
             Tuple<T...>,
-            detail::MakeTupleTypes<Tuple,
-                (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
-                                              : sizeof...(A)
+            detail::MakeTupleTypes<
+                Tuple,
+                (sizeof...(T) < sizeof...(A)) ? sizeof...(T) : sizeof...(A)
             >
         > &&
         !detail::TupleConvertible<
             Tuple<T...>,
-            detail::MakeTupleTypes<Tuple,
-                (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
-                                              : sizeof...(A)
+            detail::MakeTupleTypes<
+                Tuple,
+                (sizeof...(T) < sizeof...(A)) ? sizeof...(T) : sizeof...(A)
             >
         > &&
         detail::TupleAllDefaultConstructible<
-            detail::MakeTupleTypes<Tuple, sizeof...(A),
-                (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
-                                              : sizeof...(A)
+            detail::MakeTupleTypes<
+                Tuple, sizeof...(A),
+                (sizeof...(T) < sizeof...(A)) ? sizeof...(T) : sizeof...(A)
             >
         >, bool
     > = true>
     Tuple(T &&...t):
-        p_base(detail::MakeTupleIndices<sizeof...(T)>(),
-               detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
-               detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
-               detail::MakeTupleTypes<Tuple, sizeof...(A), sizeof...(T)>(),
-               forward<T>(t)...) {}
+        p_base(
+            detail::MakeTupleIndices<sizeof...(T)>(),
+            detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
+            detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
+            detail::MakeTupleTypes<Tuple, sizeof...(A), sizeof...(T)>(),
+            forward<T>(t)...
+        )
+    {}
 
     template<typename Alloc, typename ...T, typename = EnableIf<
         (sizeof...(T) <= sizeof...(A)) &&
         detail::TupleConvertible<
             Tuple<T...>,
-            detail::MakeTupleTypes<Tuple,
-                (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
-                                              : sizeof...(A)
+            detail::MakeTupleTypes<
+                Tuple,
+                (sizeof...(T) < sizeof...(A)) ? sizeof...(T) : sizeof...(A)
             >
         > &&
         detail::TupleAllDefaultConstructible<
-            detail::MakeTupleTypes<Tuple, sizeof...(A),
-                (sizeof...(T) < sizeof...(A)) ? sizeof...(T)
-                                              : sizeof...(A)
+            detail::MakeTupleTypes<
+                Tuple, sizeof...(A),
+                (sizeof...(T) < sizeof...(A)) ? sizeof...(T) : sizeof...(A)
             >
         >
     >> Tuple(AllocatorArg, Alloc const &a, T &&...t):
-        p_base(allocator_arg, a, detail::MakeTupleIndices<sizeof...(T)>(),
-               detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
-               detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
-               detail::MakeTupleTypes<Tuple, sizeof...(A), sizeof...(T)>(),
-               forward<T>(t)...) {}
+        p_base(
+            allocator_arg, a, detail::MakeTupleIndices<sizeof...(T)>(),
+            detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
+            detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
+            detail::MakeTupleTypes<Tuple, sizeof...(A), sizeof...(T)>(),
+            forward<T>(t)...
+        )
+    {}
 
     template<typename T, EnableIf<
         detail::TupleConvertible<T, Tuple>, bool
-    > = true> Tuple(T &&t): p_base(forward<T>(t)) {}
+    > = true>
+    Tuple(T &&t): p_base(forward<T>(t)) {}
 
     template<typename T, EnableIf<
         detail::TupleConstructible<T, Tuple> &&
         !detail::TupleConvertible<T, Tuple>, bool
-    > = true> Tuple(T &&t): p_base(forward<T>(t)) {}
+    > = true>
+    Tuple(T &&t): p_base(forward<T>(t)) {}
 
     template<typename Alloc, typename T, typename = EnableIf<
         detail::TupleConvertible<T, Tuple>
-    >> Tuple(AllocatorArg, Alloc const &a, T &&t):
-        p_base(allocator_arg, a, forward<T>(t)) {}
+    >>
+    Tuple(AllocatorArg, Alloc const &a, T &&t):
+        p_base(allocator_arg, a, forward<T>(t))
+    {}
 
     template<typename T, typename = EnableIf<detail::TupleAssignable<T, Tuple>>>
     Tuple &operator=(T &&t) {
@@ -473,8 +547,7 @@ namespace detail {
 }
 
 template<typename ...T>
-inline Tuple<typename detail::MakeTupleReturn<T>::Type...>
-make_tuple(T &&...t) {
+inline Tuple<typename detail::MakeTupleReturn<T>::Type...> make_tuple(T &&...t) {
     return Tuple<typename detail::MakeTupleReturn<T>::Type...>(forward<T>(t)...);
 }
 

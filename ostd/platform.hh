@@ -136,7 +136,9 @@ inline uint32_t endian_swap32(uint32_t x) {
     return (x << 24) | (x >> 24) | ((x >> 8) & 0xFF00) | ((x << 8) & 0xFF0000);
 }
 inline uint64_t endian_swap64(uint64_t x) {
-    return endian_swap32(uint32_t(x >> 32)) | (uint64_t(endian_swap32(uint32_t(x))) << 32);
+    return endian_swap32(
+        uint32_t(x >> 32)) | (uint64_t(endian_swap32(uint32_t(x))) << 32
+    );
 }
 
 #endif

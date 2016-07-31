@@ -37,22 +37,28 @@ namespace detail {
         constexpr MaybeStorage(): p_null_state('\0') {}
 
         MaybeStorage(MaybeStorage const &v): p_engaged(v.p_engaged) {
-            if (p_engaged) ::new(address_of(p_value)) Value(v.p_value);
+            if (p_engaged) {
+                ::new(address_of(p_value)) Value(v.p_value);
+            }
         }
 
         MaybeStorage(MaybeStorage &&v): p_engaged(v.p_engaged) {
-            if (p_engaged)
+            if (p_engaged) {
                 ::new(address_of(p_value)) Value(move(v.p_value));
+            }
         }
 
         constexpr MaybeStorage(Value const &v): p_value(v), p_engaged(true) {}
         constexpr MaybeStorage(Value &&v): p_value(move(v)), p_engaged(true) {}
 
         template<typename ...A> constexpr MaybeStorage(InPlace, A &&...args):
-            p_value(forward<A>(args)...), p_engaged(true) {}
+            p_value(forward<A>(args)...), p_engaged(true)
+        {}
 
         ~MaybeStorage() {
-            if (p_engaged) p_value.~Value();
+            if (p_engaged) {
+                p_value.~Value();
+            }
         }
     };
 
@@ -69,21 +75,26 @@ namespace detail {
         constexpr MaybeStorage(): p_null_state('\0') {}
 
         MaybeStorage(MaybeStorage const &v): p_engaged(v.p_engaged) {
-            if (p_engaged) ::new(address_of(p_value)) Value(v.p_value);
+            if (p_engaged) {
+                ::new(address_of(p_value)) Value(v.p_value);
+            }
         }
 
         MaybeStorage(MaybeStorage &&v): p_engaged(v.p_engaged) {
-            if (p_engaged)
+            if (p_engaged) {
                 ::new(address_of(p_value)) Value(move(v.p_value));
+            }
         }
 
         constexpr MaybeStorage(Value const &v): p_value(v), p_engaged(true) {}
         constexpr MaybeStorage(Value &&v):
-            p_value(move(v)), p_engaged(true) {}
+            p_value(move(v)), p_engaged(true)
+        {}
 
         template<typename ...A>
         constexpr MaybeStorage(InPlace, A &&...args):
-            p_value(forward<A>(args)...), p_engaged(true) {}
+            p_value(forward<A>(args)...), p_engaged(true)
+        {}
     };
 }
 
@@ -93,16 +104,26 @@ class Maybe: private detail::MaybeStorage<T> {
 public:
     using Value = T;
 
-    static_assert(!IsReference<T>,
-        "Initialization of Maybe with a reference type is not allowed.");
-    static_assert(!IsSame<RemoveCv<T>, InPlace>,
-        "Initialization of Maybe with InPlace is not allowed.");
-    static_assert(!IsSame<RemoveCv<T>, Nothing>,
-        "Initialization of Maybe with Nothing is not allowed.");
-    static_assert(IsObject<T>,
-        "Initialization of Maybe with non-object type is not allowed.");
-    static_assert(IsDestructible<T>,
-        "Initialization of Maybe with a non-destructible object is not allowed.");
+    static_assert(
+        !IsReference<T>,
+        "Initialization of Maybe with a reference type is not allowed."
+    );
+    static_assert(
+        !IsSame<RemoveCv<T>, InPlace>,
+        "Initialization of Maybe with InPlace is not allowed."
+    );
+    static_assert(
+        !IsSame<RemoveCv<T>, Nothing>,
+        "Initialization of Maybe with Nothing is not allowed."
+    );
+    static_assert(
+        IsObject<T>,
+        "Initialization of Maybe with non-object type is not allowed."
+    );
+    static_assert(
+        IsDestructible<T>,
+        "Initialization of Maybe with a non-destructible object is not allowed."
+    );
 
     constexpr Maybe() {}
     Maybe(Maybe const &) = default;
@@ -112,14 +133,16 @@ public:
     constexpr Maybe(Value &&v): Base(move(v)) {}
 
     template<typename ...A, typename = EnableIf<IsConstructible<T, A...>>>
-    constexpr explicit Maybe(InPlace, A &&...args): Base(in_place,
-        forward<A>(args)...) {}
+    constexpr explicit Maybe(InPlace, A &&...args):
+        Base(in_place, forward<A>(args)...)
+    {}
 
     template<typename U, typename ...A, typename = EnableIf<
-        IsConstructible<T, std::initializer_list<U> &, A...>>>
-    constexpr explicit
-    Maybe(InPlace, std::initializer_list<U> il, A &&...args):
-        Base(in_place, il, forward<A>(args)...) {}
+        IsConstructible<T, std::initializer_list<U> &, A...>>
+    >
+    constexpr explicit Maybe(InPlace, std::initializer_list<U> il, A &&...args):
+        Base(in_place, il, forward<A>(args)...)
+    {}
 
     ~Maybe() = default;
 
@@ -133,12 +156,15 @@ public:
 
     Maybe &operator=(Maybe const &v) {
         if (this->p_engaged == v.p_engaged) {
-            if (this->p_engaged) this->p_value = v.p_value;
+            if (this->p_engaged) {
+                this->p_value = v.p_value;
+            }
         } else {
-            if (this->p_engaged)
+            if (this->p_engaged) {
                 this->p_value.~Value();
-            else
+            } else {
                 ::new(address_of(this->p_value)) Value(v.p_value);
+            }
             this->p_engaged = v.p_engaged;
         }
         return *this;
@@ -146,11 +172,13 @@ public:
 
     Maybe &operator=(Maybe &&v) {
         if (this->p_engaged == v.p_engaged) {
-            if (this->p_engaged) this->p_value = move(v.p_value);
+            if (this->p_engaged) {
+                this->p_value = move(v.p_value);
+            }
         } else {
-            if (this->p_engaged)
+            if (this->p_engaged) {
                 this->p_value.~Value();
-            else {
+            } else {
                 ::new(address_of(this->p_value)) Value(move(v.p_value));
             }
             this->p_engaged = v.p_engaged;
@@ -217,26 +245,35 @@ public:
 
     template<typename U>
     constexpr Value value_or(U &&v) const & {
-        static_assert(IsCopyConstructible<Value>,
-            "Maybe<T>::value_or: T must be copy constructible");
-        static_assert(IsConvertible<U, Value>,
-            "Maybe<T>::value_or: U must be convertible to T");
+        static_assert(
+            IsCopyConstructible<Value>,
+            "Maybe<T>::value_or: T must be copy constructible"
+        );
+        static_assert(
+            IsConvertible<U, Value>,
+            "Maybe<T>::value_or: U must be convertible to T"
+        );
         return this->p_engaged ? this->p_value : Value(forward<U>(v));
     }
 
     template<typename U>
     Value value_or(U &&v) && {
-        static_assert(IsMoveConstructible<Value>,
-            "Maybe<T>::value_or: T must be copy constructible");
-        static_assert(IsConvertible<U, Value>,
-            "Maybe<T>::value_or: U must be convertible to T");
-        return this->p_engaged ? move(this->p_value)
-                               : Value(forward<U>(v));
+        static_assert(
+            IsMoveConstructible<Value>,
+            "Maybe<T>::value_or: T must be copy constructible"
+        );
+        static_assert(
+            IsConvertible<U, Value>,
+            "Maybe<T>::value_or: U must be convertible to T"
+        );
+        return this->p_engaged ? move(this->p_value) : Value(forward<U>(v));
     }
 
     void swap(Maybe &v) {
         if (this->p_engaged == v.p_engaged) {
-            if (this->p_engaged) detail::swap_adl(this->p_value, v.p_value);
+            if (this->p_engaged) {
+                detail::swap_adl(this->p_value, v.p_value);
+            }
         } else {
             if (this->p_engaged) {
                 ::new(address_of(v.p_value)) Value(move(this->p_value));

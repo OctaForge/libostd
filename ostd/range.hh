@@ -25,14 +25,17 @@ struct RandomAccessRangeTag: BidirectionalRangeTag {};
 struct FiniteRandomAccessRangeTag: RandomAccessRangeTag {};
 struct ContiguousRangeTag: FiniteRandomAccessRangeTag {};
 
-template<typename T> struct RangeHalf;
+template<typename T>
+struct RangeHalf;
 
 #define OSTD_RANGE_TRAIT(Name) \
 namespace detail { \
     template<typename T> \
     struct Range##Name##Test { \
-        template<typename U> static char test(RemoveReference<typename U::Name> *); \
-        template<typename U> static  int test(...); \
+        template<typename U> \
+        static char test(RemoveReference<typename U::Name> *); \
+        template<typename U> \
+        static int test(...); \
         static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char)); \
     }; \
     template<typename T, bool = Range##Name##Test<T>::value> \
@@ -54,24 +57,25 @@ OSTD_RANGE_TRAIT(Difference)
 #undef OSTD_RANGE_TRAIT
 
 namespace detail {
-    template<typename U> static char is_range_test(typename U::Category *,
-                                                   typename U::Size *,
-                                                   typename U::Difference *,
-                                                   typename U::Value *,
-                                                   RemoveReference<
-                                                       typename U::Reference
-                                                   > *);
-    template<typename U> static int is_range_test(...);
+    template<typename U>
+    static char is_range_test(
+        typename U::Category *, typename U::Size *,
+        typename U::Difference *, typename U::Value *,
+        RemoveReference<typename U::Reference> *
+    );
+    template<typename U>
+    static int is_range_test(...);
 
-    template<typename T> constexpr bool IsRangeTest
-        = (sizeof(is_range_test<T>(0, 0, 0, 0, 0)) == sizeof(char));
+    template<typename T> constexpr bool IsRangeTest =
+        (sizeof(is_range_test<T>(0, 0, 0, 0, 0)) == sizeof(char));
 }
 
 // is input range
 
 namespace detail {
-    template<typename T> constexpr bool IsInputRangeCore
-        = IsConvertible<RangeCategory<T>, InputRangeTag>;
+    template<typename T>
+    constexpr bool IsInputRangeCore =
+        IsConvertible<RangeCategory<T>, InputRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsInputRangeBase = false;
@@ -86,8 +90,9 @@ constexpr bool IsInputRange = detail::IsInputRangeBase<T>;
 // is forward range
 
 namespace detail {
-    template<typename T> constexpr bool IsForwardRangeCore
-        = IsConvertible<RangeCategory<T>, ForwardRangeTag>;
+    template<typename T>
+    constexpr bool IsForwardRangeCore =
+        IsConvertible<RangeCategory<T>, ForwardRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsForwardRangeBase = false;
@@ -102,8 +107,9 @@ constexpr bool IsForwardRange = detail::IsForwardRangeBase<T>;
 // is bidirectional range
 
 namespace detail {
-    template<typename T> constexpr bool IsBidirectionalRangeCore
-        = IsConvertible<RangeCategory<T>, BidirectionalRangeTag>;
+    template<typename T>
+    constexpr bool IsBidirectionalRangeCore =
+        IsConvertible<RangeCategory<T>, BidirectionalRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsBidirectionalRangeBase = false;
@@ -113,14 +119,15 @@ namespace detail {
         detail::IsBidirectionalRangeCore<T>;
 }
 
-template<typename T> constexpr bool IsBidirectionalRange
-    = detail::IsBidirectionalRangeBase<T>;
+template<typename T> constexpr bool IsBidirectionalRange =
+    detail::IsBidirectionalRangeBase<T>;
 
 // is random access range
 
 namespace detail {
-    template<typename T> constexpr bool IsRandomAccessRangeCore
-        = IsConvertible<RangeCategory<T>, RandomAccessRangeTag>;
+    template<typename T>
+    constexpr bool IsRandomAccessRangeCore =
+        IsConvertible<RangeCategory<T>, RandomAccessRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsRandomAccessRangeBase = false;
@@ -130,14 +137,15 @@ namespace detail {
         detail::IsRandomAccessRangeCore<T>;
 }
 
-template<typename T> constexpr bool IsRandomAccessRange
-    = detail::IsRandomAccessRangeBase<T>;
+template<typename T> constexpr bool IsRandomAccessRange =
+    detail::IsRandomAccessRangeBase<T>;
 
 // is finite random access range
 
 namespace detail {
-    template<typename T> constexpr bool IsFiniteRandomAccessRangeCore
-        = IsConvertible<RangeCategory<T>, FiniteRandomAccessRangeTag>;
+    template<typename T>
+    constexpr bool IsFiniteRandomAccessRangeCore =
+        IsConvertible<RangeCategory<T>, FiniteRandomAccessRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsFiniteRandomAccessRangeBase = false;
@@ -147,19 +155,20 @@ namespace detail {
         detail::IsFiniteRandomAccessRangeCore<T>;
 }
 
-template<typename T> constexpr bool IsFiniteRandomAccessRange
-    = detail::IsFiniteRandomAccessRangeBase<T>;
+template<typename T> constexpr bool IsFiniteRandomAccessRange =
+    detail::IsFiniteRandomAccessRangeBase<T>;
 
 // is infinite random access range
 
-template<typename T> constexpr bool IsInfiniteRandomAccessRange
-    = IsRandomAccessRange<T> && !IsFiniteRandomAccessRange<T>;
+template<typename T> constexpr bool IsInfiniteRandomAccessRange =
+    IsRandomAccessRange<T> && !IsFiniteRandomAccessRange<T>;
 
 // is contiguous range
 
 namespace detail {
-    template<typename T> constexpr bool IsContiguousRangeCore
-        = IsConvertible<RangeCategory<T>, ContiguousRangeTag>;
+    template<typename T>
+    constexpr bool IsContiguousRangeCore =
+        IsConvertible<RangeCategory<T>, ContiguousRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsContiguousRangeBase = false;
@@ -169,26 +178,32 @@ namespace detail {
         detail::IsContiguousRangeCore<T>;
 }
 
-template<typename T> constexpr bool IsContiguousRange
-    = detail::IsContiguousRangeBase<T>;
+template<typename T> constexpr bool IsContiguousRange =
+    detail::IsContiguousRangeBase<T>;
 
 // is output range
 
 namespace detail {
     template<typename T, typename P>
     struct OutputRangeTest {
-        template<typename U, bool (U::*)(P)> struct Test {};
-        template<typename U> static char test(Test<U, &U::put> *);
-        template<typename U> static  int test(...);
+        template<typename U, bool (U::*)(P)>
+        struct Test {};
+        template<typename U>
+        static char test(Test<U, &U::put> *);
+        template<typename U>
+        static int test(...);
         static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
     };
 
-    template<typename T> constexpr bool IsOutputRangeCore
-        = IsConvertible<RangeCategory<T>, OutputRangeTag> ||
-          (IsInputRange<T> &&
-              (detail::OutputRangeTest<T, RangeValue<T> const &>::value ||
-               detail::OutputRangeTest<T, RangeValue<T>      &&>::value ||
-               detail::OutputRangeTest<T, RangeValue<T>        >::value));
+    template<typename T>
+    constexpr bool IsOutputRangeCore =
+        IsConvertible<RangeCategory<T>, OutputRangeTag> || (
+            IsInputRange<T> && (
+                detail::OutputRangeTest<T, RangeValue<T> const &>::value ||
+                detail::OutputRangeTest<T, RangeValue<T>      &&>::value ||
+                detail::OutputRangeTest<T, RangeValue<T>        >::value
+            )
+        );
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsOutputRangeBase = false;
@@ -204,12 +219,32 @@ namespace detail {
 
     template<typename T>
     struct RangeIterator {
-        RangeIterator(): p_range() {}
-        explicit RangeIterator(T const &range) {
+        RangeIterator(): p_range(), p_init(false) {}
+        explicit RangeIterator(T const &range): p_range(), p_init(true) {
             ::new(&get_ref()) T(range);
         }
-        explicit RangeIterator(T &&range) {
+        explicit RangeIterator(T &&range): p_range(), p_init(true) {
             ::new(&get_ref()) T(move(range));
+        }
+        RangeIterator(const RangeIterator &v): p_range(), p_init(true) {
+            ::new(&get_ref()) T(v.get_ref());
+        }
+        RangeIterator(RangeIterator &&v): p_range(), p_init(true) {
+            ::new(&get_ref()) T(move(v.get_ref()));
+        }
+        RangeIterator &operator=(const RangeIterator &v) {
+            destroy();
+            ::new(&get_ref()) T(v.get_ref());
+            p_init = true;
+            return *this;
+        }
+        RangeIterator &operator=(RangeIterator &&v) {
+            destroy();
+            swap(v);
+            return *this;
+        }
+        ~RangeIterator() {
+            destroy();
         }
         RangeIterator &operator++() {
             get_ref().pop_front();
@@ -219,16 +254,28 @@ namespace detail {
             return get_ref().front();
         }
         bool operator!=(RangeIterator) const { return !get_ref().empty(); }
+        void swap(RangeIterator &v) {
+            detail::swap_adl(get_ref(). v.get_ref());
+            detail::swap_adl(p_init, v.p_init);
+        }
     private:
         T &get_ref() { return *reinterpret_cast<T *>(&p_range); }
         T const &get_ref() const { return *reinterpret_cast<T const *>(&p_range); }
+        void destroy() {
+            if (p_init) {
+                get_ref().~T();
+                p_init = false;
+            }
+        }
         AlignedStorage<sizeof(T), alignof(T)> p_range;
+        bool p_init;
     };
 }
 
 // range half
 
-template<typename T> struct HalfRange;
+template<typename T>
+struct HalfRange;
 
 namespace detail {
     template<typename R, bool = IsBidirectionalRange<typename R::Range>>
@@ -239,11 +286,15 @@ namespace detail {
         using Diff = RangeDifference<typename R::Range>;
 
         static Diff add_n(R &half, Diff n) {
-            if (n < 0) return -half.prev_n(n);
+            if (n < 0) {
+                return -half.prev_n(n);
+            }
             return half.next_n(n);
         }
         static Diff sub_n(R &half, Diff n) {
-            if (n < 0) return -half.next_n(n);
+            if (n < 0) {
+                return -half.next_n(n);
+            }
             return half.prev_n(n);
         }
     };
@@ -253,11 +304,15 @@ namespace detail {
         using Diff = RangeDifference<typename R::Range>;
 
         static Diff add_n(R &half, Diff n) {
-            if (n < 0) return 0;
+            if (n < 0) {
+                return 0;
+            }
             return half.next_n(n);
         }
         static Diff sub_n(R &half, Diff n) {
-            if (n < 0) return 0;
+            if (n < 0) {
+                return 0;
+            }
             return half.prev_n(n);
         }
     };
@@ -393,44 +448,65 @@ inline RangeDifference<R> operator-(R const &lhs, R const &rhs) {
 namespace detail {
     template<typename R>
     RangeSize<R> pop_front_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.pop_front()) return i;
+        for (RangeSize<R> i = 0; i < n; ++i) {
+            if (!range.pop_front()) {
+                return i;
+            }
+        }
         return n;
     }
 
     template<typename R>
     RangeSize<R> pop_back_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.pop_back()) return i;
+        for (RangeSize<R> i = 0; i < n; ++i) {
+            if (!range.pop_back()) {
+                return i;
+            }
+        }
         return n;
     }
 
     template<typename R>
     RangeSize<R> push_front_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.push_front()) return i;
+        for (RangeSize<R> i = 0; i < n; ++i) {
+            if (!range.push_front()) {
+                return i;
+            }
+        }
         return n;
     }
 
     template<typename R>
     RangeSize<R> push_back_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i)
-            if (!range.push_back()) return i;
+        for (RangeSize<R> i = 0; i < n; ++i) {
+            if (!range.push_back()) {
+                return i;
+            }
+        }
         return n;
     }
 }
 
-template<typename> struct ReverseRange;
-template<typename> struct MoveRange;
-template<typename> struct EnumeratedRange;
-template<typename> struct TakeRange;
-template<typename> struct ChunksRange;
-template<typename ...> struct JoinRange;
-template<typename ...> struct ZipRange;
+template<typename>
+struct ReverseRange;
+template<typename>
+struct MoveRange;
+template<typename>
+struct EnumeratedRange;
+template<typename>
+struct TakeRange;
+template<typename>
+struct ChunksRange;
+template<typename ...>
+struct JoinRange;
+template<typename ...>
+struct ZipRange;
 
-template<typename B, typename C, typename V, typename R = V &,
-         typename S = Size, typename D = Ptrdiff
-> struct InputRange {
+template<
+    typename B, typename C, typename V, typename R = V &,
+    typename S = Size, typename D = Ptrdiff
+>
+struct InputRange {
     using Category = C;
     using Size = S;
     using Difference = D;
@@ -510,8 +586,9 @@ template<typename B, typename C, typename V, typename R = V &,
         B r(*static_cast<B const *>(this));
         Size on = n;
         for (; n && !r.empty(); --n) {
-            if (!orange.put(r.front()))
+            if (!orange.put(r.front())) {
                 break;
+            }
             r.pop_front();
         }
         return (on - n);
@@ -629,11 +706,14 @@ inline auto join(R &&range) {
 
 template<typename R1, typename ...R>
 inline auto join(R1 &&r1, R &&...rr) {
-    return [ranges = forward_as_tuple(forward<R1>(r1), forward<R>(rr)...)]
-           (auto &&obj) mutable {
+    return [
+        ranges = forward_as_tuple(forward<R1>(r1), forward<R>(rr)...)
+    ] (auto &&obj) mutable {
         using Index = detail::MakeTupleIndices<sizeof...(R) + 1>;
-        return detail::join_proxy(forward<decltype(obj   )>(obj),
-                                  forward<decltype(ranges)>(ranges), Index());
+        return detail::join_proxy(
+            forward<decltype(obj)>(obj),
+            forward<decltype(ranges)>(ranges), Index()
+        );
     };
 }
 
@@ -646,11 +726,14 @@ inline auto zip(R &&range) {
 
 template<typename R1, typename ...R>
 inline auto zip(R1 &&r1, R &&...rr) {
-    return [ranges = forward_as_tuple(forward<R1>(r1), forward<R>(rr)...)]
-           (auto &&obj) mutable {
+    return [
+        ranges = forward_as_tuple(forward<R1>(r1), forward<R>(rr)...)
+    ] (auto &&obj) mutable {
         using Index = detail::MakeTupleIndices<sizeof...(R) + 1>;
-        return detail::zip_proxy(forward<decltype(obj   )>(obj),
-                                 forward<decltype(ranges)>(ranges), Index());
+        return detail::zip_proxy(
+            forward<decltype(obj)>(obj),
+            forward<decltype(ranges)>(ranges), Index()
+        );
     };
 }
 
@@ -669,9 +752,11 @@ inline auto citer(T const &r) -> decltype(r.iter()) {
     return r.iter();
 }
 
-template<typename B, typename V, typename R = V &,
-         typename S = Size, typename D = Ptrdiff
-> struct OutputRange {
+template<
+    typename B, typename V, typename R = V &,
+    typename S = Size, typename D = Ptrdiff
+>
+struct OutputRange {
     using Category = OutputRangeTag;
     using Size = S;
     using Difference = D;
@@ -700,14 +785,18 @@ private:
     T p_end;
 public:
     HalfRange() = delete;
-    HalfRange(HalfRange const &range): p_beg(range.p_beg),
-        p_end(range.p_end) {}
-    HalfRange(HalfRange &&range): p_beg(move(range.p_beg)),
-        p_end(move(range.p_end)) {}
-    HalfRange(T const &beg, T const &end): p_beg(beg),
-        p_end(end) {}
-    HalfRange(T &&beg, T &&end): p_beg(move(beg)),
-        p_end(move(end)) {}
+    HalfRange(HalfRange const &range):
+        p_beg(range.p_beg), p_end(range.p_end)
+    {}
+    HalfRange(HalfRange &&range):
+        p_beg(move(range.p_beg)), p_end(move(range.p_end))
+    {}
+    HalfRange(T const &beg, T const &end):
+        p_beg(beg),p_end(end)
+    {}
+    HalfRange(T &&beg, T &&end):
+        p_beg(move(beg)), p_end(move(end))
+    {}
 
     HalfRange &operator=(HalfRange const &range) {
         p_beg = range.p_beg;
@@ -724,14 +813,18 @@ public:
     bool empty() const { return p_beg == p_end; }
 
     bool pop_front() {
-        if (empty()) return false;
+        if (empty()) {
+            return false;
+        }
         return p_beg.next();
     }
     bool push_front() {
         return p_beg.prev();
     }
     bool pop_back() {
-        if (empty()) return false;
+        if (empty()) {
+            return false;
+        }
         return p_end.prev();
     }
     bool push_back() {
@@ -757,8 +850,7 @@ public:
 
     RangeSize<Rtype> size() const { return p_end - p_beg; }
 
-    HalfRange<Rtype>
-    slice(RangeSize<Rtype> start, RangeSize<Rtype> end) const {
+    HalfRange<Rtype> slice(RangeSize<Rtype> start, RangeSize<Rtype> end) const {
         return HalfRange<Rtype>(p_beg + start, p_beg + end);
     }
 
@@ -815,7 +907,7 @@ public:
     Rsize size() const { return p_range.size(); }
 
     bool equals_front(ReverseRange const &r) const {
-    return p_range.equals_back(r.p_range);
+        return p_range.equals_back(r.p_range);
     }
     bool equals_back(ReverseRange const &r) const {
         return p_range.equals_front(r.p_range);
@@ -931,10 +1023,12 @@ public:
 template<typename T>
 struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T, T> {
     NumberRange() = delete;
-    NumberRange(NumberRange const &it): p_a(it.p_a), p_b(it.p_b),
-        p_step(it.p_step) {}
-    NumberRange(T a, T b, T step = T(1)): p_a(a), p_b(b),
-        p_step(step) {}
+    NumberRange(NumberRange const &it):
+        p_a(it.p_a), p_b(it.p_b), p_step(it.p_step)
+    {}
+    NumberRange(T a, T b, T step = T(1)):
+        p_a(a), p_b(b), p_step(step)
+    {}
     NumberRange(T v): p_a(0), p_b(v), p_step(1) {}
 
     bool empty() const { return p_a * p_step >= p_b * p_step; }
@@ -988,7 +1082,9 @@ public:
     bool empty() const { return p_beg == p_end; }
 
     bool pop_front() {
-        if (p_beg == p_end) return false;
+        if (p_beg == p_end) {
+            return false;
+        }
         ++p_beg;
         return true;
     }
@@ -1022,7 +1118,9 @@ public:
 
     /* satisfy BidirectionalRange */
     bool pop_back() {
-        if (p_end == p_beg) return false;
+        if (p_end == p_beg) {
+            return false;
+        }
         --p_end;
         return true;
     }
@@ -1065,39 +1163,50 @@ public:
 
     /* satisfy OutputRange */
     bool put(T const &v) {
-        if (empty()) return false;
+        if (empty()) {
+            return false;
+        }
         *(p_beg++) = v;
         return true;
     }
     bool put(T &&v) {
-        if (empty()) return false;
+        if (empty()) {
+            return false;
+        }
         *(p_beg++) = move(v);
         return true;
     }
 
     Size put_n(T const *p, Size n) {
         Size ret = size();
-        if (n < ret) ret = n;
+        if (n < ret) {
+            ret = n;
+        }
         if (IsPod<T>) {
             memcpy(p_beg, p, ret * sizeof(T));
             p_beg += ret;
             return ret;
         }
-        for (Size i = ret; i; --i)
+        for (Size i = ret; i; --i) {
             *p_beg++ = *p++;
+        }
         return ret;
     }
 
     template<typename R>
     EnableIf<IsOutputRange<R>, Size> copy(R &&orange, Size n = -1) {
         Size c = size();
-        if (n < c) c = n;
+        if (n < c) {
+            c = n;
+        }
         return orange.put_n(p_beg, c);
     }
 
     Size copy(RemoveCv<T> *p, Size n = -1) {
         Size c = size();
-        if (n < c) c = n;
+        if (n < c) {
+            c = n;
+        }
         if (IsPod<T>) {
             memcpy(p_beg, data(), c * sizeof(T));
             return c;
@@ -1163,10 +1272,12 @@ public:
     EnumeratedRange(T const &range): p_range(range), p_index(0) {}
 
     EnumeratedRange(EnumeratedRange const &it):
-        p_range(it.p_range), p_index(it.p_index) {}
+        p_range(it.p_range), p_index(it.p_index)
+    {}
 
     EnumeratedRange(EnumeratedRange &&it):
-        p_range(move(it.p_range)), p_index(it.p_index) {}
+        p_range(move(it.p_range)), p_index(it.p_index)
+    {}
 
     EnumeratedRange &operator=(EnumeratedRange const &v) {
         p_range = v.p_range;
@@ -1224,12 +1335,15 @@ private:
     RangeSize<T> p_remaining;
 public:
     TakeRange() = delete;
-    TakeRange(T const &range, RangeSize<T> rem): p_range(range),
-        p_remaining(rem) {}
-    TakeRange(TakeRange const &it): p_range(it.p_range),
-        p_remaining(it.p_remaining) {}
-    TakeRange(TakeRange &&it): p_range(move(it.p_range)),
-        p_remaining(it.p_remaining) {}
+    TakeRange(T const &range, RangeSize<T> rem):
+        p_range(range), p_remaining(rem)
+    {}
+    TakeRange(TakeRange const &it):
+        p_range(it.p_range), p_remaining(it.p_remaining)
+    {}
+    TakeRange(TakeRange &&it):
+        p_range(move(it.p_range)), p_remaining(it.p_remaining)
+    {}
 
     TakeRange &operator=(TakeRange const &v) {
         p_range = v.p_range; p_remaining = v.p_remaining; return *this;
@@ -1273,12 +1387,15 @@ private:
     RangeSize<T> p_chunksize;
 public:
     ChunksRange() = delete;
-    ChunksRange(T const &range, RangeSize<T> chs): p_range(range),
-        p_chunksize(chs) {}
-    ChunksRange(ChunksRange const &it): p_range(it.p_range),
-        p_chunksize(it.p_chunksize) {}
-    ChunksRange(ChunksRange &&it): p_range(move(it.p_range)),
-        p_chunksize(it.p_chunksize) {}
+    ChunksRange(T const &range, RangeSize<T> chs):
+        p_range(range), p_chunksize(chs)
+    {}
+    ChunksRange(ChunksRange const &it):
+        p_range(it.p_range), p_chunksize(it.p_chunksize)
+    {}
+    ChunksRange(ChunksRange &&it):
+        p_range(move(it.p_range)), p_chunksize(it.p_chunksize)
+    {}
 
     ChunksRange &operator=(ChunksRange const &v) {
         p_range = v.p_range; p_chunksize = v.p_chunksize; return *this;
@@ -1308,8 +1425,9 @@ namespace detail {
     struct JoinRangeEmpty {
         template<typename T>
         static bool empty(T const &tup) {
-            if (!ostd::get<I>(tup).empty())
+            if (!ostd::get<I>(tup).empty()) {
                 return false;
+            }
             return JoinRangeEmpty<I + 1, N>::empty(tup);
         }
     };
@@ -1326,8 +1444,9 @@ namespace detail {
     struct TupleRangeEqual {
         template<typename T>
         static bool equal(T const &tup1, T const &tup2) {
-            if (!ostd::get<I>(tup1).equals_front(ostd::get<I>(tup2)))
+            if (!ostd::get<I>(tup1).equals_front(ostd::get<I>(tup2))) {
                 return false;
+            }
             return TupleRangeEqual<I + 1, N>::equal(tup1, tup2);
         }
     };
@@ -1408,8 +1527,9 @@ public:
     }
 
     bool equals_front(JoinRange const &r) const {
-        return detail::TupleRangeEqual<0, sizeof...(R)>::equal(p_ranges,
-            r.p_ranges);
+        return detail::TupleRangeEqual<0, sizeof...(R)>::equal(
+            p_ranges, r.p_ranges
+        );
     }
 
     bool pop_front() {
@@ -1417,8 +1537,9 @@ public:
     }
 
     CommonType<RangeReference<R>...> front() const {
-        return detail::JoinRangeFront<0, sizeof...(R),
-            CommonType<RangeReference<R>...>>::front(p_ranges);
+        return detail::JoinRangeFront<
+            0, sizeof...(R), CommonType<RangeReference<R>...>
+        >::front(p_ranges);
     }
 };
 
@@ -1440,8 +1561,9 @@ namespace detail {
     struct ZipRangeEmpty {
         template<typename T>
         static bool empty(T const &tup) {
-            if (ostd::get<I>(tup).empty())
+            if (ostd::get<I>(tup).empty()) {
                 return true;
+            }
             return ZipRangeEmpty<I + 1, N>::empty(tup);
         }
     };
@@ -1458,8 +1580,9 @@ namespace detail {
     struct ZipRangePop {
         template<typename T>
         static bool pop(T &tup) {
-            return ostd::get<I>(tup).pop_front() &&
-                   ZipRangePop<I + 1, N>::pop(tup);
+            return (
+                ostd::get<I>(tup).pop_front() && ZipRangePop<I + 1, N>::pop(tup)
+            );
         }
     };
 
@@ -1516,8 +1639,9 @@ public:
     }
 
     bool equals_front(ZipRange const &r) const {
-        return detail::TupleRangeEqual<0, sizeof...(R)>::equal(p_ranges,
-            r.p_ranges);
+        return detail::TupleRangeEqual<0, sizeof...(R)>::equal(
+            p_ranges, r.p_ranges
+        );
     }
 
     bool pop_front() {

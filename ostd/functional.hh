@@ -19,7 +19,8 @@ namespace ostd {
 /* basic function objects */
 
 #define OSTD_DEFINE_BINARY_OP(name, op, RT) \
-template<typename T> struct name { \
+template<typename T> \
+struct name { \
     RT operator()(T const &x, T const &y) const { \
         return x op y; \
     } \
@@ -58,7 +59,8 @@ namespace detail {
         }
     };
 
-    template<typename T> struct CharEqual<T, false> {
+    template<typename T>
+    struct CharEqual<T, false> {
         using FirstArgument = T *;
         using SecondArgument = T *;
         using Result = bool;
@@ -68,7 +70,8 @@ namespace detail {
     };
 }
 
-template<typename T> struct EqualWithCstr {
+template<typename T>
+struct EqualWithCstr {
     using FirstArgument = T;
     using SecondArgument = T;
     bool operator()(T const &x, T const &y) const {
@@ -76,36 +79,40 @@ template<typename T> struct EqualWithCstr {
     }
 };
 
-template<typename T> struct EqualWithCstr<T *>: detail::CharEqual<T> {};
+template<typename T>
+struct EqualWithCstr<T *>: detail::CharEqual<T> {};
 
-template<typename T> struct LogicalNot {
+template<typename T>
+struct LogicalNot {
     bool operator()(T const &x) const { return !x; }
     using Argument = T;
     using Result = bool;
 };
 
-template<typename T> struct Negate {
+template<typename T>
+struct Negate {
     bool operator()(T const &x) const { return -x; }
     using Argument = T;
     using Result = T;
 };
 
-template<typename T> struct BinaryNegate {
+template<typename T>
+struct BinaryNegate {
     using FirstArgument = typename T::FirstArgument;
     using SecondArgument = typename T::SecondArgument;
     using Result = bool;
 
     explicit BinaryNegate(T const &f): p_fn(f) {}
 
-    bool operator()(FirstArgument const &x,
-                    SecondArgument const &y) {
+    bool operator()(FirstArgument const &x, SecondArgument const &y) {
         return !p_fn(x, y);
     }
 private:
     T p_fn;
 };
 
-template<typename T> struct UnaryNegate {
+template<typename T>
+struct UnaryNegate {
     using Argument = typename T::Argument;
     using Result = bool;
 
@@ -117,11 +124,13 @@ private:
     T p_fn;
 };
 
-template<typename T> UnaryNegate<T> not1(T const &fn) {
+template<typename T>
+UnaryNegate<T> not1(T const &fn) {
     return UnaryNegate<T>(fn);
 }
 
-template<typename T> BinaryNegate<T> not2(T const &fn) {
+template<typename T>
+BinaryNegate<T> not2(T const &fn) {
     return BinaryNegate<T>(fn);
 }
 
@@ -194,19 +203,26 @@ namespace detail {
 }
 
 #if OSTD_BYTE_ORDER == OSTD_ENDIAN_LIL
-template<typename T> struct FromLilEndian: detail::EndianSame<T> {};
-template<typename T> struct FromBigEndian: EndianSwap<T> {};
+template<typename T>
+struct FromLilEndian: detail::EndianSame<T> {};
+template<typename T>
+struct FromBigEndian: EndianSwap<T> {};
 #else
-template<typename T> struct FromLilEndian: EndianSwap<T> {};
-template<typename T> struct FromBigEndian: detail::EndianSame<T> {};
+template<typename T>
+struct FromLilEndian: EndianSwap<T> {};
+template<typename T>
+struct FromBigEndian: detail::EndianSame<T> {};
 #endif
 
-template<typename T> T from_lil_endian(T x) { return FromLilEndian<T>()(x); }
-template<typename T> T from_big_endian(T x) { return FromBigEndian<T>()(x); }
+template<typename T>
+T from_lil_endian(T x) { return FromLilEndian<T>()(x); }
+template<typename T>
+T from_big_endian(T x) { return FromBigEndian<T>()(x); }
 
 /* hash */
 
-template<typename T> struct ToHash {
+template<typename T>
+struct ToHash {
     using Argument = T;
     using Result = Size;
 
@@ -216,7 +232,8 @@ template<typename T> struct ToHash {
 };
 
 namespace detail {
-    template<typename T> struct ToHashBase {
+    template<typename T>
+    struct ToHashBase {
         using Argument = T;
         using Result = Size;
 
@@ -226,7 +243,9 @@ namespace detail {
     };
 }
 
-#define OSTD_HASH_BASIC(T) template<> struct ToHash<T>: detail::ToHashBase<T> {};
+#define OSTD_HASH_BASIC(T) \
+template<> \
+struct ToHash<T>: detail::ToHashBase<T> {};
 
 OSTD_HASH_BASIC(bool)
 OSTD_HASH_BASIC(char)
@@ -249,13 +268,15 @@ OSTD_HASH_BASIC(Wchar)
 #undef OSTD_HASH_BASIC
 
 namespace detail {
-    template<Size E> struct FnvConstants {
+    template<Size E>
+    struct FnvConstants {
         static constexpr Size prime = 16777619u;
         static constexpr Size offset = 2166136261u;
     };
 
 
-    template<> struct FnvConstants<8> {
+    template<>
+    struct FnvConstants<8> {
         /* conversion is necessary here because when compiling on
          * 32bit, compilers will complain, despite this template
          * not being instantiated...
@@ -278,7 +299,8 @@ namespace detail {
     template<typename T, Size = sizeof(T) / sizeof(Size)>
     struct ScalarHash;
 
-    template<typename T> struct ScalarHash<T, 0> {
+    template<typename T>
+    struct ScalarHash<T, 0> {
         using Argument = T;
         using Result = Size;
 
@@ -290,7 +312,8 @@ namespace detail {
         }
     };
 
-    template<typename T> struct ScalarHash<T, 1> {
+    template<typename T>
+    struct ScalarHash<T, 1> {
         using Argument = T;
         using Result = Size;
 
@@ -301,7 +324,8 @@ namespace detail {
         }
     };
 
-    template<typename T> struct ScalarHash<T, 2> {
+    template<typename T>
+    struct ScalarHash<T, 2> {
         using Argument = T;
         using Result = Size;
 
@@ -312,7 +336,8 @@ namespace detail {
         }
     };
 
-    template<typename T> struct ScalarHash<T, 3> {
+    template<typename T>
+    struct ScalarHash<T, 3> {
         using Argument = T;
         using Result = Size;
 
@@ -323,7 +348,8 @@ namespace detail {
         }
     };
 
-    template<typename T> struct ScalarHash<T, 4> {
+    template<typename T>
+    struct ScalarHash<T, 4> {
         using Argument = T;
         using Result = Size;
 
@@ -335,26 +361,33 @@ namespace detail {
     };
 } /* namespace detail */
 
-template<> struct ToHash<llong>: detail::ScalarHash<llong> {};
-template<> struct ToHash<ullong>: detail::ScalarHash<ullong> {};
+template<>
+struct ToHash<llong>: detail::ScalarHash<llong> {};
+template<>
+struct ToHash<ullong>: detail::ScalarHash<ullong> {};
 
-template<> struct ToHash<float>: detail::ScalarHash<float> {
+template<>
+struct ToHash<float>: detail::ScalarHash<float> {
     Size operator()(float v) const {
         if (v == 0) return 0;
         return detail::ScalarHash<float>::operator()(v);
     }
 };
 
-template<> struct ToHash<double>: detail::ScalarHash<double> {
+template<>
+struct ToHash<double>: detail::ScalarHash<double> {
     Size operator()(double v) const {
         if (v == 0) return 0;
         return detail::ScalarHash<double>::operator()(v);
     }
 };
 
-template<> struct ToHash<ldouble>: detail::ScalarHash<ldouble> {
+template<>
+struct ToHash<ldouble>: detail::ScalarHash<ldouble> {
     Size operator()(ldouble v) const {
-        if (v == 0) return 0;
+        if (v == 0) {
+            return 0;
+        }
 #ifdef __i386__
         union { ldouble v; struct { Size h1, h2, h3, h4; }; } u;
         u.h1 = u.h2 = u.h3 = u.h4 = 0;
@@ -385,7 +418,8 @@ namespace detail {
         }
     };
 
-    template<typename T> struct ToHashPtr<T, true> {
+    template<typename T>
+    struct ToHashPtr<T, true> {
         using Argument = T *;
         using Result = Size;
         Size operator()(T *v) const {
@@ -394,7 +428,8 @@ namespace detail {
     };
 }
 
-template<typename T> struct ToHash<T *>: detail::ToHashPtr<T> {};
+template<typename T>
+struct ToHash<T *>: detail::ToHashPtr<T> {};
 
 template<typename T>
 typename ToHash<T>::Result to_hash(T const &v) {
@@ -428,7 +463,8 @@ template<typename T>
 ReferenceWrapper<T> ref(ReferenceWrapper<T> v) {
     return ReferenceWrapper<T>(v);
 }
-template<typename T> void ref(T const &&) = delete;
+template<typename T>
+void ref(T const &&) = delete;
 
 template<typename T>
 ReferenceWrapper<T const> cref(T const &v) {
@@ -438,12 +474,14 @@ template<typename T>
 ReferenceWrapper<T const> cref(ReferenceWrapper<T> v) {
     return ReferenceWrapper<T>(v);
 }
-template<typename T> void cref(T const &&) = delete;
+template<typename T>
+void cref(T const &&) = delete;
 
 /* mem_fn */
 
 namespace detail {
-    template<typename, typename> struct MemTypes;
+    template<typename, typename>
+    struct MemTypes;
     template<typename T, typename R, typename ...A>
     struct MemTypes<T, R(A...)> {
         using Result = R;
@@ -474,22 +512,26 @@ namespace detail {
         MemFn(R T::*ptr): p_ptr(ptr) {}
         template<typename... A>
         auto operator()(T &obj, A &&...args) ->
-          decltype(((obj).*(p_ptr))(forward<A>(args)...)) {
+            decltype(((obj).*(p_ptr))(forward<A>(args)...))
+        {
             return ((obj).*(p_ptr))(forward<A>(args)...);
         }
         template<typename... A>
         auto operator()(T const &obj, A &&...args) ->
-          decltype(((obj).*(p_ptr))(forward<A>(args)...)) const {
+            decltype(((obj).*(p_ptr))(forward<A>(args)...))
+        const {
             return ((obj).*(p_ptr))(forward<A>(args)...);
         }
         template<typename... A>
         auto operator()(T *obj, A &&...args) ->
-          decltype(((obj)->*(p_ptr))(forward<A>(args)...)) {
+            decltype(((obj)->*(p_ptr))(forward<A>(args)...))
+        {
             return ((obj)->*(p_ptr))(forward<A>(args)...);
         }
         template<typename... A>
         auto operator()(T const *obj, A &&...args) ->
-          decltype(((obj)->*(p_ptr))(forward<A>(args)...)) const {
+            decltype(((obj)->*(p_ptr))(forward<A>(args)...))
+        const {
             return ((obj)->*(p_ptr))(forward<A>(args)...);
         }
     };
@@ -504,7 +546,8 @@ detail::MemFn<R, T> mem_fn(R T:: *ptr) {
  * reference: http://probablydance.com/2013/01/13/a-faster-implementation-of-stdfunction
  */
 
-template<typename> struct Function;
+template<typename>
+struct Function;
 
 namespace detail {
     struct FunctorData {
@@ -512,9 +555,9 @@ namespace detail {
     };
 
     template<typename T>
-    constexpr bool FunctorInPlace = sizeof(T) <= sizeof(FunctorData) &&
-                                    (alignof(FunctorData) % alignof(T)) == 0 &&
-                                    IsMoveConstructible<T>;
+    constexpr bool FunctorInPlace =
+        sizeof(T) <= sizeof(FunctorData) &&
+        (alignof(FunctorData) % alignof(T)) == 0 && IsMoveConstructible<T>;
 
     struct FunctionManager;
 
@@ -547,7 +590,8 @@ namespace detail {
         template<typename R, typename ...Args>
         static R call(FunctorData const &s, Args ...args) {
             return (*reinterpret_cast<T *>(&const_cast<FunctorData &>(s)))(
-                forward<Args>(args)...);
+                forward<Args>(args)...
+            );
         }
 
         static void store_f(FmStorage &s, T v) {
@@ -577,7 +621,8 @@ namespace detail {
         template<typename R, typename ...Args>
         static R call(FunctorData const &s, Args ...args) {
             return (*reinterpret_cast<AllocatorPointer<A> &>(
-                const_cast<FunctorData &>(s)))(forward<Args>(args)...);
+                const_cast<FunctorData &>(s))
+            )(forward<Args>(args)...);
         }
 
         static void store_f(FmStorage &s, T v) {
@@ -594,7 +639,9 @@ namespace detail {
 
         static void destroy_f(A &a, FmStorage &s) {
             AllocatorPointer<A> &ptr = get_ptr_ref(s);
-            if (!ptr) return;
+            if (!ptr) {
+                return;
+            }
             allocator_destroy(a, ptr);
             allocator_deallocate(a, ptr, 1);
             ptr = nullptr;
@@ -610,7 +657,8 @@ namespace detail {
 
         static AllocatorPointer<A> &get_ptr_ref(FmStorage const &s) {
             return reinterpret_cast<AllocatorPointer<A> &>(
-                const_cast<FunctorData &>(s.data));
+                const_cast<FunctorData &>(s.data)
+            );
         }
     };
 
@@ -634,17 +682,19 @@ namespace detail {
             };
         }
 
-        void (* const call_move_and_destroyf)(FmStorage &lhs,
-            FmStorage &&rhs);
-        void (* const call_copyf)(FmStorage &lhs,
-            FmStorage const &rhs);
-        void (* const call_copyf_fo)(FmStorage &lhs,
-            FmStorage const &rhs);
+        void (* const call_move_and_destroyf)(
+            FmStorage &lhs, FmStorage &&rhs
+        );
+        void (* const call_copyf)(
+            FmStorage &lhs, FmStorage const &rhs
+        );
+        void (* const call_copyf_fo)(
+            FmStorage &lhs, FmStorage const &rhs
+        );
         void (* const call_destroyf)(FmStorage &s);
 
         template<typename T, typename A>
-        static void call_move_and_destroy(FmStorage &lhs,
-                                          FmStorage &&rhs) {
+        static void call_move_and_destroy(FmStorage &lhs, FmStorage &&rhs) {
             using Spec = FunctorDataManager<T, A>;
             Spec::move_f(lhs, move(rhs));
             Spec::destroy_f(rhs.get_alloc<A>(), rhs);
@@ -653,16 +703,14 @@ namespace detail {
         }
 
         template<typename T, typename A>
-        static void call_copy(FmStorage &lhs,
-                              FmStorage const &rhs) {
+        static void call_copy(FmStorage &lhs, FmStorage const &rhs) {
             using Spec = FunctorDataManager<T, A>;
             create_fm<T, A>(lhs, A(rhs.get_alloc<A>()));
             Spec::store_f(lhs, Spec::get_ref(rhs));
         }
 
         template<typename T, typename A>
-        static void call_copy_fo(FmStorage &lhs,
-                                 FmStorage const &rhs) {
+        static void call_copy_fo(FmStorage &lhs, FmStorage const &rhs) {
             using Spec = FunctorDataManager<T, A>;
             Spec::store_f(lhs, Spec::get_ref(rhs));
         }
@@ -677,8 +725,8 @@ namespace detail {
 
     template<typename T, typename A>
     inline static FunctionManager const &get_default_fm() {
-        static FunctionManager const def_manager
-            = FunctionManager::create_default_manager<T, A>();
+        static FunctionManager const def_manager =
+            FunctionManager::create_default_manager<T, A>();
         return def_manager;
     }
 
@@ -726,14 +774,15 @@ namespace detail {
     struct ValidFunctorNat {};
 
     template<typename U, typename ...A>
-    static decltype(func_to_functor(declval<U>()) (declval<A>()...))
-        valid_functor_test(U *);
+    static decltype(
+        func_to_functor(declval<U>()) (declval<A>()...)
+    ) valid_functor_test(U *);
     template<typename, typename ...>
     static ValidFunctorNat valid_functor_test(...);
 
     template<typename T, typename R, typename ...A>
-    constexpr bool IsValidFunctor<T, R(A...)>
-        = IsConvertible<decltype(valid_functor_test<T, A...>(nullptr)), R>;
+    constexpr bool IsValidFunctor<T, R(A...)> =
+        IsConvertible<decltype(valid_functor_test<T, A...>(nullptr)), R>;
 
     template<typename T>
     using FunctorType = decltype(func_to_functor(declval<T>()));
@@ -755,13 +804,15 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
 
     template<typename T, typename = EnableIf<
         detail::IsValidFunctor<T, R(Args...)>
-    >> Function(T f) {
+    >>
+    Function(T f) {
         if (func_is_null(f)) {
             init_empty();
             return;
         }
-        initialize(detail::func_to_functor(forward<T>(f)),
-            Allocator<detail::FunctorType<T>>());
+        initialize(detail::func_to_functor(
+            forward<T>(f)), Allocator<detail::FunctorType<T>>()
+        );
     }
 
     template<typename A>
@@ -778,9 +829,10 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
 
     template<typename A>
     Function(AllocatorArg, A const &a, Function const &f):
-    p_call(f.p_call) {
-        detail::FunctionManager const *mfa
-            = &detail::get_default_fm<AllocatorValue<A>, A>();
+        p_call(f.p_call)
+    {
+        detail::FunctionManager const *mfa =
+            &detail::get_default_fm<AllocatorValue<A>, A>();
         if (f.p_stor.manager == mfa) {
             detail::create_fm<AllocatorValue<A>, A>(p_stor, A(a));
             mfa->call_copyf_fo(p_stor, f.p_stor);
@@ -788,8 +840,8 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
         }
 
         using AA = AllocatorRebind<A, Function>;
-        detail::FunctionManager const *mff
-            = &detail::get_default_fm<Function, AA>();
+        detail::FunctionManager const *mff =
+            &detail::get_default_fm<Function, AA>();
         if (f.p_stor.manager == mff) {
             detail::create_fm<Function, AA>(p_stor, AA(a));
             mff->call_copyf_fo(p_stor, f.P_stor);
@@ -801,7 +853,8 @@ struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
 
     template<typename A, typename T, typename = EnableIf<
         detail::IsValidFunctor<T, R(Args...)>
-    >> Function(AllocatorArg, A const &a, T f) {
+    >>
+    Function(AllocatorArg, A const &a, T f) {
         if (func_is_null(f)) {
             init_empty();
             return;
@@ -860,8 +913,7 @@ private:
         using emptya = Allocator<emptyf>;
         p_call = nullptr;
         detail::create_fm<emptyf, emptya>(p_stor, emptya());
-        detail::FunctorDataManager<emptyf, emptya>::store_f(p_stor,
-            nullptr);
+        detail::FunctorDataManager<emptyf, emptya>::store_f(p_stor, nullptr);
     }
 
     template<typename T>
@@ -922,9 +974,10 @@ namespace detail {
         using Type = typename DcLambdaTypes<F>::Ptr;
     };
 
-    template<typename F, bool = IsDefaultConstructible<F> &&
-                                IsMoveConstructible<F>
-    > struct DcFuncTypeObj {
+    template<typename F, bool =
+        IsDefaultConstructible<F> && IsMoveConstructible<F>
+    >
+    struct DcFuncTypeObj {
         using Type = typename DcFuncTypeObjBase<F>::Type;
     };
 
@@ -944,8 +997,8 @@ namespace detail {
     };
 }
 
-template<typename F> using FunctionMakeDefaultConstructible
-    = typename detail::DcFuncType<F>::Type;
+template<typename F>
+using FunctionMakeDefaultConstructible = typename detail::DcFuncType<F>::Type;
 
 } /* namespace ostd */
 

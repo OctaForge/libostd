@@ -9,14 +9,18 @@ void print_result(Uint32 x) {
 
 int main() {
     FileStream wtest{"test.bin", StreamMode::write};
-    copy(iter({ 0xABCD1214, 0xBADC3264, 0xDEADBEEF, 0xBEEFDEAD }), wtest.iter<Uint32>());
+    copy(
+        iter({ 0xABCD1214, 0xBADC3264, 0xDEADBEEF, 0xBEEFDEAD }),
+        wtest.iter<Uint32>()
+    );
     wtest.close();
 
     FileStream rtest{"test.bin"};
     writefln("stream size: %d", rtest.size());
 
-    for (Uint32 x: map(rtest.iter<Uint32>(), FromBigEndian<Uint32>()))
+    for (Uint32 x: map(rtest.iter<Uint32>(), FromBigEndian<Uint32>())) {
         print_result(x);
+    }
 
     return 0;
 }

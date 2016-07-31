@@ -59,12 +59,14 @@ struct FileInfo {
     FileInfo(FileInfo const &i):
         p_slash(i.p_slash), p_dot(i.p_dot), p_type(i.p_type),
         p_path(i.p_path), p_atime(i.p_atime), p_mtime(i.p_mtime),
-        p_ctime(i.p_ctime) {}
+        p_ctime(i.p_ctime)
+    {}
 
     FileInfo(FileInfo &&i):
         p_slash(i.p_slash), p_dot(i.p_dot), p_type(i.p_type),
         p_path(move(i.p_path)), p_atime(i.p_atime), p_mtime(i.p_mtime),
-        p_ctime(i.p_ctime) {
+        p_ctime(i.p_ctime)
+    {
         i.p_slash = i.p_dot = npos;
         i.p_type = FileType::unknown;
         i.p_atime = i.p_ctime = i.p_mtime = 0;
@@ -93,18 +95,22 @@ struct FileInfo {
     ConstCharRange path() const { return p_path.iter(); }
 
     ConstCharRange filename() const {
-        return path().slice((p_slash == npos) ? 0 : (p_slash + 1),
-                            p_path.size());
+        return path().slice(
+            (p_slash == npos) ? 0 : (p_slash + 1), p_path.size()
+        );
     }
 
     ConstCharRange stem() const {
-        return path().slice((p_slash == npos) ? 0 : (p_slash + 1),
-                            (p_dot == npos) ? p_path.size() : p_dot);
+        return path().slice(
+            (p_slash == npos) ? 0 : (p_slash + 1),
+            (p_dot == npos) ? p_path.size() : p_dot
+        );
     }
 
     ConstCharRange extension() const {
-        return (p_dot == npos) ? ConstCharRange()
-                               : path().slice(p_dot, p_path.size());
+        return (p_dot == npos)
+            ? ConstCharRange()
+            : path().slice(p_dot, p_path.size());
     }
 
     FileType type() const { return p_type; }
@@ -150,53 +156,55 @@ private:
         ConstCharRange r = p_path.iter();
 
         ConstCharRange found = find_last(r, PathSeparator);
-        if (found.empty())
+        if (found.empty()) {
             p_slash = npos;
-        else
+        } else {
             p_slash = r.distance_front(found);
+        }
 
         found = find(filename(), '.');
-        if (found.empty())
+        if (found.empty()) {
             p_dot = npos;
-        else
+        } else {
             p_dot = r.distance_front(found);
+        }
 
 #ifdef OSTD_PLATFORM_WIN32
-        if (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        if (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             p_type = FileType::directory;
-        else if (attr.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+        } else if (attr.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
             p_type = FileType::symlink;
-        else if (attr.dwFileAttributes & (FILE_ATTRIBUTE_ARCHIVE |
-                                          FILE_ATTRIBUTE_COMPRESSED |
-                                          FILE_ATTRIBUTE_COMPRESSED |
-                                          FILE_ATTRIBUTE_HIDDEN |
-                                          FILE_ATTRIBUTE_NORMAL |
-                                          FILE_ATTRIBUTE_SPARSE_FILE |
-                                          FILE_ATTRIBUTE_TEMPORARY))
+        } else if (attr.dwFileAttributes & (
+            FILE_ATTRIBUTE_ARCHIVE     | FILE_ATTRIBUTE_COMPRESSED |
+            FILE_ATTRIBUTE_HIDDEN      | FILE_ATTRIBUTE_NORMAL     |
+            FILE_ATTRIBUTE_SPARSE_FILE | FILE_ATTRIBUTE_TEMPORARY
+        )) {
             p_type = FileType::regular;
-        else
+        } else {
             p_type = FileType::unknown;
+        }
 
         p_atime = detail::filetime_to_time_t(attr.ftLastAccessTime);
         p_mtime = detail::filetime_to_time_t(attr.ftLastWriteTime);
         p_ctime = detail::filetime_to_time_t(attr.ftCreationTime);
 #else
-        if (S_ISREG(st.st_mode))
+        if (S_ISREG(st.st_mode)) {
             p_type = FileType::regular;
-        else if (S_ISDIR(st.st_mode))
+        } else if (S_ISDIR(st.st_mode)) {
             p_type = FileType::directory;
-        else if (S_ISCHR(st.st_mode))
+        } else if (S_ISCHR(st.st_mode)) {
             p_type = FileType::character;
-        else if (S_ISBLK(st.st_mode))
+        } else if (S_ISBLK(st.st_mode)) {
             p_type = FileType::block;
-        else if (S_ISFIFO(st.st_mode))
+        } else if (S_ISFIFO(st.st_mode)) {
             p_type = FileType::fifo;
-        else if (S_ISLNK(st.st_mode))
+        } else if (S_ISLNK(st.st_mode)) {
             p_type = FileType::symlink;
-        else if (S_ISSOCK(st.st_mode))
+        } else if (S_ISSOCK(st.st_mode)) {
             p_type = FileType::socket;
-        else
+        } else {
             p_type = FileType::unknown;
+        }
 
         p_atime = st.st_atime;
         p_mtime = st.st_mtime;
@@ -219,9 +227,9 @@ struct DirectoryStream {
 
     DirectoryStream(): p_d(), p_de(), p_dev(), p_path() {}
     DirectoryStream(DirectoryStream const &) = delete;
-    DirectoryStream(DirectoryStream &&s): p_d(s.p_d), p_de(s.p_de),
-                                          p_dev(s.p_dev),
-                                          p_path(move(s.p_path)) {
+    DirectoryStream(DirectoryStream &&s):
+        p_d(s.p_d), p_de(s.p_de), p_dev(s.p_dev), p_path(move(s.p_path))
+    {
         s.p_d = nullptr;
         s.p_de = nullptr;
         memset(&s.p_dev, 0, sizeof(s.p_dev));
@@ -241,7 +249,9 @@ struct DirectoryStream {
     }
 
     bool open(ConstCharRange path) {
-        if (p_d || (path.size() > FILENAME_MAX)) return false;
+        if (p_d || (path.size() > FILENAME_MAX)) {
+            return false;
+        }
         char buf[FILENAME_MAX + 1];
         memcpy(buf, &path[0], path.size());
         buf[path.size()] = '\0';
@@ -263,20 +273,27 @@ struct DirectoryStream {
     }
 
     long size() const {
-        if (!p_d) return -1;
+        if (!p_d) {
+            return -1;
+        }
         DIR *td = opendir(p_path.data());
-        if (!td) return -1;
+        if (!td) {
+            return -1;
+        }
         long ret = 0;
         struct dirent rdv;
         struct dirent *rd;
-        while (pop_front(td, &rdv, &rd))
+        while (pop_front(td, &rdv, &rd)) {
             ret += strcmp(rd->d_name, ".") && strcmp(rd->d_name, "..");
+        }
         closedir(td);
         return ret;
     }
 
     bool rewind() {
-        if (!p_d) return false;
+        if (!p_d) {
+            return false;
+        }
         rewinddir(p_d);
         if (!pop_front()) {
             close();
@@ -290,8 +307,9 @@ struct DirectoryStream {
     }
 
     FileInfo read() {
-        if (!pop_front())
+        if (!pop_front()) {
             return FileInfo();
+        }
         return front();
     }
 
@@ -311,10 +329,12 @@ private:
         /* order of . and .. in the stream is not guaranteed, apparently...
          * gotta check every time because of that
          */
-        while (*de && (!strcmp((*de)->d_name, ".") ||
-                       !strcmp((*de)->d_name, ".."))) {
-            if (readdir_r(d, dev, de))
+        while (*de && (
+            !strcmp((*de)->d_name, ".") || !strcmp((*de)->d_name, "..")
+        )) {
+            if (readdir_r(d, dev, de)) {
                 return false;
+            }
         }
         return !!*de;
     }
@@ -324,8 +344,9 @@ private:
     }
 
     FileInfo front() const {
-        if (!p_de)
+        if (!p_de) {
             return FileInfo();
+        }
         String ap = p_path;
         ap += PathSeparator;
         ap += static_cast<char const *>(p_de->d_name);
@@ -345,9 +366,9 @@ struct DirectoryStream {
 
     DirectoryStream(): p_handle(INVALID_HANDLE_VALUE), p_data(), p_path() {}
     DirectoryStream(DirectoryStream const &) = delete;
-    DirectoryStream(DirectoryStream &&s): p_handle(s.p_handle),
-                                          p_data(s.p_data),
-                                          p_path(move(s.p_path)) {
+    DirectoryStream(DirectoryStream &&s):
+        p_handle(s.p_handle), p_data(s.p_data), p_path(move(s.p_path))
+    {
         s.p_handle = INVALID_HANDLE_VALUE;
         memset(&s.p_data, 0, sizeof(s.p_data));
     }
@@ -366,10 +387,12 @@ struct DirectoryStream {
     }
 
     bool open(ConstCharRange path) {
-        if (p_handle != INVALID_HANDLE_VALUE)
+        if (p_handle != INVALID_HANDLE_VALUE) {
             return false;
-        if ((path.size() >= 1024) || !path.size())
+        }
+        if ((path.size() >= 1024) || !path.size()) {
             return false;
+        }
         char buf[1026];
         memcpy(buf, &path[0], path.size());
         char *bptr = &buf[path.size()];
@@ -378,10 +401,12 @@ struct DirectoryStream {
         /* include trailing zero */
         memcpy(bptr, "\\*", 3);
         p_handle = FindFirstFile(buf, &p_data);
-        if (p_handle == INVALID_HANDLE_VALUE)
+        if (p_handle == INVALID_HANDLE_VALUE) {
             return false;
-        while (!strcmp(p_data.cFileName, ".") ||
-               !strcmp(p_data.cFileName, "..")) {
+        }
+        while (
+            !strcmp(p_data.cFileName, ".") || !strcmp(p_data.cFileName, "..")
+        ) {
             if (!FindNextFile(p_handle, &p_data)) {
                 FindClose(p_handle);
                 p_handle = INVALID_HANDLE_VALUE;
@@ -396,47 +421,55 @@ struct DirectoryStream {
     bool is_open() const { return p_handle != INVALID_HANDLE_VALUE; }
 
     void close() {
-        if (p_handle != INVALID_HANDLE_VALUE)
+        if (p_handle != INVALID_HANDLE_VALUE) {
             FindClose(p_handle);
+        }
         p_handle = INVALID_HANDLE_VALUE;
         p_data.cFileName[0] = '\0';
     }
 
     long size() const {
-        if (p_handle == INVALID_HANDLE_VALUE)
+        if (p_handle == INVALID_HANDLE_VALUE) {
             return -1;
+        }
         WIN32_FIND_DATA wfd;
         HANDLE td = FindFirstFile(p_path.data(), &wfd);
-        if (td == INVALID_HANDLE_VALUE)
+        if (td == INVALID_HANDLE_VALUE) {
             return -1;
-        while (!strcmp(wfd.cFileName, ".") && !strcmp(wfd.cFileName, ".."))
+        }
+        while (!strcmp(wfd.cFileName, ".") && !strcmp(wfd.cFileName, "..")) {
             if (!FindNextFile(td, &wfd)) {
                 FindClose(td);
                 return 0;
             }
+        }
         long ret = 1;
-        while (FindNextFile(td, &wfd))
+        while (FindNextFile(td, &wfd)) {
             ++ret;
+        }
         FindClose(td);
         return ret;
     }
 
     bool rewind() {
-        if (p_handle != INVALID_HANDLE_VALUE)
+        if (p_handle != INVALID_HANDLE_VALUE) {
             FindClose(p_handle);
+        }
         p_handle = FindFirstFile(p_path.data(), &p_data);
         if (p_handle == INVALID_HANDLE_VALUE) {
             p_data.cFileName[0] = '\0';
             return false;
         }
-        while (!strcmp(p_data.cFileName, ".") ||
-               !strcmp(p_data.cFileName, ".."))
+        while (
+            !strcmp(p_data.cFileName, ".") || !strcmp(p_data.cFileName, "..")
+        ) {
             if (!FindNextFile(p_handle, &p_data)) {
                 FindClose(p_handle);
                 p_handle = INVALID_HANDLE_VALUE;
                 p_data.cFileName[0] = '\0';
                 return false;
             }
+        }
         return true;
     }
 
@@ -445,8 +478,9 @@ struct DirectoryStream {
     }
 
     FileInfo read() {
-        if (!pop_front())
+        if (!pop_front()) {
             return FileInfo();
+        }
         return front();
     }
 
@@ -460,8 +494,9 @@ struct DirectoryStream {
 
 private:
     bool pop_front() {
-        if (!is_open())
+        if (!is_open()) {
             return false;
+        }
         if (!FindNextFile(p_handle, &p_data)) {
             p_data.cFileName[0] = '\0';
             return false;
@@ -470,8 +505,9 @@ private:
     }
 
     FileInfo front() const {
-        if (empty())
+        if (empty()) {
             return FileInfo();
+        }
         String ap = p_path;
         ap += PathSeparator;
         ap += static_cast<char const *>(p_data.cFileName);
@@ -521,7 +557,8 @@ inline DirectoryRange DirectoryStream::iter() {
 }
 
 namespace detail {
-    template<Size I> struct PathJoin {
+    template<Size I>
+    struct PathJoin {
         template<typename T, typename ...A>
         static void join(String &s, T const &a, A const &...b) {
             s += a;
@@ -530,7 +567,8 @@ namespace detail {
         }
     };
 
-    template<> struct PathJoin<1> {
+    template<>
+    struct PathJoin<1> {
         template<typename T>
         static void join(String &s, T const &a) {
             s += a;
@@ -548,8 +586,9 @@ inline FileInfo path_join(A const &...args) {
 
 inline bool directory_change(ConstCharRange path) {
     char buf[1024];
-    if (path.size() >= 1024)
+    if (path.size() >= 1024) {
         return false;
+    }
     memcpy(buf, path.data(), path.size());
     buf[path.size()] = '\0';
 #ifndef OSTD_PLATFORM_WIN32

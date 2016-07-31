@@ -26,7 +26,9 @@ class Vector {
     VecPair p_buf;
 
     void insert_base(Size idx, Size n) {
-        if (p_len + n > p_cap) reserve(p_len + n);
+        if (p_len + n > p_cap) {
+            reserve(p_len + n);
+        }
         p_len += n;
         for (Size i = p_len - 1; i > idx + n - 1; --i) {
             p_buf.first()[i] = move(p_buf.first()[i - n]);
@@ -34,10 +36,12 @@ class Vector {
     }
 
     template<typename R>
-    void ctor_from_range(R &range, EnableIf<
-        IsFiniteRandomAccessRange<R> && IsPod<T> &&
-        IsSame<T, RemoveCv<RangeValue<R>>>, bool
-    > = true) {
+    void ctor_from_range(
+        R &range, EnableIf<
+            IsFiniteRandomAccessRange<R> && IsPod<T> &&
+            IsSame<T, RemoveCv<RangeValue<R>>>, bool
+        > = true
+    ) {
         RangeSize<R> l = range.size();
         reserve(l);
         p_len = l;
@@ -45,15 +49,18 @@ class Vector {
     }
 
     template<typename R>
-    void ctor_from_range(R &range, EnableIf<
-        !IsFiniteRandomAccessRange<R> || !IsPod<T> ||
-        !IsSame<T, RemoveCv<RangeValue<R>>>, bool
-    > = true) {
+    void ctor_from_range(
+        R &range, EnableIf<
+            !IsFiniteRandomAccessRange<R> || !IsPod<T> ||
+            !IsSame<T, RemoveCv<RangeValue<R>>>, bool
+        > = true
+    ) {
         Size i = 0;
         for (; !range.empty(); range.pop_front()) {
             reserve(i + 1);
-            allocator_construct(p_buf.second(), &p_buf.first()[i],
-                range.front());
+            allocator_construct(
+                p_buf.second(), &p_buf.first()[i], range.front()
+            );
             ++i;
             p_len = i;
         }
@@ -86,16 +93,22 @@ public:
     Vector(A const &a = A()): p_len(0), p_cap(0), p_buf(nullptr, a) {}
 
     explicit Vector(Size n, T const &val = T(), A const &al = A()): Vector(al) {
-        if (!n) return;
+        if (!n) {
+            return;
+        }
         p_buf.first() = allocator_allocate(p_buf.second(), n);
         p_len = p_cap = n;
         Pointer cur = p_buf.first(), last = p_buf.first() + n;
-        while (cur != last)
+        while (cur != last) {
             allocator_construct(p_buf.second(), cur++, val);
+        }
     }
 
-    Vector(Vector const &v): p_len(0), p_cap(0), p_buf(nullptr,
-    allocator_container_copy(v.p_buf.second())) {
+    Vector(Vector const &v):
+        p_len(0), p_cap(0), p_buf(nullptr, allocator_container_copy(
+            v.p_buf.second())
+        )
+    {
         reserve(v.p_cap);
         p_len = v.p_len;
         copy_contents(v);
@@ -107,8 +120,11 @@ public:
         copy_contents(v);
     }
 
-    Vector(Vector &&v): p_len(v.p_len), p_cap(v.p_cap), p_buf(v.p_buf.first(),
-    move(v.p_buf.second())) {
+    Vector(Vector &&v):
+        p_len(v.p_len), p_cap(v.p_cap), p_buf(
+            v.p_buf.first(), move(v.p_buf.second())
+        )
+    {
         v.p_buf.first() = nullptr;
         v.p_len = v.p_cap = 0;
     }
@@ -140,18 +156,21 @@ public:
         if (IsPod<T>) {
             memcpy(p_buf.first(), &r[0], r.size() * sizeof(T));
         } else {
-            for (Size i = 0; i < r.size(); ++i)
+            for (Size i = 0; i < r.size(); ++i) {
                 allocator_construct(p_buf.second(), &p_buf.first()[i], r[i]);
+            }
         }
         p_len = r.size();
     }
 
     Vector(InitializerList<T> v, A const &a = A()):
-        Vector(ConstRange(v.begin(), v.size()), a) {}
+        Vector(ConstRange(v.begin(), v.size()), a)
+    {}
 
     template<typename R, typename = EnableIf<
         IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-    >> Vector(R range, A const &a = A()): Vector(a) {
+    >>
+    Vector(R range, A const &a = A()): Vector(a) {
         ctor_from_range(range);
     }
 
@@ -163,14 +182,17 @@ public:
     void clear() {
         if (p_len > 0 && !IsPod<T>) {
             Pointer cur = p_buf.first(), last = p_buf.first() + p_len;
-            while (cur != last)
+            while (cur != last) {
                 allocator_destroy(p_buf.second(), cur++);
+            }
         }
         p_len = 0;
     }
 
     Vector &operator=(Vector const &v) {
-        if (this == &v) return *this;
+        if (this == &v) {
+            return *this;
+        }
         clear();
         if (AllocatorPropagateOnContainerCopyAssignment<A>) {
             if (p_buf.second() != v.p_buf.second() && p_cap) {
@@ -187,10 +209,12 @@ public:
 
     Vector &operator=(Vector &&v) {
         clear();
-        if (p_buf.first())
+        if (p_buf.first()) {
             allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
-        if (AllocatorPropagateOnContainerMoveAssignment<A>)
+        }
+        if (AllocatorPropagateOnContainerMoveAssignment<A>) {
             p_buf.second() = v.p_buf.second();
+        }
         p_len = v.p_len;
         p_cap = v.p_cap;
         p_buf.~VecPair();
@@ -218,7 +242,8 @@ public:
 
     template<typename R, typename = EnableIf<
         IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-    >> Vector &operator=(R range) {
+    >>
+    Vector &operator=(R range) {
         clear();
         ctor_from_range(range);
         return *this;
@@ -239,13 +264,16 @@ public:
         } else {
             Pointer first = p_buf.first() + l;
             Pointer last  = p_buf.first() + p_len;
-            while (first != last)
+            while (first != last) {
                 allocator_construct(p_buf.second(), first++, v);
+            }
         }
     }
 
     void reserve(Size n) {
-        if (n <= p_cap) return;
+        if (n <= p_cap) {
+            return;
+        }
         Size oc = p_cap;
         if (!oc) {
             p_cap = max(n, Size(8));
@@ -274,28 +302,38 @@ public:
     T const &operator[](Size i) const { return p_buf.first()[i]; }
 
     T *at(Size i) {
-        if (!in_range(i)) return nullptr;
+        if (!in_range(i)) {
+            return nullptr;
+        }
         return &p_buf.first()[i];
     }
     T const *at(Size i) const {
-        if (!in_range(i)) return nullptr;
+        if (!in_range(i)) {
+            return nullptr;
+        }
         return &p_buf.first()[i];
     }
 
     T &push(T const &v) {
-        if (p_len == p_cap) reserve(p_len + 1);
+        if (p_len == p_cap) {
+            reserve(p_len + 1);
+        }
         allocator_construct(p_buf.second(), &p_buf.first()[p_len], v);
         return p_buf.first()[p_len++];
     }
 
     T &push(T &&v) {
-        if (p_len == p_cap) reserve(p_len + 1);
+        if (p_len == p_cap) {
+            reserve(p_len + 1);
+        }
         allocator_construct(p_buf.second(), &p_buf.first()[p_len], move(v));
         return p_buf.first()[p_len++];
     }
 
     T &push() {
-        if (p_len == p_cap) reserve(p_len + 1);
+        if (p_len == p_cap) {
+            reserve(p_len + 1);
+        }
         allocator_construct(p_buf.second(), &p_buf.first()[p_len]);
         return p_buf.first()[p_len++];
     }
@@ -305,9 +343,11 @@ public:
         if (IsPod<T>) {
             memcpy(p_buf.first() + p_len, v, n * sizeof(T));
         } else {
-            for (Size i = 0; i < n; ++i)
-                allocator_construct(p_buf.second(),
-                    &p_buf.first()[p_len + i], v[i]);
+            for (Size i = 0; i < n; ++i) {
+                allocator_construct(
+                    p_buf.second(), &p_buf.first()[p_len + i], v[i]
+                );
+            }
         }
         p_len += n;
         return Range(&p_buf.first()[p_len - n], &p_buf.first()[p_len]);
@@ -315,9 +355,12 @@ public:
 
     template<typename ...U>
     T &emplace_back(U &&...args) {
-        if (p_len == p_cap) reserve(p_len + 1);
-        allocator_construct(p_buf.second(), &p_buf.first()[p_len],
-            forward<U>(args)...);
+        if (p_len == p_cap) {
+            reserve(p_len + 1);
+        }
+        allocator_construct(
+            p_buf.second(), &p_buf.first()[p_len], forward<U>(args)...
+        );
         return p_buf.first()[p_len++];
     }
 
@@ -415,8 +458,9 @@ public:
         detail::swap_adl(p_len, v.p_len);
         detail::swap_adl(p_cap, v.p_cap);
         detail::swap_adl(p_buf.first(), v.p_buf.first());
-        if (AllocatorPropagateOnContainerSwap<A>)
+        if (AllocatorPropagateOnContainerSwap<A>) {
             detail::swap_adl(p_buf.second(), v.p_buf.second());
+        }
     }
 
     A get_allocator() const {

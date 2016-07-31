@@ -49,7 +49,9 @@ struct FileStream: Stream {
     }
 
     bool open(ConstCharRange path, StreamMode mode = StreamMode::read) {
-        if (p_f || (path.size() > FILENAME_MAX)) return false;
+        if (p_f || (path.size() > FILENAME_MAX)) {
+            return false;
+        }
         char buf[FILENAME_MAX + 1];
         memcpy(buf, &path[0], path.size());
         buf[path.size()] = '\0';
@@ -57,15 +59,18 @@ struct FileStream: Stream {
 #ifndef OSTD_PLATFORM_WIN32
         p_f = fopen(buf, detail::filemodes[Size(mode)]);
 #else
-        if (fopen_s(&p_f, buf, detail::filemodes[Size(mode)]) != 0)
+        if (fopen_s(&p_f, buf, detail::filemodes[Size(mode)]) != 0) {
             return false;
+        }
 #endif
         p_owned = !!p_f;
         return is_open();
     }
 
     bool open(FILE *f) {
-        if (p_f) return false;
+        if (p_f) {
+            return false;
+        }
         p_f = f;
         p_owned = false;
         return is_open();
@@ -75,7 +80,9 @@ struct FileStream: Stream {
     bool is_owned() const { return p_owned; }
 
     void close() {
-        if (p_f && p_owned) fclose(p_f);
+        if (p_f && p_owned) {
+            fclose(p_f);
+        }
         p_f = nullptr;
         p_owned = false;
     }
@@ -144,9 +151,11 @@ namespace detail {
     }
 
     template<typename T>
-    inline void write_impl(T const &v, EnableIf<
-        !IsConstructible<ConstCharRange, T const &>, IoNat
-    > = IoNat()) {
+    inline void write_impl(
+        T const &v, EnableIf<
+            !IsConstructible<ConstCharRange, T const &>, IoNat
+        > = IoNat()
+    ) {
         write(ostd::to_string(v));
     }
 }
@@ -178,10 +187,12 @@ inline void writeln(T const &v, A const &...args) {
 template<typename ...A>
 inline void writef(ConstCharRange fmt, A const &...args) {
     char buf[512];
-    Ptrdiff need = format(detail::FormatOutRange<sizeof(buf)>(buf),
-        fmt, args...);
-    if (need < 0) return;
-    else if (Size(need) < sizeof(buf)) {
+    Ptrdiff need = format(
+        detail::FormatOutRange<sizeof(buf)>(buf), fmt, args...
+    );
+    if (need < 0) {
+        return;
+    } else if (Size(need) < sizeof(buf)) {
         fwrite(buf, 1, need, stdout);
         return;
     }

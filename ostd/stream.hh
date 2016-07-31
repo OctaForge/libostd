@@ -68,9 +68,11 @@ private:
     }
 
     template<typename T>
-    inline bool write_impl(T const &v, EnableIf<
-        !IsConstructible<ConstCharRange, T const &>, StNat
-    > = StNat()) {
+    inline bool write_impl(
+        T const &v, EnableIf<
+            !IsConstructible<ConstCharRange, T const &>, StNat
+        > = StNat()
+    ) {
         return write(ostd::to_string(v));
     }
 
@@ -85,7 +87,9 @@ public:
 
     virtual Offset size() {
         Offset p = tell();
-        if ((p < 0) || !seek(0, StreamSeek::end)) return -1;
+        if ((p < 0) || !seek(0, StreamSeek::end)) {
+            return -1;
+        }
         Offset e = tell();
         return ((p == e) || seek(p, StreamSeek::set)) ? e : -1;
     }
@@ -134,12 +138,14 @@ public:
     template<typename ...A>
     bool writef(ConstCharRange fmt, A const &...args) {
         char buf[512];
-        Ptrdiff need = format(detail::FormatOutRange<sizeof(buf)>(buf),
-            fmt, args...);
-        if (need < 0)
+        Ptrdiff need = format(
+            detail::FormatOutRange<sizeof(buf)>(buf), fmt, args...
+        );
+        if (need < 0) {
             return false;
-        else if (Size(need) < sizeof(buf))
+        } else if (Size(need) < sizeof(buf)) {
             return write_bytes(buf, need) == Size(need);
+        }
         Vector<char> s;
         s.reserve(need);
         format(detail::UnsafeWritefRange(s.data()), fmt, args...);
@@ -154,23 +160,28 @@ public:
     template<typename T = char>
     StreamRange<T> iter();
 
-    template<typename T> Size put(T const *v, Size count) {
+    template<typename T>
+    Size put(T const *v, Size count) {
         return write_bytes(v, count * sizeof(T)) / sizeof(T);
     }
 
-    template<typename T> bool put(T v) {
+    template<typename T>
+    bool put(T v) {
         return write_bytes(&v, sizeof(T)) == sizeof(T);
     }
 
-    template<typename T> Size get(T *v, Size count) {
+    template<typename T>
+    Size get(T *v, Size count) {
         return read_bytes(v, count * sizeof(T)) / sizeof(T);
     }
 
-    template<typename T> bool get(T &v) {
+    template<typename T>
+    bool get(T &v) {
         return read_bytes(&v, sizeof(T)) == sizeof(T);
     }
 
-    template<typename T> T get() {
+    template<typename T>
+    T get() {
         T r;
         return get(r) ? r : T();
     }
@@ -189,7 +200,9 @@ struct StreamRange<T, true>: InputRange<
     }
 
     bool pop_front() {
-        if (empty()) return false;
+        if (empty()) {
+            return false;
+        }
         T val;
         return !!p_stream->read_bytes(&val, sizeof(T));
     }

@@ -31,11 +31,15 @@ struct Array {
     T const &operator[](Size i) const { return p_buf[i]; }
 
     T *at(Size i) {
-        if (!in_range(i)) return nullptr;
+        if (!in_range(i)) {
+            return nullptr;
+        }
         return &p_buf[i];
     }
     T const *at(Size i) const {
-        if (!in_range(i)) return nullptr;
+        if (!in_range(i)) {
+            return nullptr;
+        }
         return &p_buf[i];
     }
 

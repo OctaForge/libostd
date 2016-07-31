@@ -39,8 +39,11 @@ inline auto partition(F &&func) {
 template<typename R, typename P>
 inline bool is_partitioned(R range, P pred) {
     for (; !range.empty() && pred(range.front()); range.pop_front());
-    for (; !range.empty(); range.pop_front())
-        if (pred(range.front())) return false;
+    for (; !range.empty(); range.pop_front()) {
+        if (pred(range.front())) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -69,20 +72,25 @@ namespace detail {
     }
 
     template<typename R, typename C>
-    static void hs_sift_down(R range, RangeSize<R> s,
-                             RangeSize<R> e, C &compare) {
+    static void hs_sift_down(
+        R range, RangeSize<R> s, RangeSize<R> e, C &compare
+    ) {
         RangeSize<R> r = s;
         while ((r * 2 + 1) <= e) {
             RangeSize<R> ch = r * 2 + 1;
             RangeSize<R> sw = r;
-            if (compare(range[sw], range[ch]))
+            if (compare(range[sw], range[ch])) {
                 sw = ch;
-            if (((ch + 1) <= e) && compare(range[sw], range[ch + 1]))
+            }
+            if (((ch + 1) <= e) && compare(range[sw], range[ch + 1])) {
                 sw = ch + 1;
+            }
             if (sw != r) {
                 detail::swap_adl(range[r], range[sw]);
                 r = sw;
-            } else return;
+            } else {
+                return;
+            }
         }
     }
 
@@ -92,7 +100,9 @@ namespace detail {
         RangeSize<R> st = (len - 2) / 2;
         for (;;) {
             detail::hs_sift_down(range, st, len - 1, compare);
-            if (st-- == 0) break;
+            if (st-- == 0) {
+                break;
+            }
         }
         RangeSize<R> e = len - 1;
         while (e > 0) {
@@ -117,19 +127,23 @@ namespace detail {
         R pr = range;
         pr.pop_back();
         for (; !pr.empty(); pr.pop_front()) {
-            if (compare(pr.front(), range.back()))
+            if (compare(pr.front(), range.back())) {
                 detail::swap_adl(pr.front(), range[pi++]);
+            }
         }
         detail::swap_adl(range[pi], range.back());
         detail::introloop(range.slice(0, pi), compare, depth - 1);
-        detail::introloop(range.slice(pi + 1, range.size()), compare,
-            depth - 1);
+        detail::introloop(
+            range.slice(pi + 1, range.size()), compare, depth - 1
+        );
     }
 
     template<typename R, typename C>
     inline void introsort(R range, C &compare) {
-        detail::introloop(range, compare, RangeSize<R>(2
-            * (log(range.size()) / log(2))));
+        detail::introloop(
+            range, compare,
+            static_cast<RangeSize<R>>(2 * (log(range.size()) / log(2)))
+        );
     }
 } /* namespace detail */
 
@@ -176,17 +190,21 @@ inline T const &max_cmp(T const &a, T const &b, C compare) {
 template<typename R>
 inline R min_element(R range) {
     R r = range;
-    for (; !range.empty(); range.pop_front())
-        if (ostd::min(r.front(), range.front()) == range.front())
+    for (; !range.empty(); range.pop_front()) {
+        if (ostd::min(r.front(), range.front()) == range.front()) {
             r = range;
+        }
+    }
     return r;
 }
 template<typename R, typename C>
 inline R min_element_cmp(R range, C compare) {
     R r = range;
-    for (; !range.empty(); range.pop_front())
-        if (ostd::min_cmp(r.front(), range.front(), compare) == range.front())
+    for (; !range.empty(); range.pop_front()) {
+        if (ostd::min_cmp(r.front(), range.front(), compare) == range.front()) {
             r = range;
+        }
+    }
     return r;
 }
 inline auto min_element() {
@@ -202,17 +220,21 @@ inline auto min_element_cmp(C &&compare) {
 template<typename R>
 inline R max_element(R range) {
     R r = range;
-    for (; !range.empty(); range.pop_front())
-        if (ostd::max(r.front(), range.front()) == range.front())
+    for (; !range.empty(); range.pop_front()) {
+        if (ostd::max(r.front(), range.front()) == range.front()) {
             r = range;
+        }
+    }
     return r;
 }
 template<typename R, typename C>
 inline R max_element_cmp(R range, C compare) {
     R r = range;
-    for (; !range.empty(); range.pop_front())
-        if (ostd::max_cmp(r.front(), range.front(), compare) == range.front())
+    for (; !range.empty(); range.pop_front()) {
+        if (ostd::max_cmp(r.front(), range.front(), compare) == range.front()) {
             r = range;
+        }
+    }
     return r;
 }
 inline auto max_element() {
@@ -261,8 +283,12 @@ inline T clamp(T const &v, U const &lo, U const &hi, C compare) {
 template<typename R1, typename R2>
 inline bool lexicographical_compare(R1 range1, R2 range2) {
     while (!range1.empty() && !range2.empty()) {
-        if (range1.front() < range2.front()) return true;
-        if (range2.front() < range1.front()) return false;
+        if (range1.front() < range2.front()) {
+            return true;
+        }
+        if (range2.front() < range1.front()) {
+            return false;
+        }
         range1.pop_front();
         range2.pop_front();
     }
@@ -271,15 +297,21 @@ inline bool lexicographical_compare(R1 range1, R2 range2) {
 template<typename R>
 inline auto lexicographical_compare(R &&range) {
     return [range = forward<R>(range)](auto &&obj) mutable {
-        return lexicographical_compare(forward<decltype(obj)>(obj), forward<R>(range));
+        return lexicographical_compare(
+            forward<decltype(obj)>(obj), forward<R>(range)
+        );
     };
 }
 
 template<typename R1, typename R2, typename C>
 inline bool lexicographical_compare_cmp(R1 range1, R2 range2, C compare) {
     while (!range1.empty() && !range2.empty()) {
-        if (compare(range1.front(), range2.front())) return true;
-        if (compare(range2.front(), range1.front())) return false;
+        if (compare(range1.front(), range2.front())) {
+            return true;
+        }
+        if (compare(range2.front(), range1.front())) {
+            return false;
+        }
         range1.pop_front();
         range2.pop_front();
     }
@@ -287,9 +319,12 @@ inline bool lexicographical_compare_cmp(R1 range1, R2 range2, C compare) {
 }
 template<typename R, typename C>
 inline auto lexicographical_compare_cmp(R &&range, C &&compare) {
-    return [range = forward<R>(range), compare = forward<C>(compare)](auto &&obj) mutable {
-        return lexicographical_compare_cmp(forward<decltype(obj)>(obj),
-            forward<R>(range), forward<C>(compare));
+    return [
+        range = forward<R>(range), compare = forward<C>(compare)
+    ](auto &&obj) mutable {
+        return lexicographical_compare_cmp(
+            forward<decltype(obj)>(obj), forward<R>(range), forward<C>(compare)
+        );
     };
 }
 
@@ -297,8 +332,9 @@ inline auto lexicographical_compare_cmp(R &&range, C &&compare) {
 
 template<typename R, typename F>
 inline F for_each(R range, F func) {
-    for (; !range.empty(); range.pop_front())
+    for (; !range.empty(); range.pop_front()) {
         func(range.front());
+    }
     return move(func);
 }
 
@@ -311,8 +347,11 @@ inline auto for_each(F &&func) {
 
 template<typename R, typename P>
 inline bool all_of(R range, P pred) {
-    for (; !range.empty(); range.pop_front())
-        if (!pred(range.front())) return false;
+    for (; !range.empty(); range.pop_front()) {
+        if (!pred(range.front())) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -353,9 +392,11 @@ inline auto none_of(F &&func) {
 
 template<typename R, typename T>
 inline R find(R range, T const &v) {
-    for (; !range.empty(); range.pop_front())
-        if (range.front() == v)
+    for (; !range.empty(); range.pop_front()) {
+        if (range.front() == v) {
             break;
+        }
+    }
     return range;
 }
 
@@ -369,13 +410,16 @@ inline auto find(T &&v) {
 template<typename R, typename T>
 inline R find_last(R range, T const &v) {
     range = find(range, v);
-    if (!range.empty()) for (;;) {
-        R prev = range;
-        prev.pop_front();
-        R r = find(prev, v);
-        if (r.empty())
-            break;
-        range = r;
+    if (!range.empty()) {
+        for (;;) {
+            R prev = range;
+            prev.pop_front();
+            R r = find(prev, v);
+            if (r.empty()) {
+                break;
+            }
+            range = r;
+        }
     }
     return range;
 }
@@ -389,9 +433,11 @@ inline auto find_last(T &&v) {
 
 template<typename R, typename P>
 inline R find_if(R range, P pred) {
-    for (; !range.empty(); range.pop_front())
-        if (pred(range.front()))
+    for (; !range.empty(); range.pop_front()) {
+        if (pred(range.front())) {
             break;
+        }
+    }
     return range;
 }
 
@@ -404,9 +450,11 @@ inline auto find_if(F &&func) {
 
 template<typename R, typename P>
 inline R find_if_not(R range, P pred) {
-    for (; !range.empty(); range.pop_front())
-        if (!pred(range.front()))
+    for (; !range.empty(); range.pop_front()) {
+        if (!pred(range.front())) {
             break;
+        }
+    }
     return range;
 }
 
@@ -419,26 +467,35 @@ inline auto find_if_not(F &&func) {
 
 template<typename R1, typename R2, typename C>
 inline R1 find_one_of_cmp(R1 range, R2 values, C compare) {
-    for (; !range.empty(); range.pop_front())
-        for (R2 rv = values; !rv.empty(); rv.pop_front())
-            if (compare(range.front(), rv.front()))
+    for (; !range.empty(); range.pop_front()) {
+        for (R2 rv = values; !rv.empty(); rv.pop_front()) {
+            if (compare(range.front(), rv.front())) {
                 return range;
+            }
+        }
+    }
     return range;
 }
 template<typename R, typename C>
 inline auto find_one_of_cmp(R &&values, C &&compare) {
-    return [values = forward<R>(values), compare = forward<C>(compare)](auto &&obj) mutable {
-        return find_one_of_cmp(forward<decltype(obj)>(obj),
-            forward<R>(values), forward<C>(compare));
+    return [
+        values = forward<R>(values), compare = forward<C>(compare)
+    ](auto &&obj) mutable {
+        return find_one_of_cmp(
+            forward<decltype(obj)>(obj), forward<R>(values), forward<C>(compare)
+        );
     };
 }
 
 template<typename R1, typename R2>
 inline R1 find_one_of(R1 range, R2 values) {
-    for (; !range.empty(); range.pop_front())
-        for (R2 rv = values; !rv.empty(); rv.pop_front())
-            if (range.front() == rv.front())
+    for (; !range.empty(); range.pop_front()) {
+        for (R2 rv = values; !rv.empty(); rv.pop_front()) {
+            if (range.front() == rv.front()) {
                 return range;
+            }
+        }
+    }
     return range;
 }
 template<typename R>
@@ -451,9 +508,11 @@ inline auto find_one_of(R &&values) {
 template<typename R, typename T>
 inline RangeSize<R> count(R range, T const &v) {
     RangeSize<R> ret = 0;
-    for (; !range.empty(); range.pop_front())
-        if (range.front() == v)
+    for (; !range.empty(); range.pop_front()) {
+        if (range.front() == v) {
             ++ret;
+        }
+    }
     return ret;
 }
 
@@ -467,9 +526,11 @@ inline auto count(T &&v) {
 template<typename R, typename P>
 inline RangeSize<R> count_if(R range, P pred) {
     RangeSize<R> ret = 0;
-    for (; !range.empty(); range.pop_front())
-        if (pred(range.front()))
+    for (; !range.empty(); range.pop_front()) {
+        if (pred(range.front())) {
             ++ret;
+        }
+    }
     return ret;
 }
 
@@ -483,9 +544,11 @@ inline auto count_if(F &&func) {
 template<typename R, typename P>
 inline RangeSize<R> count_if_not(R range, P pred) {
     RangeSize<R> ret = 0;
-    for (; !range.empty(); range.pop_front())
-        if (!pred(range.front()))
+    for (; !range.empty(); range.pop_front()) {
+        if (!pred(range.front())) {
             ++ret;
+        }
+    }
     return ret;
 }
 
@@ -499,8 +562,9 @@ inline auto count_if_not(F &&func) {
 template<typename R>
 inline bool equal(R range1, R range2) {
     for (; !range1.empty(); range1.pop_front()) {
-        if (range2.empty() || (range1.front() != range2.front()))
+        if (range2.empty() || (range1.front() != range2.front())) {
             return false;
+        }
         range2.pop_front();
     }
     return range2.empty();
@@ -529,31 +593,37 @@ inline auto slice_until(R &&range) {
 
 template<typename R1, typename R2>
 inline R2 copy(R1 irange, R2 orange) {
-    for (; !irange.empty(); irange.pop_front())
+    for (; !irange.empty(); irange.pop_front()) {
         orange.put(irange.front());
+    }
     return orange;
 }
 
 template<typename R1, typename R2, typename P>
 inline R2 copy_if(R1 irange, R2 orange, P pred) {
-    for (; !irange.empty(); irange.pop_front())
-        if (pred(irange.front()))
+    for (; !irange.empty(); irange.pop_front()) {
+        if (pred(irange.front())) {
             orange.put(irange.front());
+        }
+    }
     return orange;
 }
 
 template<typename R1, typename R2, typename P>
 inline R2 copy_if_not(R1 irange, R2 orange, P pred) {
-    for (; !irange.empty(); irange.pop_front())
-        if (!pred(irange.front()))
+    for (; !irange.empty(); irange.pop_front()) {
+        if (!pred(irange.front())) {
             orange.put(irange.front());
+        }
+    }
     return orange;
 }
 
 template<typename R1, typename R2>
 inline R2 move(R1 irange, R2 orange) {
-    for (; !irange.empty(); irange.pop_front())
+    for (; !irange.empty(); irange.pop_front()) {
         orange.put(move(irange.front()));
+    }
     return orange;
 }
 
@@ -568,21 +638,24 @@ inline void reverse(R range) {
 
 template<typename R1, typename R2>
 inline R2 reverse_copy(R1 irange, R2 orange) {
-    for (; !irange.empty(); irange.pop_back())
+    for (; !irange.empty(); irange.pop_back()) {
         orange.put(irange.back());
+    }
     return orange;
 }
 
 template<typename R, typename T>
 inline void fill(R range, T const &v) {
-    for (; !range.empty(); range.pop_front())
+    for (; !range.empty(); range.pop_front()) {
         range.front() = v;
+    }
 }
 
 template<typename R, typename F>
 inline void generate(R range, F gen) {
-    for (; !range.empty(); range.pop_front())
+    for (; !range.empty(); range.pop_front()) {
         range.front() = gen();
+    }
 }
 
 template<typename R1, typename R2>
@@ -597,21 +670,24 @@ inline Pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
 
 template<typename R, typename T>
 inline void iota(R range, T value) {
-    for (; !range.empty(); range.pop_front())
+    for (; !range.empty(); range.pop_front()) {
         range.front() = value++;
+    }
 }
 
 template<typename R, typename T>
 inline T foldl(R range, T init) {
-    for (; !range.empty(); range.pop_front())
+    for (; !range.empty(); range.pop_front()) {
         init = init + range.front();
+    }
     return init;
 }
 
 template<typename R, typename T, typename F>
 inline T foldl_f(R range, T init, F func) {
-    for (; !range.empty(); range.pop_front())
+    for (; !range.empty(); range.pop_front()) {
         init = func(init, range.front());
+    }
     return init;
 }
 
@@ -623,22 +699,28 @@ inline auto foldl(T &&init) {
 }
 template<typename T, typename F>
 inline auto foldl_f(T &&init, F &&func) {
-    return [init = forward<T>(init), func = forward<F>(func)](auto &&obj) mutable {
-        return foldl_f(forward<decltype(obj)>(obj), forward<T>(init), forward<F>(func));
+    return [
+        init = forward<T>(init), func = forward<F>(func)
+    ](auto &&obj) mutable {
+        return foldl_f(
+            forward<decltype(obj)>(obj), forward<T>(init), forward<F>(func)
+        );
     };
 }
 
 template<typename R, typename T>
 inline T foldr(R range, T init) {
-    for (; !range.empty(); range.pop_back())
+    for (; !range.empty(); range.pop_back()) {
         init = init + range.back();
+    }
     return init;
 }
 
 template<typename R, typename T, typename F>
 inline T foldr_f(R range, T init, F func) {
-    for (; !range.empty(); range.pop_back())
+    for (; !range.empty(); range.pop_back()) {
         init = func(init, range.back());
+    }
     return init;
 }
 
@@ -650,8 +732,12 @@ inline auto foldr(T &&init) {
 }
 template<typename T, typename F>
 inline auto foldr_f(T &&init, F &&func) {
-    return [init = forward<T>(init), func = forward<F>(func)](auto &&obj) mutable {
-        return foldr_f(forward<decltype(obj)>(obj), forward<T>(init), forward<F>(func));
+    return [
+        init = forward<T>(init), func = forward<F>(func)
+    ](auto &&obj) mutable {
+        return foldr_f(
+            forward<decltype(obj)>(obj), forward<T>(init), forward<F>(func)
+        );
     };
 }
 
@@ -734,8 +820,8 @@ public:
 };
 
 namespace detail {
-    template<typename R, typename F> using MapReturnType
-        = decltype(declval<F>()(declval<RangeReference<R>>()));
+    template<typename R, typename F>
+    using MapReturnType = decltype(declval<F>()(declval<RangeReference<R>>()));
 }
 
 template<typename R, typename F>
@@ -760,22 +846,27 @@ private:
     Decay<F> p_pred;
 
     void advance_valid() {
-        while (!p_range.empty() && !p_pred(front())) p_range.pop_front();
+        while (!p_range.empty() && !p_pred(front())) {
+            p_range.pop_front();
+        }
     }
 
 public:
     FilterRange() = delete;
     template<typename P>
-    FilterRange(T const &range, P &&pred): p_range(range),
-    p_pred(forward<P>(pred)) {
+    FilterRange(T const &range, P &&pred):
+        p_range(range), p_pred(forward<P>(pred))
+    {
         advance_valid();
     }
-    FilterRange(FilterRange const &it): p_range(it.p_range),
-    p_pred(it.p_pred) {
+    FilterRange(FilterRange const &it):
+        p_range(it.p_range), p_pred(it.p_pred)
+    {
         advance_valid();
     }
-    FilterRange(FilterRange &&it): p_range(move(it.p_range)),
-    p_pred(move(it.p_pred)) {
+    FilterRange(FilterRange &&it):
+        p_range(move(it.p_range)), p_pred(move(it.p_pred))
+    {
         advance_valid();
     }
 
@@ -808,10 +899,10 @@ public:
 };
 
 namespace detail {
-    template<typename R, typename P> using FilterPred
-        = EnableIf<IsSame<
-            decltype(declval<P>()(declval<RangeReference<R>>())), bool
-        >, P>;
+    template<typename R, typename P>
+    using FilterPred = EnableIf<
+        IsSame<decltype(declval<P>()(declval<RangeReference<R>>())), bool>, P
+    >;
 }
 
 template<typename R, typename P>

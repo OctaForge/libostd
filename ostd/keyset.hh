@@ -40,7 +40,8 @@ namespace detail {
 
     template<
         typename T, typename H, typename C, typename A, bool IsMultihash
-    > struct KeysetImpl: detail::Hashtable<detail::KeysetBase<T, A>,
+    >
+    struct KeysetImpl: detail::Hashtable<detail::KeysetBase<T, A>,
         T, KeysetKey<T>, T, H, C, A, IsMultihash
     > {
     private:
@@ -65,20 +66,24 @@ namespace detail {
         using ConstLocalRange = BucketRange<T const>;
         using Allocator = A;
 
-        explicit KeysetImpl(Size size, H const &hf = H(),
-            C const &eqf = C(), A const &alloc = A()
+        explicit KeysetImpl(
+            Size size, H const &hf = H(), C const &eqf = C(),
+            A const &alloc = A()
         ): Base(size, hf, eqf, alloc) {}
 
         KeysetImpl(): KeysetImpl(0) {}
         explicit KeysetImpl(A const &alloc): KeysetImpl(0, H(), C(), alloc) {}
 
         KeysetImpl(Size size, A const &alloc):
-            KeysetImpl(size, H(), C(), alloc) {}
+            KeysetImpl(size, H(), C(), alloc)
+        {}
         KeysetImpl(Size size, H const &hf, A const &alloc):
-            KeysetImpl(size, hf, C(), alloc) {}
+            KeysetImpl(size, hf, C(), alloc)
+        {}
 
-        KeysetImpl(KeysetImpl const &m): Base(m,
-            allocator_container_copy(m.get_alloc())) {}
+        KeysetImpl(KeysetImpl const &m):
+            Base(m, allocator_container_copy(m.get_alloc())
+        {}
 
         KeysetImpl(KeysetImpl const &m, A const &alloc): Base(m, alloc) {}
 
@@ -87,33 +92,45 @@ namespace detail {
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-        >> KeysetImpl(R range, Size size = 0, H const &hf = H(),
+        >>
+        KeysetImpl(
+            R range, Size size = 0, H const &hf = H(),
             C const &eqf = C(), A const &alloc = A()
-        ): Base(size ? size : detail::estimate_hrsize(range),
-                   hf, eqf, alloc) {
-            for (; !range.empty(); range.pop_front())
+        ):
+            Base(size ? size : detail::estimate_hrsize(range), hf, eqf, alloc)
+        {
+            for (; !range.empty(); range.pop_front()) {
                 Base::emplace(range.front());
+            }
             Base::rehash_up();
         }
 
         template<typename R>
-        KeysetImpl(R range, Size size, A const &alloc)
-        : KeysetImpl(range, size, H(), C(), alloc) {}
+        KeysetImpl(R range, Size size, A const &alloc):
+            KeysetImpl(range, size, H(), C(), alloc)
+        {}
 
         template<typename R>
-        KeysetImpl(R range, Size size, H const &hf, A const &alloc)
-        : KeysetImpl(range, size, hf, C(), alloc) {}
+        KeysetImpl(R range, Size size, H const &hf, A const &alloc):
+            KeysetImpl(range, size, hf, C(), alloc)
+        {}
 
-        KeysetImpl(InitializerList<Value> init, Size size = 0,
+        KeysetImpl(
+            InitializerList<Value> init, Size size = 0,
             H const &hf = H(), C const &eqf = C(), A const &alloc = A()
-        ): KeysetImpl(iter(init), size, hf, eqf, alloc) {}
+        ):
+            KeysetImpl(iter(init), size, hf, eqf, alloc)
+        {}
 
-        KeysetImpl(InitializerList<Value> init, Size size, A const &alloc)
-        : KeysetImpl(iter(init), size, H(), C(), alloc) {}
+        KeysetImpl(InitializerList<Value> init, Size size, A const &alloc):
+            KeysetImpl(iter(init), size, H(), C(), alloc)
+        {}
 
-        KeysetImpl(InitializerList<Value> init, Size size, H const &hf,
-            A const &alloc
-        ): KeysetImpl(iter(init), size, hf, C(), alloc) {}
+        KeysetImpl(
+            InitializerList<Value> init, Size size, H const &hf, A const &alloc
+        ):
+            KeysetImpl(iter(init), size, hf, C(), alloc)
+        {}
 
         KeysetImpl &operator=(KeysetImpl const &m) {
             Base::operator=(m);
@@ -127,7 +144,8 @@ namespace detail {
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-        >> KeysetImpl &operator=(R range) {
+        >>
+        KeysetImpl &operator=(R range) {
             Base::assign_range(range);
             return *this;
         }
@@ -166,14 +184,16 @@ template<
     typename H = ToHash<detail::KeysetKey<T>>,
     typename C = EqualWithCstr<detail::KeysetKey<T>>,
     typename A = Allocator<T>
-> using Keyset = detail::KeysetImpl<T, H, C, A, false>;
+>
+using Keyset = detail::KeysetImpl<T, H, C, A, false>;
 
 template<
     typename T,
     typename H = ToHash<detail::KeysetKey<T>>,
     typename C = EqualWithCstr<detail::KeysetKey<T>>,
     typename A = Allocator<T>
-> using Multikeyset = detail::KeysetImpl<T, H, C, A, true>;
+>
+using Multikeyset = detail::KeysetImpl<T, H, C, A, true>;
 
 } /* namespace ostd */
 

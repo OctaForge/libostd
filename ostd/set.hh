@@ -17,7 +17,8 @@
 namespace ostd {
 
 namespace detail {
-    template<typename T, typename A> struct SetBase {
+    template<typename T, typename A>
+    struct SetBase {
         static inline T const &get_key(T const &e) {
             return e;
         }
@@ -54,20 +55,26 @@ namespace detail {
         using ConstLocalRange = BucketRange<T const>;
         using Allocator = A;
 
-        explicit SetImpl(Size size, H const &hf = H(),
+        explicit SetImpl(
+            Size size, H const &hf = H(),
             C const &eqf = C(), A const &alloc = A()
-        ): Base(size, hf, eqf, alloc) {}
+        ):
+            Base(size, hf, eqf, alloc)
+        {}
 
         SetImpl(): SetImpl(0) {}
         explicit SetImpl(A const &alloc): SetImpl(0, H(), C(), alloc) {}
 
         SetImpl(Size size, A const &alloc):
-            SetImpl(size, H(), C(), alloc) {}
+            SetImpl(size, H(), C(), alloc)
+        {}
         SetImpl(Size size, H const &hf, A const &alloc):
-            SetImpl(size, hf, C(), alloc) {}
+            SetImpl(size, hf, C(), alloc)
+        {}
 
-        SetImpl(SetImpl const &m): Base(m,
-            allocator_container_copy(m.get_alloc())) {}
+        SetImpl(SetImpl const &m):
+            Base(m, allocator_container_copy(m.get_alloc()))
+        {}
 
         SetImpl(SetImpl const &m, A const &alloc): Base(m, alloc) {}
 
@@ -76,33 +83,45 @@ namespace detail {
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-        >> SetImpl(R range, Size size = 0, H const &hf = H(),
+        >>
+        SetImpl(
+            R range, Size size = 0, H const &hf = H(),
             C const &eqf = C(), A const &alloc = A()
-        ): Base(size ? size : detail::estimate_hrsize(range),
-                   hf, eqf, alloc) {
-            for (; !range.empty(); range.pop_front())
+        ):
+            Base(size ? size : detail::estimate_hrsize(range), hf, eqf, alloc)
+        {
+            for (; !range.empty(); range.pop_front()) {
                 Base::emplace(range.front());
+            }
             Base::rehash_up();
         }
 
         template<typename R>
-        SetImpl(R range, Size size, A const &alloc)
-        : SetImpl(range, size, H(), C(), alloc) {}
+        SetImpl(R range, Size size, A const &alloc):
+            SetImpl(range, size, H(), C(), alloc)
+        {}
 
         template<typename R>
-        SetImpl(R range, Size size, H const &hf, A const &alloc)
-        : SetImpl(range, size, hf, C(), alloc) {}
+        SetImpl(R range, Size size, H const &hf, A const &alloc):
+            SetImpl(range, size, hf, C(), alloc)
+        {}
 
-        SetImpl(InitializerList<Value> init, Size size = 0,
+        SetImpl(
+            InitializerList<Value> init, Size size = 0,
             H const &hf = H(), C const &eqf = C(), A const &alloc = A()
-        ): SetImpl(iter(init), size, hf, eqf, alloc) {}
+        ):
+            SetImpl(iter(init), size, hf, eqf, alloc)
+        {}
 
-        SetImpl(InitializerList<Value> init, Size size, A const &alloc)
-        : SetImpl(iter(init), size, H(), C(), alloc) {}
+        SetImpl(InitializerList<Value> init, Size size, A const &alloc):
+            SetImpl(iter(init), size, H(), C(), alloc)
+        {}
 
-        SetImpl(InitializerList<Value> init, Size size, H const &hf,
-            A const &alloc
-        ): SetImpl(iter(init), size, hf, C(), alloc) {}
+        SetImpl(
+            InitializerList<Value> init, Size size, H const &hf, A const &alloc
+        ):
+            SetImpl(iter(init), size, hf, C(), alloc)
+        {}
 
         SetImpl &operator=(SetImpl const &m) {
             Base::operator=(m);
@@ -116,7 +135,8 @@ namespace detail {
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-        >> SetImpl &operator=(R range) {
+        >>
+        SetImpl &operator=(R range) {
             Base::assign_range(range);
             return *this;
         }
@@ -137,14 +157,16 @@ template<
     typename H = ToHash<T>,
     typename C = EqualWithCstr<T>,
     typename A = Allocator<T>
-> using Set = detail::SetImpl<T, H, C, A, false>;
+>
+using Set = detail::SetImpl<T, H, C, A, false>;
 
 template<
     typename T,
     typename H = ToHash<T>,
     typename C = EqualWithCstr<T>,
     typename A = Allocator<T>
-> using Multiset = detail::SetImpl<T, H, C, A, true>;
+>
+using Multiset = detail::SetImpl<T, H, C, A, true>;
 
 } /* namespace ostd */
 

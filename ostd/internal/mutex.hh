@@ -92,7 +92,9 @@ struct UniqueLock {
     UniqueLock(MutexType &m, AdoptLock): p_mtx(&m), p_owns(true) {}
 
     ~UniqueLock() {
-        if (p_owns) p_mtx->unlock();
+        if (p_owns) {
+            p_mtx->unlock();
+        }
     }
 
     UniqueLock(const UniqueLock &) = delete;
@@ -104,7 +106,9 @@ struct UniqueLock {
     }
 
     UniqueLock &operator=(UniqueLock &&u) {
-        if (p_owns) p_mtx->unlock();
+        if (p_owns) {
+            p_mtx->unlock();
+        }
         p_mtx = u.p_mtx;
         p_owns = u.p_owns;
         u.p_mtx = nullptr;
@@ -113,24 +117,27 @@ struct UniqueLock {
     }
 
     bool lock() {
-        if (!p_mtx || p_owns) return false;
-        bool ret = p_mtx->lock();
-        if (ret) p_owns = true;
-        return ret;
+        if (!p_mtx || p_owns) {
+            return false;
+        }
+        return (p_owns = p_mtx->lock());
     }
 
     int try_lock() {
-        if (!p_mtx || p_owns) return 1;
+        if (!p_mtx || p_owns) {
+            return 1;
+        }
         int ret = p_mtx->try_lock();
-        if (ret) return ret;
         p_owns = (ret == 0);
         return ret;
     }
 
     bool unlock() {
-        if (!p_mtx || p_owns) return false;
+        if (!p_mtx || !p_owns) {
+            return false;
+        }
         bool ret = p_mtx->unlock();
-        if (ret) p_owns = false;
+        p_owns = !ret;
         return ret;
     }
 
@@ -176,8 +183,9 @@ struct Condition {
     }
 
     bool wait(UniqueLock<Mutex> &l) {
-        if (!l.owns_lock())
+        if (!l.owns_lock()) {
             return false;
+        }
         return !pthread_cond_wait(&p_cnd, l.mutex()->native_handle());
     }
 

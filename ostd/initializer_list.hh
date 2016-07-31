@@ -36,7 +36,8 @@ public:
 
 namespace ostd {
 
-template<typename T> using InitializerList = std::initializer_list<T>;
+template<typename T>
+using InitializerList = std::initializer_list<T>;
 
 template<typename T>
 PointerRange<T const> iter(std::initializer_list<T> init) {

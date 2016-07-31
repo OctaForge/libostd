@@ -16,8 +16,9 @@ namespace detail {
     struct SignalBase {
         SignalBase(C *cl): p_class(cl), p_funcs(nullptr), p_nfuncs(0) {}
 
-        SignalBase(SignalBase const &ev): p_class(ev.p_class),
-                                          p_nfuncs(ev.p_nfuncs) {
+        SignalBase(SignalBase const &ev):
+            p_class(ev.p_class), p_nfuncs(ev.p_nfuncs)
+        {
             using Func = Function<void(C &, A...)>;
             byte *bufp = new byte[sizeof(Func) * p_nfuncs];
             Func *nbuf = reinterpret_cast<Func *>(bufp);
@@ -26,8 +27,9 @@ namespace detail {
             p_funcs = nbuf;
         }
 
-        SignalBase(SignalBase &&ev): p_class(nullptr), p_funcs(nullptr),
-                                   p_nfuncs(0) {
+        SignalBase(SignalBase &&ev):
+            p_class(nullptr), p_funcs(nullptr), p_nfuncs(0)
+        {
             swap(ev);
         }
 
@@ -37,8 +39,9 @@ namespace detail {
             p_nfuncs = ev.p_nfuncs;
             byte *bufp = new byte[sizeof(Func) * p_nfuncs];
             Func *nbuf = reinterpret_cast<Func *>(bufp);
-            for (Size i = 0; i < p_nfuncs; ++i)
+            for (Size i = 0; i < p_nfuncs; ++i) {
                 new (&nbuf[i]) Func(ev.p_funcs[i]);
+            }
             p_funcs = nbuf;
             return *this;
         }
@@ -51,8 +54,9 @@ namespace detail {
         ~SignalBase() { clear(); }
 
         void clear() {
-            for (Size i = 0; i < p_nfuncs; ++i)
+            for (Size i = 0; i < p_nfuncs; ++i) {
                 p_funcs[i].~Function<void(C &, A...)>();
+            }
             delete[] reinterpret_cast<byte *>(p_funcs);
             p_funcs = nullptr;
             p_nfuncs = 0;
@@ -80,16 +84,23 @@ namespace detail {
         }
 
         bool disconnect(Size idx) {
-            if ((idx >= p_nfuncs) || !p_funcs[idx]) return false;
+            if ((idx >= p_nfuncs) || !p_funcs[idx]) {
+                return false;
+            }
             p_funcs[idx] = nullptr;
             return true;
         }
 
         template<typename ...Args>
         void emit(Args &&...args) const {
-            if (!p_class) return;
-            for (Size i = 0; i < p_nfuncs; ++i)
-                if (p_funcs[i]) p_funcs[i](*p_class, args...);
+            if (!p_class) {
+                return;
+            }
+            for (Size i = 0; i < p_nfuncs; ++i) {
+                if (p_funcs[i]) {
+                    p_funcs[i](*p_class, args...);
+                }
+            }
         }
 
         C *get_class() const {

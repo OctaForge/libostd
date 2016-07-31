@@ -40,7 +40,8 @@ namespace detail {
     template<
         typename K, typename T, typename H,
         typename C, typename A, bool IsMultihash
-    > struct MapImpl: detail::Hashtable<detail::MapBase<K, T, A>,
+    >
+    struct MapImpl: detail::Hashtable<detail::MapBase<K, T, A>,
         Pair<K const, T>, K, T, H, C, A, IsMultihash
     > {
     private:
@@ -65,20 +66,26 @@ namespace detail {
         using ConstLocalRange = BucketRange<Pair<K const, T> const>;
         using Allocator = A;
 
-        explicit MapImpl(Size size, H const &hf = H(),
+        explicit MapImpl(
+            Size size, H const &hf = H(),
             C const &eqf = C(), A const &alloc = A()
-        ): Base(size, hf, eqf, alloc) {}
+        ):
+            Base(size, hf, eqf, alloc)
+        {}
 
         MapImpl(): MapImpl(0) {}
         explicit MapImpl(A const &alloc): MapImpl(0, H(), C(), alloc) {}
 
         MapImpl(Size size, A const &alloc):
-            MapImpl(size, H(), C(), alloc) {}
+            MapImpl(size, H(), C(), alloc)
+        {}
         MapImpl(Size size, H const &hf, A const &alloc):
-            MapImpl(size, hf, C(), alloc) {}
+            MapImpl(size, hf, C(), alloc)
+        {}
 
-        MapImpl(MapImpl const &m): Base(m,
-            allocator_container_copy(m.get_alloc())) {}
+        MapImpl(MapImpl const &m):
+            Base(m, allocator_container_copy(m.get_alloc()))
+        {}
 
         MapImpl(MapImpl const &m, A const &alloc): Base(m, alloc) {}
 
@@ -87,33 +94,45 @@ namespace detail {
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-        >> MapImpl(R range, Size size = 0, H const &hf = H(),
+        >>
+        MapImpl(
+            R range, Size size = 0, H const &hf = H(),
             C const &eqf = C(), A const &alloc = A()
-        ): Base(size ? size : detail::estimate_hrsize(range),
-                   hf, eqf, alloc) {
-            for (; !range.empty(); range.pop_front())
+        ):
+            Base(size ? size : detail::estimate_hrsize(range), hf, eqf, alloc)
+        {
+            for (; !range.empty(); range.pop_front()) {
                 Base::emplace(range.front());
+            }
             Base::rehash_up();
         }
 
         template<typename R>
-        MapImpl(R range, Size size, A const &alloc)
-        : MapImpl(range, size, H(), C(), alloc) {}
+        MapImpl(R range, Size size, A const &alloc):
+            MapImpl(range, size, H(), C(), alloc)
+        {}
 
         template<typename R>
-        MapImpl(R range, Size size, H const &hf, A const &alloc)
-        : MapImpl(range, size, hf, C(), alloc) {}
+        MapImpl(R range, Size size, H const &hf, A const &alloc):
+            MapImpl(range, size, hf, C(), alloc)
+        {}
 
-        MapImpl(InitializerList<Value> init, Size size = 0,
+        MapImpl(
+            InitializerList<Value> init, Size size = 0,
             H const &hf = H(), C const &eqf = C(), A const &alloc = A()
-        ): MapImpl(iter(init), size, hf, eqf, alloc) {}
+        ):
+            MapImpl(iter(init), size, hf, eqf, alloc)
+        {}
 
-        MapImpl(InitializerList<Value> init, Size size, A const &alloc)
-        : MapImpl(iter(init), size, H(), C(), alloc) {}
+        MapImpl(InitializerList<Value> init, Size size, A const &alloc):
+            MapImpl(iter(init), size, H(), C(), alloc)
+        {}
 
-        MapImpl(InitializerList<Value> init, Size size, H const &hf,
-            A const &alloc
-        ): MapImpl(iter(init), size, hf, C(), alloc) {}
+        MapImpl(
+            InitializerList<Value> init, Size size, H const &hf, A const &alloc
+        ):
+            MapImpl(iter(init), size, hf, C(), alloc)
+        {}
 
         MapImpl &operator=(MapImpl const &m) {
             Base::operator=(m);
@@ -127,7 +146,8 @@ namespace detail {
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-        >> MapImpl &operator=(R range) {
+        >>
+        MapImpl &operator=(R range) {
             Base::assign_range(range);
             return *this;
         }
@@ -166,14 +186,16 @@ template<
     typename H = ToHash<K>,
     typename C = EqualWithCstr<K>,
     typename A = Allocator<Pair<K const, T>>
-> using Map = detail::MapImpl<K, T, H, C, A, false>;
+>
+using Map = detail::MapImpl<K, T, H, C, A, false>;
 
 template<
     typename K, typename T,
     typename H = ToHash<K>,
     typename C = EqualWithCstr<K>,
     typename A = Allocator<Pair<K const, T>>
-> using Multimap = detail::MapImpl<K, T, H, C, A, true>;
+>
+using Multimap = detail::MapImpl<K, T, H, C, A, true>;
 
 } /* namespace ostd */
 

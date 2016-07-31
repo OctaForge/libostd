@@ -31,7 +31,8 @@ namespace detail {
         T p_value;
     };
 
-    template<typename T> T atomic_create();
+    template<typename T>
+    T atomic_create();
 
     template<typename T, typename U>
     EnableIf<sizeof(T()->value = atomic_create<U>()), char>
@@ -41,8 +42,8 @@ namespace detail {
     int test_atomic_assignable(...);
 
     template<typename T, typename U>
-    constexpr bool CanAtomicAssign
-        = (sizeof(test_atomic_assignable<T, U>(1)) == sizeof(char));
+    constexpr bool CanAtomicAssign =
+        (sizeof(test_atomic_assignable<T, U>(1)) == sizeof(char));
 
     template<typename T>
     static inline EnableIf<
@@ -59,7 +60,9 @@ namespace detail {
         char volatile *to  = reinterpret_cast<char volatile *>(&a->p_value);
         char volatile *end = to + sizeof(T);
         char *from = reinterpret_cast<char *>(&v);
-        while (to != end) *to++ =*from++;
+        while (to != end) {
+            *to++ =*from++;
+        }
     }
 
     template<typename T>
@@ -88,21 +91,25 @@ static constexpr Size AtomicPointerLockFree = __GCC_ATOMIC_POINTER_LOCK_FREE;
 
 namespace detail {
     static inline constexpr int to_gcc_order(MemoryOrder ord) {
-        return ((ord == MemoryOrder::relaxed) ? __ATOMIC_RELAXED :
-               ((ord == MemoryOrder::acquire) ? __ATOMIC_ACQUIRE :
-               ((ord == MemoryOrder::release) ? __ATOMIC_RELEASE :
-               ((ord == MemoryOrder::seq_cst) ? __ATOMIC_SEQ_CST :
-               ((ord == MemoryOrder::acq_rel) ? __ATOMIC_ACQ_REL :
-                                                __ATOMIC_CONSUME)))));
+        return (
+            ((ord == MemoryOrder::relaxed) ? __ATOMIC_RELAXED :
+            ((ord == MemoryOrder::acquire) ? __ATOMIC_ACQUIRE :
+            ((ord == MemoryOrder::release) ? __ATOMIC_RELEASE :
+            ((ord == MemoryOrder::seq_cst) ? __ATOMIC_SEQ_CST :
+            ((ord == MemoryOrder::acq_rel) ? __ATOMIC_ACQ_REL :
+                                              __ATOMIC_CONSUME)))))
+        );
     }
 
     static inline constexpr int to_gcc_failure_order(MemoryOrder ord) {
-        return ((ord == MemoryOrder::relaxed) ? __ATOMIC_RELAXED :
-               ((ord == MemoryOrder::acquire) ? __ATOMIC_ACQUIRE :
-               ((ord == MemoryOrder::release) ? __ATOMIC_RELAXED :
-               ((ord == MemoryOrder::seq_cst) ? __ATOMIC_SEQ_CST :
-               ((ord == MemoryOrder::acq_rel) ? __ATOMIC_ACQUIRE :
-                                                __ATOMIC_CONSUME)))));
+        return (
+            ((ord == MemoryOrder::relaxed) ? __ATOMIC_RELAXED :
+            ((ord == MemoryOrder::acquire) ? __ATOMIC_ACQUIRE :
+            ((ord == MemoryOrder::release) ? __ATOMIC_RELAXED :
+            ((ord == MemoryOrder::seq_cst) ? __ATOMIC_SEQ_CST :
+            ((ord == MemoryOrder::acq_rel) ? __ATOMIC_ACQUIRE :
+                                             __ATOMIC_CONSUME)))))
+        );
     }
 
     static inline void atomic_thread_fence(MemoryOrder ord) {
@@ -119,8 +126,9 @@ namespace detail {
     }
 
     template<typename T>
-    static inline void atomic_store(AtomicBase<T> volatile *a,
-                                    T v, MemoryOrder ord) {
+    static inline void atomic_store(
+        AtomicBase<T> volatile *a, T v, MemoryOrder ord
+    ) {
         __atomic_store(&a->p_value, &v, to_gcc_order(ord));
     }
 
@@ -163,8 +171,10 @@ namespace detail {
         AtomicBase<T> volatile *a, T *expected, T v,
         MemoryOrder success, MemoryOrder failure
     ) {
-        return __atomic_compare_exchange(&a->p_value, expected, &v, false,
-            to_gcc_order(success), to_gcc_failure_order(failure));
+        return __atomic_compare_exchange(
+            &a->p_value, expected, &v, false,
+            to_gcc_order(success), to_gcc_failure_order(failure)
+        );
     }
 
     template<typename T>
@@ -172,8 +182,10 @@ namespace detail {
         AtomicBase<T> *a, T *expected, T v,
         MemoryOrder success, MemoryOrder failure
     ) {
-        return __atomic_compare_exchange(&a->p_value, expected, &v, false,
-            to_gcc_order(success), to_gcc_failure_order(failure));
+        return __atomic_compare_exchange(
+            &a->p_value, expected, &v, false,
+            to_gcc_order(success), to_gcc_failure_order(failure)
+        );
     }
 
     template<typename T>
@@ -181,8 +193,10 @@ namespace detail {
         AtomicBase<T> volatile *a, T *expected, T v,
         MemoryOrder success, MemoryOrder failure
     ) {
-        return __atomic_compare_exchange(&a->p_value, expected, &v, true,
-            to_gcc_order(success), to_gcc_failure_order(failure));
+        return __atomic_compare_exchange(
+            &a->p_value, expected, &v, true,
+            to_gcc_order(success), to_gcc_failure_order(failure)
+        );
     }
 
     template<typename T>
@@ -190,8 +204,10 @@ namespace detail {
         AtomicBase<T> *a, T *expected, T v,
         MemoryOrder success, MemoryOrder failure
     ) {
-        return __atomic_compare_exchange(&a->p_value, expected, &v, true,
-            to_gcc_order(success), to_gcc_failure_order(failure));
+        return __atomic_compare_exchange(
+            &a->p_value, expected, &v, true,
+            to_gcc_order(success), to_gcc_failure_order(failure)
+        );
     }
 
     template<typename T>
@@ -200,84 +216,96 @@ namespace detail {
     template<typename T>
     struct SkipAmt<T *> { static constexpr Size value = sizeof(T); };
 
-    template<typename T> struct SkipAmt<T[]> {};
-    template<typename T, Size N> struct SkipAmt<T[N]> {};
+    template<typename T>
+    struct SkipAmt<T[]> {};
+
+    template<typename T, Size N>
+    struct SkipAmt<T[N]> {};
 
     template<typename T, typename U>
-    static inline T atomic_fetch_add(AtomicBase<T> volatile *a,
-                                     U d, MemoryOrder ord) {
-        return __atomic_fetch_add(&a->p_value, d * SkipAmt<T>::value,
-            to_gcc_order(ord));
-    }
-
-    template<typename T, typename U>
-    static inline T atomic_fetch_add(AtomicBase<T> *a,
-                                     U d, MemoryOrder ord) {
-        return __atomic_fetch_add(&a->p_value, d * SkipAmt<T>::value,
-            to_gcc_order(ord));
+    static inline T atomic_fetch_add(
+        AtomicBase<T> volatile *a, U d, MemoryOrder ord
+    ) {
+        return __atomic_fetch_add(
+            &a->p_value, d * SkipAmt<T>::value, to_gcc_order(ord)
+        );
     }
 
     template<typename T, typename U>
-    static inline T atomic_fetch_sub(AtomicBase<T> volatile *a,
-                                     U d, MemoryOrder ord) {
-        return __atomic_fetch_sub(&a->p_value, d * SkipAmt<T>::value,
-            to_gcc_order(ord));
+    static inline T atomic_fetch_add(
+        AtomicBase<T> *a, U d, MemoryOrder ord
+    ) {
+        return __atomic_fetch_add(
+            &a->p_value, d * SkipAmt<T>::value, to_gcc_order(ord)
+        );
     }
 
     template<typename T, typename U>
-    static inline T atomic_fetch_sub(AtomicBase<T> *a,
-                                     U d, MemoryOrder ord) {
-        return __atomic_fetch_sub(&a->p_value, d * SkipAmt<T>::value,
-            to_gcc_order(ord));
+    static inline T atomic_fetch_sub(
+        AtomicBase<T> volatile *a, U d, MemoryOrder ord
+    ) {
+        return __atomic_fetch_sub(
+            &a->p_value, d * SkipAmt<T>::value, to_gcc_order(ord)
+        );
+    }
+
+    template<typename T, typename U>
+    static inline T atomic_fetch_sub(
+        AtomicBase<T> *a, U d, MemoryOrder ord
+    ) {
+        return __atomic_fetch_sub(
+            &a->p_value, d * SkipAmt<T>::value, to_gcc_order(ord)
+        );
     }
 
     template<typename T>
-    static inline T atomic_fetch_and(AtomicBase<T> volatile *a,
-                                     T pattern, MemoryOrder ord) {
-        return __atomic_fetch_and(&a->p_value, pattern,
-            to_gcc_order(ord));
+    static inline T atomic_fetch_and(
+        AtomicBase<T> volatile *a, T pattern, MemoryOrder ord
+    ) {
+        return __atomic_fetch_and(&a->p_value, pattern, to_gcc_order(ord));
     }
 
     template<typename T>
-    static inline T atomic_fetch_and(AtomicBase<T> *a,
-                                     T pattern, MemoryOrder ord) {
-        return __atomic_fetch_and(&a->p_value, pattern,
-            to_gcc_order(ord));
+    static inline T atomic_fetch_and(
+        AtomicBase<T> *a, T pattern, MemoryOrder ord
+    ) {
+        return __atomic_fetch_and(&a->p_value, pattern, to_gcc_order(ord));
     }
 
     template<typename T>
-    static inline T atomic_fetch_or(AtomicBase<T> volatile *a,
-                                    T pattern, MemoryOrder ord) {
-        return __atomic_fetch_or(&a->p_value, pattern,
-            to_gcc_order(ord));
+    static inline T atomic_fetch_or(
+        AtomicBase<T> volatile *a, T pattern, MemoryOrder ord
+    ) {
+        return __atomic_fetch_or(&a->p_value, pattern, to_gcc_order(ord));
     }
 
     template<typename T>
-    static inline T atomic_fetch_or(AtomicBase<T> *a,
-                                    T pattern, MemoryOrder ord) {
-        return __atomic_fetch_or(&a->p_value, pattern,
-            to_gcc_order(ord));
+    static inline T atomic_fetch_or(
+        AtomicBase<T> *a, T pattern, MemoryOrder ord
+    ) {
+        return __atomic_fetch_or(&a->p_value, pattern, to_gcc_order(ord));
     }
 
     template<typename T>
-    static inline T atomic_fetch_xor(AtomicBase<T> volatile *a,
-                                     T pattern, MemoryOrder ord) {
-        return __atomic_fetch_xor(&a->p_value, pattern,
-            to_gcc_order(ord));
+    static inline T atomic_fetch_xor(
+        AtomicBase<T> volatile *a, T pattern, MemoryOrder ord
+    ) {
+        return __atomic_fetch_xor(&a->p_value, pattern, to_gcc_order(ord));
     }
 
     template<typename T>
-    static inline T atomic_fetch_xor(AtomicBase<T> *a,
-                                     T pattern, MemoryOrder ord) {
-        return __atomic_fetch_xor(&a->p_value, pattern,
-            to_gcc_order(ord));
+    static inline T atomic_fetch_xor(
+        AtomicBase<T> *a, T pattern, MemoryOrder ord
+    ) {
+        return __atomic_fetch_xor(&a->p_value, pattern, to_gcc_order(ord));
     }
 } /* namespace detail */
 #else
 # error Unsupported compiler
 #endif
 
-template <typename T> inline T kill_dependency(T v) {
+template <typename T>
+inline T kill_dependency(T v) {
     return v;
 }
 
@@ -330,45 +358,47 @@ namespace detail {
             return atomic_exchange(&p_a, v, ord);
         }
 
-        bool compare_exchange_weak(T &e, T v, MemoryOrder s,
-                                   MemoryOrder f) volatile {
+        bool compare_exchange_weak(
+            T &e, T v, MemoryOrder s, MemoryOrder f
+        ) volatile {
             return atomic_compare_exchange_weak(&p_a, &e, v, s, f);
         }
 
-        bool compare_exchange_weak(T &e, T v, MemoryOrder s,
-                                   MemoryOrder f) {
+        bool compare_exchange_weak(T &e, T v, MemoryOrder s, MemoryOrder f) {
             return atomic_compare_exchange_weak(&p_a, &e, v, s, f);
         }
 
-        bool compare_exchange_strong(T &e, T v, MemoryOrder s,
-                                     MemoryOrder f) volatile {
+        bool compare_exchange_strong(
+            T &e, T v, MemoryOrder s, MemoryOrder f
+        ) volatile {
             return atomic_compare_exchange_strong(&p_a, &e, v, s, f);
         }
 
-        bool compare_exchange_strong(T &e, T v, MemoryOrder s,
-                                     MemoryOrder f) {
+        bool compare_exchange_strong(T &e, T v, MemoryOrder s, MemoryOrder f) {
             return atomic_compare_exchange_strong(&p_a, &e, v, s, f);
         }
 
-        bool compare_exchange_weak(T &e, T v, MemoryOrder ord
-                                                  = MemoryOrder::seq_cst)
-        volatile {
+        bool compare_exchange_weak(
+            T &e, T v, MemoryOrder ord = MemoryOrder::seq_cst
+        ) volatile {
             return atomic_compare_exchange_weak(&p_a, &e, v, ord, ord);
         }
 
-        bool compare_exchange_weak(T &e, T v, MemoryOrder ord
-                                                  = MemoryOrder::seq_cst) {
+        bool compare_exchange_weak(
+            T &e, T v, MemoryOrder ord = MemoryOrder::seq_cst
+        ) {
             return atomic_compare_exchange_weak(&p_a, &e, v, ord, ord);
         }
 
-        bool compare_exchange_strong(T &e, T v, MemoryOrder ord
-                                                    = MemoryOrder::seq_cst)
-        volatile {
+        bool compare_exchange_strong(
+            T &e, T v, MemoryOrder ord = MemoryOrder::seq_cst
+        ) volatile {
             return atomic_compare_exchange_strong(&p_a, &e, v, ord, ord);
         }
 
-        bool compare_exchange_strong(T &e, T v, MemoryOrder ord
-                                                    = MemoryOrder::seq_cst) {
+        bool compare_exchange_strong(
+            T &e, T v, MemoryOrder ord = MemoryOrder::seq_cst
+        ) {
             return atomic_compare_exchange_strong(&p_a, &e, v, ord, ord);
         }
     };
@@ -421,10 +451,10 @@ namespace detail {
             return atomic_fetch_xor(&this->p_a, op, ord);
         }
 
-        T operator++(int) volatile { return fetch_add(T(1));         }
-        T operator++(int)          { return fetch_add(T(1));         }
-        T operator--(int) volatile { return fetch_sub(T(1));         }
-        T operator--(int)          { return fetch_sub(T(1));         }
+        T operator++(int) volatile { return fetch_add(T(1));        }
+        T operator++(int)          { return fetch_add(T(1));        }
+        T operator--(int) volatile { return fetch_sub(T(1));        }
+        T operator--(int)          { return fetch_sub(T(1));        }
         T operator++(   ) volatile { return fetch_add(T(1)) + T(1); }
         T operator++(   )          { return fetch_add(T(1)) + T(1); }
         T operator--(   ) volatile { return fetch_sub(T(1)) - T(1); }
@@ -581,20 +611,17 @@ inline T atomic_exchange(Atomic<T> *a, T v) {
 }
 
 template <typename T>
-inline T atomic_exchange_explicit(Atomic<T> volatile *a, T v,
-                                  MemoryOrder ord) {
+inline T atomic_exchange_explicit(Atomic<T> volatile *a, T v, MemoryOrder ord) {
     return a->exchange(v, ord);
 }
 
 template <typename T>
-inline T atomic_exchange_explicit(Atomic<T> *a, T v,
-                                   MemoryOrder ord) {
+inline T atomic_exchange_explicit(Atomic<T> *a, T v, MemoryOrder ord) {
     return a->exchange(v, ord);
 }
 
 template <typename T>
-inline bool atomic_compare_exchange_weak(Atomic<T> volatile *a,
-                                         T *e, T v) {
+inline bool atomic_compare_exchange_weak(Atomic<T> volatile *a, T *e, T v) {
     return a->compare_exchange_weak(*e, v);
 }
 
@@ -604,8 +631,7 @@ inline bool atomic_compare_exchange_weak(Atomic<T> *a, T *e, T v) {
 }
 
 template <typename T>
-inline bool atomic_compare_exchange_strong(Atomic<T> volatile *a,
-                                           T *e, T v) {
+inline bool atomic_compare_exchange_strong(Atomic<T> volatile *a, T *e, T v) {
     return a->compare_exchange_strong(*e, v);
 }
 
@@ -615,46 +641,44 @@ inline bool atomic_compare_exchange_strong(Atomic<T> *a, T *e, T v) {
 }
 
 template <typename T>
-inline bool atomic_compare_exchange_weak_explicit(Atomic<T> volatile *a,
-                                                  T *e, T v,
-                                                  MemoryOrder s,
-                                                  MemoryOrder f) {
+inline bool atomic_compare_exchange_weak_explicit(
+    Atomic<T> volatile *a, T *e, T v, MemoryOrder s, MemoryOrder f
+) {
     return a->compare_exchange_weak(*e, v, s, f);
 }
 
 template <typename T>
-inline bool atomic_compare_exchange_weak_explicit(Atomic<T> *a, T *e,
-                                                  T v,
-                                                  MemoryOrder s,
-                                                  MemoryOrder f) {
+inline bool atomic_compare_exchange_weak_explicit(
+    Atomic<T> *a, T *e, T v, MemoryOrder s, MemoryOrder f
+) {
     return a->compare_exchange_weak(*e, v, s, f);
 }
 
 template <typename T>
-inline bool atomic_compare_exchange_strong_explicit(Atomic<T> volatile *a,
-                                                    T *e, T v,
-                                                    MemoryOrder s,
-                                                    MemoryOrder f) {
+inline bool atomic_compare_exchange_strong_explicit(
+    Atomic<T> volatile *a, T *e, T v, MemoryOrder s, MemoryOrder f
+) {
     return a->compare_exchange_strong(*e, v, s, f);
 }
 
 template <typename T>
-inline bool atomic_compare_exchange_strong_explicit(Atomic<T> *a, T *e,
-                                                    T v,
-                                                    MemoryOrder s,
-                                                    MemoryOrder f) {
+inline bool atomic_compare_exchange_strong_explicit(
+    Atomic<T> *a, T *e, T v, MemoryOrder s, MemoryOrder f
+) {
     return a->compare_exchange_strong(*e, v, s, f);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_add(Atomic<T> volatile *a, T op) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_add(
+    Atomic<T> volatile *a, T op
+) {
     return a->fetch_add(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_add(Atomic<T> *a, T op) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_add(
+    Atomic<T> *a, T op
+) {
     return a->fetch_add(op);
 }
 
@@ -669,39 +693,44 @@ inline T *atomic_fetch_add(Atomic<T *> *a, Ptrdiff op) {
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_add_explicit(Atomic<T> volatile *a, T op,
-                          MemoryOrder ord) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_add_explicit(
+    Atomic<T> volatile *a, T op, MemoryOrder ord
+) {
     return a->fetch_add(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_add_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_add_explicit(
+    Atomic<T> *a, T op, MemoryOrder ord
+) {
     return a->fetch_add(op, ord);
 }
 
 template <typename T>
-inline T *atomic_fetch_add_explicit(Atomic<T *> volatile *a,
-                                    Ptrdiff op, MemoryOrder ord) {
+inline T *atomic_fetch_add_explicit(
+    Atomic<T *> volatile *a, Ptrdiff op, MemoryOrder ord
+) {
     return a->fetch_add(op, ord);
 }
 
 template <typename T>
-inline T *atomic_fetch_add_explicit(Atomic<T *> *a, Ptrdiff op,
-                                    MemoryOrder ord) {
+inline T *atomic_fetch_add_explicit(
+    Atomic<T *> *a, Ptrdiff op, MemoryOrder ord
+) {
     return a->fetch_add(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_sub(Atomic<T> volatile *a, T op) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_sub(
+    Atomic<T> volatile *a, T op
+) {
     return a->fetch_sub(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_sub(Atomic<T> *a, T op) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_sub(
+    Atomic<T> *a, T op
+) {
     return a->fetch_sub(op);
 }
 
@@ -716,102 +745,114 @@ inline T *atomic_fetch_sub(Atomic<T *> *a, Ptrdiff op) {
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_sub_explicit(Atomic<T> volatile *a, T op,
-                          MemoryOrder ord) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_sub_explicit(
+    Atomic<T> volatile *a, T op, MemoryOrder ord
+) {
     return a->fetch_sub(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_sub_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_sub_explicit(
+    Atomic<T> *a, T op, MemoryOrder ord
+) {
     return a->fetch_sub(op, ord);
 }
 
 template <typename T>
-inline T *atomic_fetch_sub_explicit(Atomic<T *> volatile *a,
-                                    Ptrdiff op, MemoryOrder ord) {
+inline T *atomic_fetch_sub_explicit(
+    Atomic<T *> volatile *a, Ptrdiff op, MemoryOrder ord
+) {
     return a->fetch_sub(op, ord);
 }
 
 template <typename T>
-inline T *atomic_fetch_sub_explicit(Atomic<T *> *a, Ptrdiff op,
-                                    MemoryOrder ord) {
+inline T *atomic_fetch_sub_explicit(
+    Atomic<T *> *a, Ptrdiff op, MemoryOrder ord
+) {
     return a->fetch_sub(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_and(Atomic<T> volatile *a, T op) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_and(
+    Atomic<T> volatile *a, T op
+) {
     return a->fetch_and(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_and(Atomic<T> *a, T op) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_and(
+    Atomic<T> *a, T op
+) {
     return a->fetch_and(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_and_explicit(Atomic<T> volatile *a, T op,
-                          MemoryOrder ord) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_and_explicit(
+    Atomic<T> volatile *a, T op, MemoryOrder ord
+) {
     return a->fetch_and(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_and_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_and_explicit(
+    Atomic<T> *a, T op, MemoryOrder ord
+) {
     return a->fetch_and(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_or(Atomic<T> volatile *a, T op) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_or(
+    Atomic<T> volatile *a, T op
+) {
     return a->fetch_or(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_or(Atomic<T> *a, T op) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_or(
+    Atomic<T> *a, T op
+) {
     return a->fetch_or(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_or_explicit(Atomic<T> volatile *a, T op,
-                         MemoryOrder ord) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_or_explicit(
+    Atomic<T> volatile *a, T op, MemoryOrder ord
+) {
     return a->fetch_or(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_or_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_or_explicit(
+    Atomic<T> *a, T op, MemoryOrder ord
+) {
     return a->fetch_or(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_xor(Atomic<T> volatile *a, T op) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_xor(
+    Atomic<T> volatile *a, T op
+) {
     return a->fetch_xor(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_xor(Atomic<T> *a, T op) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_xor(
+    Atomic<T> *a, T op
+) {
     return a->fetch_xor(op);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_xor_explicit(Atomic<T> volatile *a, T op,
-                          MemoryOrder ord) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_xor_explicit(
+    Atomic<T> volatile *a, T op, MemoryOrder ord
+) {
     return a->fetch_xor(op, ord);
 }
 
 template <typename T>
-inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T>
-atomic_fetch_xor_explicit(Atomic<T> *a, T op, MemoryOrder ord) {
+inline EnableIf<IsIntegral<T> && !IsSame<T, bool>, T> atomic_fetch_xor_explicit(
+    Atomic<T> *a, T op, MemoryOrder ord
+) {
     return a->fetch_xor(op, ord);
 }
 
@@ -852,13 +893,13 @@ inline bool atomic_flag_test_and_set(AtomicFlag *a) {
     return a->test_and_set();
 }
 
-inline bool atomic_flag_test_and_set_explicit(AtomicFlag volatile *a,
-                                              MemoryOrder ord) {
+inline bool atomic_flag_test_and_set_explicit(
+    AtomicFlag volatile *a, MemoryOrder ord
+) {
     return a->test_and_set(ord);
 }
 
-inline bool atomic_flag_test_and_set_explicit(AtomicFlag *a,
-                                              MemoryOrder ord) {
+inline bool atomic_flag_test_and_set_explicit(AtomicFlag *a, MemoryOrder ord) {
     return a->test_and_set(ord);
 }
 
@@ -870,8 +911,7 @@ inline void atomic_flag_clear(AtomicFlag *a) {
     a->clear();
 }
 
-inline void atomic_flag_clear_explicit(AtomicFlag volatile *a,
-                                       MemoryOrder ord) {
+inline void atomic_flag_clear_explicit(AtomicFlag volatile *a, MemoryOrder ord) {
     a->clear(ord);
 }
 

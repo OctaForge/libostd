@@ -48,8 +48,9 @@ int main() {
     /* we can connect lambdas, including closures
      * this callback can access "test" easily and it will still work
      */
-    auto idx = st.on_simple.connect([&](SignalTest const &, int v,
-                                        ConstCharRange str) {
+    auto idx = st.on_simple.connect([&](
+        SignalTest const &, int v, ConstCharRange str
+    ) {
         writefln("and lambda test: %d, %s (%d)", v, str, test);
     });
 
@@ -69,13 +70,16 @@ int main() {
     /* the reference to SignalTest here is mutable */
     st.on_param.connect([](SignalTest &self, float oldval) {
         writeln("value changed...");
-        writefln("   old value: %f, new value: %f", oldval,
-            self.get_param());
+        writefln(
+            "   old value: %f, new value: %f", oldval, self.get_param()
+        );
 
         /* when we have a mutable reference we can change the original
          * object, for example re-emit its own signal once again
          */
-        if (self.get_param() > 140.0f) return;
+        if (self.get_param() > 140.0f) {
+            return;
+        }
         self.set_param(self.get_param() + 1.0f);
     });
 

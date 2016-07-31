@@ -9,12 +9,13 @@ int main() {
 
     FileStream wtest{"test.txt", StreamMode::write};
 
-    String smpl = "This is a test file for later read.\n"
-                  "It contains some sample text in order to see whether "
-                  "things actually read correctly.\n\n\n"
-                  ""
-                  "This is after a few newlines. The file continues here.\n"
-                  "The file ends here.\n";
+    String smpl = 
+        "This is a test file for later read.\n"
+        "It contains some sample text in order to see whether "
+        "things actually read correctly.\n\n\n"
+        ""
+        "This is after a few newlines. The file continues here.\n"
+        "The file ends here.\n";
 
     copy(smpl.iter(), wtest.iter());
     wtest.close();

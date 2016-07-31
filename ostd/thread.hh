@@ -109,30 +109,38 @@ struct Thread {
     Thread(): p_thread(0) {}
     Thread(Thread &&o): p_thread(o.p_thread) { o.p_thread = 0; }
 
-    template<typename F, typename ...A,
-             typename = EnableIf<!IsSame<Decay<F>, Thread>>>
+    template<
+        typename F, typename ...A, typename = EnableIf<!IsSame<Decay<F>, Thread>>
+    >
     Thread(F &&func, A &&...args) {
         using FuncT = Tuple<Decay<F>, Decay<A>...>;
-        Box<FuncT> p(new FuncT(detail::decay_copy(forward<F>(func)),
-                               detail::decay_copy(forward<A>(args))...));
-        int res = pthread_create(&p_thread, 0, &detail::thread_proxy<FuncT>, p.get());
-        if (!res)
+        Box<FuncT> p(new FuncT(
+            detail::decay_copy(forward<F>(func)),
+            detail::decay_copy(forward<A>(args))...
+        ));
+        int res = pthread_create(
+            &p_thread, 0, &detail::thread_proxy<FuncT>, p.get()
+        );
+        if (!res) {
             p.release();
-        else
+        } else {
             p_thread = 0;
+        }
     }
 
     Thread &operator=(Thread &&other) {
-        if (joinable())
+        if (joinable()) {
             abort();
+        }
         p_thread = other.p_thread;
         other.p_thread = 0;
         return *this;
     }
 
     ~Thread() {
-        if (joinable())
+        if (joinable()) {
             abort();
+        }
     }
 
     explicit operator bool() const { return joinable(); }
@@ -152,8 +160,9 @@ struct Thread {
 
     bool detach() {
         bool ret = false;
-        if (p_thread)
+        if (p_thread) {
             ret = !pthread_detach(p_thread);
+        }
         p_thread = 0;
         return ret;
     }
@@ -174,8 +183,9 @@ struct Thread {
 #elif defined(_SC_NPROCESSORS_ONLN)
             count = ostd::uint(sysconf(_SC_NPROCESSORS_ONLN));
 #endif
-            if (count <= 0)
+            if (count <= 0) {
                 count = 1;
+            }
         }
         return count;
     }
