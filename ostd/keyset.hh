@@ -82,7 +82,7 @@ namespace detail {
         {}
 
         KeysetImpl(KeysetImpl const &m):
-            Base(m, allocator_container_copy(m.get_alloc())
+            Base(m, allocator_container_copy(m.get_alloc()))
         {}
 
         KeysetImpl(KeysetImpl const &m, A const &alloc): Base(m, alloc) {}
