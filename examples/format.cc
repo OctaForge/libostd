@@ -14,12 +14,12 @@ struct Foo {
 template<typename R>
 bool to_format(Foo const &, R &writer, FormatSpec const &fs) {
     switch (fs.spec()) {
-    case 'i':
-        writer.put_string("Foo1");
-        break;
-    default:
-        writer.put_string("Foo2");
-        break;
+        case 'i':
+            writer.put_string("Foo1");
+            break;
+        default:
+            writer.put_string("Foo2");
+            break;
     }
     return true;
 }
@@ -29,12 +29,12 @@ struct Bar {
     template<typename R>
     bool to_format(R &writer, FormatSpec const &fs) const {
         switch (fs.spec()) {
-        case 'i':
-            writer.put_string("Bar1");
-            break;
-        default:
-            writer.put_string("Bar2");
-            break;
+            case 'i':
+                writer.put_string("Bar1");
+                break;
+            default:
+                writer.put_string("Bar2");
+                break;
         }
         return true;
     }

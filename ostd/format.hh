@@ -30,12 +30,12 @@ namespace detail {
     inline int parse_fmt_flags(ConstCharRange &fmt, int ret) {
         while (!fmt.empty()) {
             switch (fmt.front()) {
-            case '-': ret |= FMT_FLAG_DASH; fmt.pop_front(); break;
-            case '+': ret |= FMT_FLAG_PLUS; fmt.pop_front(); break;
-            case '#': ret |= FMT_FLAG_HASH; fmt.pop_front(); break;
-            case '0': ret |= FMT_FLAG_ZERO; fmt.pop_front(); break;
-            case ' ': ret |= FMT_FLAG_SPACE; fmt.pop_front(); break;
-            default: goto retflags;
+                case '-': ret |= FMT_FLAG_DASH; fmt.pop_front(); break;
+                case '+': ret |= FMT_FLAG_PLUS; fmt.pop_front(); break;
+                case '#': ret |= FMT_FLAG_HASH; fmt.pop_front(); break;
+                case '0': ret |= FMT_FLAG_ZERO; fmt.pop_front(); break;
+                case ' ': ret |= FMT_FLAG_SPACE; fmt.pop_front(); break;
+                default: goto retflags;
             }
         }
     retflags:
