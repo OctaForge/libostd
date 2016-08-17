@@ -173,11 +173,15 @@ public:
     /* non-range */
     int compare(CharRangeBase<T const> s) const {
         ostd::Size s1 = size(), s2 = s.size();
+        int ret;
         if (!s1 || !s2) {
-            return s1 - s2;
+            goto diffsize;
         }
-        int ret = memcmp(data(), s.data(), ostd::min(s1, s2));
-        return ret ? ret : (s1 - s2);
+        if ((ret = memcmp(data(), s.data(), ostd::min(s1, s2)))) {
+            return ret;
+        }
+diffsize:
+        return (s1 < s2) ? -1 : ((s1 > s2) ? 1 : 0);
     }
 
     template<typename R>
