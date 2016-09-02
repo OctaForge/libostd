@@ -187,16 +187,12 @@ diffsize:
 
     int case_compare(CharRangeBase<T const> s) const {
         ostd::Size s1 = size(), s2 = s.size();
-        if (!s1 || !s2) {
-            goto diffsize;
-        }
         for (ostd::Size i = 0, ms = ostd::min(s1, s2); i < ms; ++i) {
             int d = toupper(p_beg[i]) - toupper(s[i]);
             if (d) {
                 return d;
             }
         }
-diffsize:
         return (s1 < s2) ? -1 : ((s1 > s2) ? 1 : 0);
     }
 
