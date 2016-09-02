@@ -221,26 +221,42 @@ public:
         return address_of(this->p_value);
     }
 
-    Value *operator->() {
+    constexpr Value *operator->() {
         return address_of(this->p_value);
     }
 
-    constexpr Value const &operator*() const {
+    constexpr Value const &operator*() const & {
         return this->p_value;
     }
 
-    Value &operator*() {
+    constexpr Value &operator*() & {
         return this->p_value;
+    }
+
+    constexpr Value const &&operator*() const && {
+        return ostd::move(this->p_value);
+    }
+
+    constexpr Value &&operator*() && {
+        return ostd::move(this->p_value);
     }
 
     constexpr explicit operator bool() const { return this->p_engaged; }
 
-    constexpr Value const &value() const {
+    constexpr Value const &value() const & {
         return this->p_value;
     }
 
-    Value &value() {
+    constexpr Value &value() & {
         return this->p_value;
+    }
+
+    constexpr Value const &&value() const && {
+        return ostd::move(this->p_value);
+    }
+
+    constexpr Value &&value() && {
+        return ostd::move(this->p_value);
     }
 
     template<typename U>
@@ -257,7 +273,7 @@ public:
     }
 
     template<typename U>
-    Value value_or(U &&v) && {
+    constexpr Value value_or(U &&v) && {
         static_assert(
             IsMoveConstructible<Value>,
             "Maybe<T>::value_or: T must be copy constructible"
