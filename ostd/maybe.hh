@@ -51,7 +51,8 @@ namespace detail {
         constexpr MaybeStorage(Value const &v): p_value(v), p_engaged(true) {}
         constexpr MaybeStorage(Value &&v): p_value(move(v)), p_engaged(true) {}
 
-        template<typename ...A> constexpr MaybeStorage(InPlace, A &&...args):
+        template<typename ...A>
+        constexpr MaybeStorage(InPlace, A &&...args):
             p_value(forward<A>(args)...), p_engaged(true)
         {}
 
@@ -466,6 +467,16 @@ inline constexpr bool operator>=(T const &b, Maybe<T> const &a) {
 template<typename T>
 inline constexpr Maybe<Decay<T>> make_maybe(T &&v) {
     return Maybe<Decay<T>>(forward<T>(v));
+}
+
+template<typename T, typename ...A>
+inline constexpr Maybe<T> make_maybe(A &&...args) {
+    return Maybe<T>(InPlace, forward<A>(args)...);
+}
+
+template<typename T, typename U, typename ...A>
+inline constexpr Maybe<T> make_maybe(std::initializer_list<U> il, A &&...args) {
+    return Maybe<T>(InPlace, il, forward<A>(args)...);
 }
 
 } /* namespace ostd */
