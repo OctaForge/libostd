@@ -471,12 +471,12 @@ inline constexpr Maybe<Decay<T>> make_maybe(T &&v) {
 
 template<typename T, typename ...A>
 inline constexpr Maybe<T> make_maybe(A &&...args) {
-    return Maybe<T>(InPlace, forward<A>(args)...);
+    return Maybe<T>(in_place, forward<A>(args)...);
 }
 
 template<typename T, typename U, typename ...A>
 inline constexpr Maybe<T> make_maybe(std::initializer_list<U> il, A &&...args) {
-    return Maybe<T>(InPlace, il, forward<A>(args)...);
+    return Maybe<T>(in_place, il, forward<A>(args)...);
 }
 
 } /* namespace ostd */
