@@ -87,9 +87,7 @@ namespace detail {
         }
 
         constexpr MaybeStorage(Value const &v): p_value(v), p_engaged(true) {}
-        constexpr MaybeStorage(Value &&v):
-            p_value(move(v)), p_engaged(true)
-        {}
+        constexpr MaybeStorage(Value &&v): p_value(move(v)), p_engaged(true) {}
 
         template<typename ...A>
         constexpr MaybeStorage(InPlace, A &&...args):
@@ -276,7 +274,7 @@ public:
     constexpr Value value_or(U &&v) && {
         static_assert(
             IsMoveConstructible<Value>,
-            "Maybe<T>::value_or: T must be copy constructible"
+            "Maybe<T>::value_or: T must be move constructible"
         );
         static_assert(
             IsConvertible<U, Value>,
