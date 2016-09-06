@@ -1370,7 +1370,7 @@ namespace detail {
     struct AlignedUnionBase {
         static constexpr Size alignment_value = AlignMax<alignof(T)...>;
 
-        struct type {
+        struct Type {
             alignas(alignment_value) byte data[AlignMax<N, sizeof(T)...>];
         };
     };
