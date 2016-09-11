@@ -1452,7 +1452,24 @@ namespace detail {
 
 #define OSTD_FWD(T, _v) static_cast<T &&>(_v)
     template<typename ...A>
-    auto func_invoke(InvokeAny, A &&...) -> InvokeNat;
+    inline auto func_invoke(InvokeAny, A &&...) -> InvokeNat;
+
+    /* forward declarations, later defined in functional */
+    template<
+        typename F, typename T, typename ...A,
+        typename = EnableIf<
+            IsMemberFunctionPointer<RemoveReference<F>> &&
+            IsBaseOf<
+                RemoveReference<MemberPointerClass<RemoveReference<F>>>,
+                RemoveReference<T>
+            >
+        >
+    >
+    inline auto func_invoke(F &&f, T &&v, A &&...args) ->
+        decltype((OSTD_FWD(T, v).*f)(OSTD_FWD(A, args)...))
+    {
+        return (OSTD_FWD(T, v).*f)(OSTD_FWD(A, args)...);
+    }
 
     template<
         typename F, typename T, typename ...A,
@@ -1464,21 +1481,11 @@ namespace detail {
             >
         >
     >
-    auto func_invoke(F &&f, T &&v, A &&...args) ->
-        decltype((OSTD_FWD(T, v).*f)(OSTD_FWD(A, args)...));
-
-    template<
-        typename F, typename T, typename ...A,
-        typename = EnableIf<
-            IsMemberFunctionPointer<RemoveReference<F>> &&
-            IsBaseOf<
-                RemoveReference<MemberPointerClass<RemoveReference<F>>>,
-                RemoveReference<T>
-            >
-        >
-    >
-    auto func_invoke(F &&f, T &&v, A &&...args) ->
-        decltype(((*OSTD_FWD(T, v)).*f)(OSTD_FWD(A, args)...));
+    inline auto func_invoke(F &&f, T &&v, A &&...args) ->
+        decltype(((*OSTD_FWD(T, v)).*f)(OSTD_FWD(A, args)...))
+    {
+        return ((*OSTD_FWD(T, v)).*f)(OSTD_FWD(A, args)...);
+    }
 
     template<
         typename F, typename T,
@@ -1490,7 +1497,9 @@ namespace detail {
             >
         >
     >
-    auto func_invoke(F &&f, T &&v) -> decltype(OSTD_FWD(T, v).*f);
+    inline auto func_invoke(F &&f, T &&v) -> decltype(OSTD_FWD(T, v).*f) {
+        return OSTD_FWD(T, v).*f;
+    }
 
     template<
         typename F, typename T,
@@ -1502,11 +1511,16 @@ namespace detail {
             >
         >
     >
-    auto func_invoke(F &&f, T &&v) -> decltype((*OSTD_FWD(T, v)).*f);
+    inline auto func_invoke(F &&f, T &&v) -> decltype((*OSTD_FWD(T, v)).*f) {
+        return (*OSTD_FWD(T, v)).*f;
+    }
 
     template<typename F, typename ...A>
-    auto func_invoke(F &&f, A &&...args) ->
-        decltype(OSTD_FWD(F, f)(OSTD_FWD(A, args)...));
+    inline auto func_invoke(F &&f, A &&...args) ->
+        decltype(OSTD_FWD(F, f)(OSTD_FWD(A, args)...))
+    {
+        return OSTD_FWD(F, f)(OSTD_FWD(A, args)...);
+    }
 #undef OSTD_FWD
 
     template<typename F, typename ...A>

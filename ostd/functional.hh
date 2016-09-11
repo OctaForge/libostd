@@ -571,16 +571,11 @@ namespace detail {
         return !!f;
     }
 
-    template<typename F, typename ...A>
-    inline auto func_invoke_helper(F &&f, A &&...args) {
-        return forward<F>(f)(forward<A>(args)...);
-    }
-
     template<typename R>
     struct FuncInvokeVoidReturnWrapper {
         template<typename ...A>
         static R call(A &&...args) {
-            return func_invoke_helper(forward<A>(args)...);
+            return func_invoke(forward<A>(args)...);
         }
     };
 
@@ -588,7 +583,7 @@ namespace detail {
     struct FuncInvokeVoidReturnWrapper<void> {
         template<typename ...A>
         static void call(A &&...args) {
-            func_invoke_helper(forward<A>(args)...);
+            func_invoke(forward<A>(args)...);
         }
     };
 
