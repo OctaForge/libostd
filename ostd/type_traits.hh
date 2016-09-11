@@ -52,7 +52,7 @@ using RemoveAllExtents = typename detail::RemoveAllExtentsBase<T>::Type;
 
 namespace detail {
     template<typename T>
-    AddRvalueReference<T> declval_in();
+    AddRvalueReference<T> declval_in() noexcept;
 }
 
 /* integral constant */

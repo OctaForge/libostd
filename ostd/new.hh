@@ -11,8 +11,8 @@
 
 inline void *operator new     (ostd::Size, void *p) { return p; }
 inline void *operator new   [](ostd::Size, void *p) { return p; }
-inline void  operator delete  (void *, void *)  {}
-inline void  operator delete[](void *, void *)  {}
+inline void  operator delete  (void *, void *) noexcept {}
+inline void  operator delete[](void *, void *) noexcept {}
 #else
 #include <new>
 #endif

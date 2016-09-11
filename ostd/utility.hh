@@ -44,7 +44,7 @@ inline T exchange(T &v, U &&nv) {
 /* declval */
 
 template<typename T>
-AddRvalueReference<T> declval();
+AddRvalueReference<T> declval() noexcept;
 
 /* swap */
 

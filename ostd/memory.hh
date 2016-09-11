@@ -15,7 +15,7 @@
 namespace ostd {
 /* address of */
 
-template<typename T> constexpr T *address_of(T &v) {
+template<typename T> constexpr T *address_of(T &v) noexcept {
     return reinterpret_cast<T *>(
         &const_cast<char &>(reinterpret_cast<char const volatile &>(v))
     );
@@ -196,7 +196,7 @@ struct DefaultDelete {
     constexpr DefaultDelete() = default;
 
     template<typename U>
-    DefaultDelete(DefaultDelete<U> const &) {};
+    DefaultDelete(DefaultDelete<U> const &) noexcept {};
 
     void operator()(T *p) const {
         delete p;
@@ -208,7 +208,7 @@ struct DefaultDelete<T[]> {
     constexpr DefaultDelete() = default;
 
     template<typename U>
-    DefaultDelete(DefaultDelete<U[]> const &) {};
+    DefaultDelete(DefaultDelete<U[]> const &) noexcept {};
 
     void operator()(T *p) const {
         delete[] p;
@@ -257,28 +257,30 @@ private:
     using Dcref = RemoveReference<D> const &;
 
 public:
-    constexpr Box(): p_stor(nullptr, D()) {
+    constexpr Box() noexcept: p_stor(nullptr, D()) {
         static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
-    constexpr Box(Nullptr): p_stor(nullptr, D()) {
-        static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
-    }
-
-    explicit Box(Pointer p): p_stor(p, D()) {
+    constexpr Box(Nullptr) noexcept: p_stor(nullptr, D()) {
         static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
 
-    Box(Pointer p, Conditional<IsReference<D>, D, AddLvalueReference<D const>> d):
+    explicit Box(Pointer p) noexcept: p_stor(p, D()) {
+        static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
+    }
+
+    Box(
+        Pointer p, Conditional<IsReference<D>, D, AddLvalueReference<D const>> d
+    ) noexcept:
         p_stor(p, d)
     {}
 
-    Box(Pointer p, RemoveReference<D> &&d):
+    Box(Pointer p, RemoveReference<D> &&d) noexcept:
         p_stor(p, move(d))
     {
         static_assert(!IsReference<D>, "rvalue deleter cannot be a ref");
     }
 
-    Box(Box &&u): p_stor(u.release(), forward<D>(u.get_deleter())) {}
+    Box(Box &&u) noexcept: p_stor(u.release(), forward<D>(u.get_deleter())) {}
 
     template<typename TT, typename DD>
     Box(
@@ -288,9 +290,9 @@ public:
             IsConvertible<DD, D> && (!IsReference<D> || IsSame<D, DD>),
             Nat
         > = Nat()
-    ): p_stor(u.release(), forward<DD>(u.get_deleter())) {}
+    ) noexcept: p_stor(u.release(), forward<DD>(u.get_deleter())) {}
 
-    Box &operator=(Box &&u) {
+    Box &operator=(Box &&u) noexcept {
         reset(u.release());
         p_stor.second() = forward<D>(u.get_deleter());
         return *this;
@@ -302,13 +304,13 @@ public:
         IsConvertible<typename Box<TT, DD>::Pointer, Pointer> &&
         IsAssignable<D &, DD &&>,
         Box &
-    > operator=(Box<TT, DD> &&u) {
+    > operator=(Box<TT, DD> &&u) noexcept {
         reset(u.release());
         p_stor.second() = forward<DD>(u.get_deleter());
         return *this;
     }
 
-    Box &operator=(Nullptr) {
+    Box &operator=(Nullptr) noexcept {
         reset();
         return *this;
     }
@@ -316,24 +318,24 @@ public:
     ~Box() { reset(); }
 
     AddLvalueReference<T> operator*() const { return *p_stor.first(); }
-    Pointer operator->() const { return p_stor.first(); }
+    Pointer operator->() const noexcept { return p_stor.first(); }
 
-    explicit operator bool() const {
+    explicit operator bool() const noexcept {
         return p_stor.first() != nullptr;
     }
 
-    Pointer get() const { return p_stor.first(); }
+    Pointer get() const noexcept { return p_stor.first(); }
 
-    Dref  get_deleter()       { return p_stor.second(); }
-    Dcref get_deleter() const { return p_stor.second(); }
+    Dref  get_deleter()       noexcept { return p_stor.second(); }
+    Dcref get_deleter() const noexcept { return p_stor.second(); }
 
-    Pointer release() {
+    Pointer release() noexcept {
         Pointer p = p_stor.first();
         p_stor.first() = nullptr;
         return p;
     }
 
-    void reset(Pointer p = nullptr) {
+    void reset(Pointer p = nullptr) noexcept {
         Pointer tmp = p_stor.first();
         p_stor.first() = p;
         if (tmp) {
@@ -341,7 +343,7 @@ public:
         }
     }
 
-    void swap(Box &u) {
+    void swap(Box &u) noexcept {
         p_stor.swap(u.p_stor);
     }
 
@@ -381,43 +383,47 @@ private:
     using Dcref = RemoveReference<D> const &;
 
 public:
-    constexpr Box(): p_stor(nullptr, D()) {
+    constexpr Box() noexcept: p_stor(nullptr, D()) {
         static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
-    constexpr Box(Nullptr): p_stor(nullptr, D()) {
+    constexpr Box(Nullptr) noexcept: p_stor(nullptr, D()) {
         static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
 
     template<typename U> explicit Box(U p, EnableIf<
         detail::SameOrLessCvQualified<U, Pointer>, Nat
-    > = Nat()): p_stor(p, D()) {
+    > = Nat()) noexcept: p_stor(p, D()) {
         static_assert(!IsPointer<D>, "Box constructed with null fptr deleter");
     }
 
     template<typename U> Box(U p, Conditional<
         IsReference<D>, D, AddLvalueReference<D const>
-    > d, EnableIf<detail::SameOrLessCvQualified<U, Pointer>, Nat> = Nat()):
+    > d, EnableIf<
+        detail::SameOrLessCvQualified<U, Pointer>, Nat
+    > = Nat()) noexcept:
         p_stor(p, d)
     {}
 
-    Box(Nullptr, Conditional<IsReference<D>, D, AddLvalueReference<D const>> d):
+    Box(
+        Nullptr, Conditional<IsReference<D>, D, AddLvalueReference<D const>> d
+    ) noexcept:
         p_stor(nullptr, d)
     {}
 
     template<typename U> Box(U p, RemoveReference<D> &&d,
-    EnableIf<detail::SameOrLessCvQualified<U, Pointer>, Nat> = Nat()):
+    EnableIf<detail::SameOrLessCvQualified<U, Pointer>, Nat> = Nat()) noexcept:
         p_stor(p, move(d))
     {
         static_assert(!IsReference<D>, "rvalue deleter cannot be a ref");
     }
 
-    Box(Nullptr, RemoveReference<D> &&d):
+    Box(Nullptr, RemoveReference<D> &&d) noexcept:
         p_stor(nullptr, move(d))
     {
         static_assert(!IsReference<D>, "rvalue deleter cannot be a ref");
     }
 
-    Box(Box &&u): p_stor(u.release(), forward<D>(u.get_deleter())) {}
+    Box(Box &&u) noexcept: p_stor(u.release(), forward<D>(u.get_deleter())) {}
 
     template<typename TT, typename DD>
     Box(
@@ -427,11 +433,11 @@ public:
             IsConvertible<DD, D> && (!IsReference<D> || IsSame<D, DD>),
             Nat
         > = Nat()
-    ):
+    ) noexcept:
         p_stor(u.release(), forward<DD>(u.get_deleter()))
     {}
 
-    Box &operator=(Box &&u) {
+    Box &operator=(Box &&u) noexcept {
         reset(u.release());
         p_stor.second() = forward<D>(u.get_deleter());
         return *this;
@@ -443,13 +449,13 @@ public:
         detail::SameOrLessCvQualified<typename Box<TT, DD>::Pointer, Pointer> &&
         IsAssignable<D &, DD &&>,
         Box &
-    > operator=(Box<TT, DD> &&u) {
+    > operator=(Box<TT, DD> &&u) noexcept {
         reset(u.release());
         p_stor.second() = forward<DD>(u.get_deleter());
         return *this;
     }
 
-    Box &operator=(Nullptr) {
+    Box &operator=(Nullptr) noexcept {
         reset();
         return *this;
     }
@@ -460,16 +466,16 @@ public:
         return p_stor.first()[idx];
     }
 
-    explicit operator bool() const {
+    explicit operator bool() const noexcept {
         return p_stor.first() != nullptr;
     }
 
-    Pointer get() const { return p_stor.first(); }
+    Pointer get() const noexcept { return p_stor.first(); }
 
-    Dref  get_deleter()       { return p_stor.second(); }
-    Dcref get_deleter() const { return p_stor.second(); }
+    Dref  get_deleter()       noexcept { return p_stor.second(); }
+    Dcref get_deleter() const noexcept { return p_stor.second(); }
 
-    Pointer release() {
+    Pointer release() noexcept {
         Pointer p = p_stor.first();
         p_stor.first() = nullptr;
         return p;
@@ -478,7 +484,7 @@ public:
     template<typename U>
     EnableIf<
         detail::SameOrLessCvQualified<U, Pointer>, void
-    > reset(U p) {
+    > reset(U p) noexcept {
         Pointer tmp = p_stor.first();
         p_stor.first() = p;
         if (tmp) {
@@ -486,7 +492,7 @@ public:
         }
     }
 
-    void reset(Nullptr) {
+    void reset(Nullptr) noexcept {
         Pointer tmp = p_stor.first();
         p_stor.first() = nullptr;
         if (tmp) {
@@ -494,11 +500,11 @@ public:
         }
     }
 
-    void reset() {
+    void reset() noexcept {
         reset(nullptr);
     }
 
-    void swap(Box &u) {
+    void swap(Box &u) noexcept {
         p_stor.swap(u.p_stor);
     }
 
@@ -574,31 +580,33 @@ struct Allocator {
     template<typename U>
     using Rebind = Allocator<U>;
 
-    Allocator() {}
+    Allocator() noexcept {}
     template<typename U>
-    Allocator(Allocator<U> const &) {}
+    Allocator(Allocator<U> const &) noexcept {}
 
-    Pointer address(Reference v) const {
+    Pointer address(Reference v) const noexcept {
         return address_of(v);
     };
-    ConstPointer address(ConstReference v) const {
+    ConstPointer address(ConstReference v) const noexcept {
         return address_of(v);
     };
 
-    Size max_size() const { return Size(~0) / sizeof(T); }
+    Size max_size() const noexcept { return Size(~0) / sizeof(T); }
 
     Pointer allocate(Size n, Allocator<void>::ConstPointer = nullptr) {
         return reinterpret_cast<Pointer>(::new byte[n * sizeof(T)]);
     }
 
-    void deallocate(Pointer p, Size) { ::delete[] reinterpret_cast<byte *>(p); }
+    void deallocate(Pointer p, Size) noexcept {
+        ::delete[] reinterpret_cast<byte *>(p);
+    }
 
     template<typename U, typename ...A>
     void construct(U *p, A &&...args) {
         ::new(p) U(forward<A>(args)...);
     }
 
-    void destroy(Pointer p) { p->~T(); }
+    void destroy(Pointer p) noexcept { p->~T(); }
 };
 
 template<typename T>
@@ -614,37 +622,39 @@ struct Allocator<T const> {
     template<typename U>
     using Rebind = Allocator<U>;
 
-    Allocator() {}
+    Allocator() noexcept {}
     template<typename U>
-    Allocator(Allocator<U> const &) {}
+    Allocator(Allocator<U> const &) noexcept {}
 
-    ConstPointer address(ConstReference v) const {
+    ConstPointer address(ConstReference v) const noexcept {
         return address_of(v);
     };
 
-    Size max_size() const { return Size(~0) / sizeof(T); }
+    Size max_size() const noexcept { return Size(~0) / sizeof(T); }
 
     Pointer allocate(Size n, Allocator<void>::ConstPointer = nullptr) {
         return reinterpret_cast<Pointer>(::new byte[n * sizeof(T)]);
     }
 
-    void deallocate(Pointer p, Size) { ::delete[] reinterpret_cast<byte *>(p); }
+    void deallocate(Pointer p, Size) noexcept {
+        ::delete[] reinterpret_cast<byte *>(p);
+    }
 
     template<typename U, typename ...A>
     void construct(U *p, A &&...args) {
         ::new(p) U(forward<A>(args)...);
     }
 
-    void destroy(Pointer p) { p->~T(); }
+    void destroy(Pointer p) noexcept { p->~T(); }
 };
 
 template<typename T, typename U>
-bool operator==(Allocator<T> const &, Allocator<U> const &) {
+bool operator==(Allocator<T> const &, Allocator<U> const &) noexcept {
     return true;
 }
 
 template<typename T, typename U>
-bool operator!=(Allocator<T> const &, Allocator<U> const &) {
+bool operator!=(Allocator<T> const &, Allocator<U> const &) noexcept {
     return false;
 }
 
@@ -972,7 +982,7 @@ inline AllocatorPointer<A> allocator_allocate(
 template<typename A>
 inline void allocator_deallocate(
     A &a, AllocatorPointer<A> p, AllocatorSize<A> n
-) {
+) noexcept {
     a.deallocate(p, n);
 }
 
@@ -1038,7 +1048,7 @@ namespace detail {
 } /* namespace detail */
 
 template<typename A, typename T>
-inline void allocator_destroy(A &a, T *p) {
+inline void allocator_destroy(A &a, T *p) noexcept {
     detail::destroy(BoolConstant<detail::DestroyTest<A, T *>>(), a, p);
 }
 
@@ -1067,7 +1077,7 @@ namespace detail {
 } /* namespace detail */
 
 template<typename A>
-inline AllocatorSize<A> allocator_max_size(A const &a) {
+inline AllocatorSize<A> allocator_max_size(A const &a) noexcept {
     return detail::alloc_max_size(
         BoolConstant<detail::AllocMaxSizeTest<A const>>(), a
     );
