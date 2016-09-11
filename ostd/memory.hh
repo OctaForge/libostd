@@ -1157,8 +1157,10 @@ namespace detail {
         A &p_alloc;
         Size p_size;
     public:
+        using Pointer = AllocatorPointer<A>;
+        using Size = ostd::Size;
         AllocatorDestructor(A &a, Size s) noexcept: p_alloc(a), p_size(s) {}
-        void operator()(AllocatorPointer<A> p) noexcept {
+        void operator()(Pointer p) noexcept {
             allocator_deallocate(p_alloc, p, p_size);
         }
     };

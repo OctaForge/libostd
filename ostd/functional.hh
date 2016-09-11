@@ -1,6 +1,7 @@
 /* Function objects for OctaSTD.
  *
  * This file is part of OctaSTD. See COPYING.md for futher information.
+ * Portions of this file are originally adapted from the libc++ project.
  */
 
 #ifndef OSTD_FUNCTIONAL_HH
@@ -13,6 +14,7 @@
 #include "ostd/memory.hh"
 #include "ostd/utility.hh"
 #include "ostd/type_traits.hh"
+#include <ostd/tuple.hh>
 
 namespace ostd {
 
@@ -542,409 +544,435 @@ detail::MemFn<R, T> mem_fn(R T:: *ptr) {
     return detail::MemFn<R, T>(ptr);
 }
 
-/* function impl
- * reference: http://probablydance.com/2013/01/13/a-faster-implementation-of-stdfunction
+/* function impl adapted from libc++
  */
 
 template<typename>
-struct Function;
+class Function;
 
 namespace detail {
-    struct FunctorData {
-        void *p1, *p2;
+    template<typename T>
+    inline bool func_is_not_null(T const &) {
+        return true;
+    }
+
+    template<typename T>
+    inline bool func_is_not_null(T *ptr) {
+        return ptr;
+    }
+
+    template<typename R, typename C>
+    inline bool func_is_not_null(R C::*ptr) {
+        return ptr;
+    }
+
+    template<typename T>
+    inline bool func_is_not_null(Function<T> const &f) {
+        return !!f;
+    }
+
+    template<typename F, typename ...A>
+    inline auto func_invoke_helper(F &&f, A &&...args) {
+        return forward<F>(f)(forward<A>(args)...);
+    }
+
+    template<typename R>
+    struct FuncInvokeVoidReturnWrapper {
+        template<typename ...A>
+        static R call(A &&...args) {
+            return func_invoke_helper(forward<A>(args)...);
+        }
+    };
+
+    template<>
+    struct FuncInvokeVoidReturnWrapper<void> {
+        template<typename ...A>
+        static void call(A &&...args) {
+            func_invoke_helper(forward<A>(args)...);
+        }
     };
 
     template<typename T>
-    constexpr bool FunctorInPlace =
-        sizeof(T) <= sizeof(FunctorData) &&
-        (alignof(FunctorData) % alignof(T)) == 0 && IsMoveConstructible<T>;
-
-    struct FunctionManager;
-
-    struct FmStorage {
-        FunctorData data;
-        FunctionManager const *manager;
-
-        template<typename A>
-        A &get_alloc() {
-            union {
-                FunctionManager const **m;
-                A *alloc;
-            } u;
-            u.m = &manager;
-            return *u.alloc;
-        }
-        template<typename A>
-        A const &get_alloc() const {
-            union {
-                FunctionManager const * const *m;
-                A const *alloc;
-            } u;
-            u.m = &manager;
-            return *u.alloc;
-        }
-    };
-
-    template<typename T, typename A, typename E = void>
-    struct FunctorDataManager {
-        template<typename R, typename ...Args>
-        static R call(FunctorData const &s, Args ...args) {
-            return (*reinterpret_cast<T *>(&const_cast<FunctorData &>(s)))(
-                forward<Args>(args)...
-            );
-        }
-
-        static void store_f(FmStorage &s, T v) {
-            new (&get_ref(s)) T(forward<T>(v));
-        }
-
-        static void move_f(FmStorage &lhs, FmStorage &&rhs) {
-            new (&get_ref(lhs)) T(move(get_ref(rhs)));
-        }
-
-        static void destroy_f(A &, FmStorage &s) {
-            get_ref(s).~T();
-        }
-
-        static T &get_ref(FmStorage const &s) {
-            union {
-                FunctorData const *data;
-                T *ret;
-            } u;
-            u.data = &s.data;
-            return *u.ret;
-        }
-    };
-
-    template<typename T, typename A>
-    struct FunctorDataManager<T, A, EnableIf<!FunctorInPlace<T>>> {
-        template<typename R, typename ...Args>
-        static R call(FunctorData const &s, Args ...args) {
-            return (*reinterpret_cast<AllocatorPointer<A> &>(
-                const_cast<FunctorData &>(s))
-            )(forward<Args>(args)...);
-        }
-
-        static void store_f(FmStorage &s, T v) {
-            A &a = s.get_alloc<A>();
-            AllocatorPointer<A> *ptr = new (&get_ptr_ref(s))
-                AllocatorPointer<A>(allocator_allocate(a, 1));
-            allocator_construct(a, *ptr, forward<T>(v));
-        }
-
-        static void move_f(FmStorage &lhs, FmStorage &&rhs) {
-            new (&get_ptr_ref(lhs)) AllocatorPointer<A>(move(get_ptr_ref(rhs)));
-            get_ptr_ref(rhs) = nullptr;
-        }
-
-        static void destroy_f(A &a, FmStorage &s) {
-            AllocatorPointer<A> &ptr = get_ptr_ref(s);
-            if (!ptr) {
-                return;
-            }
-            allocator_destroy(a, ptr);
-            allocator_deallocate(a, ptr, 1);
-            ptr = nullptr;
-        }
-
-        static T &get_ref(FmStorage const &s) {
-            return *get_ptr_ref(s);
-        }
-
-        static AllocatorPointer<A> &get_ptr_ref(FmStorage &s) {
-            return reinterpret_cast<AllocatorPointer<A> &>(s.data);
-        }
-
-        static AllocatorPointer<A> &get_ptr_ref(FmStorage const &s) {
-            return reinterpret_cast<AllocatorPointer<A> &>(
-                const_cast<FunctorData &>(s.data)
-            );
-        }
-    };
-
-    template<typename T, typename A>
-    static FunctionManager const &get_default_fm();
-
-    template<typename T, typename A>
-    static void create_fm(FmStorage &s, A &&a) {
-        new (&s.get_alloc<A>()) A(move(a));
-        s.manager = &get_default_fm<T, A>();
-    }
-
-    struct FunctionManager {
-        template<typename T, typename A>
-        inline static constexpr FunctionManager create_default_manager() {
-            return FunctionManager {
-                &call_move_and_destroy<T, A>,
-                &call_copy<T, A>,
-                &call_copy_fo<T, A>,
-                &call_destroy<T, A>
-            };
-        }
-
-        void (* const call_move_and_destroyf)(
-            FmStorage &lhs, FmStorage &&rhs
-        );
-        void (* const call_copyf)(
-            FmStorage &lhs, FmStorage const &rhs
-        );
-        void (* const call_copyf_fo)(
-            FmStorage &lhs, FmStorage const &rhs
-        );
-        void (* const call_destroyf)(FmStorage &s);
-
-        template<typename T, typename A>
-        static void call_move_and_destroy(FmStorage &lhs, FmStorage &&rhs) {
-            using Spec = FunctorDataManager<T, A>;
-            Spec::move_f(lhs, move(rhs));
-            Spec::destroy_f(rhs.get_alloc<A>(), rhs);
-            create_fm<T, A>(lhs, move(rhs.get_alloc<A>()));
-            rhs.get_alloc<A>().~A();
-        }
-
-        template<typename T, typename A>
-        static void call_copy(FmStorage &lhs, FmStorage const &rhs) {
-            using Spec = FunctorDataManager<T, A>;
-            create_fm<T, A>(lhs, A(rhs.get_alloc<A>()));
-            Spec::store_f(lhs, Spec::get_ref(rhs));
-        }
-
-        template<typename T, typename A>
-        static void call_copy_fo(FmStorage &lhs, FmStorage const &rhs) {
-            using Spec = FunctorDataManager<T, A>;
-            Spec::store_f(lhs, Spec::get_ref(rhs));
-        }
-
-        template<typename T, typename A>
-        static void call_destroy(FmStorage &s) {
-            using Spec = FunctorDataManager<T, A>;
-            Spec::destroy_f(s.get_alloc<A>(), s);
-            s.get_alloc<A>().~A();
-        }
-    };
-
-    template<typename T, typename A>
-    inline static FunctionManager const &get_default_fm() {
-        static FunctionManager const def_manager =
-            FunctionManager::create_default_manager<T, A>();
-        return def_manager;
-    }
-
-    template<typename R, typename...>
-    struct FunctionBase {
-        using Result = R;
-    };
-
-    template<typename R, typename T>
-    struct FunctionBase<R, T> {
-        using Result = R;
-        using Argument = T;
-    };
-
-    template<typename R, typename T, typename U>
-    struct FunctionBase<R, T, U> {
-        using Result = R;
-        using FirstArgument = T;
-        using SecondArgument = U;
-    };
-
-    template<typename, typename>
-    constexpr bool IsValidFunctor = false;
+    class FuncBase;
 
     template<typename R, typename ...A>
-    constexpr bool IsValidFunctor<Function<R(A...)>, R(A...)> = false;
+    class FuncBase<R(A...)> {
+        FuncBase(FuncBase const &);
+        FuncBase &operator=(FuncBase const &);
+    public:
+        FuncBase() {}
+        virtual ~FuncBase() {}
+        virtual FuncBase *clone() const = 0;
+        virtual void clone(FuncBase *) const = 0;
+        virtual void destroy() noexcept = 0;
+        virtual void destroy_deallocate() noexcept = 0;
+        virtual R operator()(A &&...args) = 0;
+    };
 
-    template<typename T>
-    T func_to_functor(T &&f) {
-        return forward<T>(f);
+    template<typename F, typename A, typename AT>
+    class FuncCore;
+
+    template<typename F, typename A, typename R, typename ...AT>
+    class FuncCore<F, A, R(AT...)>: public FuncBase<R(AT...)> {
+        CompressedPair<F, A> f_stor;
+public:
+        explicit FuncCore(F &&f):
+            f_stor(
+                piecewise_construct,
+                forward_as_tuple(ostd::move(f)),
+                forward_as_tuple()
+            )
+        {}
+
+        explicit FuncCore(F const &f, A const &a):
+            f_stor(
+                piecewise_construct,
+                forward_as_tuple(f),
+                forward_as_tuple(a)
+            )
+        {}
+
+        explicit FuncCore(F const &f, A &&a):
+            f_stor(
+                piecewise_construct,
+                forward_as_tuple(f),
+                forward_as_tuple(ostd::move(a))
+            )
+        {}
+
+        explicit FuncCore(F &&f, A &&a):
+            f_stor(
+                piecewise_construct,
+                forward_as_tuple(ostd::move(f)),
+                forward_as_tuple(ostd::move(a))
+            )
+        {}
+
+        virtual FuncBase<R(AT...)> *clone() const;
+        virtual void clone(FuncBase<R(AT...)> *) const;
+        virtual void destroy() noexcept;
+        virtual void destroy_deallocate() noexcept;
+        virtual R operator()(AT &&...args);
+    };
+
+    template<typename F, typename A, typename R, typename ...AT>
+    FuncBase<R(AT...)> *FuncCore<F, A, R(AT...)>::clone() const {
+        using AA = AllocatorRebind<A, FuncCore>;
+        AA a(f_stor.second());
+        using D = AllocatorDestructor<AA>;
+        Box<FuncCore, D> hold(a.allocate(1), D(a, 1));
+        ::new(hold.get()) FuncCore(f_stor.first(), A(a));
+        return hold.release();
     }
 
-    template<typename RR, typename T, typename ...AA>
-    auto func_to_functor(RR (T::*f)(AA...))
-        -> decltype(mem_fn(f)) {
-        return mem_fn(f);
+    template<typename F, typename A, typename R, typename ...AT>
+    void FuncCore<F, A, R(AT...)>::clone(FuncBase<R(AT...)> *p) const {
+        ::new (p) FuncCore(f_stor.first(), f_stor.second());
     }
 
-    template<typename RR, typename T, typename ...AA>
-    auto func_to_functor(RR (T::*f)(AA...) const)
-        -> decltype(mem_fn(f)) {
-        return mem_fn(f);
+    template<typename F, typename A, typename R, typename ...AT>
+    void FuncCore<F, A, R(AT...)>::destroy() noexcept {
+        f_stor.~CompressedPair<F, A>();
     }
 
-    struct ValidFunctorNat {};
+    template<typename F, typename A, typename R, typename ...AT>
+    void FuncCore<F, A, R(AT...)>::destroy_deallocate() noexcept {
+        using AA = AllocatorRebind<A, FuncCore>;
+        AA a(f_stor.second());
+        f_stor.~CompressedPair<F, A>();
+        a.deallocate(this, 1);
+    }
 
-    template<typename U, typename ...A>
-    static decltype(
-        func_to_functor(declval<U>()) (declval<A>()...)
-    ) valid_functor_test(U *);
-    template<typename, typename ...>
-    static ValidFunctorNat valid_functor_test(...);
-
-    template<typename T, typename R, typename ...A>
-    constexpr bool IsValidFunctor<T, R(A...)> =
-        IsConvertible<decltype(valid_functor_test<T, A...>(nullptr)), R>;
-
-    template<typename T>
-    using FunctorType = decltype(func_to_functor(declval<T>()));
+    template<typename F, typename A, typename R, typename ...AT>
+    R FuncCore<F, A, R(AT...)>::operator()(AT &&...args) {
+        using Invoker = FuncInvokeVoidReturnWrapper<R>;
+        return Invoker::call(f_stor.first(), forward<AT>(args)...);
+    }
 } /* namespace detail */
 
 template<typename R, typename ...Args>
-struct Function<R(Args...)>: detail::FunctionBase<R, Args...> {
-    Function(       ) { init_empty(); }
-    Function(Nullptr) { init_empty(); }
+class Function<R(Args...)> {
+    using Base = detail::FuncBase<R(Args...)>;
+    AlignedStorage<3 * sizeof(void *)> p_buf;
+    Base *p_f;
 
-    Function(Function &&f) {
-        init_empty();
-        swap(f);
+    static inline Base *as_base(void *p) {
+        return reinterpret_cast<Base *>(p);
     }
 
-    Function(Function const &f): p_call(f.p_call) {
-        f.p_stor.manager->call_copyf(p_stor, f.p_stor);
-    }
+    template<
+        typename F,
+        bool = !IsSame<F, Function> && detail::IsInvokable<F &, Args...>
+    >
+    struct CallableBase;
 
-    template<typename T, typename = EnableIf<
-        detail::IsValidFunctor<T, R(Args...)>
-    >>
-    Function(T f) {
-        if (func_is_null(f)) {
-            init_empty();
-            return;
-        }
-        initialize(detail::func_to_functor(
-            forward<T>(f)), Allocator<detail::FunctorType<T>>()
-        );
-    }
-
-    template<typename A>
-    Function(AllocatorArg, A const &) { init_empty(); }
-
-    template<typename A>
-    Function(AllocatorArg, A const &, Nullptr) { init_empty(); }
-
-    template<typename A>
-    Function(AllocatorArg, A const &, Function &&f) {
-        init_empty();
-        swap(f);
-    }
-
-    template<typename A>
-    Function(AllocatorArg, A const &a, Function const &f):
-        p_call(f.p_call)
-    {
-        detail::FunctionManager const *mfa =
-            &detail::get_default_fm<AllocatorValue<A>, A>();
-        if (f.p_stor.manager == mfa) {
-            detail::create_fm<AllocatorValue<A>, A>(p_stor, A(a));
-            mfa->call_copyf_fo(p_stor, f.p_stor);
-            return;
-        }
-
-        using AA = AllocatorRebind<A, Function>;
-        detail::FunctionManager const *mff =
-            &detail::get_default_fm<Function, AA>();
-        if (f.p_stor.manager == mff) {
-            detail::create_fm<Function, AA>(p_stor, AA(a));
-            mff->call_copyf_fo(p_stor, f.P_stor);
-            return;
-        }
-
-        initialize(f, AA(a));
-    }
-
-    template<typename A, typename T, typename = EnableIf<
-        detail::IsValidFunctor<T, R(Args...)>
-    >>
-    Function(AllocatorArg, A const &a, T f) {
-        if (func_is_null(f)) {
-            init_empty();
-            return;
-        }
-        initialize(detail::func_to_functor(forward<T>(f)), A(a));
-    }
-
-    ~Function() {
-        p_stor.manager->call_destroyf(p_stor);
-    }
-
-    Function &operator=(Function &&f) {
-        p_stor.manager->call_destroyf(p_stor);
-        swap(f);
-        return *this;
-    }
-
-    Function &operator=(Function const &f) {
-        p_stor.manager->call_destroyf(p_stor);
-        swap(Function(f));
-        return *this;
+    template<typename F>
+    struct CallableBase<F, true> {
+        static constexpr bool value =
+            IsSame<R, void> || IsConvertible<detail::InvokeOf<F &, Args...>, R>;
+    };
+    template<typename F>
+    struct CallableBase<F, false> {
+        static constexpr bool value = false;
     };
 
-    R operator()(Args ...args) const {
-        return p_call(p_stor.data, forward<Args>(args)...);
+    template<typename F>
+    static constexpr bool Callable = CallableBase<F>::value;
+
+public:
+    using Result = R;
+
+    Function() noexcept: p_f(nullptr) {}
+    Function(Nullptr) noexcept: p_f(nullptr) {}
+
+    Function(Function const &);
+    Function(Function &&) noexcept;
+
+    template<
+        typename F, typename = EnableIf<Callable<F> && !IsSame<F, Function>>
+    >
+    Function(F);
+
+    template<typename A>
+    Function(AllocatorArg, A const &) noexcept: p_f(nullptr) {}
+    template<typename A>
+    Function(AllocatorArg, A const &, Nullptr) noexcept: p_f(nullptr) {}
+    template<typename A>
+    Function(AllocatorArg, A const &, Function const &);
+    template<typename A>
+    Function(AllocatorArg, A const &, Function &&);
+    template<typename F, typename A, typename = EnableIf<Callable<F>>>
+    Function(AllocatorArg, A const &, F);
+
+    Function &operator=(Function const &f) {
+        Function(f).swap(*this);
+        return *this;
     }
 
-    template<typename F, typename A>
-    void assign(F &&f, A const &a) {
-        Function(allocator_arg, a, forward<F>(f)).swap(*this);
+    Function &operator=(Function &&) noexcept;
+    Function &operator=(Nullptr) noexcept;
+
+    template<typename F>
+    EnableIf<
+        Callable<Decay<F>> && !IsSame<RemoveReference<F>, Function>,
+        Function &
+    > operator=(F &&f) {
+        Function(forward<F>(f)).swap(*this);
+        return *this;
     }
 
-    void swap(Function &f) {
-        detail::FmStorage tmp;
-        f.p_stor.manager->call_move_and_destroyf(tmp, move(f.p_stor));
-        p_stor.manager->call_move_and_destroyf(f.p_stor, move(p_stor));
-        tmp.manager->call_move_and_destroyf(p_stor, move(tmp));
-        ostd::swap(p_call, f.p_call);
-    }
+    ~Function();
 
-    explicit operator bool() const { return p_call != nullptr; }
+    void swap(Function &) noexcept;
 
-private:
-    detail::FmStorage p_stor;
-    R (*p_call)(detail::FunctorData const &, Args...);
+    explicit operator bool() const noexcept { return p_f; }
 
-    template<typename T, typename A>
-    void initialize(T &&f, A &&a) {
-        p_call = &detail::FunctorDataManager<T, A>::template call<R, Args...>;
-        detail::create_fm<T, A>(p_stor, forward<A>(a));
-        detail::FunctorDataManager<T, A>::store_f(p_stor, forward<T>(f));
-    }
+    /* deleted overloads close possible hole in the type system */
+    template<typename RR, typename ...AA>
+    bool operator==(Function<RR(AA...)> &) const = delete;
+    template<typename RR, typename ...AA>
+    bool operator!=(Function<RR(AA...)> &) const = delete;
 
-    void init_empty() {
-        using emptyf = R(*)(Args...);
-        using emptya = Allocator<emptyf>;
-        p_call = nullptr;
-        detail::create_fm<emptyf, emptya>(p_stor, emptya());
-        detail::FunctorDataManager<emptyf, emptya>::store_f(p_stor, nullptr);
-    }
-
-    template<typename T>
-    static bool func_is_null(T const &) { return false; }
-
-    static bool func_is_null(R (* const &fptr)(Args...)) {
-        return fptr == nullptr;
-    }
-
-    template<typename RR, typename T, typename ...AArgs>
-    static bool func_is_null(RR (T::* const &fptr)(AArgs...)) {
-        return fptr == nullptr;
-    }
-
-    template<typename RR, typename T, typename ...AArgs>
-    static bool func_is_null(RR (T::* const &fptr)(AArgs...) const) {
-        return fptr == nullptr;
+    R operator()(Args ...a) const {
+        return (*p_f)(forward<Args>(a)...);
     }
 };
 
-template<typename T>
-bool operator==(Nullptr, Function<T> const &rhs) { return !rhs; }
+template<typename R, typename ...Args>
+Function<R(Args...)>::Function(Function const &f) {
+    if (!f.p_f) {
+        p_f = nullptr;
+    } else if (static_cast<void *>(f.p_f) == &f.p_buf) {
+        p_f = as_base(&p_buf);
+        f.p_f->clone(p_f);
+    } else {
+        p_f = f.p_f->clone();
+    }
+}
 
-template<typename T>
-bool operator==(Function<T> const &lhs, Nullptr) { return !lhs; }
+template<typename R, typename ...Args>
+template<typename A>
+Function<R(Args...)>::Function(
+    AllocatorArg, A const &, Function const &f
+) {
+    if (!f.p_f) {
+        p_f = nullptr;
+    } else if (static_cast<void *>(f.p_f) == &f.p_buf) {
+        p_f = as_base(&p_buf);
+        f.p_f->clone(p_f);
+    } else {
+        p_f = f.p_f->clone();
+    }
+}
 
-template<typename T>
-bool operator!=(Nullptr, Function<T> const &rhs) { return rhs; }
+template<typename R, typename ...Args>
+Function<R(Args...)>::Function(Function &&f) noexcept {
+    if (!f.p_f) {
+        p_f = nullptr;
+    } else if (static_cast<void *>(f.p_f) == &f.p_buf) {
+        p_f = as_base(&p_buf);
+        f.p_f->clone(p_f);
+    } else {
+        p_f = f.p_f;
+        f.p_f = nullptr;
+    }
+}
 
-template<typename T>
-bool operator!=(Function<T> const &lhs, Nullptr) { return lhs; }
+template<typename R, typename ...Args>
+template<typename A>
+Function<R(Args...)>::Function(
+    AllocatorArg, A const &, Function &&f
+) {
+    if (!f.p_f) {
+        p_f = nullptr;
+    } else if (static_cast<void *>(f.p_f) == &f.p_buf) {
+        p_f = as_base(&p_buf);
+        f.p_f->clone(p_f);
+    } else {
+        p_f = f.p_f;
+        f.p_f = nullptr;
+    }
+}
+
+template<typename R, typename ...Args>
+template<typename F, typename>
+Function<R(Args...)>::Function(F f): p_f(nullptr) {
+    if (!detail::func_is_not_null(f)) {
+        return;
+    }
+    using FF = detail::FuncCore<F, Allocator<F>, R(Args...)>;
+    if ((sizeof(FF) <= sizeof(p_buf)) && IsNothrowCopyConstructible<F>) {
+        p_f = ::new(static_cast<void *>(&p_buf)) FF(move(f));
+        return;
+    }
+    using AA = Allocator<FF>;
+    AA a;
+    using D = detail::AllocatorDestructor<AA>;
+    Box<FF, D> hold(a.allocate(1), D(a, 1));
+    ::new(hold.get()) FF(move(f), Allocator<F>(a));
+    p_f = hold.release();
+}
+
+template<typename R, typename ...Args>
+template<typename F, typename A, typename>
+Function<R(Args...)>::Function(AllocatorArg, A const &a, F f):
+    p_f(nullptr)
+{
+    if (!detail::func_is_not_null(f)) {
+        return;
+    }
+    using FF = detail::FuncCore<F, A, R(Args...)>;
+    using AA = AllocatorRebind<A, FF>;
+    AA aa(a);
+    if (
+        (sizeof(FF) <= sizeof(p_buf)) && IsNothrowCopyConstructible<F> &&
+        IsNothrowCopyConstructible<AA>
+    ) {
+        p_f = ::new(static_cast<void *>(&p_buf)) FF(move(f), A(aa));
+        return;
+    }
+    using D = detail::AllocatorDestructor<AA>;
+    Box<FF, D> hold(aa.allocate(1), D(aa, 1));
+    ::new(hold.get()) FF(move(f), A(aa));
+    p_f = hold.release();
+}
+
+template<typename R, typename ...Args>
+Function<R(Args...)> &Function<R(Args...)>::operator=(Function &&f)
+    noexcept
+{
+    if (static_cast<void *>(p_f) == &p_buf) {
+        p_f->destroy();
+    } else if (p_f) {
+        p_f->destroy_deallocate();
+    }
+    if (f.p_f == nullptr) {
+        p_f = nullptr;
+    } else if (static_cast<void *>(f.p_f) == &f.p_buf) {
+        p_f = as_base(&p_buf);
+        f.p_f->clone(p_f);
+    } else {
+        p_f = f.p_f;
+        f.p_f = nullptr;
+    }
+    return *this;
+}
+
+template<typename R, typename ...Args>
+Function<R(Args...)> &Function<R(Args...)>::operator=(Nullptr) noexcept {
+    if (static_cast<void *>(p_f) == &p_buf) {
+        p_f->destroy();
+    } else if (p_f) {
+        p_f->destroy_deallocate();
+    }
+    p_f = nullptr;
+    return *this;
+}
+
+template<typename R, typename ...Args>
+Function<R(Args...)>::~Function() {
+    if (static_cast<void *>(p_f) == &p_buf) {
+        p_f->destroy();
+    } else if (p_f) {
+        p_f->destroy_deallocate();
+    }
+}
+
+template<typename R, typename ...Args>
+void Function<R(Args...)>::swap(Function &f) noexcept {
+    if (
+        (static_cast<void *>(p_f) == &p_buf) &&
+        (static_cast<void *>(f.p_f) == &f.p_buf)
+    ) {
+        /* both in small storage */
+        AlignedStorage<sizeof(p_buf)> tmpbuf;
+        Base *t = as_base(&tmpbuf);
+        p_f->clone(t);
+        p_f->destroy();
+        p_f = nullptr;
+        f.p_f->clone(as_base(&p_buf));
+        f.p_f->destroy();
+        f.p_f = nullptr;
+        p_f = as_base(&p_buf);
+        t->clone(as_base(&f.p_buf));
+        t->destroy();
+        f.p_f = as_base(&f.p_buf);
+    } else if (static_cast<void *>(p_f) == &p_buf) {
+        /* ours in small storage */
+        p_f->clone(as_base(&f.p_buf));
+        p_f->destroy();
+        p_f = f.p_f;
+        f.p_f = as_base(&f.p_buf);
+    } else if (static_cast<void *>(f.p_f) == &f.p_buf) {
+        /* the other in small storage */
+        f.p_f->clone(as_base(&p_buf));
+        f.p_f->destroy();
+        f.p_f = p_f;
+        p_f = as_base(&p_buf);
+    } else {
+        detail::swap_adl(p_f, f.p_f);
+    }
+}
+
+template<typename R, typename ...Args>
+inline bool operator==(Function<R(Args...)> const &f, Nullptr) noexcept {
+    return !f;
+}
+
+template<typename R, typename ...Args>
+inline bool operator==(Nullptr, Function<R(Args...)> const &f) noexcept {
+    return !f;
+}
+
+template<typename R, typename ...Args>
+inline bool operator!=(Function<R(Args...)> const &f, Nullptr) noexcept {
+    return bool(f);
+}
+
+template<typename R, typename ...Args>
+inline bool operator!=(Nullptr, Function<R(Args...)> const &f) noexcept {
+    return bool(f);
+}
 
 namespace detail {
     template<typename F>
