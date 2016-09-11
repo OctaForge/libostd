@@ -94,6 +94,9 @@ namespace detail {
 
 /* pair */
 
+struct PiecewiseConstruct {};
+constexpr PiecewiseConstruct piecewise_construct = {};
+
 template<typename T, typename U>
 struct Pair {
     T first;
@@ -118,6 +121,15 @@ struct Pair {
     template<typename TT, typename UU>
     Pair(Pair<TT, UU> &&v):
         first(move(v.first)), second(move(v.second))
+    {}
+
+    template<typename ...A1, typename ...A2>
+    Pair(PiecewiseConstruct pc, Tuple<A1...> fa, Tuple<A2...> sa):
+        Pair(
+            pc, fa, sa,
+            detail::MakeTupleIndices<sizeof...(A1)>(),
+            detail::MakeTupleIndices<sizeof...(A2)>()
+        )
     {}
 
     Pair &operator=(Pair const &v) {
@@ -150,6 +162,13 @@ struct Pair {
         detail::swap_adl(first, v.first);
         detail::swap_adl(second, v.second);
     }
+
+private:
+    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    Pair(
+        PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+        detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+    );
 };
 
 template<typename T>
@@ -324,6 +343,12 @@ namespace detail {
             p_first(forward<TT>(a)), p_second(forward<UU>(b))
         {}
 
+        template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+        CompressedPairBase(
+            PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+            detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+        );
+
         T &first() { return p_first; }
         T const &first() const { return p_first; }
 
@@ -345,6 +370,12 @@ namespace detail {
             T(forward<TT>(a)), p_second(forward<UU>(b))
         {}
 
+        template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+        CompressedPairBase(
+            PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+            detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+        );
+
         T &first() { return *this; }
         T const &first() const { return *this; }
 
@@ -365,6 +396,12 @@ namespace detail {
             U(forward<UU>(b)), p_first(forward<TT>(a))
         {}
 
+        template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+        CompressedPairBase(
+            PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+            detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+        );
+
         T &first() { return p_first; }
         T const &first() const { return p_first; }
 
@@ -383,6 +420,12 @@ namespace detail {
             T(forward<TT>(a)), U(forward<UU>(b))
         {}
 
+        template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+        CompressedPairBase(
+            PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+            detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+        );
+
         T &first() { return *this; }
         T const &first() const { return *this; }
 
@@ -399,6 +442,15 @@ namespace detail {
         template<typename TT, typename UU>
         CompressedPair(TT &&a, UU &&b):
             Base(forward<TT>(a), forward<UU>(b))
+        {}
+
+        template<typename ...A1, typename ...A2>
+        CompressedPair(PiecewiseConstruct pc, Tuple<A1...> fa, Tuple<A2...> sa):
+            Base(
+                pc, fa, sa,
+                detail::MakeTupleIndices<sizeof...(A1)>(),
+                detail::MakeTupleIndices<sizeof...(A2)>()
+            )
         {}
 
         T &first() { return Base::first(); }

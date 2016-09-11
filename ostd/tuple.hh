@@ -634,6 +634,59 @@ inline bool operator>=(Tuple<T...> const &x, Tuple<U...> const &y) {
 template<typename ...T, typename A>
 constexpr bool UsesAllocator<Tuple<T...>, A> = true;
 
+/* piecewise pair stuff */
+
+template<typename T, typename U>
+template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+Pair<T, U>::Pair(
+    PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+    detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+):
+    first(forward<A1>(get<I1>(fa))...), second(forward<A2>(get<I2>(sa))...)
+{}
+
+namespace detail {
+    template<typename T, typename U>
+    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    CompressedPairBase<T, U, 0>::CompressedPairBase(
+        PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+        detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+    ):
+        p_first(forward<A1>(get<I1>(fa))...),
+        p_second(forward<A2>(get<I2>(sa))...)
+    {}
+
+    template<typename T, typename U>
+    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    CompressedPairBase<T, U, 1>::CompressedPairBase(
+        PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+        detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+    ):
+        T(forward<A1>(get<I1>(fa))...),
+        p_second(forward<A2>(get<I2>(sa))...)
+    {}
+
+    template<typename T, typename U>
+    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    CompressedPairBase<T, U, 2>::CompressedPairBase(
+        PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+        detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+    ):
+        U(forward<A2>(get<I2>(sa))...),
+        p_first(forward<A1>(get<I1>(fa))...)
+    {}
+
+    template<typename T, typename U>
+    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    CompressedPairBase<T, U, 3>::CompressedPairBase(
+        PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+        detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+    ):
+        T(forward<A1>(get<I1>(fa))...),
+        U(forward<A2>(get<I2>(sa))...)
+    {}
+} /* namespace detail */
+
 } /* namespace ostd */
 
 #endif
