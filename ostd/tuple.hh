@@ -323,16 +323,16 @@ class Tuple {
     Base p_base;
 
     template<Size I, typename ...T>
-    friend TupleElement<I, Tuple<T...>> &get(Tuple<T...> &);
+    friend TupleElement<I, Tuple<T...>> &get(Tuple<T...> &) noexcept;
 
     template<Size I, typename ...T>
-    friend TupleElement<I, Tuple<T...>> const &get(Tuple<T...> const &);
+    friend TupleElement<I, Tuple<T...>> const &get(Tuple<T...> const &) noexcept;
 
     template<Size I, typename ...T>
-    friend TupleElement<I, Tuple<T...>> &&get(Tuple<T...> &&);
+    friend TupleElement<I, Tuple<T...>> &&get(Tuple<T...> &&) noexcept;
 
     template<Size I, typename ...T>
-    friend TupleElement<I, Tuple<T...>> const &&get(Tuple<T...> const &&);
+    friend TupleElement<I, Tuple<T...>> const &&get(Tuple<T...> const &&) noexcept;
 
 public:
     template<bool D = true, typename = EnableIf<
@@ -484,26 +484,26 @@ public:
 /* get */
 
 template<Size I, typename ...A>
-inline TupleElement<I, Tuple<A...>> &get(Tuple<A...> &t) {
+inline TupleElement<I, Tuple<A...>> &get(Tuple<A...> &t) noexcept {
     using Type = TupleElement<I, Tuple<A...>>;
     return static_cast<detail::TupleLeaf<I, Type> &>(t.p_base).get();
 }
 
 template<Size I, typename ...A>
-inline TupleElement<I, Tuple<A...>> const &get(Tuple<A...> const &t) {
+inline TupleElement<I, Tuple<A...>> const &get(Tuple<A...> const &t) noexcept {
     using Type = TupleElement<I, Tuple<A...>>;
     return static_cast<detail::TupleLeaf<I, Type> const &>(t.p_base).get();
 }
 
 template<Size I, typename ...A>
-inline TupleElement<I, Tuple<A...>> &&get(Tuple<A...> &&t) {
+inline TupleElement<I, Tuple<A...>> &&get(Tuple<A...> &&t) noexcept {
     using Type = TupleElement<I, Tuple<A...>>;
     return static_cast<Type &&>(
         static_cast<detail::TupleLeaf<I, Type> &&>(t.p_base).get());
 }
 
 template<Size I, typename ...A>
-inline TupleElement<I, Tuple<A...>> const &&get(Tuple<A...> const &&t) {
+inline TupleElement<I, Tuple<A...>> const &&get(Tuple<A...> const &&t) noexcept {
     using Type = TupleElement<I, Tuple<A...>>;
     return static_cast<Type const &&>(
         static_cast<detail::TupleLeaf<I, Type> const &&>(t.p_base).get());

@@ -102,40 +102,40 @@ namespace ostd {
 #if defined(OSTD_TOOLCHAIN_GNU)
 
 /* using gcc/clang builtins */
-inline uint16_t endian_swap16(uint16_t x) {
+inline uint16_t endian_swap16(uint16_t x) noexcept {
     return __builtin_bswap16(x);
 }
-inline uint32_t endian_swap32(uint32_t x) {
+inline uint32_t endian_swap32(uint32_t x) noexcept {
     return __builtin_bswap32(x);
 }
-inline uint64_t endian_swap64(uint64_t x) {
+inline uint64_t endian_swap64(uint64_t x) noexcept {
     return __builtin_bswap64(x);
 }
 
 #elif defined(OSTD_TOOLCHAIN_MSVC)
 
 /* using msvc builtins */
-inline uint16_t endian_swap16(uint16_t x) {
+inline uint16_t endian_swap16(uint16_t x) noexcept {
     return _byteswap_ushort(x);
 }
-inline uint32_t endian_swap32(uint32_t x) {
+inline uint32_t endian_swap32(uint32_t x) noexcept {
     /* win64 is llp64 */
     return _byteswap_ulong(x);
 }
-inline uint64_t endian_swap64(uint64_t x) {
+inline uint64_t endian_swap64(uint64_t x) noexcept {
     return _byteswap_uint64(x);
 }
 
 #else
 
 /* fallback */
-inline uint16_t endian_swap16(uint16_t x) {
+inline uint16_t endian_swap16(uint16_t x) noexcept {
     return (x << 8) | (x >> 8);
 }
-inline uint32_t endian_swap32(uint32_t x) {
+inline uint32_t endian_swap32(uint32_t x) noexcept {
     return (x << 24) | (x >> 24) | ((x >> 8) & 0xFF00) | ((x << 8) & 0xFF0000);
 }
-inline uint64_t endian_swap64(uint64_t x) {
+inline uint64_t endian_swap64(uint64_t x) noexcept {
     return endian_swap32(
         uint32_t(x >> 32)) | (uint64_t(endian_swap32(uint32_t(x))) << 32
     );

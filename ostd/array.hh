@@ -11,6 +11,7 @@
 #include "ostd/algorithm.hh"
 #include "ostd/range.hh"
 #include "ostd/string.hh"
+#include "ostd/utility.hh"
 #include "ostd/internal/tuple.hh"
 
 namespace ostd {
@@ -27,53 +28,53 @@ struct Array {
     using Range = PointerRange<T>;
     using ConstRange = PointerRange<T const>;
 
-    T &operator[](Size i) { return p_buf[i]; }
-    T const &operator[](Size i) const { return p_buf[i]; }
+    T &operator[](Size i) noexcept { return p_buf[i]; }
+    T const &operator[](Size i) const noexcept { return p_buf[i]; }
 
-    T *at(Size i) {
+    T *at(Size i) noexcept {
         if (!in_range(i)) {
             return nullptr;
         }
         return &p_buf[i];
     }
-    T const *at(Size i) const {
+    T const *at(Size i) const noexcept {
         if (!in_range(i)) {
             return nullptr;
         }
         return &p_buf[i];
     }
 
-    T &front() { return p_buf[0]; }
-    T const &front() const { return p_buf[0]; }
+    T &front() noexcept { return p_buf[0]; }
+    T const &front() const noexcept { return p_buf[0]; }
 
-    T &back() { return p_buf[(N > 0) ? (N - 1) : 0]; }
-    T const &back() const { return p_buf[(N > 0) ? (N - 1) : 0]; }
+    T &back() noexcept { return p_buf[(N > 0) ? (N - 1) : 0]; }
+    T const &back() const noexcept { return p_buf[(N > 0) ? (N - 1) : 0]; }
 
-    Size size() const { return N; }
-    Size max_size() const { return Size(~0) / sizeof(T); }
+    Size size() const noexcept { return N; }
+    Size max_size() const noexcept { return Size(~0) / sizeof(T); }
 
-    bool empty() const { return N == 0; }
+    bool empty() const noexcept { return N == 0; }
 
-    bool in_range(Size idx) { return idx < N; }
-    bool in_range(int idx) { return idx >= 0 && Size(idx) < N; }
-    bool in_range(ConstPointer ptr) {
+    bool in_range(Size idx) noexcept { return idx < N; }
+    bool in_range(int idx) noexcept { return idx >= 0 && Size(idx) < N; }
+    bool in_range(ConstPointer ptr) noexcept {
         return ptr >= &p_buf[0] && ptr < &p_buf[N];
     }
 
-    Pointer data() { return p_buf; }
-    ConstPointer data() const { return p_buf; }
+    Pointer data() noexcept { return p_buf; }
+    ConstPointer data() const noexcept { return p_buf; }
 
-    Range iter() {
+    Range iter() noexcept {
         return Range(p_buf, p_buf + N);
     }
-    ConstRange iter() const {
+    ConstRange iter() const noexcept {
         return ConstRange(p_buf, p_buf + N);
     }
-    ConstRange citer() const {
+    ConstRange citer() const noexcept {
         return ConstRange(p_buf, p_buf + N);
     }
 
-    void swap(Array &v) {
+    void swap(Array &v) noexcept(noexcept(swap(declval<T &>(), declval<T &>()))) {
         ostd::swap_ranges(iter(), v.iter());
     }
 
@@ -89,22 +90,22 @@ struct TupleElementBase<I, Array<T, N>> {
 };
 
 template<Size I, typename T, Size N>
-inline TupleElement<I, Array<T, N>> &get(Array<T, N> &a) {
+inline TupleElement<I, Array<T, N>> &get(Array<T, N> &a) noexcept {
     return a[I];
 }
 
 template<Size I, typename T, Size N>
-inline TupleElement<I, Array<T, N>> const &get(Array<T, N> const &a) {
+inline TupleElement<I, Array<T, N>> const &get(Array<T, N> const &a) noexcept {
     return a[I];
 }
 
 template<Size I, typename T, Size N>
-inline TupleElement<I, Array<T, N>> &&get(Array<T, N> &&a) {
+inline TupleElement<I, Array<T, N>> &&get(Array<T, N> &&a) noexcept {
     return move(a.p_buf[I]);
 }
 
 template<Size I, typename T, Size N>
-inline TupleElement<I, Array<T, N>> const &&get(Array<T, N> const &&a) {
+inline TupleElement<I, Array<T, N>> const &&get(Array<T, N> const &&a) noexcept {
     return move(a.p_buf[I]);
 }
 

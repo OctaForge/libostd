@@ -53,3 +53,26 @@ or clang, etc.).
 
 Windows is supported with GCC (MinGW) and Clang. The MS C runtime is supported
 as well, so compiling with Clang targeting MSVC compatibility will work.
+
+## Exceptions
+
+The library is written with the idea that no API in it ever throws exceptions (with
+possibly some rare... exceptions ;)). However, this does not mean it cannot be used
+in code that utilizes exceptions. Because of this, the library attempts to provide
+some degree of exception safety as well as proper `noexcept` annotations. It also
+provides type traits to check things such as whether something can be constructed
+or assigned to without throwing.
+
+This is currently a work in progress though. Here is a list of files where things
+have been correctly annotated:
+
+* array.hh
+* initializer_list.hh
+* memory.hh
+* new.hh
+* platform.hh
+* utility.hh
+* type_traits.hh
+
+This list will expand over time. As for exception safety of containers, it's is
+currently not done/checked. They will be made exception safe over time too.

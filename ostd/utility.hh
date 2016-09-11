@@ -16,19 +16,19 @@ namespace ostd {
 /* move */
 
 template<typename T>
-inline constexpr RemoveReference<T> &&move(T &&v) {
+inline constexpr RemoveReference<T> &&move(T &&v) noexcept {
     return static_cast<RemoveReference<T> &&>(v);
 }
 
 /* forward */
 
 template<typename T>
-inline constexpr T &&forward(RemoveReference<T> &v) {
+inline constexpr T &&forward(RemoveReference<T> &v) noexcept {
     return static_cast<T &&>(v);
 }
 
 template<typename T>
-inline constexpr T &&forward(RemoveReference<T> &&v) {
+inline constexpr T &&forward(RemoveReference<T> &&v) noexcept {
     return static_cast<T &&>(v);
 }
 
@@ -58,14 +58,14 @@ namespace detail {
     template<typename T>
     inline void swap_fb(
         T &a, T &b, EnableIf<decltype(test_swap<T>(0))::value, bool> = true
-    ) {
+    ) noexcept(noexcept(a.swap(b))) {
         a.swap(b);
     }
 
     template<typename T>
     inline void swap_fb(
         T &a, T &b, EnableIf<!decltype(test_swap<T>(0))::value, bool> = true
-    ) {
+    ) noexcept(IsNothrowMoveConstructible<T> && IsNothrowMoveAssignable<T>) {
         T c(move(a));
         a = move(b);
         b = move(c);
@@ -73,22 +73,28 @@ namespace detail {
 }
 
 template<typename T>
-inline void swap(T &a, T &b) {
+inline void swap(T &a, T &b) noexcept(noexcept(detail::swap_fb(a, b))) {
    detail::swap_fb(a, b);
 }
 
 template<typename T, Size N>
-inline void swap(T (&a)[N], T (&b)[N]) {
+inline void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b))) {
     for (Size i = 0; i < N; ++i) {
         swap(a[i], b[i]);
     }
 }
 
 namespace detail {
-    template<typename T>
-    inline void swap_adl(T &a, T &b) {
+    namespace adl_swap {
         using ostd::swap;
-        swap(a, b);
+        template<typename T>
+        inline void swap_adl(T &a, T &b) noexcept(noexcept(swap(a, b))) {
+            swap(a, b);
+        }
+    }
+    template<typename T>
+    inline void swap_adl(T &a, T &b) noexcept(noexcept(adl_swap::swap_adl(a, b))) {
+        adl_swap::swap_adl(a, b);
     }
 }
 
@@ -145,7 +151,9 @@ struct Pair {
         return *this;
     }
 
-    Pair &operator=(Pair &&v) {
+    Pair &operator=(Pair &&v) noexcept(
+        IsNothrowMoveAssignable<T> && IsNothrowMoveAssignable<U>
+    ) {
         first = move(v.first);
         second = move(v.second);
         return *this;
@@ -158,7 +166,10 @@ struct Pair {
         return *this;
     }
 
-    void swap(Pair &v) {
+    void swap(Pair &v) noexcept(
+        noexcept(detail::swap_adl(first, v.first)) &&
+        noexcept(detail::swap_adl(second, v.second))
+    ) {
         detail::swap_adl(first, v.first);
         detail::swap_adl(second, v.second);
     }
@@ -284,22 +295,22 @@ namespace detail {
 }
 
 template<Size I, typename T, typename U>
-inline TupleElement<I, Pair<T, U>> &get(Pair<T, U> &p) {
+inline TupleElement<I, Pair<T, U>> &get(Pair<T, U> &p) noexcept {
     return detail::GetPair<I>::get(p);
 }
 
 template<Size I, typename T, typename U>
-inline TupleElement<I, Pair<T, U>> const &get(Pair<T, U> const &p) {
+inline TupleElement<I, Pair<T, U>> const &get(Pair<T, U> const &p) noexcept {
     return detail::GetPair<I>::get(p);
 }
 
 template<Size I, typename T, typename U>
-inline TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) {
+inline TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) noexcept {
     return detail::GetPair<I>::get(move(p));
 }
 
 template<Size I, typename T, typename U>
-inline TupleElement<I, Pair<T, U>> const &&get(Pair<T, U> const &&p) {
+inline TupleElement<I, Pair<T, U>> const &&get(Pair<T, U> const &&p) noexcept {
     return detail::GetPair<I>::get(move(p));
 }
 
