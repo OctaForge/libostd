@@ -1149,6 +1149,21 @@ template<typename T, typename A, typename ...Args>
 constexpr int UsesAllocatorConstructor =
     detail::UsesAllocCtor<T, A, Args...>::value;
 
+/* util for other classes */
+
+namespace detail {
+    template<typename A>
+    class AllocatorDestructor {
+        A &p_alloc;
+        Size p_size;
+    public:
+        AllocatorDestructor(A &a, Size s) noexcept: p_alloc(a), p_size(s) {}
+        void operator()(AllocatorPointer<A> p) noexcept {
+            allocator_deallocate(p_alloc, p, p_size);
+        }
+    };
+}
+
 } /* namespace ostd */
 
 #endif

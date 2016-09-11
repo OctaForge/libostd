@@ -1,6 +1,7 @@
 /* Type traits for OctaSTD.
  *
  * This file is part of OctaSTD. See COPYING.md for futher information.
+ * Portions of this file are originally adapted from the libc++ project.
  */
 
 #ifndef OSTD_TYPE_TRAITS_HH
@@ -293,6 +294,216 @@ namespace detail {
 
 template<typename T>
 constexpr bool IsMemberFunctionPointer = detail::IsMemberFunctionPointerBase<RemoveCv<T>>;
+
+/* internal member traits, from libc++ */
+
+namespace detail {
+    template<typename MP, bool IsMemberPtr, bool IsMemberObjectPtr>
+    struct MemberPointerTraitsBase {};
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A...), true, false> {
+        using Class = C;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A..., ...), true, false> {
+        using Class = C;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A...) const, true, false> {
+        using Class = C const;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A..., ...) const, true, false> {
+        using Class = C const;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A...) volatile, true, false> {
+        using Class = C volatile;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A..., ...) volatile, true, false> {
+        using Class = C volatile;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A...) const volatile, true, false> {
+        using Class = C const volatile;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<
+        R (C::*)(A..., ...) const volatile, true, false
+    > {
+        using Class = C const volatile;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A...) &, true, false> {
+        using Class = C &;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A..., ...) &, true, false> {
+        using Class = C &;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A...) const &, true, false> {
+        using Class = C const &;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A..., ...) const &, true, false> {
+        using Class = C const &;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A...) volatile &, true, false> {
+        using Class = C volatile &;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<
+        R (C::*)(A..., ...) volatile &, true, false
+    > {
+        using Class = C volatile &;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<
+        R (C::*)(A...) const volatile &, true, false
+    > {
+        using Class = C const volatile &;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<
+        R (C::*)(A..., ...) const volatile &, true, false
+    > {
+        using Class = C const volatile &;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A...) &&, true, false> {
+        using Class = C &&;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A..., ...) &&, true, false> {
+        using Class = C &&;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A...) const &&, true, false> {
+        using Class = C const &&;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A..., ...) const &&, true, false> {
+        using Class = C const &&;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<R (C::*)(A...) volatile &&, true, false> {
+        using Class = C volatile &&;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<
+        R (C::*)(A..., ...) volatile &&, true, false
+    > {
+        using Class = C volatile &&;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<
+        R (C::*)(A...) const volatile &&, true, false
+    > {
+        using Class = C const volatile &&;
+        using Result = R;
+        using Func = R(A...);
+    };
+
+    template <class R, class C, class ...A>
+    struct MemberPointerTraitsBase<
+        R (C::*)(A..., ...) const volatile &&, true, false
+    > {
+        using Class = C const volatile &&;
+        using Result = R;
+        using Func = R(A..., ...);
+    };
+
+    template<typename R, typename C>
+    struct MemberPointerTraitsBase<R C::*, false, true> {
+        using Class = C;
+        using Result = R;
+    };
+
+    template<typename MP>
+    using MemberPointerClass = typename MemberPointerTraitsBase<
+        RemoveCv<MP>, IsMemberFunctionPointer<MP>, IsMemberObjectPointer<MP>
+    >::Class;
+
+    template<typename MP>
+    using MemberPointerResult = typename MemberPointerTraitsBase<
+        RemoveCv<MP>, IsMemberFunctionPointer<MP>, IsMemberObjectPointer<MP>
+    >::Result;
+
+    template<typename MP>
+    using MemberPointerFunc = typename MemberPointerTraitsBase<
+        RemoveCv<MP>, IsMemberFunctionPointer<MP>, IsMemberObjectPointer<MP>
+    >::Func;
+} /* namespace detail */
 
 /* is object */
 
@@ -1214,59 +1425,6 @@ namespace detail {
 template<bool _cond, typename T, typename U>
 using Conditional = typename detail::ConditionalBase<_cond, T, U>::Type;
 
-/* result of call at compile time */
-
-namespace detail {
-#define OSTD_FWD(T, _v) static_cast<T &&>(_v)
-    template<typename F, typename ...A>
-    inline auto rof_invoke(F &&f, A &&...args) ->
-        decltype(OSTD_FWD(F, f)(OSTD_FWD(A, args)...))
-    {
-        return OSTD_FWD(F, f)(OSTD_FWD(A, args)...);
-    }
-    template<typename B, typename T, typename D>
-    inline auto rof_invoke(T B::*pmd, D &&ref) ->
-        decltype(OSTD_FWD(D, ref).*pmd)
-    {
-        return OSTD_FWD(D, ref).*pmd;
-    }
-    template<typename PMD, typename P>
-    inline auto rof_invoke(PMD &&pmd, P &&ptr) ->
-        decltype((*OSTD_FWD(P, ptr)).*OSTD_FWD(PMD, pmd))
-    {
-        return (*OSTD_FWD(P, ptr)).*OSTD_FWD(PMD, pmd);
-    }
-    template<typename B, typename T, typename D, typename ...A>
-    inline auto rof_invoke(T B::*pmf, D &&ref, A &&...args) ->
-        decltype((OSTD_FWD(D, ref).*pmf)(OSTD_FWD(A, args)...))
-    {
-        return (OSTD_FWD(D, ref).*pmf)(OSTD_FWD(A, args)...);
-    }
-    template<typename PMF, typename P, typename ...A>
-    inline auto rof_invoke(PMF &&pmf, P &&ptr, A &&...args) ->
-        decltype(((*OSTD_FWD(P, ptr)).*OSTD_FWD(PMF, pmf))(OSTD_FWD(A, args)...))
-    {
-        return ((*OSTD_FWD(P, ptr)).*OSTD_FWD(PMF, pmf))
-          (OSTD_FWD(A, args)...);
-    }
-#undef OSTD_FWD
-
-    template<typename, typename = void>
-    struct ResultOfCore {};
-    template<typename F, typename ...A>
-    struct ResultOfCore<F(A...), decltype(void(rof_invoke(
-    detail::declval_in<F>(), detail::declval_in<A>()...)))> {
-        using type = decltype(rof_invoke(detail::declval_in<F>(),
-            detail::declval_in<A>()...));
-    };
-
-    template<typename T>
-    struct ResultOfBase: ResultOfCore<T> {};
-} /* namespace detail */
-
-template<typename T>
-using ResultOf = typename detail::ResultOfBase<T>::Type;
-
 /* enable if */
 
 namespace detail {
@@ -1279,6 +1437,111 @@ namespace detail {
 
 template<bool B, typename T = void>
 using EnableIf = typename detail::EnableIfBase<B, T>::Type;
+
+/* result of call at compile time, from libc++ */
+
+namespace detail {
+    struct InvokeNat {
+        InvokeNat() = delete;
+        InvokeNat(InvokeNat const &) = delete;
+        InvokeNat &operator=(InvokeNat const &) = delete;
+        ~InvokeNat() = delete;
+    };
+
+    struct InvokeAny { InvokeAny(...); };
+
+#define OSTD_FWD(T, _v) static_cast<T &&>(_v)
+    template<typename ...A>
+    auto func_invoke(InvokeAny, A &&...) -> InvokeNat;
+
+    template<
+        typename F, typename T, typename ...A,
+        typename = EnableIf<
+            IsMemberFunctionPointer<RemoveReference<F>> &&
+            IsBaseOf<
+                RemoveReference<MemberPointerClass<RemoveReference<F>>>,
+                RemoveReference<T>
+            >
+        >
+    >
+    auto func_invoke(F &&f, T &&v, A &&...args) ->
+        decltype((OSTD_FWD(T, v).*f)(OSTD_FWD(A, args)...));
+
+    template<
+        typename F, typename T, typename ...A,
+        typename = EnableIf<
+            IsMemberFunctionPointer<RemoveReference<F>> &&
+            IsBaseOf<
+                RemoveReference<MemberPointerClass<RemoveReference<F>>>,
+                RemoveReference<T>
+            >
+        >
+    >
+    auto func_invoke(F &&f, T &&v, A &&...args) ->
+        decltype(((*OSTD_FWD(T, v)).*f)(OSTD_FWD(A, args)...));
+
+    template<
+        typename F, typename T,
+        typename = EnableIf<
+            IsMemberObjectPointer<RemoveReference<F>> &&
+            IsBaseOf<
+                RemoveReference<MemberPointerClass<RemoveReference<F>>>,
+                RemoveReference<T>
+            >
+        >
+    >
+    auto func_invoke(F &&f, T &&v) -> decltype(OSTD_FWD(T, v).*f);
+
+    template<
+        typename F, typename T,
+        typename = EnableIf<
+            IsMemberObjectPointer<RemoveReference<F>> &&
+            IsBaseOf<
+                RemoveReference<MemberPointerClass<RemoveReference<F>>>,
+                RemoveReference<T>
+            >
+        >
+    >
+    auto func_invoke(F &&f, T &&v) -> decltype((*OSTD_FWD(T, v)).*f);
+
+    template<typename F, typename ...A>
+    auto func_invoke(F &&f, A &&...args) ->
+        decltype(OSTD_FWD(F, f)(OSTD_FWD(A, args)...));
+#undef OSTD_FWD
+
+    template<typename F, typename ...A>
+    struct FuncInvokableBase {
+        using Type = decltype(
+            func_invoke(declval_in<F>(), declval_in<A>()...)
+        );
+        static constexpr bool value = !IsSame<Type, InvokeNat>;
+    };
+
+    template<typename F, typename ...A>
+    constexpr bool IsInvokable = FuncInvokableBase<F, A...>::value;
+
+    template<bool I, typename F, typename ...A>
+    struct InvokeOfBase {};
+
+    template<typename F, typename ...A>
+    struct InvokeOfBase<true, F, A...> {
+        using Type = typename FuncInvokableBase<F, A...>::Type;
+    };
+
+    template<typename F, typename ...A>
+    using InvokeOf = typename InvokeOfBase<IsInvokable<F, A...>, F, A...>::Type;
+
+    template<typename F>
+    struct ResultOfBase {};
+
+    template<typename F, typename ...A>
+    struct ResultOfBase<F(A...)> {
+        using Type = InvokeOf<F, A...>;
+    };
+} /* namespace detail */
+
+template<typename F>
+using ResultOf = typename detail::ResultOfBase<F>::Type;
 
 /* decay */
 
