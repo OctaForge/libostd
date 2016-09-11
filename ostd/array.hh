@@ -74,7 +74,9 @@ struct Array {
         return ConstRange(p_buf, p_buf + N);
     }
 
-    void swap(Array &v) noexcept(noexcept(swap(declval<T &>(), declval<T &>()))) {
+    void swap(Array &v) noexcept(
+        noexcept(ostd::swap(declval<T &>(), declval<T &>()))
+    ) {
         ostd::swap_ranges(iter(), v.iter());
     }
 
