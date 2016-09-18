@@ -455,7 +455,7 @@ public:
         p_len = v.p_len;
         p_cap = v.p_cap;
         p_buf.~StrPair();
-        new (&p_buf) StrPair(v.disown(), move(v.p_buf.second()));
+        new (&p_buf) StrPair(v.release(), move(v.p_buf.second()));
         if (!p_cap) {
             p_buf.first() = reinterpret_cast<Pointer>(&p_len);
         }
@@ -559,7 +559,7 @@ public:
 
     bool empty() const { return (size() == 0); }
 
-    Value *disown() {
+    Value *release() {
         Pointer r = p_buf.first();
         p_buf.first() = nullptr;
         p_len = p_cap = 0;

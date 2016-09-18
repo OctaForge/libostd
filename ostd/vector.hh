@@ -218,7 +218,7 @@ public:
         p_len = v.p_len;
         p_cap = v.p_cap;
         p_buf.~VecPair();
-        new (&p_buf) VecPair(v.disown(), move(v.p_buf.second()));
+        new (&p_buf) VecPair(v.release(), move(v.p_buf.second()));
         return *this;
     }
 
@@ -398,7 +398,7 @@ public:
         return ptr >= p_buf.first() && ptr < &p_buf.first()[p_len];
     }
 
-    Value *disown() {
+    Value *release() {
         Pointer r = p_buf.first();
         p_buf.first() = nullptr;
         p_len = p_cap = 0;
