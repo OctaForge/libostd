@@ -125,12 +125,12 @@ namespace detail {
 
     template<typename T, typename U>
     struct PointerRebindType {
-        using type = typename PointerRebindBase<T, U>::Type;
+        using Type = typename PointerRebindBase<T, U>::Type;
     };
 
     template<typename T, typename U>
     struct PointerRebindType<T *, U> {
-        using type = U *;
+        using Type = U *;
     };
 
     template<typename T>
@@ -544,108 +544,21 @@ typename detail::BoxIf<T>::BoxKnownSize make_box(A &&...args) = delete;
 
 /* allocator */
 
-template<typename>
-struct Allocator;
-
-template<>
-struct Allocator<void> {
-    using Value = void;
-    using Pointer = void *;
-    using ConstPointer = void const *;
-
-    template<typename U>
-    using Rebind = Allocator<U>;
-};
-
-template<>
-struct Allocator<void const> {
-    using Value = void const;
-    using Pointer = void const *;
-    using ConstPointer = void const *;
-
-    template<typename U>
-    using Rebind = Allocator<U>;
-};
-
 template<typename T>
 struct Allocator {
-    using Size = ostd::Size;
-    using Difference = Ptrdiff;
     using Value = T;
-    using Reference = T &;
-    using ConstReference = T const &;
-    using Pointer = T *;
-    using ConstPointer = T const *;
-
-    template<typename U>
-    using Rebind = Allocator<U>;
 
     Allocator() noexcept {}
     template<typename U>
     Allocator(Allocator<U> const &) noexcept {}
 
-    Pointer address(Reference v) const noexcept {
-        return address_of(v);
-    };
-    ConstPointer address(ConstReference v) const noexcept {
-        return address_of(v);
-    };
-
-    Size max_size() const noexcept { return Size(~0) / sizeof(T); }
-
-    Pointer allocate(Size n, Allocator<void>::ConstPointer = nullptr) {
-        return reinterpret_cast<Pointer>(::new byte[n * sizeof(T)]);
+    Value *allocate(Size n) {
+        return reinterpret_cast<Value *>(::new byte[n * sizeof(T)]);
     }
 
-    void deallocate(Pointer p, Size) noexcept {
+    void deallocate(Value *p, Size) noexcept {
         ::delete[] reinterpret_cast<byte *>(p);
     }
-
-    template<typename U, typename ...A>
-    void construct(U *p, A &&...args) {
-        ::new(p) U(forward<A>(args)...);
-    }
-
-    void destroy(Pointer p) noexcept { p->~T(); }
-};
-
-template<typename T>
-struct Allocator<T const> {
-    using Size = ostd::Size;
-    using Difference = Ptrdiff;
-    using Value = T const;
-    using Reference = T const &;
-    using ConstReference = T const &;
-    using Pointer = T const *;
-    using ConstPointer = T const *;
-
-    template<typename U>
-    using Rebind = Allocator<U>;
-
-    Allocator() noexcept {}
-    template<typename U>
-    Allocator(Allocator<U> const &) noexcept {}
-
-    ConstPointer address(ConstReference v) const noexcept {
-        return address_of(v);
-    };
-
-    Size max_size() const noexcept { return Size(~0) / sizeof(T); }
-
-    Pointer allocate(Size n, Allocator<void>::ConstPointer = nullptr) {
-        return reinterpret_cast<Pointer>(::new byte[n * sizeof(T)]);
-    }
-
-    void deallocate(Pointer p, Size) noexcept {
-        ::delete[] reinterpret_cast<byte *>(p);
-    }
-
-    template<typename U, typename ...A>
-    void construct(U *p, A &&...args) {
-        ::new(p) U(forward<A>(args)...);
-    }
-
-    void destroy(Pointer p) noexcept { p->~T(); }
 };
 
 template<typename T, typename U>
