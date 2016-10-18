@@ -12,7 +12,7 @@ Full C++14 support is required in your compiler.
 Compiler | Version
 -------- | -------
 gcc/g++  | 5.4+, 6+
-clang    | 3.8+
+clang    | 3.8+ (most platforms including LLVM for macOS), 8.0.0+ (macOS Xcode)
 
 Other C++14 compliant compilers might work as well. OctaSTD does not utilize
 compiler specific extensions except certain builtin type traits - to implement
@@ -41,15 +41,14 @@ suffers from the issue mentioned above).
 
 ## Supported operating systems
 
-Currently supported OSes in OctaSTD are Linux, FreeBSD and OS X. Other
+Currently supported OSes in OctaSTD are Linux, FreeBSD and macOS. Other
 systems that implement POSIX API will also work (if they don't, bug reports
 are welcome).
 
-OS X support requires Xcode 8 or newer to work. That is the first version to
-ship a Clang 3.8 based toolchain, so things will not compile with an older
-version of Xcode. Alternatively you are free to use any other supported
-compiler from other distribution channels (official Clang, homebrew gcc
-or clang, etc.).
+MacOS support requires Xcode 8 or newer to work (or alternatively, official
+LLVM distribution for macOS or any supported compiler from other channels
+such as Homebrew). That is the first version to ship a Clang 3.8 based
+toolchain, so things will not compile with an older version of Xcode.
 
 Windows is supported with GCC (MinGW) and Clang. The MS C runtime is supported
 as well, so compiling with Clang targeting MSVC compatibility will work.
