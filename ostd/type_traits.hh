@@ -7,6 +7,7 @@
 #ifndef OSTD_TYPE_TRAITS_HH
 #define OSTD_TYPE_TRAITS_HH
 
+#include <limits.h>
 #include <stddef.h>
 
 #include "ostd/types.hh"
@@ -54,6 +55,11 @@ namespace detail {
     template<typename T>
     AddRvalueReference<T> declval_in() noexcept;
 }
+
+/* size in bits */
+
+template<typename T>
+constexpr Size SizeInBits = sizeof(T) * CHAR_BIT;
 
 /* integral constant */
 

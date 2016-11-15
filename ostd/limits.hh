@@ -84,19 +84,19 @@ namespace detail {
 }
 
 template<typename T>
-static constexpr T NumericLimitMin = detail::NumericLimitsBase<T>::minv;
+constexpr T NumericLimitMin = detail::NumericLimitsBase<T>::minv;
 
 template<typename T>
-static constexpr T NumericLimitMax = detail::NumericLimitsBase<T>::maxv;
+constexpr T NumericLimitMax = detail::NumericLimitsBase<T>::maxv;
 
 template<typename T>
-static constexpr T NumericLimitLowest = detail::NumericLimitsBase<T>::lowv;
+constexpr T NumericLimitLowest = detail::NumericLimitsBase<T>::lowv;
 
 template<typename T>
-static constexpr bool NumericLimitIsSigned = detail::NumericLimitsBase<T>::is_signed;
+constexpr bool NumericLimitIsSigned = detail::NumericLimitsBase<T>::is_signed;
 
 template<typename T>
-static constexpr bool NumericLimitIsInteger = detail::NumericLimitsBase<T>::is_integer;
+constexpr bool NumericLimitIsInteger = detail::NumericLimitsBase<T>::is_integer;
 
 }
 
