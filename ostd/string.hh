@@ -889,14 +889,15 @@ struct ToString<T> { \
     } \
 };
 
-OSTD_TOSTR_NUM(sbyte, "%d")
+OSTD_TOSTR_NUM(sbyte, "%hhd")
+OSTD_TOSTR_NUM(short, "%hd")
 OSTD_TOSTR_NUM(int, "%d")
-OSTD_TOSTR_NUM(int &, "%d")
 OSTD_TOSTR_NUM(long, "%ld")
 OSTD_TOSTR_NUM(float, "%f")
 OSTD_TOSTR_NUM(double, "%f")
 
-OSTD_TOSTR_NUM(byte, "%u")
+OSTD_TOSTR_NUM(byte, "%hhu")
+OSTD_TOSTR_NUM(ushort, "%hu")
 OSTD_TOSTR_NUM(uint, "%u")
 OSTD_TOSTR_NUM(ulong, "%lu")
 OSTD_TOSTR_NUM(llong, "%lld")
