@@ -1023,9 +1023,6 @@ public:
 template<typename T>
 struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T, T> {
     NumberRange() = delete;
-    NumberRange(NumberRange const &it):
-        p_a(it.p_a), p_b(it.p_b), p_step(it.p_step)
-    {}
     NumberRange(T a, T b, T step = T(1)):
         p_a(a), p_b(b), p_step(step)
     {}
