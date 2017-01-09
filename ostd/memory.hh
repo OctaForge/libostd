@@ -1076,16 +1076,16 @@ constexpr int UsesAllocatorConstructor =
 
 namespace detail {
     template<typename A>
-    class AllocatorDestructor {
-        A &p_alloc;
-        Size p_size;
-    public:
+    struct AllocatorDestructor {
         using Pointer = AllocatorPointer<A>;
         using Size = ostd::Size;
         AllocatorDestructor(A &a, Size s) noexcept: p_alloc(a), p_size(s) {}
         void operator()(Pointer p) noexcept {
             allocator_deallocate(p_alloc, p, p_size);
         }
+    private:
+        A &p_alloc;
+        Size p_size;
     };
 }
 

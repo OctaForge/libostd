@@ -225,14 +225,13 @@ struct DirectoryRange;
 struct DirectoryStream {
     friend struct DirectoryRange;
 
-    DirectoryStream(): p_d(), p_de(), p_dev(), p_path() {}
+    DirectoryStream(): p_d(), p_de(), p_path() {}
     DirectoryStream(DirectoryStream const &) = delete;
     DirectoryStream(DirectoryStream &&s):
-        p_d(s.p_d), p_de(s.p_de), p_dev(s.p_dev), p_path(move(s.p_path))
+        p_d(s.p_d), p_de(s.p_de), p_path(move(s.p_path))
     {
         s.p_d = nullptr;
         s.p_de = nullptr;
-        memset(&s.p_dev, 0, sizeof(s.p_dev));
     }
 
     DirectoryStream(ConstCharRange path): DirectoryStream() {
@@ -281,9 +280,8 @@ struct DirectoryStream {
             return -1;
         }
         long ret = 0;
-        struct dirent rdv;
         struct dirent *rd;
-        while (pop_front(td, &rdv, &rd)) {
+        while (pop_front(td, &rd)) {
             ret += strcmp(rd->d_name, ".") && strcmp(rd->d_name, "..");
         }
         closedir(td);
@@ -322,9 +320,9 @@ struct DirectoryStream {
     DirectoryRange iter();
 
 private:
-    static bool pop_front(DIR *d, struct dirent *dev, struct dirent **de) {
+    static bool pop_front(DIR *d, struct dirent **de) {
         if (!d) return false;
-        if (readdir_r(d, dev, de))
+        if (!(*de = readdir(d)))
             return false;
         /* order of . and .. in the stream is not guaranteed, apparently...
          * gotta check every time because of that
@@ -332,7 +330,7 @@ private:
         while (*de && (
             !strcmp((*de)->d_name, ".") || !strcmp((*de)->d_name, "..")
         )) {
-            if (readdir_r(d, dev, de)) {
+            if (!(*de = readdir(d))) {
                 return false;
             }
         }
@@ -340,7 +338,7 @@ private:
     }
 
     bool pop_front() {
-        return pop_front(p_d, &p_dev, &p_de);
+        return pop_front(p_d, &p_de);
     }
 
     FileInfo front() const {
@@ -355,7 +353,6 @@ private:
 
     DIR *p_d;
     struct dirent *p_de;
-    struct dirent  p_dev;
     String p_path;
 };
 
