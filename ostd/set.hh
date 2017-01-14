@@ -107,18 +107,18 @@ namespace detail {
         {}
 
         SetImpl(
-            InitializerList<Value> init, Size size = 0,
+            std::initializer_list<Value> init, Size size = 0,
             H const &hf = H(), C const &eqf = C(), A const &alloc = A()
         ):
             SetImpl(iter(init), size, hf, eqf, alloc)
         {}
 
-        SetImpl(InitializerList<Value> init, Size size, A const &alloc):
+        SetImpl(std::initializer_list<Value> init, Size size, A const &alloc):
             SetImpl(iter(init), size, H(), C(), alloc)
         {}
 
         SetImpl(
-            InitializerList<Value> init, Size size, H const &hf, A const &alloc
+            std::initializer_list<Value> init, Size size, H const &hf, A const &alloc
         ):
             SetImpl(iter(init), size, hf, C(), alloc)
         {}
@@ -141,7 +141,7 @@ namespace detail {
             return *this;
         }
 
-        SetImpl &operator=(InitializerList<Value> il) {
+        SetImpl &operator=(std::initializer_list<Value> il) {
             Base::assign_init(il);
             return *this;
         }

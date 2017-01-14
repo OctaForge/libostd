@@ -116,18 +116,18 @@ namespace detail {
         {}
 
         KeysetImpl(
-            InitializerList<Value> init, Size size = 0,
+            std::initializer_list<Value> init, Size size = 0,
             H const &hf = H(), C const &eqf = C(), A const &alloc = A()
         ):
             KeysetImpl(iter(init), size, hf, eqf, alloc)
         {}
 
-        KeysetImpl(InitializerList<Value> init, Size size, A const &alloc):
+        KeysetImpl(std::initializer_list<Value> init, Size size, A const &alloc):
             KeysetImpl(iter(init), size, H(), C(), alloc)
         {}
 
         KeysetImpl(
-            InitializerList<Value> init, Size size, H const &hf, A const &alloc
+            std::initializer_list<Value> init, Size size, H const &hf, A const &alloc
         ):
             KeysetImpl(iter(init), size, hf, C(), alloc)
         {}
@@ -150,7 +150,7 @@ namespace detail {
             return *this;
         }
 
-        KeysetImpl &operator=(InitializerList<Value> il) {
+        KeysetImpl &operator=(std::initializer_list<Value> il) {
             Base::assign_init(il);
             return *this;
         }

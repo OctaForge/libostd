@@ -8,9 +8,9 @@
 #define OSTD_FUNCTIONAL_HH
 
 #include <string.h>
+#include <new>
 
 #include "ostd/platform.hh"
-#include "ostd/new.hh"
 #include "ostd/memory.hh"
 #include "ostd/utility.hh"
 #include "ostd/type_traits.hh"

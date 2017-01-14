@@ -163,7 +163,7 @@ public:
         p_len = r.size();
     }
 
-    Vector(InitializerList<T> v, A const &a = A()):
+    Vector(std::initializer_list<T> v, A const &a = A()):
         Vector(ConstRange(v.begin(), v.size()), a)
     {}
 
@@ -222,7 +222,7 @@ public:
         return *this;
     }
 
-    Vector &operator=(InitializerList<T> il) {
+    Vector &operator=(std::initializer_list<T> il) {
         clear();
         Size ilen = il.end() - il.begin();
         reserve(ilen);
@@ -436,7 +436,7 @@ public:
         return Range(&p_buf.first()[idx], &p_buf.first()[p_len]);
     }
 
-    Range insert(Size idx, InitializerList<T> il) {
+    Range insert(Size idx, std::initializer_list<T> il) {
         return insert_range(idx, ostd::iter(il));
     }
 

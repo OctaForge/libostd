@@ -118,18 +118,18 @@ namespace detail {
         {}
 
         MapImpl(
-            InitializerList<Value> init, Size size = 0,
+            std::initializer_list<Value> init, Size size = 0,
             H const &hf = H(), C const &eqf = C(), A const &alloc = A()
         ):
             MapImpl(iter(init), size, hf, eqf, alloc)
         {}
 
-        MapImpl(InitializerList<Value> init, Size size, A const &alloc):
+        MapImpl(std::initializer_list<Value> init, Size size, A const &alloc):
             MapImpl(iter(init), size, H(), C(), alloc)
         {}
 
         MapImpl(
-            InitializerList<Value> init, Size size, H const &hf, A const &alloc
+            std::initializer_list<Value> init, Size size, H const &hf, A const &alloc
         ):
             MapImpl(iter(init), size, hf, C(), alloc)
         {}
@@ -152,7 +152,7 @@ namespace detail {
             return *this;
         }
 
-        MapImpl &operator=(InitializerList<Value> il) {
+        MapImpl &operator=(std::initializer_list<Value> il) {
             Base::assign_init(il);
             return *this;
         }

@@ -7,8 +7,8 @@
 #define OSTD_MEMORY_HH
 
 #include <stddef.h>
+#include <new>
 
-#include "ostd/new.hh"
 #include "ostd/utility.hh"
 #include "ostd/type_traits.hh"
 

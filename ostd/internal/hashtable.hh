@@ -366,7 +366,7 @@ protected:
             rehash_up();
         }
 
-        void assign_init(InitializerList<E> il) {
+        void assign_init(std::initializer_list<E> il) {
             const E *beg = il.begin(), *end = il.end();
             clear();
             reserve_at_least(end - beg);

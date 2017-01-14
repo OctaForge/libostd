@@ -8,8 +8,8 @@
 
 #include <stddef.h>
 #include <string.h>
+#include <new>
 
-#include "ostd/new.hh"
 #include "ostd/types.hh"
 #include "ostd/utility.hh"
 #include "ostd/type_traits.hh"
