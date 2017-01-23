@@ -7,7 +7,7 @@ using namespace ostd;
 void list_dirs(ConstCharRange path, int off = 0) {
     DirectoryStream ds{path};
     /* iterate all items in directory */
-    for (auto v: ds.iter()) {
+    for (auto v: iter(ds)) {
         if (v.type() != FileType::directory) {
             continue;
         }

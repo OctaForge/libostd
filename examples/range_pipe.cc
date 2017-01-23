@@ -69,9 +69,9 @@ int main() {
 
     srand(time(0));
     Array<int, 100> arr;
-    generate(arr.iter(), []() { return rand() % 128; });
+    generate(iter(arr), []() { return rand() % 128; });
 
-    auto r = arr.iter()
+    auto r = iter(arr)
         | sort  ()
         | filter([](auto v) { return v >= 65 && v <= 90; })
         | map   ([](auto v) { return char(v); });

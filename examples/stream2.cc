@@ -17,7 +17,7 @@ int main() {
         "This is after a few newlines. The file continues here.\n"
         "The file ends here.\n";
 
-    copy(smpl.iter(), wtest.iter());
+    copy(iter(smpl), wtest.iter());
     wtest.close();
 
     FileStream test{"test.txt"};

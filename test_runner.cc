@@ -49,7 +49,7 @@ int main() {
     };
 
     DirectoryStream ds(testdir);
-    for (auto v: ds.iter()) {
+    for (auto v: iter(ds)) {
         if ((v.type() != FileType::regular) || (v.extension() != srcext))
             continue;
 
