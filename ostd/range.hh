@@ -224,13 +224,13 @@ namespace detail {
             ::new(&get_ref()) T(range);
         }
         explicit RangeIterator(T &&range): p_range(), p_init(true) {
-            ::new(&get_ref()) T(move(range));
+            ::new(&get_ref()) T(std::move(range));
         }
         RangeIterator(const RangeIterator &v): p_range(), p_init(true) {
             ::new(&get_ref()) T(v.get_ref());
         }
         RangeIterator(RangeIterator &&v): p_range(), p_init(true) {
-            ::new(&get_ref()) T(move(v.get_ref()));
+            ::new(&get_ref()) T(std::move(v.get_ref()));
         }
         RangeIterator &operator=(const RangeIterator &v) {
             destroy();
@@ -332,7 +332,7 @@ public:
     RangeHalf(RangeHalf<U> const &half): p_range(half.p_range) {}
 
     RangeHalf(RangeHalf const &half): p_range(half.p_range) {}
-    RangeHalf(RangeHalf &&half): p_range(move(half.p_range)) {}
+    RangeHalf(RangeHalf &&half): p_range(std::move(half.p_range)) {}
 
     RangeHalf &operator=(RangeHalf const &half) {
         p_range = half.p_range;
@@ -340,7 +340,7 @@ public:
     }
 
     RangeHalf &operator=(RangeHalf &&half) {
-        p_range = move(half.p_range);
+        p_range = std::move(half.p_range);
         return *this;
     }
 
@@ -562,12 +562,12 @@ struct InputRange {
 
     template<typename R1, typename ...RR>
     JoinRange<B, R1, RR...> join(R1 r1, RR ...rr) const {
-        return JoinRange<B, R1, RR...>(iter(), move(r1), move(rr)...);
+        return JoinRange<B, R1, RR...>(iter(), std::move(r1), std::move(rr)...);
     }
 
     template<typename R1, typename ...RR>
     ZipRange<B, R1, RR...> zip(R1 r1, RR ...rr) const {
-        return ZipRange<B, R1, RR...>(iter(), move(r1), move(rr)...);
+        return ZipRange<B, R1, RR...>(iter(), std::move(r1), std::move(rr)...);
     }
 
     RangeHalf<B> half() const {
@@ -660,7 +660,7 @@ struct InputRange {
 
 template<typename R, typename F, typename = EnableIf<IsInputRange<R>>>
 inline auto operator|(R &&range, F &&func) {
-    return func(forward<R>(range));
+    return func(std::forward<R>(range));
 }
 
 inline auto reverse() {
@@ -688,51 +688,55 @@ inline auto chunks(T n) {
 namespace detail {
     template<typename T, typename ...R, Size ...I>
     inline auto join_proxy(T &&obj, Tuple<R &&...> &&tup, TupleIndices<I...>) {
-        return obj.join(forward<R>(get<I>(forward<Tuple<R &&...>>(tup)))...);
+        return obj.join(std::forward<R>(
+            get<I>(std::forward<Tuple<R &&...>>(tup))
+        )...);
     }
 
     template<typename T, typename ...R, Size ...I>
     inline auto zip_proxy(T &&obj, Tuple<R &&...> &&tup, TupleIndices<I...>) {
-        return obj.zip(forward<R>(get<I>(forward<Tuple<R &&...>>(tup)))...);
+        return obj.zip(std::forward<R>(
+            get<I>(std::forward<Tuple<R &&...>>(tup))
+        )...);
     }
 }
 
 template<typename R>
 inline auto join(R &&range) {
-    return [range = forward<R>(range)](auto &&obj) mutable {
-        return obj.join(forward<R>(range));
+    return [range = std::forward<R>(range)](auto &&obj) mutable {
+        return obj.join(std::forward<R>(range));
     };
 }
 
 template<typename R1, typename ...R>
 inline auto join(R1 &&r1, R &&...rr) {
     return [
-        ranges = forward_as_tuple(forward<R1>(r1), forward<R>(rr)...)
+        ranges = forward_as_tuple(std::forward<R1>(r1), std::forward<R>(rr)...)
     ] (auto &&obj) mutable {
         using Index = detail::MakeTupleIndices<sizeof...(R) + 1>;
         return detail::join_proxy(
-            forward<decltype(obj)>(obj),
-            forward<decltype(ranges)>(ranges), Index()
+            std::forward<decltype(obj)>(obj),
+            std::forward<decltype(ranges)>(ranges), Index()
         );
     };
 }
 
 template<typename R>
 inline auto zip(R &&range) {
-    return [range = forward<R>(range)](auto &&obj) mutable {
-        return obj.zip(forward<R>(range));
+    return [range = std::forward<R>(range)](auto &&obj) mutable {
+        return obj.zip(std::forward<R>(range));
     };
 }
 
 template<typename R1, typename ...R>
 inline auto zip(R1 &&r1, R &&...rr) {
     return [
-        ranges = forward_as_tuple(forward<R1>(r1), forward<R>(rr)...)
+        ranges = forward_as_tuple(std::forward<R1>(r1), std::forward<R>(rr)...)
     ] (auto &&obj) mutable {
         using Index = detail::MakeTupleIndices<sizeof...(R) + 1>;
         return detail::zip_proxy(
-            forward<decltype(obj)>(obj),
-            forward<decltype(ranges)>(ranges), Index()
+            std::forward<decltype(obj)>(obj),
+            std::forward<decltype(ranges)>(ranges), Index()
         );
     };
 }
@@ -789,13 +793,13 @@ public:
         p_beg(range.p_beg), p_end(range.p_end)
     {}
     HalfRange(HalfRange &&range):
-        p_beg(move(range.p_beg)), p_end(move(range.p_end))
+        p_beg(std::move(range.p_beg)), p_end(std::move(range.p_end))
     {}
     HalfRange(T const &beg, T const &end):
         p_beg(beg),p_end(end)
     {}
     HalfRange(T &&beg, T &&end):
-        p_beg(move(beg)), p_end(move(end))
+        p_beg(std::move(beg)), p_end(std::move(end))
     {}
 
     HalfRange &operator=(HalfRange const &range) {
@@ -805,8 +809,8 @@ public:
     }
 
     HalfRange &operator=(HalfRange &&range) {
-        p_beg = move(range.p_beg);
-        p_end = move(range.p_end);
+        p_beg = std::move(range.p_beg);
+        p_end = std::move(range.p_end);
         return *this;
     }
 
@@ -862,7 +866,7 @@ public:
         return p_beg.range().put(v);
     }
     bool put(RangeValue<Rtype> &&v) {
-        return p_beg.range().put(move(v));
+        return p_beg.range().put(std::move(v));
     }
 
     RangeValue<Rtype> *data() { return p_beg.data(); }
@@ -884,14 +888,14 @@ public:
     ReverseRange() = delete;
     ReverseRange(T const &range): p_range(range) {}
     ReverseRange(ReverseRange const &it): p_range(it.p_range) {}
-    ReverseRange(ReverseRange &&it): p_range(move(it.p_range)) {}
+    ReverseRange(ReverseRange &&it): p_range(std::move(it.p_range)) {}
 
     ReverseRange &operator=(ReverseRange const &v) {
         p_range = v.p_range;
         return *this;
     }
     ReverseRange &operator=(ReverseRange &&v) {
-        p_range = move(v.p_range);
+        p_range = std::move(v.p_range);
         return *this;
     }
     ReverseRange &operator=(T const &v) {
@@ -899,7 +903,7 @@ public:
         return *this;
     }
     ReverseRange &operator=(T &&v) {
-        p_range = move(v);
+        p_range = std::move(v);
         return *this;
     }
 
@@ -959,14 +963,14 @@ public:
     MoveRange() = delete;
     MoveRange(T const &range): p_range(range) {}
     MoveRange(MoveRange const &it): p_range(it.p_range) {}
-    MoveRange(MoveRange &&it): p_range(move(it.p_range)) {}
+    MoveRange(MoveRange &&it): p_range(std::move(it.p_range)) {}
 
     MoveRange &operator=(MoveRange const &v) {
         p_range = v.p_range;
         return *this;
     }
     MoveRange &operator=(MoveRange &&v) {
-        p_range = move(v.p_range);
+        p_range = std::move(v.p_range);
         return *this;
     }
     MoveRange &operator=(T const &v) {
@@ -974,7 +978,7 @@ public:
         return *this;
     }
     MoveRange &operator=(T &&v) {
-        p_range = move(v);
+        p_range = std::move(v);
         return *this;
     }
 
@@ -1007,17 +1011,17 @@ public:
     Rsize push_front_n(Rsize n) { return p_range.push_front_n(n); }
     Rsize push_back_n(Rsize n) { return p_range.push_back_n(n); }
 
-    Rref front() const { return move(p_range.front()); }
-    Rref back() const { return move(p_range.back()); }
+    Rref front() const { return std::move(p_range.front()); }
+    Rref back() const { return std::move(p_range.back()); }
 
-    Rref operator[](Rsize i) const { return move(p_range[i]); }
+    Rref operator[](Rsize i) const { return std::move(p_range[i]); }
 
     MoveRange<T> slice(Rsize start, Rsize end) const {
         return MoveRange<T>(p_range.slice(start, end));
     }
 
     bool put(Rval const &v) { return p_range.put(v); }
-    bool put(Rval &&v) { return p_range.put(move(v)); }
+    bool put(Rval &&v) { return p_range.put(std::move(v)); }
 };
 
 template<typename T>
@@ -1170,7 +1174,7 @@ public:
         if (empty()) {
             return false;
         }
-        *(p_beg++) = move(v);
+        *(p_beg++) = std::move(v);
         return true;
     }
 
@@ -1228,6 +1232,11 @@ inline PointerRange<T const> iter(T const (&array)[N]) {
     return PointerRange<T const>(array, N);
 }
 
+template<typename T, Size N>
+inline PointerRange<T const> citer(T const (&array)[N]) {
+    return PointerRange<T const>(array, N);
+}
+
 namespace detail {
     struct PtrNat {};
 }
@@ -1273,7 +1282,7 @@ public:
     {}
 
     EnumeratedRange(EnumeratedRange &&it):
-        p_range(move(it.p_range)), p_index(it.p_index)
+        p_range(std::move(it.p_range)), p_index(it.p_index)
     {}
 
     EnumeratedRange &operator=(EnumeratedRange const &v) {
@@ -1282,7 +1291,7 @@ public:
         return *this;
     }
     EnumeratedRange &operator=(EnumeratedRange &&v) {
-        p_range = move(v.p_range);
+        p_range = std::move(v.p_range);
         p_index = v.p_index;
         return *this;
     }
@@ -1292,7 +1301,7 @@ public:
         return *this;
     }
     EnumeratedRange &operator=(T &&v) {
-        p_range = move(v);
+        p_range = std::move(v);
         p_index = 0;
         return *this;
     }
@@ -1339,14 +1348,14 @@ public:
         p_range(it.p_range), p_remaining(it.p_remaining)
     {}
     TakeRange(TakeRange &&it):
-        p_range(move(it.p_range)), p_remaining(it.p_remaining)
+        p_range(std::move(it.p_range)), p_remaining(it.p_remaining)
     {}
 
     TakeRange &operator=(TakeRange const &v) {
         p_range = v.p_range; p_remaining = v.p_remaining; return *this;
     }
     TakeRange &operator=(TakeRange &&v) {
-        p_range = move(v.p_range);
+        p_range = std::move(v.p_range);
         p_remaining = v.p_remaining;
         return *this;
     }
@@ -1391,14 +1400,14 @@ public:
         p_range(it.p_range), p_chunksize(it.p_chunksize)
     {}
     ChunksRange(ChunksRange &&it):
-        p_range(move(it.p_range)), p_chunksize(it.p_chunksize)
+        p_range(std::move(it.p_range)), p_chunksize(it.p_chunksize)
     {}
 
     ChunksRange &operator=(ChunksRange const &v) {
         p_range = v.p_range; p_chunksize = v.p_chunksize; return *this;
     }
     ChunksRange &operator=(ChunksRange &&v) {
-        p_range = move(v.p_range);
+        p_range = std::move(v.p_range);
         p_chunksize = v.p_chunksize;
         return *this;
     }
@@ -1505,9 +1514,9 @@ private:
 public:
     JoinRange() = delete;
     JoinRange(R const &...ranges): p_ranges(ranges...) {}
-    JoinRange(R &&...ranges): p_ranges(forward<R>(ranges)...) {}
+    JoinRange(R &&...ranges): p_ranges(std::forward<R>(ranges)...) {}
     JoinRange(JoinRange const &v): p_ranges(v.p_ranges) {}
-    JoinRange(JoinRange &&v): p_ranges(move(v.p_ranges)) {}
+    JoinRange(JoinRange &&v): p_ranges(std::move(v.p_ranges)) {}
 
     JoinRange &operator=(JoinRange const &v) {
         p_ranges = v.p_ranges;
@@ -1515,7 +1524,7 @@ public:
     }
 
     JoinRange &operator=(JoinRange &&v) {
-        p_ranges = move(v.p_ranges);
+        p_ranges = std::move(v.p_ranges);
         return *this;
     }
 
@@ -1617,9 +1626,9 @@ private:
 public:
     ZipRange() = delete;
     ZipRange(R const &...ranges): p_ranges(ranges...) {}
-    ZipRange(R &&...ranges): p_ranges(forward<R>(ranges)...) {}
+    ZipRange(R &&...ranges): p_ranges(std::forward<R>(ranges)...) {}
     ZipRange(ZipRange const &v): p_ranges(v.p_ranges) {}
-    ZipRange(ZipRange &&v): p_ranges(move(v.p_ranges)) {}
+    ZipRange(ZipRange &&v): p_ranges(std::move(v.p_ranges)) {}
 
     ZipRange &operator=(ZipRange const &v) {
         p_ranges = v.p_ranges;
@@ -1627,7 +1636,7 @@ public:
     }
 
     ZipRange &operator=(ZipRange &&v) {
-        p_ranges = move(v.p_ranges);
+        p_ranges = std::move(v.p_ranges);
         return *this;
     }
 
@@ -1655,9 +1664,9 @@ struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value,
     typename T::Reference, typename T::Size, typename T::Difference> {
     AppenderRange(): p_data() {}
     AppenderRange(T const &v): p_data(v) {}
-    AppenderRange(T &&v): p_data(move(v)) {}
+    AppenderRange(T &&v): p_data(std::move(v)) {}
     AppenderRange(AppenderRange const &v): p_data(v.p_data) {}
-    AppenderRange(AppenderRange &&v): p_data(move(v.p_data)) {}
+    AppenderRange(AppenderRange &&v): p_data(std::move(v.p_data)) {}
 
     AppenderRange &operator=(AppenderRange const &v) {
         p_data = v.p_data;
@@ -1665,7 +1674,7 @@ struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value,
     }
 
     AppenderRange &operator=(AppenderRange &&v) {
-        p_data = move(v.p_data);
+        p_data = std::move(v.p_data);
         return *this;
     }
 
@@ -1675,7 +1684,7 @@ struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value,
     }
 
     AppenderRange &operator=(T &&v) {
-        p_data = move(v);
+        p_data = std::move(v);
         return *this;
     }
 
@@ -1693,7 +1702,7 @@ struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value,
     }
 
     bool put(typename T::Value &&v) {
-        p_data.push(move(v));
+        p_data.push(std::move(v));
         return true;
     }
 
@@ -1709,11 +1718,8 @@ inline AppenderRange<T> appender() {
 
 template<typename T>
 inline AppenderRange<T> appender(T &&v) {
-    return AppenderRange<T>(forward<T>(v));
+    return AppenderRange<T>(std::forward<T>(v));
 }
-
-// range of
-template<typename T> using RangeOf = decltype(iter(declval<T>()));
 
 } /* namespace ostd */
 

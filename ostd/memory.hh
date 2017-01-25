@@ -275,12 +275,14 @@ public:
     {}
 
     Box(Pointer p, RemoveReference<D> &&d) noexcept:
-        p_stor(p, move(d))
+        p_stor(p, std::move(d))
     {
         static_assert(!IsReference<D>, "rvalue deleter cannot be a ref");
     }
 
-    Box(Box &&u) noexcept: p_stor(u.release(), forward<D>(u.get_deleter())) {}
+    Box(Box &&u) noexcept:
+        p_stor(u.release(), std::forward<D>(u.get_deleter()))
+    {}
 
     template<typename TT, typename DD>
     Box(
@@ -290,11 +292,11 @@ public:
             IsConvertible<DD, D> && (!IsReference<D> || IsSame<D, DD>),
             Nat
         > = Nat()
-    ) noexcept: p_stor(u.release(), forward<DD>(u.get_deleter())) {}
+    ) noexcept: p_stor(u.release(), std::forward<DD>(u.get_deleter())) {}
 
     Box &operator=(Box &&u) noexcept {
         reset(u.release());
-        p_stor.second() = forward<D>(u.get_deleter());
+        p_stor.second() = std::forward<D>(u.get_deleter());
         return *this;
     }
 
@@ -306,7 +308,7 @@ public:
         Box &
     > operator=(Box<TT, DD> &&u) noexcept {
         reset(u.release());
-        p_stor.second() = forward<DD>(u.get_deleter());
+        p_stor.second() = std::forward<DD>(u.get_deleter());
         return *this;
     }
 
@@ -412,18 +414,20 @@ public:
 
     template<typename U> Box(U p, RemoveReference<D> &&d,
     EnableIf<detail::SameOrLessCvQualified<U, Pointer>, Nat> = Nat()) noexcept:
-        p_stor(p, move(d))
+        p_stor(p, std::move(d))
     {
         static_assert(!IsReference<D>, "rvalue deleter cannot be a ref");
     }
 
     Box(Nullptr, RemoveReference<D> &&d) noexcept:
-        p_stor(nullptr, move(d))
+        p_stor(nullptr, std::move(d))
     {
         static_assert(!IsReference<D>, "rvalue deleter cannot be a ref");
     }
 
-    Box(Box &&u) noexcept: p_stor(u.release(), forward<D>(u.get_deleter())) {}
+    Box(Box &&u) noexcept:
+        p_stor(u.release(), std::forward<D>(u.get_deleter()))
+    {}
 
     template<typename TT, typename DD>
     Box(
@@ -434,12 +438,12 @@ public:
             Nat
         > = Nat()
     ) noexcept:
-        p_stor(u.release(), forward<DD>(u.get_deleter()))
+        p_stor(u.release(), std::forward<DD>(u.get_deleter()))
     {}
 
     Box &operator=(Box &&u) noexcept {
         reset(u.release());
-        p_stor.second() = forward<D>(u.get_deleter());
+        p_stor.second() = std::forward<D>(u.get_deleter());
         return *this;
     }
 
@@ -451,7 +455,7 @@ public:
         Box &
     > operator=(Box<TT, DD> &&u) noexcept {
         reset(u.release());
-        p_stor.second() = forward<DD>(u.get_deleter());
+        p_stor.second() = std::forward<DD>(u.get_deleter());
         return *this;
     }
 
@@ -531,7 +535,7 @@ namespace detail {
 
 template<typename T, typename ...A>
 typename detail::BoxIf<T>::BoxType make_box(A &&...args) {
-    return Box<T>(new T(forward<A>(args)...));
+    return Box<T>(new T(std::forward<A>(args)...));
 }
 
 template<typename T>
@@ -904,7 +908,7 @@ inline void allocator_deallocate(
 namespace detail {
     template<typename A, typename T, typename ...Args>
     auto construct_test(A &&a, T *p, Args &&...args) ->
-        decltype(a.construct(p, forward<Args>(args)...), True());
+        decltype(a.construct(p, std::forward<Args>(args)...), True());
 
     template<typename A, typename T, typename ...Args>
     auto construct_test(A const &, T *, Args &&...) -> False;
@@ -919,12 +923,12 @@ namespace detail {
 
     template<typename A, typename T, typename ...Args>
     inline void construct(True, A &a, T *p, Args &&...args) {
-        a.construct(p, forward<Args>(args)...);
+        a.construct(p, std::forward<Args>(args)...);
     }
 
     template<typename A, typename T, typename ...Args>
     inline void construct(False, A &, T *p, Args &&...args) {
-        ::new (p) T(forward<Args>(args)...);
+        ::new (p) T(std::forward<Args>(args)...);
     }
 } /* namespace detail */
 
@@ -932,7 +936,7 @@ template<typename A, typename T, typename ...Args>
 inline void allocator_construct(A &a, T *p, Args &&...args) {
     detail::construct(
         BoolConstant<detail::ConstructTest<A, T *, Args...>>(),
-        a, p, forward<Args>(args)...
+        a, p, std::forward<Args>(args)...
     );
 }
 

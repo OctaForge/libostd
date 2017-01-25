@@ -44,16 +44,16 @@ namespace detail {
 
         MaybeStorage(MaybeStorage &&v): p_engaged(v.p_engaged) {
             if (p_engaged) {
-                ::new(address_of(p_value)) Value(move(v.p_value));
+                ::new(address_of(p_value)) Value(std::move(v.p_value));
             }
         }
 
         constexpr MaybeStorage(Value const &v): p_value(v), p_engaged(true) {}
-        constexpr MaybeStorage(Value &&v): p_value(move(v)), p_engaged(true) {}
+        constexpr MaybeStorage(Value &&v): p_value(std::move(v)), p_engaged(true) {}
 
         template<typename ...A>
         constexpr MaybeStorage(InPlace, A &&...args):
-            p_value(forward<A>(args)...), p_engaged(true)
+            p_value(std::forward<A>(args)...), p_engaged(true)
         {}
 
         ~MaybeStorage() {
@@ -83,16 +83,16 @@ namespace detail {
 
         MaybeStorage(MaybeStorage &&v): p_engaged(v.p_engaged) {
             if (p_engaged) {
-                ::new(address_of(p_value)) Value(move(v.p_value));
+                ::new(address_of(p_value)) Value(std::move(v.p_value));
             }
         }
 
         constexpr MaybeStorage(Value const &v): p_value(v), p_engaged(true) {}
-        constexpr MaybeStorage(Value &&v): p_value(move(v)), p_engaged(true) {}
+        constexpr MaybeStorage(Value &&v): p_value(std::move(v)), p_engaged(true) {}
 
         template<typename ...A>
         constexpr MaybeStorage(InPlace, A &&...args):
-            p_value(forward<A>(args)...), p_engaged(true)
+            p_value(std::forward<A>(args)...), p_engaged(true)
         {}
     };
 }
@@ -129,18 +129,18 @@ public:
     Maybe(Maybe &&) = default;
     constexpr Maybe(Nothing) {}
     constexpr Maybe(Value const &v): Base(v) {}
-    constexpr Maybe(Value &&v): Base(move(v)) {}
+    constexpr Maybe(Value &&v): Base(std::move(v)) {}
 
     template<typename ...A, typename = EnableIf<IsConstructible<T, A...>>>
     constexpr explicit Maybe(InPlace, A &&...args):
-        Base(in_place, forward<A>(args)...)
+        Base(in_place, std::forward<A>(args)...)
     {}
 
     template<typename U, typename ...A, typename = EnableIf<
         IsConstructible<T, std::initializer_list<U> &, A...>>
     >
     constexpr explicit Maybe(InPlace, std::initializer_list<U> il, A &&...args):
-        Base(in_place, il, forward<A>(args)...)
+        Base(in_place, il, std::forward<A>(args)...)
     {}
 
     ~Maybe() = default;
@@ -172,13 +172,13 @@ public:
     Maybe &operator=(Maybe &&v) {
         if (this->p_engaged == v.p_engaged) {
             if (this->p_engaged) {
-                this->p_value = move(v.p_value);
+                this->p_value = std::move(v.p_value);
             }
         } else {
             if (this->p_engaged) {
                 this->p_value.~Value();
             } else {
-                ::new(address_of(this->p_value)) Value(move(v.p_value));
+                ::new(address_of(this->p_value)) Value(std::move(v.p_value));
             }
             this->p_engaged = v.p_engaged;
         }
@@ -191,9 +191,9 @@ public:
     >>
     Maybe &operator=(U &&v) {
         if (this->p_engaged) {
-            this->p_value = forward<U>(v);
+            this->p_value = std::forward<U>(v);
         } else {
-            ::new(address_of(this->p_value)) Value(forward<U>(v));
+            ::new(address_of(this->p_value)) Value(std::forward<U>(v));
             this->p_engaged = true;
         }
         return *this;
@@ -202,7 +202,7 @@ public:
     template<typename ...A, typename = EnableIf<IsConstructible<Value, A...>>>
     void emplace(A &&...args) {
         *this = nothing;
-        ::new(address_of(this->p_value)) Value(forward<A>(args)...);
+        ::new(address_of(this->p_value)) Value(std::forward<A>(args)...);
         this->p_engaged = true;
     }
 
@@ -212,7 +212,7 @@ public:
     void emplace(std::initializer_list<U> il, A &&...args) {
         *this = nothing;
         ::new(address_of(this->p_value))
-            Value(il, forward<A>(args)...);
+            Value(il, std::forward<A>(args)...);
         this->p_engaged = true;
     }
 
@@ -233,11 +233,11 @@ public:
     }
 
     constexpr Value const &&operator*() const && {
-        return ostd::move(this->p_value);
+        return std::move(this->p_value);
     }
 
     constexpr Value &&operator*() && {
-        return ostd::move(this->p_value);
+        return std::move(this->p_value);
     }
 
     constexpr explicit operator bool() const { return this->p_engaged; }
@@ -251,11 +251,11 @@ public:
     }
 
     constexpr Value const &&value() const && {
-        return ostd::move(this->p_value);
+        return std::move(this->p_value);
     }
 
     constexpr Value &&value() && {
-        return ostd::move(this->p_value);
+        return std::move(this->p_value);
     }
 
     template<typename U>
@@ -268,7 +268,7 @@ public:
             IsConvertible<U, Value>,
             "Maybe<T>::value_or: U must be convertible to T"
         );
-        return this->p_engaged ? this->p_value : Value(forward<U>(v));
+        return this->p_engaged ? this->p_value : Value(std::forward<U>(v));
     }
 
     template<typename U>
@@ -281,7 +281,7 @@ public:
             IsConvertible<U, Value>,
             "Maybe<T>::value_or: U must be convertible to T"
         );
-        return this->p_engaged ? move(this->p_value) : Value(forward<U>(v));
+        return this->p_engaged ? std::move(this->p_value) : Value(std::forward<U>(v));
     }
 
     void swap(Maybe &v) {
@@ -291,10 +291,10 @@ public:
             }
         } else {
             if (this->p_engaged) {
-                ::new(address_of(v.p_value)) Value(move(this->p_value));
+                ::new(address_of(v.p_value)) Value(std::move(this->p_value));
                 this->p_value.~Value();
             } else {
-                ::new(address_of(this->p_value)) Value(move(v.p_value));
+                ::new(address_of(this->p_value)) Value(std::move(v.p_value));
                 v.p_value.~Value();
             }
             detail::swap_adl(this->p_engaged, v.p_engaged);
@@ -466,17 +466,17 @@ inline constexpr bool operator>=(T const &b, Maybe<T> const &a) {
 
 template<typename T>
 inline constexpr Maybe<Decay<T>> make_maybe(T &&v) {
-    return Maybe<Decay<T>>(forward<T>(v));
+    return Maybe<Decay<T>>(std::forward<T>(v));
 }
 
 template<typename T, typename ...A>
 inline constexpr Maybe<T> make_maybe(A &&...args) {
-    return Maybe<T>(in_place, forward<A>(args)...);
+    return Maybe<T>(in_place, std::forward<A>(args)...);
 }
 
 template<typename T, typename U, typename ...A>
 inline constexpr Maybe<T> make_maybe(std::initializer_list<U> il, A &&...args) {
-    return Maybe<T>(in_place, il, forward<A>(args)...);
+    return Maybe<T>(in_place, il, std::forward<A>(args)...);
 }
 
 } /* namespace ostd */

@@ -27,7 +27,7 @@ inline Maybe<String> env_get(ConstCharRange name) {
     if (!ret) {
         return ostd::nothing;
     }
-    return ostd::move(String(ret));
+    return std::move(String(ret));
 #else
     String rbuf;
     for (;;) {
@@ -43,7 +43,7 @@ inline Maybe<String> env_get(ConstCharRange name) {
         }
         rbuf.reserve(ret - 1);
     }
-    return ostd::move(rbuf);
+    return std::move(rbuf);
 #endif
 }
 

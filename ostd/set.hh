@@ -78,8 +78,8 @@ namespace detail {
 
         SetImpl(SetImpl const &m, A const &alloc): Base(m, alloc) {}
 
-        SetImpl(SetImpl &&m): Base(move(m)) {}
-        SetImpl(SetImpl &&m, A const &alloc): Base(move(m), alloc) {}
+        SetImpl(SetImpl &&m): Base(std::move(m)) {}
+        SetImpl(SetImpl &&m, A const &alloc): Base(std::move(m), alloc) {}
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
@@ -129,7 +129,7 @@ namespace detail {
         }
 
         SetImpl &operator=(SetImpl &&m) {
-            Base::operator=(move(m));
+            Base::operator=(std::move(m));
             return *this;
         }
 

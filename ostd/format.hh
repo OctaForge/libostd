@@ -509,14 +509,6 @@ namespace detail {
         ConstCharRange fmt, A const &...args
     );
 
-    template<typename T, typename = RangeOf<T>>
-    static True test_fmt_range(int);
-    template<typename>
-    static False test_fmt_range(...);
-
-    template<typename T>
-    constexpr bool FmtRangeTest = decltype(test_fmt_range<T>(0))::value;
-
     template<Size I>
     struct FmtTupleUnpacker {
         template<typename R, typename T, typename ...A>
@@ -565,7 +557,7 @@ namespace detail {
     template<typename R, typename T>
     inline Ptrdiff write_range(
         R &writer, FormatSpec const *fl, bool escape, bool expandval,
-        ConstCharRange sep, T const &val, EnableIf<FmtRangeTest<T>, bool> = true
+        ConstCharRange sep, T const &val, EnableIf<detail::IterableTest<T>, bool> = true
     ) {
         auto range = ostd::iter(val);
         if (range.empty()) {
@@ -603,7 +595,7 @@ namespace detail {
     template<typename R, typename T>
     inline Ptrdiff write_range(
         R &, FormatSpec const *, bool, bool, ConstCharRange,
-        T const &, EnableIf<!FmtRangeTest<T>, bool> = true
+        T const &, EnableIf<!detail::IterableTest<T>, bool> = true
     ) {
         assert(false && "invalid value for ranged format");
         return -1;

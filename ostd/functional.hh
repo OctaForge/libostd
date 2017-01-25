@@ -514,27 +514,27 @@ namespace detail {
         MemFn(R T::*ptr): p_ptr(ptr) {}
         template<typename... A>
         auto operator()(T &obj, A &&...args) ->
-            decltype(((obj).*(p_ptr))(forward<A>(args)...))
+            decltype(((obj).*(p_ptr))(std::forward<A>(args)...))
         {
-            return ((obj).*(p_ptr))(forward<A>(args)...);
+            return ((obj).*(p_ptr))(std::forward<A>(args)...);
         }
         template<typename... A>
         auto operator()(T const &obj, A &&...args) ->
-            decltype(((obj).*(p_ptr))(forward<A>(args)...))
+            decltype(((obj).*(p_ptr))(std::forward<A>(args)...))
         const {
-            return ((obj).*(p_ptr))(forward<A>(args)...);
+            return ((obj).*(p_ptr))(std::forward<A>(args)...);
         }
         template<typename... A>
         auto operator()(T *obj, A &&...args) ->
-            decltype(((obj)->*(p_ptr))(forward<A>(args)...))
+            decltype(((obj)->*(p_ptr))(std::forward<A>(args)...))
         {
-            return ((obj)->*(p_ptr))(forward<A>(args)...);
+            return ((obj)->*(p_ptr))(std::forward<A>(args)...);
         }
         template<typename... A>
         auto operator()(T const *obj, A &&...args) ->
-            decltype(((obj)->*(p_ptr))(forward<A>(args)...))
+            decltype(((obj)->*(p_ptr))(std::forward<A>(args)...))
         const {
-            return ((obj)->*(p_ptr))(forward<A>(args)...);
+            return ((obj)->*(p_ptr))(std::forward<A>(args)...);
         }
     };
 } /* namespace detail */
@@ -575,7 +575,7 @@ namespace detail {
     struct FuncInvokeVoidReturnWrapper {
         template<typename ...A>
         static R call(A &&...args) {
-            return func_invoke(forward<A>(args)...);
+            return func_invoke(std::forward<A>(args)...);
         }
     };
 
@@ -583,7 +583,7 @@ namespace detail {
     struct FuncInvokeVoidReturnWrapper<void> {
         template<typename ...A>
         static void call(A &&...args) {
-            func_invoke(forward<A>(args)...);
+            func_invoke(std::forward<A>(args)...);
         }
     };
 
@@ -614,7 +614,7 @@ public:
         explicit FuncCore(F &&f):
             f_stor(
                 piecewise_construct,
-                forward_as_tuple(ostd::move(f)),
+                forward_as_tuple(std::move(f)),
                 forward_as_tuple()
             )
         {}
@@ -631,15 +631,15 @@ public:
             f_stor(
                 piecewise_construct,
                 forward_as_tuple(f),
-                forward_as_tuple(ostd::move(a))
+                forward_as_tuple(std::move(a))
             )
         {}
 
         explicit FuncCore(F &&f, A &&a):
             f_stor(
                 piecewise_construct,
-                forward_as_tuple(ostd::move(f)),
-                forward_as_tuple(ostd::move(a))
+                forward_as_tuple(std::move(f)),
+                forward_as_tuple(std::move(a))
             )
         {}
 
@@ -681,7 +681,7 @@ public:
     template<typename F, typename A, typename R, typename ...AT>
     R FuncCore<F, A, R(AT...)>::operator()(AT &&...args) {
         using Invoker = FuncInvokeVoidReturnWrapper<R>;
-        return Invoker::call(f_stor.first(), forward<AT>(args)...);
+        return Invoker::call(f_stor.first(), std::forward<AT>(args)...);
     }
 } /* namespace detail */
 
@@ -752,7 +752,7 @@ public:
         Callable<Decay<F>> && !IsSame<RemoveReference<F>, Function>,
         Function &
     > operator=(F &&f) {
-        Function(forward<F>(f)).swap(*this);
+        Function(std::forward<F>(f)).swap(*this);
         return *this;
     }
 
@@ -769,7 +769,7 @@ public:
     bool operator!=(Function<RR(AA...)> &) const = delete;
 
     R operator()(Args ...a) const {
-        return (*p_f)(forward<Args>(a)...);
+        return (*p_f)(std::forward<Args>(a)...);
     }
 };
 
@@ -837,14 +837,14 @@ Function<R(Args...)>::Function(F f): p_f(nullptr) {
     }
     using FF = detail::FuncCore<F, Allocator<F>, R(Args...)>;
     if ((sizeof(FF) <= sizeof(p_buf)) && IsNothrowCopyConstructible<F>) {
-        p_f = ::new(static_cast<void *>(&p_buf)) FF(move(f));
+        p_f = ::new(static_cast<void *>(&p_buf)) FF(std::move(f));
         return;
     }
     using AA = Allocator<FF>;
     AA a;
     using D = detail::AllocatorDestructor<AA>;
     Box<FF, D> hold(a.allocate(1), D(a, 1));
-    ::new(hold.get()) FF(move(f), Allocator<F>(a));
+    ::new(hold.get()) FF(std::move(f), Allocator<F>(a));
     p_f = hold.release();
 }
 
@@ -863,12 +863,12 @@ Function<R(Args...)>::Function(AllocatorArg, A const &a, F f):
         (sizeof(FF) <= sizeof(p_buf)) && IsNothrowCopyConstructible<F> &&
         IsNothrowCopyConstructible<AA>
     ) {
-        p_f = ::new(static_cast<void *>(&p_buf)) FF(move(f), A(aa));
+        p_f = ::new(static_cast<void *>(&p_buf)) FF(std::move(f), A(aa));
         return;
     }
     using D = detail::AllocatorDestructor<AA>;
     Box<FF, D> hold(aa.allocate(1), D(aa, 1));
-    ::new(hold.get()) FF(move(f), A(aa));
+    ::new(hold.get()) FF(std::move(f), A(aa));
     p_f = hold.release();
 }
 

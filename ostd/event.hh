@@ -67,17 +67,17 @@ namespace detail {
             using Func = Function<void(C &, A...)>;
             for (Size i = 0; i < p_nfuncs; ++i) {
                 if (!p_funcs[i]) {
-                    p_funcs[i] = forward<F>(func);
+                    p_funcs[i] = std::forward<F>(func);
                     return i;
                 }
             }
             byte *bufp = new byte[sizeof(Func) * (p_nfuncs + 1)];
             Func *nbuf = reinterpret_cast<Func *>(bufp);
             for (Size i = 0; i < p_nfuncs; ++i) {
-                new (&nbuf[i]) Func(move(p_funcs[i]));
+                new (&nbuf[i]) Func(std::move(p_funcs[i]));
                 p_funcs[i].~Func();
             }
-            new (&nbuf[p_nfuncs]) Func(forward<F>(func));
+            new (&nbuf[p_nfuncs]) Func(std::forward<F>(func));
             delete[] reinterpret_cast<byte *>(p_funcs);
             p_funcs = nbuf;
             return p_nfuncs++;
@@ -134,7 +134,7 @@ private:
 public:
     Signal(C *cl): p_base(cl) {}
     Signal(Signal const &ev): p_base(ev.p_base) {}
-    Signal(Signal &&ev): p_base(move(ev.p_base)) {}
+    Signal(Signal &&ev): p_base(std::move(ev.p_base)) {}
 
     Signal &operator=(Signal const &ev) {
         p_base = ev.p_base;
@@ -142,22 +142,22 @@ public:
     }
 
     Signal &operator=(Signal &&ev) {
-        p_base = move(ev.p_base);
+        p_base = std::move(ev.p_base);
         return *this;
     }
 
     void clear() { p_base.clear(); }
 
     template<typename F>
-    Size connect(F &&func) { return p_base.connect(forward<F>(func)); }
+    Size connect(F &&func) { return p_base.connect(std::forward<F>(func)); }
 
     bool disconnect(Size idx) { return p_base.disconnect(idx); }
 
     template<typename ...Args>
-    void emit(Args &&...args) { p_base.emit(forward<Args>(args)...); }
+    void emit(Args &&...args) { p_base.emit(std::forward<Args>(args)...); }
 
     template<typename ...Args>
-    void operator()(Args &&...args) { emit(forward<Args>(args)...); }
+    void operator()(Args &&...args) { emit(std::forward<Args>(args)...); }
 
     C *get_class() const { return p_base.get_class(); }
     C *set_class(C *cl) { return p_base.set_class(cl); }
@@ -173,7 +173,7 @@ private:
 public:
     Signal(C *cl): p_base(cl) {}
     Signal(Signal const &ev): p_base(ev.p_base) {}
-    Signal(Signal &&ev): p_base(move(ev.p_base)) {}
+    Signal(Signal &&ev): p_base(std::move(ev.p_base)) {}
 
     Signal &operator=(Signal const &ev) {
         p_base = ev.p_base;
@@ -181,22 +181,22 @@ public:
     }
 
     Signal &operator=(Signal &&ev) {
-        p_base = move(ev.p_base);
+        p_base = std::move(ev.p_base);
         return *this;
     }
 
     void clear() { p_base.clear(); }
 
     template<typename F>
-    Size connect(F &&func) { return p_base.connect(forward<F>(func)); }
+    Size connect(F &&func) { return p_base.connect(std::forward<F>(func)); }
 
     bool disconnect(Size idx) { return p_base.disconnect(idx); }
 
     template<typename ...Args>
-    void emit(Args &&...args) const { p_base.emit(forward<Args>(args)...); }
+    void emit(Args &&...args) const { p_base.emit(std::forward<Args>(args)...); }
 
     template<typename ...Args>
-    void operator()(Args &&...args) const { emit(forward<Args>(args)...); }
+    void operator()(Args &&...args) const { emit(std::forward<Args>(args)...); }
 
     C *get_class() const { return p_base.get_class(); }
     C *set_class(C *cl) { return p_base.set_class(cl); }

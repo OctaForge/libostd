@@ -15,6 +15,7 @@
 #include "ostd/vector.hh"
 #include "ostd/functional.hh"
 #include "ostd/type_traits.hh"
+#include "ostd/algorithm.hh"
 
 namespace ostd {
 static constexpr Size npos = -1;
@@ -342,7 +343,7 @@ public:
     }
     StringBase(StringBase &&s):
         p_len(s.p_len), p_cap(s.p_cap),
-        p_buf(s.p_buf.first(), move(s.p_buf.second()))
+        p_buf(s.p_buf.first(), std::move(s.p_buf.second()))
     {
         s.p_len = s.p_cap = 0;
         s.p_buf.first() = reinterpret_cast<Pointer>(&s.p_len);
@@ -455,7 +456,7 @@ public:
         p_len = v.p_len;
         p_cap = v.p_cap;
         p_buf.~StrPair();
-        new (&p_buf) StrPair(v.release(), move(v.p_buf.second()));
+        new (&p_buf) StrPair(v.release(), std::move(v.p_buf.second()));
         if (!p_cap) {
             p_buf.first() = reinterpret_cast<Pointer>(&p_len);
         }
@@ -835,7 +836,7 @@ struct ToString<T, EnableIf<
         if (!v.to_string(sink)) {
             return String();
         }
-        return move(app.get());
+        return std::move(app.get());
     }
 };
 
@@ -1048,11 +1049,11 @@ inline String operator+(char lhs, String const &rhs) {
 }
 
 inline String operator+(String &&lhs, ConstCharRange rhs) {
-    String ret(move(lhs)); ret += rhs; return ret;
+    String ret(std::move(lhs)); ret += rhs; return ret;
 }
 
 inline String operator+(String &&lhs, char rhs) {
-    String ret(move(lhs)); ret += rhs; return ret;
+    String ret(std::move(lhs)); ret += rhs; return ret;
 }
 
 template<typename R>

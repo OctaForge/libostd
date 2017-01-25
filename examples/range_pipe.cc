@@ -81,7 +81,7 @@ int main() {
     /* "list comprehensions" */
     writeln("list initialization");
 
-    Vector<int> test(
+    auto test = make_vector(
         range(20)
             | filter([](int v) { return v % 2 == 0; })
             | map   ([](int v) { return v * 2; })

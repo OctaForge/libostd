@@ -64,7 +64,7 @@ namespace detail {
         template<typename T, typename = EnableIf<
             !IsSame<Decay<T>, TupleLeaf> && IsConstructible<H, T>
         >>
-        explicit TupleLeaf(T &&t): p_value(forward<T>(t)) {
+        explicit TupleLeaf(T &&t): p_value(std::forward<T>(t)) {
             static_assert(
                 !IsReference<H> || (
                     IsLvalueReference<H> && (
@@ -80,7 +80,7 @@ namespace detail {
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 0>, A const &, T &&t):
-            p_value(forward<T>(t))
+            p_value(std::forward<T>(t))
         {
             static_assert(
                 !IsLvalueReference<H> || (
@@ -97,7 +97,7 @@ namespace detail {
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 1>, A const &a, T &&t):
-            p_value(allocator_arg, a, forward<T>(t))
+            p_value(allocator_arg, a, std::forward<T>(t))
         {
             static_assert(
                 !IsLvalueReference<H> || (
@@ -114,7 +114,7 @@ namespace detail {
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 2>, A const &a, T &&t):
-            p_value(forward<T>(t), a)
+            p_value(std::forward<T>(t), a)
         {
             static_assert(
                 !IsLvalueReference<H> || (
@@ -134,7 +134,7 @@ namespace detail {
 
         template<typename T>
         TupleLeaf &operator=(T &&t) {
-            p_value = forward<T>(t);
+            p_value = std::forward<T>(t);
             return *this;
         }
 
@@ -168,21 +168,21 @@ namespace detail {
         template<typename T, typename = EnableIf<
             !IsSame<Decay<T>, TupleLeaf> && IsConstructible<H, T>
         >>
-        explicit TupleLeaf(T &&t): H(forward<T>(t)) {}
+        explicit TupleLeaf(T &&t): H(std::forward<T>(t)) {}
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 0>, A const &, T &&t):
-            H(forward<T>(t))
+            H(std::forward<T>(t))
         {}
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 1>, A const &a, T &&t):
-            H(allocator_arg, a, forward<T>(t))
+            H(allocator_arg, a, std::forward<T>(t))
         {}
 
         template<typename T, typename A>
         explicit TupleLeaf(Constant<int, 2>, A const &a, T &&t):
-            H(forward<T>(t), a)
+            H(std::forward<T>(t), a)
         {}
 
         TupleLeaf(TupleLeaf const &) = default;
@@ -190,7 +190,7 @@ namespace detail {
 
         template<typename T>
         TupleLeaf &operator=(T &&t) {
-            H::operator=(forward<T>(t));
+            H::operator=(std::forward<T>(t));
             return *this;
         }
 
@@ -244,7 +244,7 @@ namespace detail {
             TupleIndices<Ia...>, TupleTypes<Aa...>,
             TupleIndices<Ib...>, TupleTypes<Ab...>, T &&...t
         ):
-            TupleLeaf<Ia, Aa>(forward<T>(t))...,
+            TupleLeaf<Ia, Aa>(std::forward<T>(t))...,
             TupleLeaf<Ib, Ab>()...
         {}
 
@@ -259,7 +259,7 @@ namespace detail {
         ):
             TupleLeaf<Ia, Aa>(
                 UsesAllocatorConstructor<Aa, Alloc, T>, a,
-                forward<T>(t)
+                std::forward<T>(t)
             )...,
             TupleLeaf<Ib, Ab>(UsesAllocatorConstructor<Ab, Alloc>, a)...
         {}
@@ -269,7 +269,7 @@ namespace detail {
         >>
         TupleBase(T &&t):
             TupleLeaf<I, A>(
-                forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t))
+                std::forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t))
             )...
         {}
 
@@ -280,14 +280,14 @@ namespace detail {
             TupleLeaf<I, A>(
                 UsesAllocatorConstructor<
                     A, Alloc, TupleElement<I, MakeTupleTypes<T>>
-                >, a, forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t))
+                >, a, std::forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t))
             )...
         {}
 
         template<typename T>
         EnableIf<TupleAssignable<T, Tuple<A...>>, TupleBase &> operator=(T &&t) {
             tuple_swallow(TupleLeaf<I, A>::operator=(
-                forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t))
+                std::forward<TupleElement<I, MakeTupleTypes<T>>>(get<I>(t))
             )...);
             return *this;
         }
@@ -304,7 +304,7 @@ namespace detail {
 
         TupleBase &operator=(TupleBase &&t) {
             tuple_swallow(TupleLeaf<I, A>::operator=(
-                forward<A>((static_cast<TupleLeaf<I, A> &>(t)).get())
+                std::forward<A>((static_cast<TupleLeaf<I, A> &>(t)).get())
             )...);
             return *this;
         }
@@ -382,7 +382,7 @@ public:
             detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
             detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
             detail::MakeTupleTypes<Tuple, sizeof...(A), sizeof...(T)>(),
-            forward<T>(t)...
+            std::forward<T>(t)...
         )
     {}
 
@@ -415,7 +415,7 @@ public:
             detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
             detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
             detail::MakeTupleTypes<Tuple, sizeof...(A), sizeof...(T)>(),
-            forward<T>(t)...
+            std::forward<T>(t)...
         )
     {}
 
@@ -440,31 +440,31 @@ public:
             detail::MakeTupleTypes<Tuple, sizeof...(T)>(),
             detail::MakeTupleIndices<sizeof...(A), sizeof...(T)>(),
             detail::MakeTupleTypes<Tuple, sizeof...(A), sizeof...(T)>(),
-            forward<T>(t)...
+            std::forward<T>(t)...
         )
     {}
 
     template<typename T, EnableIf<
         detail::TupleConvertible<T, Tuple>, bool
     > = true>
-    Tuple(T &&t): p_base(forward<T>(t)) {}
+    Tuple(T &&t): p_base(std::forward<T>(t)) {}
 
     template<typename T, EnableIf<
         detail::TupleConstructible<T, Tuple> &&
         !detail::TupleConvertible<T, Tuple>, bool
     > = true>
-    Tuple(T &&t): p_base(forward<T>(t)) {}
+    Tuple(T &&t): p_base(std::forward<T>(t)) {}
 
     template<typename Alloc, typename T, typename = EnableIf<
         detail::TupleConvertible<T, Tuple>
     >>
     Tuple(AllocatorArg, Alloc const &a, T &&t):
-        p_base(allocator_arg, a, forward<T>(t))
+        p_base(allocator_arg, a, std::forward<T>(t))
     {}
 
     template<typename T, typename = EnableIf<detail::TupleAssignable<T, Tuple>>>
     Tuple &operator=(T &&t) {
-        p_base.operator=(forward<T>(t));
+        p_base.operator=(std::forward<T>(t));
         return *this;
     }
 
@@ -548,14 +548,14 @@ namespace detail {
 
 template<typename ...T>
 inline Tuple<typename detail::MakeTupleReturn<T>::Type...> make_tuple(T &&...t) {
-    return Tuple<typename detail::MakeTupleReturn<T>::Type...>(forward<T>(t)...);
+    return Tuple<typename detail::MakeTupleReturn<T>::Type...>(std::forward<T>(t)...);
 }
 
 /* forward as tuple */
 
 template<typename ...T>
 inline Tuple<T &&...> forward_as_tuple(T &&...t) {
-    return Tuple<T &&...>(forward<T>(t)...);
+    return Tuple<T &&...>(std::forward<T>(t)...);
 }
 
 /* tuple relops */
@@ -642,7 +642,10 @@ Pair<T, U>::Pair(
     PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
     detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
 ):
-    first(forward<A1>(get<I1>(fa))...), second(forward<A2>(get<I2>(sa))...)
+    first(
+        std::forward<A1>(get<I1>(fa))...),
+        second(std::forward<A2>(get<I2>(sa))...
+    )
 {}
 
 namespace detail {
@@ -652,8 +655,8 @@ namespace detail {
         PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
         detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
     ):
-        p_first(forward<A1>(get<I1>(fa))...),
-        p_second(forward<A2>(get<I2>(sa))...)
+        p_first(std::forward<A1>(get<I1>(fa))...),
+        p_second(std::forward<A2>(get<I2>(sa))...)
     {}
 
     template<typename T, typename U>
@@ -662,8 +665,8 @@ namespace detail {
         PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
         detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
     ):
-        T(forward<A1>(get<I1>(fa))...),
-        p_second(forward<A2>(get<I2>(sa))...)
+        T(std::forward<A1>(get<I1>(fa))...),
+        p_second(std::forward<A2>(get<I2>(sa))...)
     {}
 
     template<typename T, typename U>
@@ -672,8 +675,8 @@ namespace detail {
         PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
         detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
     ):
-        U(forward<A2>(get<I2>(sa))...),
-        p_first(forward<A1>(get<I1>(fa))...)
+        U(std::forward<A2>(get<I2>(sa))...),
+        p_first(std::forward<A1>(get<I1>(fa))...)
     {}
 
     template<typename T, typename U>
@@ -682,8 +685,8 @@ namespace detail {
         PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
         detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
     ):
-        T(forward<A1>(get<I1>(fa))...),
-        U(forward<A2>(get<I2>(sa))...)
+        T(std::forward<A1>(get<I1>(fa))...),
+        U(std::forward<A2>(get<I2>(sa))...)
     {}
 } /* namespace detail */
 

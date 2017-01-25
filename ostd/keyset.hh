@@ -87,8 +87,8 @@ namespace detail {
 
         KeysetImpl(KeysetImpl const &m, A const &alloc): Base(m, alloc) {}
 
-        KeysetImpl(KeysetImpl &&m): Base(move(m)) {}
-        KeysetImpl(KeysetImpl &&m, A const &alloc): Base(move(m), alloc) {}
+        KeysetImpl(KeysetImpl &&m): Base(std::move(m)) {}
+        KeysetImpl(KeysetImpl &&m, A const &alloc): Base(std::move(m), alloc) {}
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
@@ -138,7 +138,7 @@ namespace detail {
         }
 
         KeysetImpl &operator=(KeysetImpl &&m) {
-            Base::operator=(move(m));
+            Base::operator=(std::move(m));
             return *this;
         }
 
@@ -170,7 +170,7 @@ namespace detail {
         }
         T &operator[](Key &&key) {
             static_assert(!IsMultihash, "operator[] only allowed on regular keysets");
-            return Base::access_or_insert(move(key));
+            return Base::access_or_insert(std::move(key));
         }
 
         void swap(KeysetImpl &v) {

@@ -8,6 +8,8 @@
 
 #include <stdio.h>
 
+#include <vector>
+
 #include "ostd/platform.hh"
 #include "ostd/string.hh"
 #include "ostd/stream.hh"
@@ -196,7 +198,7 @@ inline void writef(ConstCharRange fmt, A const &...args) {
         fwrite(buf, 1, need, stdout);
         return;
     }
-    Vector<char> s;
+    std::vector<char> s;
     s.reserve(need);
     format(detail::UnsafeWritefRange(s.data()), fmt, args...);
     fwrite(s.data(), 1, need, stdout);

@@ -103,12 +103,12 @@ inline TupleElement<I, Array<T, N>> const &get(Array<T, N> const &a) noexcept {
 
 template<Size I, typename T, Size N>
 inline TupleElement<I, Array<T, N>> &&get(Array<T, N> &&a) noexcept {
-    return move(a.p_buf[I]);
+    return std::move(a.p_buf[I]);
 }
 
 template<Size I, typename T, Size N>
 inline TupleElement<I, Array<T, N>> const &&get(Array<T, N> const &&a) noexcept {
-    return move(a.p_buf[I]);
+    return std::move(a.p_buf[I]);
 }
 
 template<typename T, Size N>

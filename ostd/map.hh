@@ -29,7 +29,7 @@ namespace detail {
         template<typename U>
         static inline void set_key(Element &e, U &&key, A &alloc) {
             allocator_destroy(alloc, &e);
-            allocator_construct(alloc, &e, forward<U>(key), move(T()));
+            allocator_construct(alloc, &e, std::forward<U>(key), std::move(T()));
         }
         static inline void swap_elem(Element &a, Element &b) {
             swap_adl(const_cast<K &>(a.first), const_cast<K &>(b.first));
@@ -89,8 +89,8 @@ namespace detail {
 
         MapImpl(MapImpl const &m, A const &alloc): Base(m, alloc) {}
 
-        MapImpl(MapImpl &&m): Base(move(m)) {}
-        MapImpl(MapImpl &&m, A const &alloc): Base(move(m), alloc) {}
+        MapImpl(MapImpl &&m): Base(std::move(m)) {}
+        MapImpl(MapImpl &&m, A const &alloc): Base(std::move(m), alloc) {}
 
         template<typename R, typename = EnableIf<
             IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
@@ -140,7 +140,7 @@ namespace detail {
         }
 
         MapImpl &operator=(MapImpl &&m) {
-            Base::operator=(move(m));
+            Base::operator=(std::move(m));
             return *this;
         }
 
@@ -172,7 +172,7 @@ namespace detail {
         }
         T &operator[](K &&key) {
             static_assert(!IsMultihash, "operator[] only allowed on regular maps");
-            return Base::access_or_insert(move(key));
+            return Base::access_or_insert(std::move(key));
         }
 
         void swap(MapImpl &v) {

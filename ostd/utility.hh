@@ -8,38 +8,12 @@
 
 #include <stddef.h>
 
+#include <utility>
+
 #include "ostd/type_traits.hh"
 #include "ostd/internal/tuple.hh"
 
 namespace ostd {
-
-/* move */
-
-template<typename T>
-inline constexpr RemoveReference<T> &&move(T &&v) noexcept {
-    return static_cast<RemoveReference<T> &&>(v);
-}
-
-/* forward */
-
-template<typename T>
-inline constexpr T &&forward(RemoveReference<T> &v) noexcept {
-    return static_cast<T &&>(v);
-}
-
-template<typename T>
-inline constexpr T &&forward(RemoveReference<T> &&v) noexcept {
-    return static_cast<T &&>(v);
-}
-
-/* exchange */
-
-template<typename T, typename U = T>
-inline T exchange(T &v, U &&nv) {
-    T old = move(v);
-    v = forward<U>(nv);
-    return old;
-}
 
 /* declval */
 
@@ -66,9 +40,9 @@ namespace detail {
     inline void swap_fb(
         T &a, T &b, EnableIf<!decltype(test_swap<T>(0))::value, bool> = true
     ) noexcept(IsNothrowMoveConstructible<T> && IsNothrowMoveAssignable<T>) {
-        T c(move(a));
-        a = move(b);
-        b = move(c);
+        T c(std::move(a));
+        a = std::move(b);
+        b = std::move(c);
     }
 }
 
@@ -118,7 +92,7 @@ struct Pair {
 
     template<typename TT, typename UU>
     Pair(TT &&x, UU &&y):
-        first(forward<TT>(x)), second(forward<UU>(y))
+        first(std::forward<TT>(x)), second(std::forward<UU>(y))
     {}
 
     template<typename TT, typename UU>
@@ -126,7 +100,7 @@ struct Pair {
 
     template<typename TT, typename UU>
     Pair(Pair<TT, UU> &&v):
-        first(move(v.first)), second(move(v.second))
+        first(std::move(v.first)), second(std::move(v.second))
     {}
 
     template<typename ...A1, typename ...A2>
@@ -154,15 +128,15 @@ struct Pair {
     Pair &operator=(Pair &&v) noexcept(
         IsNothrowMoveAssignable<T> && IsNothrowMoveAssignable<U>
     ) {
-        first = move(v.first);
-        second = move(v.second);
+        first = std::move(v.first);
+        second = std::move(v.second);
         return *this;
     }
 
     template<typename TT, typename UU>
     Pair &operator=(Pair<TT, UU> &&v) {
-        first = forward<TT>(v.first);
-        second = forward<UU>(v.second);
+        first = std::forward<TT>(v.first);
+        second = std::forward<UU>(v.second);
         return *this;
     }
 
@@ -209,7 +183,7 @@ inline Pair<
     return Pair<
         typename detail::MakePairRet<T>::Type,
         typename detail::MakePairRet<U>::Type
-    >(forward<T>(a), forward<U>(b));
+    >(std::forward<T>(a), std::forward<U>(b));
 }
 
 template<typename T, typename U>
@@ -272,10 +246,10 @@ namespace detail {
         template<typename T, typename U>
         static T const &get(Pair<T, U> const &p) { return p.first; }
         template<typename T, typename U>
-        static T &&get(Pair<T, U> &&p) { return forward<T>(p.first); }
+        static T &&get(Pair<T, U> &&p) { return std::forward<T>(p.first); }
         template<typename T, typename U>
         static T const &&get(Pair<T, U> const &&p) {
-            return forward<T const>(p.first);
+            return std::forward<T const>(p.first);
         }
     };
 
@@ -286,10 +260,10 @@ namespace detail {
         template<typename T, typename U>
         static U const &get(Pair<T, U> const &p) { return p.second; }
         template<typename T, typename U>
-        static U &&get(Pair<T, U> &&p) { return forward<U>(p.second); }
+        static U &&get(Pair<T, U> &&p) { return std::forward<U>(p.second); }
         template<typename T, typename U>
         static T const &&get(Pair<T, U> const &&p) {
-            return forward<T const>(p.second);
+            return std::forward<T const>(p.second);
         }
     };
 }
@@ -306,12 +280,12 @@ inline TupleElement<I, Pair<T, U>> const &get(Pair<T, U> const &p) noexcept {
 
 template<Size I, typename T, typename U>
 inline TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) noexcept {
-    return detail::GetPair<I>::get(move(p));
+    return detail::GetPair<I>::get(std::move(p));
 }
 
 template<Size I, typename T, typename U>
 inline TupleElement<I, Pair<T, U>> const &&get(Pair<T, U> const &&p) noexcept {
-    return detail::GetPair<I>::get(move(p));
+    return detail::GetPair<I>::get(std::move(p));
 }
 
 namespace detail {
@@ -351,7 +325,7 @@ namespace detail {
 
         template<typename TT, typename UU>
         CompressedPairBase(TT &&a, UU &&b):
-            p_first(forward<TT>(a)), p_second(forward<UU>(b))
+            p_first(std::forward<TT>(a)), p_second(std::forward<UU>(b))
         {}
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
@@ -378,7 +352,7 @@ namespace detail {
 
         template<typename TT, typename UU>
         CompressedPairBase(TT &&a, UU &&b):
-            T(forward<TT>(a)), p_second(forward<UU>(b))
+            T(std::forward<TT>(a)), p_second(std::forward<UU>(b))
         {}
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
@@ -404,7 +378,7 @@ namespace detail {
 
         template<typename TT, typename UU>
         CompressedPairBase(TT &&a, UU &&b):
-            U(forward<UU>(b)), p_first(forward<TT>(a))
+            U(std::forward<UU>(b)), p_first(std::forward<TT>(a))
         {}
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
@@ -428,7 +402,7 @@ namespace detail {
     struct CompressedPairBase<T, U, 3>: T, U {
         template<typename TT, typename UU>
         CompressedPairBase(TT &&a, UU &&b):
-            T(forward<TT>(a)), U(forward<UU>(b))
+            T(std::forward<TT>(a)), U(std::forward<UU>(b))
         {}
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
@@ -452,7 +426,7 @@ namespace detail {
 
         template<typename TT, typename UU>
         CompressedPair(TT &&a, UU &&b):
-            Base(forward<TT>(a), forward<UU>(b))
+            Base(std::forward<TT>(a), std::forward<UU>(b))
         {}
 
         template<typename ...A1, typename ...A2>

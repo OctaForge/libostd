@@ -41,7 +41,7 @@ struct Bar {
 };
 
 int main() {
-    Vector<int> x = { 5, 10, 15, 20 };
+    std::vector<int> x = { 5, 10, 15, 20 };
     writefln("[%(%s|%)]", x);
 
     int y[] = { 2, 4, 8, 16, 32 };

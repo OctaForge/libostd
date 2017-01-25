@@ -64,7 +64,7 @@ struct FileInfo {
 
     FileInfo(FileInfo &&i):
         p_slash(i.p_slash), p_dot(i.p_dot), p_type(i.p_type),
-        p_path(move(i.p_path)), p_atime(i.p_atime), p_mtime(i.p_mtime),
+        p_path(std::move(i.p_path)), p_atime(i.p_atime), p_mtime(i.p_mtime),
         p_ctime(i.p_ctime)
     {
         i.p_slash = i.p_dot = npos;
@@ -228,7 +228,7 @@ struct DirectoryStream {
     DirectoryStream(): p_d(), p_de(), p_path() {}
     DirectoryStream(DirectoryStream const &) = delete;
     DirectoryStream(DirectoryStream &&s):
-        p_d(s.p_d), p_de(s.p_de), p_path(move(s.p_path))
+        p_d(s.p_d), p_de(s.p_de), p_path(std::move(s.p_path))
     {
         s.p_d = nullptr;
         s.p_de = nullptr;
@@ -364,7 +364,7 @@ struct DirectoryStream {
     DirectoryStream(): p_handle(INVALID_HANDLE_VALUE), p_data(), p_path() {}
     DirectoryStream(DirectoryStream const &) = delete;
     DirectoryStream(DirectoryStream &&s):
-        p_handle(s.p_handle), p_data(s.p_data), p_path(move(s.p_path))
+        p_handle(s.p_handle), p_data(s.p_data), p_path(std::move(s.p_path))
     {
         s.p_handle = INVALID_HANDLE_VALUE;
         memset(&s.p_data, 0, sizeof(s.p_data));

@@ -8,6 +8,8 @@
 
 #include <sys/types.h>
 
+#include <vector>
+
 #include "ostd/platform.hh"
 #include "ostd/types.hh"
 #include "ostd/range.hh"
@@ -146,7 +148,7 @@ public:
         } else if (Size(need) < sizeof(buf)) {
             return write_bytes(buf, need) == Size(need);
         }
-        Vector<char> s;
+        std::vector<char> s;
         s.reserve(need);
         format(detail::UnsafeWritefRange(s.data()), fmt, args...);
         return write_bytes(s.data(), need) == Size(need);

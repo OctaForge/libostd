@@ -323,7 +323,7 @@ protected:
         template<typename U>
         T &insert(Size h, U &&key) {
             Chain *c = insert(h);
-            B::set_key(c->value, forward<U>(key), get_alloc());
+            B::set_key(c->value, std::forward<U>(key), get_alloc());
             return B::get_data(c->value);
         }
 
@@ -344,7 +344,7 @@ protected:
                 return B::get_data(c->value);
             }
             rehash_ahead(1);
-            return insert(bucket(key), move(key));
+            return insert(bucket(key), std::move(key));
         }
 
         T *access(const K &key) const {
@@ -422,7 +422,7 @@ protected:
 
         Hashtable(Hashtable &&ht): p_size(ht.p_size), p_len(ht.p_len),
         p_chunks(ht.p_chunks), p_unused(ht.p_unused),
-        p_data(move(ht.p_data)), p_maxlf(ht.p_maxlf) {
+        p_data(std::move(ht.p_data)), p_maxlf(ht.p_maxlf) {
             ht.p_size = ht.p_len = 0;
             ht.p_chunks = nullptr;
             ht.p_unused = nullptr;
@@ -565,7 +565,7 @@ public:
         template<typename ...Args>
         Pair<Range, bool> emplace(Args &&...args) {
             rehash_ahead(1);
-            E elem(forward<Args>(args)...);
+            E elem(std::forward<Args>(args)...);
             if (Multihash) {
                 /* multihash: always insert
                  * gotta make sure that equal keys always come  after

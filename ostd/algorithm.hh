@@ -31,8 +31,10 @@ inline R partition(R range, U pred) {
 
 template<typename F>
 inline auto partition(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return partition(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return partition(
+            std::forward<decltype(obj)>(obj), std::forward<F>(func)
+        );
     };
 }
 
@@ -49,8 +51,10 @@ inline bool is_partitioned(R range, P pred) {
 
 template<typename F>
 inline auto is_partitioned(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return is_partitioned(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return is_partitioned(
+            std::forward<decltype(obj)>(obj), std::forward<F>(func)
+        );
     };
 }
 
@@ -62,12 +66,12 @@ namespace detail {
         RangeSize<R> rlen = range.size();
         for (RangeSize<R> i = 1; i < rlen; ++i) {
             RangeSize<R> j = i;
-            RangeValue<R> v(move(range[i]));
+            RangeValue<R> v(std::move(range[i]));
             while (j > 0 && !compare(range[j - 1], v)) {
                 range[j] = range[j - 1];
                 --j;
             }
-            range[j] = move(v);
+            range[j] = std::move(v);
         }
     }
 
@@ -154,8 +158,10 @@ inline R sort_cmp(R range, C compare) {
 }
 template<typename C>
 inline auto sort_cmp(C &&compare) {
-    return [compare = forward<C>(compare)](auto &&obj) mutable {
-        return sort_cmp(forward<decltype(obj)>(obj), forward<C>(compare));
+    return [compare = std::forward<C>(compare)](auto &&obj) mutable {
+        return sort_cmp(
+            std::forward<decltype(obj)>(obj), std::forward<C>(compare)
+        );
     };
 }
 
@@ -164,7 +170,7 @@ inline R sort(R range) {
     return sort_cmp(range, Less<RangeValue<R>>());
 }
 inline auto sort() {
-    return [](auto &&obj) { return sort(forward<decltype(obj)>(obj)); };
+    return [](auto &&obj) { return sort(std::forward<decltype(obj)>(obj)); };
 }
 
 /* min/max(_element) */
@@ -208,12 +214,16 @@ inline R min_element_cmp(R range, C compare) {
     return r;
 }
 inline auto min_element() {
-    return [](auto &&obj) { return min_element(forward<decltype(obj)>(obj)); };
+    return [](auto &&obj) {
+        return min_element(std::forward<decltype(obj)>(obj));
+    };
 }
 template<typename C>
 inline auto min_element_cmp(C &&compare) {
-    return [compare = forward<C>(compare)](auto &&obj) mutable {
-        return min_element_cmp(forward<decltype(obj)>(obj), forward<C>(compare));
+    return [compare = std::forward<C>(compare)](auto &&obj) mutable {
+        return min_element_cmp(
+            std::forward<decltype(obj)>(obj), std::forward<C>(compare)
+        );
     };
 }
 
@@ -238,12 +248,16 @@ inline R max_element_cmp(R range, C compare) {
     return r;
 }
 inline auto max_element() {
-    return [](auto &&obj) { return max_element(forward<decltype(obj)>(obj)); };
+    return [](auto &&obj) {
+        return max_element(std::forward<decltype(obj)>(obj));
+    };
 }
 template<typename C>
 inline auto max_element_cmp(C &&compare) {
-    return [compare = forward<C>(compare)](auto &&obj) mutable {
-        return max_element_cmp(forward<decltype(obj)>(obj), forward<C>(compare));
+    return [compare = std::forward<C>(compare)](auto &&obj) mutable {
+        return max_element_cmp(
+            std::forward<decltype(obj)>(obj), std::forward<C>(compare)
+        );
     };
 }
 
@@ -296,9 +310,9 @@ inline bool lexicographical_compare(R1 range1, R2 range2) {
 }
 template<typename R>
 inline auto lexicographical_compare(R &&range) {
-    return [range = forward<R>(range)](auto &&obj) mutable {
+    return [range = std::forward<R>(range)](auto &&obj) mutable {
         return lexicographical_compare(
-            forward<decltype(obj)>(obj), forward<R>(range)
+            std::forward<decltype(obj)>(obj), std::forward<R>(range)
         );
     };
 }
@@ -320,10 +334,11 @@ inline bool lexicographical_compare_cmp(R1 range1, R2 range2, C compare) {
 template<typename R, typename C>
 inline auto lexicographical_compare_cmp(R &&range, C &&compare) {
     return [
-        range = forward<R>(range), compare = forward<C>(compare)
+        range = std::forward<R>(range), compare = std::forward<C>(compare)
     ](auto &&obj) mutable {
         return lexicographical_compare_cmp(
-            forward<decltype(obj)>(obj), forward<R>(range), forward<C>(compare)
+            std::forward<decltype(obj)>(obj), std::forward<R>(range),
+            std::forward<C>(compare)
         );
     };
 }
@@ -335,13 +350,13 @@ inline F for_each(R range, F func) {
     for (; !range.empty(); range.pop_front()) {
         func(range.front());
     }
-    return move(func);
+    return std::move(func);
 }
 
 template<typename F>
 inline auto for_each(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return for_each(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return for_each(std::forward<decltype(obj)>(obj), std::forward<F>(func));
     };
 }
 
@@ -357,8 +372,8 @@ inline bool all_of(R range, P pred) {
 
 template<typename F>
 inline auto all_of(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return all_of(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return all_of(std::forward<decltype(obj)>(obj), std::forward<F>(func));
     };
 }
 
@@ -371,8 +386,8 @@ inline bool any_of(R range, P pred) {
 
 template<typename F>
 inline auto any_of(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return any_of(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return any_of(std::forward<decltype(obj)>(obj), std::forward<F>(func));
     };
 }
 
@@ -385,8 +400,8 @@ inline bool none_of(R range, P pred) {
 
 template<typename F>
 inline auto none_of(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return none_of(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return none_of(std::forward<decltype(obj)>(obj), std::forward<F>(func));
     };
 }
 
@@ -402,8 +417,8 @@ inline R find(R range, T const &v) {
 
 template<typename T>
 inline auto find(T &&v) {
-    return [v = forward<T>(v)](auto &&obj) mutable {
-        return find(forward<decltype(obj)>(obj), forward<T>(v));
+    return [v = std::forward<T>(v)](auto &&obj) mutable {
+        return find(std::forward<decltype(obj)>(obj), std::forward<T>(v));
     };
 }
 
@@ -426,8 +441,8 @@ inline R find_last(R range, T const &v) {
 
 template<typename T>
 inline auto find_last(T &&v) {
-    return [v = forward<T>(v)](auto &&obj) mutable {
-        return find_last(forward<decltype(obj)>(obj), forward<T>(v));
+    return [v = std::forward<T>(v)](auto &&obj) mutable {
+        return find_last(std::forward<decltype(obj)>(obj), std::forward<T>(v));
     };
 }
 
@@ -443,8 +458,8 @@ inline R find_if(R range, P pred) {
 
 template<typename F>
 inline auto find_if(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return find_if(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return find_if(std::forward<decltype(obj)>(obj), std::forward<F>(func));
     };
 }
 
@@ -460,8 +475,10 @@ inline R find_if_not(R range, P pred) {
 
 template<typename F>
 inline auto find_if_not(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return find_if_not(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return find_if_not(
+            std::forward<decltype(obj)>(obj), std::forward<F>(func)
+        );
     };
 }
 
@@ -479,10 +496,11 @@ inline R1 find_one_of_cmp(R1 range, R2 values, C compare) {
 template<typename R, typename C>
 inline auto find_one_of_cmp(R &&values, C &&compare) {
     return [
-        values = forward<R>(values), compare = forward<C>(compare)
+        values = std::forward<R>(values), compare = std::forward<C>(compare)
     ](auto &&obj) mutable {
         return find_one_of_cmp(
-            forward<decltype(obj)>(obj), forward<R>(values), forward<C>(compare)
+            std::forward<decltype(obj)>(obj), std::forward<R>(values),
+            std::forward<C>(compare)
         );
     };
 }
@@ -500,8 +518,10 @@ inline R1 find_one_of(R1 range, R2 values) {
 }
 template<typename R>
 inline auto find_one_of(R &&values) {
-    return [values = forward<R>(values)](auto &&obj) mutable {
-        return find_one_of(forward<decltype(obj)>(obj), forward<R>(values));
+    return [values = std::forward<R>(values)](auto &&obj) mutable {
+        return find_one_of(
+            std::forward<decltype(obj)>(obj), std::forward<R>(values)
+        );
     };
 }
 
@@ -518,8 +538,8 @@ inline RangeSize<R> count(R range, T const &v) {
 
 template<typename T>
 inline auto count(T &&v) {
-    return [v = forward<T>(v)](auto &&obj) mutable {
-        return count(forward<decltype(obj)>(obj), forward<T>(v));
+    return [v = std::forward<T>(v)](auto &&obj) mutable {
+        return count(std::forward<decltype(obj)>(obj), std::forward<T>(v));
     };
 }
 
@@ -536,8 +556,8 @@ inline RangeSize<R> count_if(R range, P pred) {
 
 template<typename F>
 inline auto count_if(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return count_if(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return count_if(std::forward<decltype(obj)>(obj), std::forward<F>(func));
     };
 }
 
@@ -554,8 +574,10 @@ inline RangeSize<R> count_if_not(R range, P pred) {
 
 template<typename F>
 inline auto count_if_not(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return count_if_not(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return count_if_not(
+            std::forward<decltype(obj)>(obj), std::forward<F>(func)
+        );
     };
 }
 
@@ -572,8 +594,8 @@ inline bool equal(R range1, R range2) {
 
 template<typename R>
 inline auto equal(R &&range) {
-    return [range = forward<R>(range)](auto &&obj) mutable {
-        return equal(forward<decltype(obj)>(obj), forward<R>(range));
+    return [range = std::forward<R>(range)](auto &&obj) mutable {
+        return equal(std::forward<decltype(obj)>(obj), std::forward<R>(range));
     };
 }
 
@@ -584,8 +606,10 @@ R slice_until(R range1, R range2) {
 
 template<typename R>
 inline auto slice_until(R &&range) {
-    return [range = forward<R>(range)](auto &&obj) mutable {
-        return slice_until(forward<decltype(obj)>(obj), forward<R>(range));
+    return [range = std::forward<R>(range)](auto &&obj) mutable {
+        return slice_until(
+            std::forward<decltype(obj)>(obj), std::forward<R>(range)
+        );
     };
 }
 
@@ -622,7 +646,7 @@ inline R2 copy_if_not(R1 irange, R2 orange, P pred) {
 template<typename R1, typename R2>
 inline R2 move(R1 irange, R2 orange) {
     for (; !irange.empty(); irange.pop_front()) {
-        orange.put(move(irange.front()));
+        orange.put(std::move(irange.front()));
     }
     return orange;
 }
@@ -693,17 +717,18 @@ inline T foldl_f(R range, T init, F func) {
 
 template<typename T>
 inline auto foldl(T &&init) {
-    return [init = forward<T>(init)](auto &&obj) mutable {
-        return foldl(forward<decltype(obj)>(obj), forward<T>(init));
+    return [init = std::forward<T>(init)](auto &&obj) mutable {
+        return foldl(std::forward<decltype(obj)>(obj), std::forward<T>(init));
     };
 }
 template<typename T, typename F>
 inline auto foldl_f(T &&init, F &&func) {
     return [
-        init = forward<T>(init), func = forward<F>(func)
+        init = std::forward<T>(init), func = std::forward<F>(func)
     ](auto &&obj) mutable {
         return foldl_f(
-            forward<decltype(obj)>(obj), forward<T>(init), forward<F>(func)
+            std::forward<decltype(obj)>(obj), std::forward<T>(init),
+            std::forward<F>(func)
         );
     };
 }
@@ -726,17 +751,18 @@ inline T foldr_f(R range, T init, F func) {
 
 template<typename T>
 inline auto foldr(T &&init) {
-    return [init = forward<T>(init)](auto &&obj) mutable {
-        return foldr(forward<decltype(obj)>(obj), forward<T>(init));
+    return [init = std::forward<T>(init)](auto &&obj) mutable {
+        return foldr(std::forward<decltype(obj)>(obj), std::forward<T>(init));
     };
 }
 template<typename T, typename F>
 inline auto foldr_f(T &&init, F &&func) {
     return [
-        init = forward<T>(init), func = forward<F>(func)
+        init = std::forward<T>(init), func = std::forward<F>(func)
     ](auto &&obj) mutable {
         return foldr_f(
-            forward<decltype(obj)>(obj), forward<T>(init), forward<F>(func)
+            std::forward<decltype(obj)>(obj), std::forward<T>(init),
+            std::forward<F>(func)
         );
     };
 }
@@ -753,11 +779,11 @@ public:
     MapRange() = delete;
     template<typename FF>
     MapRange(T const &range, FF &&func):
-        p_range(range), p_func(forward<FF>(func)) {}
+        p_range(range), p_func(std::forward<FF>(func)) {}
     MapRange(MapRange const &it):
         p_range(it.p_range), p_func(it.p_func) {}
     MapRange(MapRange &&it):
-        p_range(move(it.p_range)), p_func(move(it.p_func)) {}
+        p_range(std::move(it.p_range)), p_func(std::move(it.p_func)) {}
 
     MapRange &operator=(MapRange const &v) {
         p_range = v.p_range;
@@ -765,8 +791,8 @@ public:
         return *this;
     }
     MapRange &operator=(MapRange &&v) {
-        p_range = move(v.p_range);
-        p_func  = move(v.p_func);
+        p_range = std::move(v.p_range);
+        p_func  = std::move(v.p_func);
         return *this;
     }
 
@@ -826,13 +852,13 @@ namespace detail {
 
 template<typename R, typename F>
 inline MapRange<R, F, detail::MapReturnType<R, F>> map(R range, F func) {
-    return MapRange<R, F, detail::MapReturnType<R, F>>(range, move(func));
+    return MapRange<R, F, detail::MapReturnType<R, F>>(range, std::move(func));
 }
 
 template<typename F>
 inline auto map(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return map(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return map(std::forward<decltype(obj)>(obj), std::forward<F>(func));
     };
 }
 
@@ -855,7 +881,7 @@ public:
     FilterRange() = delete;
     template<typename P>
     FilterRange(T const &range, P &&pred):
-        p_range(range), p_pred(forward<P>(pred))
+        p_range(range), p_pred(std::forward<P>(pred))
     {
         advance_valid();
     }
@@ -865,7 +891,7 @@ public:
         advance_valid();
     }
     FilterRange(FilterRange &&it):
-        p_range(move(it.p_range)), p_pred(move(it.p_pred))
+        p_range(std::move(it.p_range)), p_pred(std::move(it.p_pred))
     {
         advance_valid();
     }
@@ -877,8 +903,8 @@ public:
         return *this;
     }
     FilterRange &operator=(FilterRange &&v) {
-        p_range = move(v.p_range);
-        p_pred  = move(v.p_pred);
+        p_range = std::move(v.p_range);
+        p_pred  = std::move(v.p_pred);
         advance_valid();
         return *this;
     }
@@ -907,13 +933,13 @@ namespace detail {
 
 template<typename R, typename P>
 inline FilterRange<R, detail::FilterPred<R, P>> filter(R range, P pred) {
-    return FilterRange<R, P>(range, move(pred));
+    return FilterRange<R, P>(range, std::move(pred));
 }
 
 template<typename F>
 inline auto filter(F &&func) {
-    return [func = forward<F>(func)](auto &&obj) mutable {
-        return filter(forward<decltype(obj)>(obj), forward<F>(func));
+    return [func = std::forward<F>(func)](auto &&obj) mutable {
+        return filter(std::forward<decltype(obj)>(obj), std::forward<F>(func));
     };
 }
 
