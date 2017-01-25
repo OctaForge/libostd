@@ -68,7 +68,7 @@ int main() {
     writeln("several piped algorithms");
 
     srand(time(0));
-    Array<int, 100> arr;
+    std::array<int, 100> arr;
     generate(iter(arr), []() { return rand() % 128; });
 
     auto r = iter(arr)
