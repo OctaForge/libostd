@@ -741,19 +741,40 @@ inline auto zip(R1 &&r1, R &&...rr) {
     };
 }
 
+template<typename C, typename = void>
+struct ranged_traits;
+
+namespace detail {
+    template<typename C>
+    static True test_direct_iter(decltype(declval<C>().iter()) *);
+
+    template<typename>
+    static False test_direct_iter(...);
+
+    template<typename C>
+    constexpr bool direct_iter_test = decltype(test_direct_iter<C>(0))::value;
+}
+
+template<typename C>
+struct ranged_traits<C, EnableIf<detail::direct_iter_test<C>>> {
+    static auto iter(C &r) -> decltype(r.iter()) {
+        return r.iter();
+    }
+};
+
 template<typename T>
-inline auto iter(T &r) -> decltype(r.iter()) {
-    return r.iter();
+inline auto iter(T &r) -> decltype(ranged_traits<T>::iter(r)) {
+    return ranged_traits<T>::iter(r);
 }
 
 template<typename T>
-inline auto iter(T const &r) -> decltype(r.iter()) {
-    return r.iter();
+inline auto iter(T const &r) -> decltype(ranged_traits<T const>::iter(r)) {
+    return ranged_traits<T const>::iter(r);
 }
 
 template<typename T>
-inline auto citer(T const &r) -> decltype(r.iter()) {
-    return r.iter();
+inline auto citer(T const &r) -> decltype(ranged_traits<T const>::iter(r)) {
+    return ranged_traits<T const>::iter(r);
 }
 
 template<

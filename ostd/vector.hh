@@ -13,19 +13,18 @@
 namespace ostd {
 
 template<typename T>
-inline PointerRange<T> iter(std::vector<T> &v) {
-    return PointerRange<T>{v.data(), v.size()};
-}
+struct ranged_traits<std::vector<T>> {
+    static PointerRange<T> iter(std::vector<T> &v) {
+        return PointerRange<T>{v.data(), v.size()};
+    }
+};
 
 template<typename T>
-inline PointerRange<T const> iter(std::vector<T> const &v) {
-    return PointerRange<T const>{v.data(), v.size()};
-}
-
-template<typename T>
-inline PointerRange<T const> citer(std::vector<T> const &v) {
-    return PointerRange<T const>{v.data(), v.size()};
-}
+struct ranged_traits<std::vector<T> const> {
+    static PointerRange<T const> iter(std::vector<T> const &v) {
+        return PointerRange<T const>{v.data(), v.size()};
+    }
+};
 
 template<typename T, typename R>
 inline std::vector<T> make_vector(R range) {

@@ -13,19 +13,18 @@
 namespace ostd {
 
 template<typename T, size_t N>
-inline PointerRange<T> iter(std::array<T, N> &v) {
-    return PointerRange<T>{v.data(), N};
-}
+struct ranged_traits<std::array<T, N>> {
+    static PointerRange<T> iter(std::array<T, N> &v) {
+        return PointerRange<T>{v.data(), N};
+    }
+};
 
 template<typename T, size_t N>
-inline PointerRange<T const> iter(std::array<T, N> const &v) {
-    return PointerRange<T const>{v.data(), N};
-}
-
-template<typename T, size_t N>
-inline PointerRange<T const> citer(std::array<T, N> const &v) {
-    return PointerRange<T const>{v.data(), N};
-}
+struct ranged_traits<std::array<T, N> const> {
+    static PointerRange<T const> iter(std::array<T, N> const &v) {
+        return PointerRange<T const>{v.data(), N};
+    }
+};
 
 } /* namespace ostd */
 
