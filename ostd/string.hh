@@ -984,8 +984,8 @@ namespace detail {
         static void append(String &ret, T const &tup) {
             ret += ", ";
             ret += ToString<RemoveCv<RemoveReference<
-                decltype(ostd::get<I>(tup))
-            >>>()(ostd::get<I>(tup));
+                decltype(std::get<I>(tup))
+            >>>()(std::get<I>(tup));
             TupleToString<I + 1, N>::append(ret, tup);
         }
     };
@@ -1001,24 +1001,12 @@ namespace detail {
         template<typename T>
         static void append(String &ret, T const &tup) {
             ret += ToString<RemoveCv<RemoveReference<
-                decltype(ostd::get<0>(tup))
-            >>>()(ostd::get<0>(tup));
+                decltype(std::get<0>(tup))
+            >>>()(std::get<0>(tup));
             TupleToString<1, N>::append(ret, tup);
         }
     };
 }
-
-template<typename ...T>
-struct ToString<Tuple<T...>> {
-    using Argument = Tuple<T...>;
-    using Result = String;
-    String operator()(Argument const &v) {
-        String ret("{");
-        detail::TupleToString<0, sizeof...(T)>::append(ret, v);
-        ret += "}";
-        return ret;
-    }
-};
 
 template<typename ...T>
 struct ToString<std::tuple<T...>> {

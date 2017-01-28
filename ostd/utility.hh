@@ -74,39 +74,6 @@ namespace detail {
 
 /* pair */
 
-template<typename T, typename U>
-constexpr Size TupleSize<std::pair<T, U>> = 2;
-
-template<typename T, typename U>
-struct TupleElementBase<0, std::pair<T, U>> {
-    using Type = T;
-};
-
-template<typename T, typename U>
-struct TupleElementBase<1, std::pair<T, U>> {
-    using Type = U;
-};
-
-template<Size I, typename T, typename U>
-inline TupleElement<I, std::pair<T, U>> &get(std::pair<T, U> &p) noexcept {
-    return std::get<I>(p);
-}
-
-template<Size I, typename T, typename U>
-inline TupleElement<I, std::pair<T, U>> const &get(std::pair<T, U> const &p) noexcept {
-    return std::get<I>(p);
-}
-
-template<Size I, typename T, typename U>
-inline TupleElement<I, std::pair<T, U>> &&get(std::pair<T, U> &&p) noexcept {
-    return std::get<I>(std::move(p));
-}
-
-template<Size I, typename T, typename U>
-inline TupleElement<I, std::pair<T, U>> const &&get(std::pair<T, U> const &&p) noexcept {
-    return std::get<I>(std::move(p));
-}
-
 namespace detail {
     template<typename T, typename U,
         bool = IsSame<RemoveCv<T>, RemoveCv<U>>,
@@ -149,8 +116,9 @@ namespace detail {
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
         CompressedPairBase(
-            std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
-            detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+            std::piecewise_construct_t,
+            std::tuple<A1...> &fa, std::tuple<A2...> &sa,
+            std::index_sequence<I1...>, std::index_sequence<I2...>
         );
 
         T &first() { return p_first; }
@@ -176,8 +144,9 @@ namespace detail {
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
         CompressedPairBase(
-            std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
-            detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+            std::piecewise_construct_t,
+            std::tuple<A1...> &fa, std::tuple<A2...> &sa,
+            std::index_sequence<I1...>, std::index_sequence<I2...>
         );
 
         T &first() { return *this; }
@@ -202,8 +171,9 @@ namespace detail {
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
         CompressedPairBase(
-            std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
-            detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+            std::piecewise_construct_t,
+            std::tuple<A1...> &fa, std::tuple<A2...> &sa,
+            std::index_sequence<I1...>, std::index_sequence<I2...>
         );
 
         T &first() { return p_first; }
@@ -226,8 +196,9 @@ namespace detail {
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
         CompressedPairBase(
-            std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
-            detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
+            std::piecewise_construct_t,
+            std::tuple<A1...> &fa, std::tuple<A2...> &sa,
+            std::index_sequence<I1...>, std::index_sequence<I2...>
         );
 
         T &first() { return *this; }
@@ -249,11 +220,14 @@ namespace detail {
         {}
 
         template<typename ...A1, typename ...A2>
-        CompressedPair(std::piecewise_construct_t pc, Tuple<A1...> fa, Tuple<A2...> sa):
+        CompressedPair(
+            std::piecewise_construct_t pc,
+            std::tuple<A1...> fa, std::tuple<A2...> sa
+        ):
             Base(
                 pc, fa, sa,
-                detail::MakeTupleIndices<sizeof...(A1)>(),
-                detail::MakeTupleIndices<sizeof...(A2)>()
+                std::make_index_sequence<sizeof...(A1)>(),
+                std::make_index_sequence<sizeof...(A2)>()
             )
         {}
 
@@ -267,6 +241,46 @@ namespace detail {
             Base::swap(v);
         }
     };
+
+    template<typename T, typename U>
+    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    CompressedPairBase<T, U, 0>::CompressedPairBase(
+        std::piecewise_construct_t, std::tuple<A1...> &fa, std::tuple<A2...> &sa,
+        std::index_sequence<I1...>, std::index_sequence<I2...>
+    ):
+        p_first(std::forward<A1>(std::get<I1>(fa))...),
+        p_second(std::forward<A2>(std::get<I2>(sa))...)
+    {}
+
+    template<typename T, typename U>
+    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    CompressedPairBase<T, U, 1>::CompressedPairBase(
+        std::piecewise_construct_t, std::tuple<A1...> &fa, std::tuple<A2...> &sa,
+        std::index_sequence<I1...>, std::index_sequence<I2...>
+    ):
+        T(std::forward<A1>(std::get<I1>(fa))...),
+        p_second(std::forward<A2>(std::get<I2>(sa))...)
+    {}
+
+    template<typename T, typename U>
+    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    CompressedPairBase<T, U, 2>::CompressedPairBase(
+        std::piecewise_construct_t, std::tuple<A1...> &fa, std::tuple<A2...> &sa,
+        std::index_sequence<I1...>, std::index_sequence<I2...>
+    ):
+        U(std::forward<A2>(std::get<I2>(sa))...),
+        p_first(std::forward<A1>(std::get<I1>(fa))...)
+    {}
+
+    template<typename T, typename U>
+    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    CompressedPairBase<T, U, 3>::CompressedPairBase(
+        std::piecewise_construct_t, std::tuple<A1...> &fa, std::tuple<A2...> &sa,
+        std::index_sequence<I1...>, std::index_sequence<I2...>
+    ):
+        T(std::forward<A1>(std::get<I1>(fa))...),
+        U(std::forward<A2>(std::get<I2>(sa))...)
+    {}
 } /* namespace detail */
 
 } /* namespace ostd */

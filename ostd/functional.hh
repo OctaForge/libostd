@@ -575,32 +575,32 @@ public:
         explicit FuncCore(F &&f):
             f_stor(
                 std::piecewise_construct,
-                forward_as_tuple(std::move(f)),
-                forward_as_tuple()
+                std::forward_as_tuple(std::move(f)),
+                std::forward_as_tuple()
             )
         {}
 
         explicit FuncCore(F const &f, A const &a):
             f_stor(
                 std::piecewise_construct,
-                forward_as_tuple(f),
-                forward_as_tuple(a)
+                std::forward_as_tuple(f),
+                std::forward_as_tuple(a)
             )
         {}
 
         explicit FuncCore(F const &f, A &&a):
             f_stor(
                 std::piecewise_construct,
-                forward_as_tuple(f),
-                forward_as_tuple(std::move(a))
+                std::forward_as_tuple(f),
+                std::forward_as_tuple(std::move(a))
             )
         {}
 
         explicit FuncCore(F &&f, A &&a):
             f_stor(
                 std::piecewise_construct,
-                forward_as_tuple(std::move(f)),
-                forward_as_tuple(std::move(a))
+                std::forward_as_tuple(std::move(f)),
+                std::forward_as_tuple(std::move(a))
             )
         {}
 
