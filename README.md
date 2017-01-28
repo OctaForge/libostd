@@ -31,8 +31,13 @@ partial specialization issues and version 5.3 has an internal compiler error
 triggered by the tuple implementation. Version 5.4 appears to be the first one
 to compile this without issues. GCC 6.1 also appears to compile without problems.
 
-MSVC++ is currently unsupported but being worked on. You will need at least
-2015 Update 3 for this to work.
+MSVC++ is unsupported and for the time being will remain unsupported. As of MS
+Visual Studio 2017 RC, basic C++11 features are still broken and prevent usage
+of the library, with no reasonable workarounds. I will be testing new versions
+as they get released and mark it supported as soon as it actually works, but no
+active effort will be put towards making it work. On Windows, you're free to
+use GCC/Clang or if you need the Visual Studio environment, the Visual Studio
+version of Clang with MS Codegen should work just fine.
 
 ## Supported operating systems
 
