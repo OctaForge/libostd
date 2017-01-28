@@ -11,10 +11,11 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <utility>
+
 #include "ostd/algorithm.hh"
 #include "ostd/string.hh"
 #include "ostd/utility.hh"
-#include "ostd/internal/tuple.hh"
 
 namespace ostd {
 
@@ -533,10 +534,22 @@ namespace detail {
         }
     };
 
+    /* ugly ass check for whether a type is tuple-like, like tuple itself,
+     * pair, array, possibly other types added later or overridden...
+     */
+    template<typename T>
+    std::true_type tuple_like_test(typename std::tuple_size<T>::type *);
+
+    template<typename>
+    std::false_type tuple_like_test(...);
+
+    template<typename T>
+    constexpr bool is_tuple_like = decltype(tuple_like_test<T>(0))::value;
+
     template<typename R, typename T>
     inline Ptrdiff format_ritem(
         R &writer, Size &fmtn, bool esc, bool, ConstCharRange fmt,
-        T const &item, EnableIf<!IsTupleLike<T>, bool> = true
+        T const &item, EnableIf<!is_tuple_like<T>, bool> = true
     ) {
         return format_impl(writer, fmtn, esc, fmt, item);
     }
@@ -544,7 +557,7 @@ namespace detail {
     template<typename R, typename T>
     inline Ptrdiff format_ritem(
         R &writer, Size &fmtn, bool esc, bool expandval, ConstCharRange fmt,
-        T const &item, EnableIf<IsTupleLike<T>, bool> = true
+        T const &item, EnableIf<is_tuple_like<T>, bool> = true
     ) {
         if (expandval) {
             return FmtTupleUnpacker<std::tuple_size<T>::value>::unpack(

@@ -11,12 +11,12 @@
 
 #include <new>
 #include <functional>
+#include <tuple>
 
 #include "ostd/platform.hh"
 #include "ostd/memory.hh"
 #include "ostd/utility.hh"
 #include "ostd/type_traits.hh"
-#include <ostd/tuple.hh>
 
 namespace ostd {
 

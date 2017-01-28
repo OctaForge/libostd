@@ -9,9 +9,9 @@
 #include <stddef.h>
 
 #include <utility>
+#include <tuple>
 
 #include "ostd/type_traits.hh"
-#include "ostd/internal/tuple.hh"
 
 namespace ostd {
 
