@@ -41,12 +41,12 @@ version of Clang with MS Codegen should work just fine.
 
 ## Supported operating systems
 
-Currently supported OSes in OctaSTD are Linux, FreeBSD, macOS and Windows. Other
-systems might work as well, as long as a sufficient compiler is provided.
+Most of OctaSTD is entirely platform independent and relies only on the standard
+library. Therefore it can be used on any operating system that provides a C++14
+compiler and library implementation.
 
-MacOS support requires Xcode 8 or newer to work (or alternatively, official
-LLVM distribution for macOS or any supported compiler from other channels
-such as Homebrew). That is the first version to ship a Clang 3.8 based
-toolchain, so things will not compile with an older version of Xcode.
-
-Windows support includes MinGW, Clang and soon MSVC++.
+There are certain parts (currently the filesystem module) that however do rely
+on system specific APIs. These are restricted to POSIX compliant operating
+systems and Windows, with testing done on Linux, FreeBSD, macOS and Windows -
+they should work on other POSIX compliant operating systems as well, and
+potential patches are welcome.
