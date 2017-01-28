@@ -58,7 +58,7 @@ int main() {
         writeln(v);
     }
 
-    /* 2-tuple zip uses Pair */
+    /* 2-tuple zip uses std::pair */
     writeln("2-tuple range zip");
     for (auto v: iter({ 5, 10, 15, 20 }) | zip(iter({ 6, 11, 16, 21 }))) {
         writeln(v.first, ", ", v.second);

@@ -1,9 +1,10 @@
+#include <tuple>
+
 #include <ostd/algorithm.hh>
 #include <ostd/vector.hh>
 #include <ostd/map.hh>
 #include <ostd/range.hh>
 #include <ostd/io.hh>
-#include <ostd/tuple.hh>
 
 using namespace ostd;
 
@@ -64,10 +65,10 @@ int main() {
     writefln("{ %-#(%s: %d, %) }", m);
 
     /* tuple format test */
-    Tuple<int, float, char const *> xt[] = {
-        make_tuple(5, 3.14f, "foo"),
-        make_tuple(3, 1.23f, "bar"),
-        make_tuple(9, 8.66f, "baz")
+    std::tuple<int, float, char const *> xt[] = {
+        std::make_tuple(5, 3.14f, "foo"),
+        std::make_tuple(3, 1.23f, "bar"),
+        std::make_tuple(9, 8.66f, "baz")
     };
     writefln("[ %#(<%d|%f|%s>%|, %) ]", xt);
 

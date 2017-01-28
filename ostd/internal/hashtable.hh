@@ -563,7 +563,7 @@ public:
         }
 
         template<typename ...Args>
-        Pair<Range, bool> emplace(Args &&...args) {
+        std::pair<Range, bool> emplace(Args &&...args) {
             rehash_ahead(1);
             E elem(std::forward<Args>(args)...);
             if (Multihash) {
@@ -574,7 +574,7 @@ public:
                 Size h = bucket(B::get_key(elem));
                 Chain *ch = insert(h);
                 B::swap_elem(ch->value, elem);
-                return make_pair(Range(ch), true);
+                return std::make_pair(Range(ch), true);
             }
             Size h = bucket(B::get_key(elem));
             Chain *found = nullptr;
@@ -591,7 +591,7 @@ public:
                 found = insert(h);
                 B::swap_elem(found->value, elem);
             }
-            return make_pair(Range(found), ins);
+            return std::make_pair(Range(found), ins);
         }
 
         Size erase(const K &key) {

@@ -8,6 +8,7 @@
 #define OSTD_INTERNAL_TUPLE_HH
 
 #include <tuple>
+#include <utility>
 
 #include "ostd/types.hh"
 #include "ostd/type_traits.hh"
@@ -16,10 +17,6 @@ namespace ostd {
 
 template<typename ...A>
 class Tuple;
-template<typename T, typename U>
-struct Pair;
-template<typename T, Size I>
-struct Array;
 
 /* tuple size */
 
@@ -118,36 +115,19 @@ inline const TupleElement<I, Tuple<A...>> &&get(const Tuple<A...> &&) noexcept;
 /* pair specializations */
 
 template<typename T, typename U>
-constexpr bool IsTupleLike<Pair<T, U>> = true;
+constexpr bool IsTupleLike<std::pair<T, U>> = true;
 
 template<Size I, typename T, typename U>
-inline TupleElement<I, Pair<T, U>> &get(Pair<T, U> &) noexcept;
+inline TupleElement<I, std::pair<T, U>> &get(std::pair<T, U> &) noexcept;
 
 template<Size I, typename T, typename U>
-inline const TupleElement<I, Pair<T, U>> &get(const Pair<T, U> &) noexcept;
+inline const TupleElement<I, std::pair<T, U>> &get(const std::pair<T, U> &) noexcept;
 
 template<Size I, typename T, typename U>
-inline TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&) noexcept;
+inline TupleElement<I, std::pair<T, U>> &&get(std::pair<T, U> &&) noexcept;
 
 template<Size I, typename T, typename U>
-inline const TupleElement<I, Pair<T, U>> &&get(const Pair<T, U> &&) noexcept;
-
-/* array specializations */
-
-template<typename T, Size I>
-constexpr bool IsTupleLike<Array<T, I>> = true;
-
-template<Size I, typename T, Size S>
-inline T &get(Array<T, S> &) noexcept;
-
-template<Size I, typename T, Size S>
-inline const T &get(const Array<T, S> &) noexcept;
-
-template<Size I, typename T, Size S>
-inline T &&get(Array<T, S> &&) noexcept;
-
-template<Size I, typename T, Size S>
-inline const T &&get(const Array<T, S> &&) noexcept;
+inline const TupleElement<I, std::pair<T, U>> &&get(const std::pair<T, U> &&) noexcept;
 
 /* make tuple indices */
 

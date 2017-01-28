@@ -6,6 +6,8 @@
 #ifndef OSTD_MAP_HH
 #define OSTD_MAP_HH
 
+#include <utility>
+
 #include "ostd/types.hh"
 #include "ostd/utility.hh"
 #include "ostd/memory.hh"
@@ -18,7 +20,7 @@ namespace ostd {
 
 namespace detail {
     template<typename K, typename T, typename A> struct MapBase {
-        using Element = Pair<K const, T>;
+        using Element = std::pair<K const, T>;
 
         static inline K const &get_key(Element &e) {
             return e.first;
@@ -42,11 +44,11 @@ namespace detail {
         typename C, typename A, bool IsMultihash
     >
     struct MapImpl: detail::Hashtable<detail::MapBase<K, T, A>,
-        Pair<K const, T>, K, T, H, C, A, IsMultihash
+        std::pair<K const, T>, K, T, H, C, A, IsMultihash
     > {
     private:
         using Base = detail::Hashtable<detail::MapBase<K, T, A>,
-            Pair<K const, T>, K, T, H, C, A, IsMultihash
+            std::pair<K const, T>, K, T, H, C, A, IsMultihash
         >;
 
     public:
@@ -56,14 +58,14 @@ namespace detail {
         using Difference = Ptrdiff;
         using Hasher = H;
         using KeyEqual = C;
-        using Value = Pair<K const, T>;
+        using Value = std::pair<K const, T>;
         using Reference = Value &;
         using Pointer = AllocatorPointer<A>;
         using ConstPointer = AllocatorConstPointer<A>;
-        using Range = HashRange<Pair<K const, T>>;
-        using ConstRange = HashRange<Pair<K const, T> const>;
-        using LocalRange = BucketRange<Pair<K const, T>>;
-        using ConstLocalRange = BucketRange<Pair<K const, T> const>;
+        using Range = HashRange<std::pair<K const, T>>;
+        using ConstRange = HashRange<std::pair<K const, T> const>;
+        using LocalRange = BucketRange<std::pair<K const, T>>;
+        using ConstLocalRange = BucketRange<std::pair<K const, T> const>;
         using Allocator = A;
 
         explicit MapImpl(
@@ -185,7 +187,7 @@ template<
     typename K, typename T,
     typename H = ToHash<K>,
     typename C = EqualWithCstr<K>,
-    typename A = Allocator<Pair<K const, T>>
+    typename A = Allocator<std::pair<K const, T>>
 >
 using Map = detail::MapImpl<K, T, H, C, A, false>;
 
@@ -193,7 +195,7 @@ template<
     typename K, typename T,
     typename H = ToHash<K>,
     typename C = EqualWithCstr<K>,
-    typename A = Allocator<Pair<K const, T>>
+    typename A = Allocator<std::pair<K const, T>>
 >
 using Multimap = detail::MapImpl<K, T, H, C, A, true>;
 

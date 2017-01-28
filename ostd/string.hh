@@ -964,8 +964,8 @@ struct ToString<ConstCharRange> {
 };
 
 template<typename T, typename U>
-struct ToString<Pair<T, U>> {
-    using Argument = Pair<T, U>;
+struct ToString<std::pair<T, U>> {
+    using Argument = std::pair<T, U>;
     using Result = String;
     String operator()(Argument const &v) {
         String ret("{");

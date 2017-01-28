@@ -8,6 +8,8 @@
 
 #include <math.h>
 
+#include <utility>
+
 #include "ostd/functional.hh"
 #include "ostd/range.hh"
 #include "ostd/utility.hh"
@@ -683,13 +685,13 @@ inline void generate(R range, F gen) {
 }
 
 template<typename R1, typename R2>
-inline Pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
+inline std::pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
     while (!range1.empty() && !range2.empty()) {
         detail::swap_adl(range1.front(), range2.front());
         range1.pop_front();
         range2.pop_front();
     }
-    return ostd::make_pair(range1, range2);
+    return std::make_pair(range1, range2);
 }
 
 template<typename R, typename T>

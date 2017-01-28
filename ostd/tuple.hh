@@ -70,7 +70,7 @@ namespace detail {
                     IsLvalueReference<H> && (
                         IsLvalueReference<T> || IsSame<
                             RemoveReference<T>,
-                            ReferenceWrapper<RemoveReference<H>>
+                            std::reference_wrapper<RemoveReference<H>>
                         >
                     )
                 ) || (IsRvalueReference<H> && !IsLvalueReference<T>),
@@ -87,7 +87,7 @@ namespace detail {
                     IsLvalueReference<H> && (
                         IsLvalueReference<T> || IsSame<
                             RemoveReference<T>,
-                            ReferenceWrapper<RemoveReference<H>>
+                            std::reference_wrapper<RemoveReference<H>>
                         >
                     )
                 ),
@@ -104,7 +104,7 @@ namespace detail {
                     IsLvalueReference<H> && (
                         IsLvalueReference<T> || IsSame<
                             RemoveReference<T>,
-                            ReferenceWrapper<RemoveReference<H>>
+                            std::reference_wrapper<RemoveReference<H>>
                         >
                     )
                 ),
@@ -121,7 +121,7 @@ namespace detail {
                     IsLvalueReference<H> && (
                         IsLvalueReference<T> || IsSame<
                             RemoveReference<T>,
-                            ReferenceWrapper<RemoveReference<H>>
+                            std::reference_wrapper<RemoveReference<H>>
                         >
                     )
                 ),
@@ -536,7 +536,7 @@ namespace detail {
     };
 
     template<typename T>
-    struct MakeTupleReturnType<ReferenceWrapper<T>> {
+    struct MakeTupleReturnType<std::reference_wrapper<T>> {
         using Type = T &;
     };
 
@@ -636,23 +636,11 @@ constexpr bool UsesAllocator<Tuple<T...>, A> = true;
 
 /* piecewise pair stuff */
 
-template<typename T, typename U>
-template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
-Pair<T, U>::Pair(
-    PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
-    detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
-):
-    first(
-        std::forward<A1>(get<I1>(fa))...),
-        second(std::forward<A2>(get<I2>(sa))...
-    )
-{}
-
 namespace detail {
     template<typename T, typename U>
     template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
     CompressedPairBase<T, U, 0>::CompressedPairBase(
-        PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+        std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
         detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
     ):
         p_first(std::forward<A1>(get<I1>(fa))...),
@@ -662,7 +650,7 @@ namespace detail {
     template<typename T, typename U>
     template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
     CompressedPairBase<T, U, 1>::CompressedPairBase(
-        PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+        std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
         detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
     ):
         T(std::forward<A1>(get<I1>(fa))...),
@@ -672,7 +660,7 @@ namespace detail {
     template<typename T, typename U>
     template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
     CompressedPairBase<T, U, 2>::CompressedPairBase(
-        PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+        std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
         detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
     ):
         U(std::forward<A2>(get<I2>(sa))...),
@@ -682,7 +670,7 @@ namespace detail {
     template<typename T, typename U>
     template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
     CompressedPairBase<T, U, 3>::CompressedPairBase(
-        PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+        std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
         detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
     ):
         T(std::forward<A1>(get<I1>(fa))...),

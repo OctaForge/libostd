@@ -1588,7 +1588,7 @@ namespace detail {
 
     template<typename T, typename U>
     struct ZipValueType<T, U> {
-        using Type = Pair<T, U>;
+        using Type = std::pair<T, U>;
     };
 
     template<typename ...T>

@@ -74,218 +74,37 @@ namespace detail {
 
 /* pair */
 
-struct PiecewiseConstruct {};
-constexpr PiecewiseConstruct piecewise_construct = {};
+template<typename T, typename U>
+constexpr Size TupleSize<std::pair<T, U>> = 2;
 
 template<typename T, typename U>
-struct Pair {
-    T first;
-    U second;
-
-    Pair() = default;
-    ~Pair() = default;
-
-    Pair(Pair const &) = default;
-    Pair(Pair &&) = default;
-
-    Pair(T const &x, U const &y): first(x), second(y) {}
-
-    template<typename TT, typename UU>
-    Pair(TT &&x, UU &&y):
-        first(std::forward<TT>(x)), second(std::forward<UU>(y))
-    {}
-
-    template<typename TT, typename UU>
-    Pair(Pair<TT, UU> const &v): first(v.first), second(v.second) {}
-
-    template<typename TT, typename UU>
-    Pair(Pair<TT, UU> &&v):
-        first(std::move(v.first)), second(std::move(v.second))
-    {}
-
-    template<typename ...A1, typename ...A2>
-    Pair(PiecewiseConstruct pc, Tuple<A1...> fa, Tuple<A2...> sa):
-        Pair(
-            pc, fa, sa,
-            detail::MakeTupleIndices<sizeof...(A1)>(),
-            detail::MakeTupleIndices<sizeof...(A2)>()
-        )
-    {}
-
-    Pair &operator=(Pair const &v) {
-        first = v.first;
-        second = v.second;
-        return *this;
-    }
-
-    template<typename TT, typename UU>
-    Pair &operator=(Pair<TT, UU> const &v) {
-        first = v.first;
-        second = v.second;
-        return *this;
-    }
-
-    Pair &operator=(Pair &&v) noexcept(
-        IsNothrowMoveAssignable<T> && IsNothrowMoveAssignable<U>
-    ) {
-        first = std::move(v.first);
-        second = std::move(v.second);
-        return *this;
-    }
-
-    template<typename TT, typename UU>
-    Pair &operator=(Pair<TT, UU> &&v) {
-        first = std::forward<TT>(v.first);
-        second = std::forward<UU>(v.second);
-        return *this;
-    }
-
-    void swap(Pair &v) noexcept(
-        noexcept(detail::swap_adl(first, v.first)) &&
-        noexcept(detail::swap_adl(second, v.second))
-    ) {
-        detail::swap_adl(first, v.first);
-        detail::swap_adl(second, v.second);
-    }
-
-private:
-    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
-    Pair(
-        PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
-        detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
-    );
-};
-
-template<typename T>
-struct ReferenceWrapper;
-
-namespace detail {
-    template<typename T>
-    struct MakePairRetBase {
-        using Type = T;
-    };
-
-    template<typename T>
-    struct MakePairRetBase<ReferenceWrapper<T>> {
-        using Type = T &;
-    };
-
-    template<typename T>
-    struct MakePairRet {
-        using Type = typename detail::MakePairRetBase<Decay<T>>::Type;
-    };
-} /* namespace detail */
-
-template<typename T, typename U>
-inline Pair<
-    typename detail::MakePairRet<T>::Type, typename detail::MakePairRet<U>::Type
-> make_pair(T &&a, U &&b) {
-    return Pair<
-        typename detail::MakePairRet<T>::Type,
-        typename detail::MakePairRet<U>::Type
-    >(std::forward<T>(a), std::forward<U>(b));
-}
-
-template<typename T, typename U>
-inline constexpr bool operator==(Pair<T, U> const &x, Pair<T, U> const &y) {
-    return (x.first == y.first) && (x.second == y.second);
-}
-
-template<typename T, typename U>
-inline constexpr bool operator!=(Pair<T, U> const &x, Pair<T, U> const &y) {
-    return (x.first != y.first) || (x.second != y.second);
-}
-
-template<typename T, typename U>
-inline constexpr bool operator<(Pair<T, U> const &x, Pair<T, U> const &y) {
-    return (x.first < y.first)
-        ? true
-        : ((y.first < x.first)
-            ? false
-            : ((x.second < y.second)
-                ? true
-                : false));
-}
-
-template<typename T, typename U>
-inline constexpr bool operator>(Pair<T, U> const &x, Pair<T, U> const &y) {
-    return (y < x);
-}
-
-template<typename T, typename U>
-inline constexpr bool operator<=(Pair<T, U> const &x, Pair<T, U> const &y) {
-    return !(y < x);
-}
-
-template<typename T, typename U>
-inline constexpr bool operator>=(Pair<T, U> const &x, Pair<T, U> const &y) {
-    return !(x < y);
-}
-
-template<typename T, typename U>
-constexpr Size TupleSize<Pair<T, U>> = 2;
-
-template<typename T, typename U>
-struct TupleElementBase<0, Pair<T, U>> {
+struct TupleElementBase<0, std::pair<T, U>> {
     using Type = T;
 };
 
 template<typename T, typename U>
-struct TupleElementBase<1, Pair<T, U>> {
+struct TupleElementBase<1, std::pair<T, U>> {
     using Type = U;
 };
 
-namespace detail {
-    template<Size>
-    struct GetPair;
-
-    template<>
-    struct GetPair<0> {
-        template<typename T, typename U>
-        static T &get(Pair<T, U> &p) { return p.first; }
-        template<typename T, typename U>
-        static T const &get(Pair<T, U> const &p) { return p.first; }
-        template<typename T, typename U>
-        static T &&get(Pair<T, U> &&p) { return std::forward<T>(p.first); }
-        template<typename T, typename U>
-        static T const &&get(Pair<T, U> const &&p) {
-            return std::forward<T const>(p.first);
-        }
-    };
-
-    template<>
-    struct GetPair<1> {
-        template<typename T, typename U>
-        static U &get(Pair<T, U> &p) { return p.second; }
-        template<typename T, typename U>
-        static U const &get(Pair<T, U> const &p) { return p.second; }
-        template<typename T, typename U>
-        static U &&get(Pair<T, U> &&p) { return std::forward<U>(p.second); }
-        template<typename T, typename U>
-        static T const &&get(Pair<T, U> const &&p) {
-            return std::forward<T const>(p.second);
-        }
-    };
+template<Size I, typename T, typename U>
+inline TupleElement<I, std::pair<T, U>> &get(std::pair<T, U> &p) noexcept {
+    return std::get<I>(p);
 }
 
 template<Size I, typename T, typename U>
-inline TupleElement<I, Pair<T, U>> &get(Pair<T, U> &p) noexcept {
-    return detail::GetPair<I>::get(p);
+inline TupleElement<I, std::pair<T, U>> const &get(std::pair<T, U> const &p) noexcept {
+    return std::get<I>(p);
 }
 
 template<Size I, typename T, typename U>
-inline TupleElement<I, Pair<T, U>> const &get(Pair<T, U> const &p) noexcept {
-    return detail::GetPair<I>::get(p);
+inline TupleElement<I, std::pair<T, U>> &&get(std::pair<T, U> &&p) noexcept {
+    return std::get<I>(std::move(p));
 }
 
 template<Size I, typename T, typename U>
-inline TupleElement<I, Pair<T, U>> &&get(Pair<T, U> &&p) noexcept {
-    return detail::GetPair<I>::get(std::move(p));
-}
-
-template<Size I, typename T, typename U>
-inline TupleElement<I, Pair<T, U>> const &&get(Pair<T, U> const &&p) noexcept {
-    return detail::GetPair<I>::get(std::move(p));
+inline TupleElement<I, std::pair<T, U>> const &&get(std::pair<T, U> const &&p) noexcept {
+    return std::get<I>(std::move(p));
 }
 
 namespace detail {
@@ -330,7 +149,7 @@ namespace detail {
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
         CompressedPairBase(
-            PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+            std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
             detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
         );
 
@@ -357,7 +176,7 @@ namespace detail {
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
         CompressedPairBase(
-            PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+            std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
             detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
         );
 
@@ -383,7 +202,7 @@ namespace detail {
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
         CompressedPairBase(
-            PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+            std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
             detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
         );
 
@@ -407,7 +226,7 @@ namespace detail {
 
         template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
         CompressedPairBase(
-            PiecewiseConstruct, Tuple<A1...> &fa, Tuple<A2...> &sa,
+            std::piecewise_construct_t, Tuple<A1...> &fa, Tuple<A2...> &sa,
             detail::TupleIndices<I1...>, detail::TupleIndices<I2...>
         );
 
@@ -430,7 +249,7 @@ namespace detail {
         {}
 
         template<typename ...A1, typename ...A2>
-        CompressedPair(PiecewiseConstruct pc, Tuple<A1...> fa, Tuple<A2...> sa):
+        CompressedPair(std::piecewise_construct_t pc, Tuple<A1...> fa, Tuple<A2...> sa):
             Base(
                 pc, fa, sa,
                 detail::MakeTupleIndices<sizeof...(A1)>(),

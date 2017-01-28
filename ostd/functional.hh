@@ -8,7 +8,9 @@
 #define OSTD_FUNCTIONAL_HH
 
 #include <string.h>
+
 #include <new>
+#include <functional>
 
 #include "ostd/platform.hh"
 #include "ostd/memory.hh"
@@ -438,47 +440,6 @@ typename ToHash<T>::Result to_hash(T const &v) {
     return ToHash<T>()(v);
 }
 
-/* reference wrapper */
-
-template<typename T>
-struct ReferenceWrapper {
-    using Type = T;
-
-    ReferenceWrapper(T &v): p_ptr(address_of(v)) {}
-    ReferenceWrapper(ReferenceWrapper const &) = default;
-    ReferenceWrapper(T &&) = delete;
-
-    ReferenceWrapper &operator=(ReferenceWrapper const &) = default;
-
-    operator T &() const { return *p_ptr; }
-    T &get() const { return *p_ptr; }
-
-private:
-    T *p_ptr;
-};
-
-template<typename T>
-ReferenceWrapper<T> ref(T &v) {
-    return ReferenceWrapper<T>(v);
-}
-template<typename T>
-ReferenceWrapper<T> ref(ReferenceWrapper<T> v) {
-    return ReferenceWrapper<T>(v);
-}
-template<typename T>
-void ref(T const &&) = delete;
-
-template<typename T>
-ReferenceWrapper<T const> cref(T const &v) {
-    return ReferenceWrapper<T>(v);
-}
-template<typename T>
-ReferenceWrapper<T const> cref(ReferenceWrapper<T> v) {
-    return ReferenceWrapper<T>(v);
-}
-template<typename T>
-void cref(T const &&) = delete;
-
 /* mem_fn */
 
 namespace detail {
@@ -613,7 +574,7 @@ namespace detail {
 public:
         explicit FuncCore(F &&f):
             f_stor(
-                piecewise_construct,
+                std::piecewise_construct,
                 forward_as_tuple(std::move(f)),
                 forward_as_tuple()
             )
@@ -621,7 +582,7 @@ public:
 
         explicit FuncCore(F const &f, A const &a):
             f_stor(
-                piecewise_construct,
+                std::piecewise_construct,
                 forward_as_tuple(f),
                 forward_as_tuple(a)
             )
@@ -629,7 +590,7 @@ public:
 
         explicit FuncCore(F const &f, A &&a):
             f_stor(
-                piecewise_construct,
+                std::piecewise_construct,
                 forward_as_tuple(f),
                 forward_as_tuple(std::move(a))
             )
@@ -637,7 +598,7 @@ public:
 
         explicit FuncCore(F &&f, A &&a):
             f_stor(
-                piecewise_construct,
+                std::piecewise_construct,
                 forward_as_tuple(std::move(f)),
                 forward_as_tuple(std::move(a))
             )

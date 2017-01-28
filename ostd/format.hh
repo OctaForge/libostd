@@ -517,7 +517,7 @@ namespace detail {
             T const &item, A const &...args
         ) {
             return FmtTupleUnpacker<I - 1>::unpack(
-                writer, fmtn, esc, fmt, item, get<I - 1>(item), args...
+                writer, fmtn, esc, fmt, item, std::get<I - 1>(item), args...
             );
         }
     };
@@ -547,7 +547,7 @@ namespace detail {
         T const &item, EnableIf<IsTupleLike<T>, bool> = true
     ) {
         if (expandval) {
-            return FmtTupleUnpacker<TupleSize<T>>::unpack(
+            return FmtTupleUnpacker<std::tuple_size<T>::value>::unpack(
                 writer, fmtn, esc, fmt, item
             );
         }
