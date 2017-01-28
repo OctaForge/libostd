@@ -19,7 +19,7 @@ namespace detail {
         SignalBase(SignalBase const &ev):
             p_class(ev.p_class), p_nfuncs(ev.p_nfuncs)
         {
-            using Func = std::function<void(C &, A...)>;
+            using Func = Function<void(C &, A...)>;
             byte *bufp = new byte[sizeof(Func) * p_nfuncs];
             Func *nbuf = reinterpret_cast<Func *>(bufp);
             for (Size i = 0; i < p_nfuncs; ++i)
@@ -34,7 +34,7 @@ namespace detail {
         }
 
         SignalBase &operator=(SignalBase const &ev) {
-            using Func = std::function<void(C &, A...)>;
+            using Func = Function<void(C &, A...)>;
             p_class = ev.p_class;
             p_nfuncs = ev.p_nfuncs;
             byte *bufp = new byte[sizeof(Func) * p_nfuncs];
@@ -54,9 +54,8 @@ namespace detail {
         ~SignalBase() { clear(); }
 
         void clear() {
-            using func = std::function<void(C &, A...)>;
             for (Size i = 0; i < p_nfuncs; ++i) {
-                p_funcs[i].~func();
+                p_funcs[i].~Function<void(C &, A...)>();
             }
             delete[] reinterpret_cast<byte *>(p_funcs);
             p_funcs = nullptr;
@@ -65,7 +64,7 @@ namespace detail {
 
         template<typename F>
         Size connect(F &&func) {
-            using Func = std::function<void(C &, A...)>;
+            using Func = Function<void(C &, A...)>;
             for (Size i = 0; i < p_nfuncs; ++i) {
                 if (!p_funcs[i]) {
                     p_funcs[i] = std::forward<F>(func);
@@ -122,7 +121,7 @@ namespace detail {
 
     private:
         C *p_class;
-        std::function<void(C &, A...)> *p_funcs;
+        Function<void(C &, A...)> *p_funcs;
         Size p_nfuncs;
     };
 } /* namespace detail */
