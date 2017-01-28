@@ -7,6 +7,8 @@
 #ifndef OSTD_INTERNAL_TUPLE_HH
 #define OSTD_INTERNAL_TUPLE_HH
 
+#include <tuple>
+
 #include "ostd/types.hh"
 #include "ostd/type_traits.hh"
 
@@ -62,6 +64,39 @@ template<typename T>
 constexpr bool IsTupleLike<volatile T> = IsTupleLike<T>;
 template<typename T>
 constexpr bool IsTupleLike<const volatile T> = IsTupleLike<T>;
+
+/* std::tuple specializations */
+
+template<typename ...A>
+constexpr bool IsTupleLike<std::tuple<A...>> = true;
+
+template<typename ...T>
+constexpr Size TupleSize<std::tuple<T...>> = sizeof...(T);
+
+template<Size I, typename ...T>
+struct TupleElementBase<I, std::tuple<T...>> {
+    using Type = std::tuple_element_t<I, std::tuple<T...>>;
+};
+
+template<Size I, typename ...A>
+inline TupleElement<I, std::tuple<A...>> &get(std::tuple<A...> &t) noexcept {
+    return std::get<I>(t);
+}
+
+template<Size I, typename ...A>
+inline const TupleElement<I, std::tuple<A...>> &get(const std::tuple<A...> &t) noexcept {
+    return std::get<I>(t);
+}
+
+template<Size I, typename ...A>
+inline TupleElement<I, std::tuple<A...>> &&get(std::tuple<A...> &&t) noexcept {
+    return std::get<I>(std::move(t));
+}
+
+template<Size I, typename ...A>
+inline const TupleElement<I, std::tuple<A...>> &&get(const std::tuple<A...> &&t) noexcept{
+    return std::get<I>(std::move(t));
+}
 
 /* tuple specializations */
 

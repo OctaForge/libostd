@@ -1020,6 +1020,18 @@ struct ToString<Tuple<T...>> {
     }
 };
 
+template<typename ...T>
+struct ToString<std::tuple<T...>> {
+    using Argument = std::tuple<T...>;
+    using Result = String;
+    String operator()(Argument const &v) {
+        String ret("{");
+        detail::TupleToString<0, sizeof...(T)>::append(ret, v);
+        ret += "}";
+        return ret;
+    }
+};
+
 template<typename T>
 typename ToString<T>::Result to_string(T const &v) {
     return ToString<RemoveCv<RemoveReference<T>>>()(v);

@@ -8,12 +8,14 @@
 
 #include <stddef.h>
 #include <string.h>
+
 #include <new>
+#include <tuple>
+#include <utility>
 
 #include "ostd/types.hh"
 #include "ostd/utility.hh"
 #include "ostd/type_traits.hh"
-#include "ostd/tuple.hh"
 
 namespace ostd {
 
@@ -687,16 +689,20 @@ inline auto chunks(T n) {
 
 namespace detail {
     template<typename T, typename ...R, Size ...I>
-    inline auto join_proxy(T &&obj, Tuple<R &&...> &&tup, TupleIndices<I...>) {
+    inline auto join_proxy(
+        T &&obj, std::tuple<R &&...> &&tup, std::index_sequence<I...>
+    ) {
         return obj.join(std::forward<R>(
-            get<I>(std::forward<Tuple<R &&...>>(tup))
+            std::get<I>(std::forward<std::tuple<R &&...>>(tup))
         )...);
     }
 
     template<typename T, typename ...R, Size ...I>
-    inline auto zip_proxy(T &&obj, Tuple<R &&...> &&tup, TupleIndices<I...>) {
+    inline auto zip_proxy(
+        T &&obj, std::tuple<R &&...> &&tup, std::index_sequence<I...>
+    ) {
         return obj.zip(std::forward<R>(
-            get<I>(std::forward<Tuple<R &&...>>(tup))
+            std::get<I>(std::forward<std::tuple<R &&...>>(tup))
         )...);
     }
 }
@@ -711,12 +717,14 @@ inline auto join(R &&range) {
 template<typename R1, typename ...R>
 inline auto join(R1 &&r1, R &&...rr) {
     return [
-        ranges = forward_as_tuple(std::forward<R1>(r1), std::forward<R>(rr)...)
+        ranges = std::forward_as_tuple(
+            std::forward<R1>(r1), std::forward<R>(rr)...
+        )
     ] (auto &&obj) mutable {
-        using Index = detail::MakeTupleIndices<sizeof...(R) + 1>;
         return detail::join_proxy(
             std::forward<decltype(obj)>(obj),
-            std::forward<decltype(ranges)>(ranges), Index()
+            std::forward<decltype(ranges)>(ranges),
+            std::make_index_sequence<sizeof...(R) + 1>()
         );
     };
 }
@@ -731,12 +739,14 @@ inline auto zip(R &&range) {
 template<typename R1, typename ...R>
 inline auto zip(R1 &&r1, R &&...rr) {
     return [
-        ranges = forward_as_tuple(std::forward<R1>(r1), std::forward<R>(rr)...)
+        ranges = std::forward_as_tuple(
+            std::forward<R1>(r1), std::forward<R>(rr)...
+        )
     ] (auto &&obj) mutable {
-        using Index = detail::MakeTupleIndices<sizeof...(R) + 1>;
         return detail::zip_proxy(
             std::forward<decltype(obj)>(obj),
-            std::forward<decltype(ranges)>(ranges), Index()
+            std::forward<decltype(ranges)>(ranges),
+            std::make_index_sequence<sizeof...(R) + 1>()
         );
     };
 }
@@ -1452,7 +1462,7 @@ namespace detail {
     struct JoinRangeEmpty {
         template<typename T>
         static bool empty(T const &tup) {
-            if (!ostd::get<I>(tup).empty()) {
+            if (!std::get<I>(tup).empty()) {
                 return false;
             }
             return JoinRangeEmpty<I + 1, N>::empty(tup);
@@ -1471,7 +1481,7 @@ namespace detail {
     struct TupleRangeEqual {
         template<typename T>
         static bool equal(T const &tup1, T const &tup2) {
-            if (!ostd::get<I>(tup1).equals_front(ostd::get<I>(tup2))) {
+            if (!std::get<I>(tup1).equals_front(std::get<I>(tup2))) {
                 return false;
             }
             return TupleRangeEqual<I + 1, N>::equal(tup1, tup2);
@@ -1490,8 +1500,8 @@ namespace detail {
     struct JoinRangePop {
         template<typename T>
         static bool pop(T &tup) {
-            if (!ostd::get<I>(tup).empty()) {
-                return ostd::get<I>(tup).pop_front();
+            if (!std::get<I>(tup).empty()) {
+                return std::get<I>(tup).pop_front();
             }
             return JoinRangePop<I + 1, N>::pop(tup);
         }
@@ -1509,8 +1519,8 @@ namespace detail {
     struct JoinRangeFront {
         template<typename U>
         static T front(U const &tup) {
-            if (!ostd::get<I>(tup).empty()) {
-                return ostd::get<I>(tup).front();
+            if (!std::get<I>(tup).empty()) {
+                return std::get<I>(tup).front();
             }
             return JoinRangeFront<I + 1, N, T>::front(tup);
         }
@@ -1520,7 +1530,7 @@ namespace detail {
     struct JoinRangeFront<N, N, T> {
         template<typename U>
         static T front(U const &tup) {
-            return ostd::get<0>(tup).front();
+            return std::get<0>(tup).front();
         }
     };
 }
@@ -1531,7 +1541,7 @@ struct JoinRange: InputRange<JoinRange<R...>,
     CommonType<RangeValue<R>...>, CommonType<RangeReference<R>...>,
     CommonType<RangeSize<R>...>, CommonType<RangeDifference<R>...>> {
 private:
-    Tuple<R...> p_ranges;
+    std::tuple<R...> p_ranges;
 public:
     JoinRange() = delete;
     JoinRange(R const &...ranges): p_ranges(ranges...) {}
@@ -1573,7 +1583,7 @@ public:
 namespace detail {
     template<typename ...T>
     struct ZipValueType {
-        using Type = Tuple<T...>;
+        using Type = std::tuple<T...>;
     };
 
     template<typename T, typename U>
@@ -1588,7 +1598,7 @@ namespace detail {
     struct ZipRangeEmpty {
         template<typename T>
         static bool empty(T const &tup) {
-            if (ostd::get<I>(tup).empty()) {
+            if (std::get<I>(tup).empty()) {
                 return true;
             }
             return ZipRangeEmpty<I + 1, N>::empty(tup);
@@ -1608,7 +1618,7 @@ namespace detail {
         template<typename T>
         static bool pop(T &tup) {
             return (
-                ostd::get<I>(tup).pop_front() && ZipRangePop<I + 1, N>::pop(tup)
+                std::get<I>(tup).pop_front() && ZipRangePop<I + 1, N>::pop(tup)
             );
         }
     };
@@ -1624,14 +1634,15 @@ namespace detail {
     template<typename ...T>
     struct ZipRangeFront {
         template<typename U, Size ...I>
-        static ZipValue<T...> tup_get(U const &tup, detail::TupleIndices<I...>) {
-            return ZipValue<T...>(ostd::get<I>(tup).front()...);
+        static ZipValue<T...> tup_get(U const &tup, std::index_sequence<I...>) {
+            return ZipValue<T...>(std::get<I>(tup).front()...);
         }
 
         template<typename U>
         static ZipValue<T...> front(U const &tup) {
-            using Index = detail::MakeTupleIndices<sizeof...(T)>;
-            return ZipRangeFront<T...>::tup_get(tup, Index());
+            return ZipRangeFront<T...>::tup_get(
+                tup, std::make_index_sequence<sizeof...(T)>()
+            );
         }
     };
 }
@@ -1643,7 +1654,7 @@ struct ZipRange: InputRange<ZipRange<R...>,
     detail::ZipValue<RangeReference<R>...>,
     CommonType<RangeSize<R>...>, CommonType<RangeDifference<R>...>> {
 private:
-    Tuple<R...> p_ranges;
+    std::tuple<R...> p_ranges;
 public:
     ZipRange() = delete;
     ZipRange(R const &...ranges): p_ranges(ranges...) {}
