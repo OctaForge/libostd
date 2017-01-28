@@ -52,9 +52,9 @@ inline void swap(T &a, T &b) noexcept(noexcept(detail::swap_fb(a, b))) {
 }
 
 template<typename T, Size N>
-inline void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b))) {
+inline void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(ostd::swap(*a, *b))) {
     for (Size i = 0; i < N; ++i) {
-        swap(a[i], b[i]);
+        ostd::swap(a[i], b[i]);
     }
 }
 
@@ -62,8 +62,8 @@ namespace detail {
     namespace adl_swap {
         using ostd::swap;
         template<typename T>
-        inline void swap_adl(T &a, T &b) noexcept(noexcept(swap(a, b))) {
-            swap(a, b);
+        inline void swap_adl(T &a, T &b) noexcept(noexcept(ostd::swap(a, b))) {
+            ostd::swap(a, b);
         }
     }
     template<typename T>
