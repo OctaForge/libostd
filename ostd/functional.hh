@@ -551,7 +551,7 @@ public:
         using AA = AllocatorRebind<A, FuncCore>;
         AA a(f_stor.second());
         using D = AllocatorDestructor<AA>;
-        Box<FuncCore, D> hold(a.allocate(1), D(a, 1));
+        std::unique_ptr<FuncCore, D> hold(a.allocate(1), D(a, 1));
         ::new(hold.get()) FuncCore(f_stor.first(), A(a));
         return hold.release();
     }
@@ -739,7 +739,7 @@ Function<R(Args...)>::Function(F f): p_f(nullptr) {
     using AA = Allocator<FF>;
     AA a;
     using D = detail::AllocatorDestructor<AA>;
-    Box<FF, D> hold(a.allocate(1), D(a, 1));
+    std::unique_ptr<FF, D> hold(a.allocate(1), D(a, 1));
     ::new(hold.get()) FF(std::move(f), Allocator<F>(a));
     p_f = hold.release();
 }
@@ -763,7 +763,7 @@ Function<R(Args...)>::Function(AllocatorArg, A const &a, F f):
         return;
     }
     using D = detail::AllocatorDestructor<AA>;
-    Box<FF, D> hold(aa.allocate(1), D(aa, 1));
+    std::unique_ptr<FF, D> hold(aa.allocate(1), D(aa, 1));
     ::new(hold.get()) FF(std::move(f), A(aa));
     p_f = hold.release();
 }
