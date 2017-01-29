@@ -25,7 +25,7 @@ int main() {
     /* configurable section */
 
     auto compiler = env_get("CXX").value_or("c++");
-    auto cxxflags = "-std=c++14 -I. -Wall -Wextra -Wshadow -Wold-style-cast "
+    auto cxxflags = "-std=c++1z -I. -Wall -Wextra -Wshadow -Wold-style-cast "
                     "-Wno-missing-braces"; /* clang false positive */
     auto testdir = env_get("TESTDIR").value_or("tests");
     auto srcext = ".cc";

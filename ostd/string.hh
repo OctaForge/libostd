@@ -10,6 +10,9 @@
 #include <stddef.h>
 #include <ctype.h>
 
+#include <string>
+#include <string_view>
+
 #include "ostd/utility.hh"
 #include "ostd/range.hh"
 #include "ostd/vector.hh"
@@ -208,6 +211,11 @@ diffsize:
         return c;
     }
 
+    /* that way we can assign, append etc to std::string */
+    operator std::basic_string_view<RemoveCv<T>>() const {
+        return std::basic_string_view<RemoveCv<T>>{data(), size()};
+    }
+
 private:
     T *p_beg, *p_end;
 };
@@ -245,6 +253,20 @@ inline bool starts_with(ConstCharRange a, ConstCharRange b) {
     }
     return a.slice(0, b.size()) == b;
 }
+
+template<typename T>
+struct ranged_traits<std::basic_string<T>> {
+    static CharRangeBase<T> iter(std::basic_string<T> &v) {
+        return CharRangeBase<T>{v.data(), v.size()};
+    }
+};
+
+template<typename T>
+struct ranged_traits<std::basic_string<T> const> {
+    static CharRangeBase<T const> iter(std::basic_string<T> const &v) {
+        return CharRangeBase<T const>{v.data(), v.size()};
+    }
+};
 
 template<typename T, typename A>
 class StringBase {
@@ -952,6 +974,15 @@ struct ToString<String> {
 };
 
 template<>
+struct ToString<std::string> {
+    using Argument = std::string;
+    using Result = String;
+    String operator()(Argument const &s) {
+        return iter(s);
+    }
+};
+
+template<>
 struct ToString<CharRange> {
     using Argument = CharRange;
     using Result = String;
@@ -1123,5 +1154,23 @@ inline TempCString<R> to_temp_cstr(
 }
 
 } /* namespace ostd */
+
+namespace std {
+
+template<>
+struct hash<ostd::CharRange> {
+    size_t operator()(ostd::CharRange const &v) {
+        return hash<std::string_view>{}(v);
+    }
+};
+
+template<>
+struct hash<ostd::ConstCharRange> {
+    size_t operator()(ostd::CharRange const &v) {
+        return hash<std::string_view>{}(v);
+    }
+};
+
+}
 
 #endif
