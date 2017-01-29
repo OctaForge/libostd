@@ -19,11 +19,11 @@ namespace detail {
         SignalBase(SignalBase const &ev):
             p_class(ev.p_class), p_nfuncs(ev.p_nfuncs)
         {
-            using Func = Function<void(C &, A...)>;
-            byte *bufp = new byte[sizeof(Func) * p_nfuncs];
-            Func *nbuf = reinterpret_cast<Func *>(bufp);
+            using func_t = std::function<void(C &, A...)>;
+            byte *bufp = new byte[sizeof(func_t) * p_nfuncs];
+            func_t *nbuf = reinterpret_cast<func_t *>(bufp);
             for (Size i = 0; i < p_nfuncs; ++i)
-                new (&nbuf[i]) Func(ev.p_funcs[i]);
+                new (&nbuf[i]) func_t(ev.p_funcs[i]);
             p_funcs = nbuf;
         }
 
@@ -34,13 +34,13 @@ namespace detail {
         }
 
         SignalBase &operator=(SignalBase const &ev) {
-            using Func = Function<void(C &, A...)>;
+            using func_t = std::function<void(C &, A...)>;
             p_class = ev.p_class;
             p_nfuncs = ev.p_nfuncs;
-            byte *bufp = new byte[sizeof(Func) * p_nfuncs];
-            Func *nbuf = reinterpret_cast<Func *>(bufp);
+            byte *bufp = new byte[sizeof(func_t) * p_nfuncs];
+            func_t *nbuf = reinterpret_cast<func_t *>(bufp);
             for (Size i = 0; i < p_nfuncs; ++i) {
-                new (&nbuf[i]) Func(ev.p_funcs[i]);
+                new (&nbuf[i]) func_t(ev.p_funcs[i]);
             }
             p_funcs = nbuf;
             return *this;
@@ -55,7 +55,8 @@ namespace detail {
 
         void clear() {
             for (Size i = 0; i < p_nfuncs; ++i) {
-                p_funcs[i].~Function<void(C &, A...)>();
+                using func = std::function<void(C &, A...)>;
+                p_funcs[i].~func();
             }
             delete[] reinterpret_cast<byte *>(p_funcs);
             p_funcs = nullptr;
@@ -64,20 +65,20 @@ namespace detail {
 
         template<typename F>
         Size connect(F &&func) {
-            using Func = Function<void(C &, A...)>;
+            using func_t = std::function<void(C &, A...)>;
             for (Size i = 0; i < p_nfuncs; ++i) {
                 if (!p_funcs[i]) {
                     p_funcs[i] = std::forward<F>(func);
                     return i;
                 }
             }
-            byte *bufp = new byte[sizeof(Func) * (p_nfuncs + 1)];
-            Func *nbuf = reinterpret_cast<Func *>(bufp);
+            byte *bufp = new byte[sizeof(func_t) * (p_nfuncs + 1)];
+            func_t *nbuf = reinterpret_cast<func_t *>(bufp);
             for (Size i = 0; i < p_nfuncs; ++i) {
-                new (&nbuf[i]) Func(std::move(p_funcs[i]));
-                p_funcs[i].~Func();
+                new (&nbuf[i]) func_t(std::move(p_funcs[i]));
+                p_funcs[i].~func_t();
             }
-            new (&nbuf[p_nfuncs]) Func(std::forward<F>(func));
+            new (&nbuf[p_nfuncs]) func_t(std::forward<F>(func));
             delete[] reinterpret_cast<byte *>(p_funcs);
             p_funcs = nbuf;
             return p_nfuncs++;
@@ -122,7 +123,7 @@ namespace detail {
 
     private:
         C *p_class;
-        Function<void(C &, A...)> *p_funcs;
+        std::function<void(C &, A...)> *p_funcs;
         Size p_nfuncs;
     };
 } /* namespace detail */
