@@ -35,7 +35,10 @@ namespace detail {
         }
         template<typename U>
         static inline void set_key(T &, U const &, A &) {}
-        static inline void swap_elem(T &a, T &b) { swap_adl(a, b); }
+        static inline void swap_elem(T &a, T &b) {
+            using std::swap;
+            swap(a, b);
+        }
     };
 
     template<
@@ -187,6 +190,11 @@ template<
 >
 using Keyset = detail::KeysetImpl<T, H, C, A, false>;
 
+template<typename T, typename H, typename C, typename A>
+inline void swap(Keyset<T, H, C, A> &a, Keyset<T, H, C, A> &b) {
+    a.swap(b);
+}
+
 template<
     typename T,
     typename H = ToHash<detail::KeysetKey<T>>,
@@ -194,6 +202,11 @@ template<
     typename A = Allocator<T>
 >
 using Multikeyset = detail::KeysetImpl<T, H, C, A, true>;
+
+template<typename T, typename H, typename C, typename A>
+inline void swap(Multikeyset<T, H, C, A> &a, Multikeyset<T, H, C, A> &b) {
+    a.swap(b);
+}
 
 } /* namespace ostd */
 

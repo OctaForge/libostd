@@ -285,9 +285,10 @@ public:
     }
 
     void swap(Maybe &v) {
+        using std::swap;
         if (this->p_engaged == v.p_engaged) {
             if (this->p_engaged) {
-                detail::swap_adl(this->p_value, v.p_value);
+                swap(this->p_value, v.p_value);
             }
         } else {
             if (this->p_engaged) {
@@ -297,7 +298,7 @@ public:
                 ::new(address_of(this->p_value)) Value(std::move(v.p_value));
                 v.p_value.~Value();
             }
-            detail::swap_adl(this->p_engaged, v.p_engaged);
+            swap(this->p_engaged, v.p_engaged);
         }
     }
 
@@ -305,6 +306,11 @@ public:
         return this->p_engaged ? ostd::ToHash<T>()(this->p_value) : 0;
     }
 };
+
+template<typename T>
+inline void swap(Maybe<T> &a, Maybe<T> &b) {
+    a.swap(b);
+}
 
 /* maybe vs maybe */
 

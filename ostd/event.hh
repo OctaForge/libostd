@@ -114,9 +114,10 @@ namespace detail {
         }
 
         void swap(SignalBase &ev) {
-            detail::swap_adl(p_class, ev.p_class);
-            detail::swap_adl(p_funcs, ev.p_funcs);
-            detail::swap_adl(p_nfuncs, ev.p_nfuncs);
+            using std::swap;
+            swap(p_class, ev.p_class);
+            swap(p_funcs, ev.p_funcs);
+            swap(p_nfuncs, ev.p_nfuncs);
         }
 
     private:
@@ -203,6 +204,11 @@ public:
 
     void swap(Signal &ev) { p_base.swap(ev.p_base); }
 };
+
+template<typename C, typename ...A>
+inline void swap(Signal<C, A...> &a, Signal<C, A...> &b) {
+    a.swap(b);
+}
 
 } /* namespace ostd */
 

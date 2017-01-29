@@ -257,8 +257,9 @@ namespace detail {
         }
         bool operator!=(RangeIterator) const { return !get_ref().empty(); }
         void swap(RangeIterator &v) {
-            detail::swap_adl(get_ref(). v.get_ref());
-            detail::swap_adl(p_init, v.p_init);
+            using std::swap;
+            swap(get_ref(). v.get_ref());
+            swap(p_init, v.p_init);
         }
     private:
         T &get_ref() { return *reinterpret_cast<T *>(&p_range); }

@@ -128,8 +128,9 @@ struct FileStream: Stream {
     }
 
     void swap(FileStream &s) {
-        ostd::swap(p_f, s.p_f);
-        ostd::swap(p_owned, s.p_owned);
+        using std::swap;
+        swap(p_f, s.p_f);
+        swap(p_owned, s.p_owned);
     }
 
     FILE *get_file() { return p_f; }
@@ -138,6 +139,10 @@ private:
     FILE *p_f;
     bool p_owned;
 };
+
+inline void swap(FileStream &a, FileStream &b) {
+    a.swap(b);
+}
 
 static FileStream in(stdin);
 static FileStream out(stdout);

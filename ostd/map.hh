@@ -34,8 +34,9 @@ namespace detail {
             allocator_construct(alloc, &e, std::forward<U>(key), std::move(T()));
         }
         static inline void swap_elem(Element &a, Element &b) {
-            swap_adl(const_cast<K &>(a.first), const_cast<K &>(b.first));
-            swap_adl(a.second, b.second);
+            using std::swap;
+            swap(const_cast<K &>(a.first), const_cast<K &>(b.first));
+            swap(a.second, b.second);
         }
     };
 
@@ -191,6 +192,11 @@ template<
 >
 using Map = detail::MapImpl<K, T, H, C, A, false>;
 
+template<typename K, typename T, typename H, typename C, typename A>
+inline void swap(Map<K, T, H, C, A> &a, Map<K, T, H, C, A> &b) {
+    a.swap(b);
+}
+
 template<
     typename K, typename T,
     typename H = ToHash<K>,
@@ -198,6 +204,11 @@ template<
     typename A = Allocator<std::pair<K const, T>>
 >
 using Multimap = detail::MapImpl<K, T, H, C, A, true>;
+
+template<typename K, typename T, typename H, typename C, typename A>
+inline void swap(Multimap<K, T, H, C, A> &a, Multimap<K, T, H, C, A> &b) {
+    a.swap(b);
+}
 
 } /* namespace ostd */
 

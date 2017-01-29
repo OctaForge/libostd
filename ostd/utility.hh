@@ -15,61 +15,6 @@
 
 namespace ostd {
 
-/* swap */
-
-namespace detail {
-    template<typename T>
-    auto test_swap(int) -> BoolConstant<IsVoid<
-        decltype(std::declval<T>().swap(std::declval<T &>()))
-    >>;
-    template<typename>
-    False test_swap(...);
-
-    template<typename T>
-    inline void swap_fb(
-        T &a, T &b, EnableIf<decltype(test_swap<T>(0))::value, bool> = true
-    ) noexcept(noexcept(a.swap(b))) {
-        a.swap(b);
-    }
-
-    template<typename T>
-    inline void swap_fb(
-        T &a, T &b, EnableIf<!decltype(test_swap<T>(0))::value, bool> = true
-    ) noexcept(IsNothrowMoveConstructible<T> && IsNothrowMoveAssignable<T>) {
-        T c(std::move(a));
-        a = std::move(b);
-        b = std::move(c);
-    }
-}
-
-template<typename T>
-inline void swap(T &a, T &b) noexcept(noexcept(detail::swap_fb(a, b))) {
-   detail::swap_fb(a, b);
-}
-
-template<typename T, Size N>
-inline void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(ostd::swap(*a, *b))) {
-    for (Size i = 0; i < N; ++i) {
-        ostd::swap(a[i], b[i]);
-    }
-}
-
-namespace detail {
-    namespace adl_swap {
-        using ostd::swap;
-        template<typename T>
-        inline void swap_adl(T &a, T &b) noexcept(noexcept(ostd::swap(a, b))) {
-            ostd::swap(a, b);
-        }
-    }
-    template<typename T>
-    inline void swap_adl(T &a, T &b) noexcept(noexcept(adl_swap::swap_adl(a, b))) {
-        adl_swap::swap_adl(a, b);
-    }
-}
-
-/* pair */
-
 namespace detail {
     template<typename T, typename U,
         bool = IsSame<RemoveCv<T>, RemoveCv<U>>,

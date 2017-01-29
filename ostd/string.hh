@@ -645,11 +645,12 @@ public:
     }
 
     void swap(StringBase &v) {
-        detail::swap_adl(p_len, v.p_len);
-        detail::swap_adl(p_cap, v.p_cap);
-        detail::swap_adl(p_buf.first(), v.p_buf.first());
+        using std::swap;
+        swap(p_len, v.p_len);
+        swap(p_cap, v.p_cap);
+        swap(p_buf.first(), v.p_buf.first());
         if (AllocatorPropagateOnContainerSwap<A>) {
-            detail::swap_adl(p_buf.second(), v.p_buf.second());
+            swap(p_buf.second(), v.p_buf.second());
         }
     }
 
@@ -661,6 +662,11 @@ public:
         return p_buf.second();
     }
 };
+
+template<typename T>
+inline void swap(StringBase<T> &a, StringBase<T> &b) {
+    a.swap(b);
+}
 
 using String = StringBase<char>;
 
@@ -1098,10 +1104,16 @@ public:
     RemoveCv<RangeValue<R>> const *get() const { return p_buf; }
 
     void swap(TempCString &s) {
-        detail::swap_adl(p_buf, s.p_buf);
-        detail::swap_adl(p_allocated, s.p_allocated);
+        using std::swap;
+        swap(p_buf, s.p_buf);
+        swap(p_allocated, s.p_allocated);
     }
 };
+
+template<typename R>
+inline void swap(TempCString<R> &a, TempCString<R> &b) {
+    a.swap(b);
+}
 
 template<typename R>
 inline TempCString<R> to_temp_cstr(

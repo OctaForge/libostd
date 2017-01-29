@@ -477,15 +477,16 @@ protected:
         }
 
         Hashtable &operator=(Hashtable &&ht) {
+            using std::swap;
             clear();
-            swap_adl(p_size, ht.p_size);
-            swap_adl(p_len, ht.p_len);
-            swap_adl(p_chunks, ht.p_chunks);
-            swap_adl(p_unused, ht.p_unused);
-            swap_adl(p_data.first(), ht.p_data.first());
-            swap_adl(p_data.second().second(), ht.p_data.second().second());
+            swap(p_size, ht.p_size);
+            swap(p_len, ht.p_len);
+            swap(p_chunks, ht.p_chunks);
+            swap(p_unused, ht.p_unused);
+            swap(p_data.first(), ht.p_data.first());
+            swap(p_data.second().second(), ht.p_data.second().second());
             if (AllocatorPropagateOnContainerMoveAssignment<A>) {
-                swap_adl(p_data.second().first(), ht.p_data.second().first());
+                swap(p_data.second().first(), ht.p_data.second().first());
             }
             return *this;
         }
@@ -506,14 +507,15 @@ protected:
         }
 
         void swap(Hashtable &ht) {
-            swap_adl(p_size, ht.p_size);
-            swap_adl(p_len, ht.p_len);
-            swap_adl(p_chunks, ht.p_chunks);
-            swap_adl(p_unused, ht.p_unused);
-            swap_adl(p_data.first(), ht.p_data.first());
-            swap_adl(p_data.second().second(), ht.p_data.second().second());
+            using std::swap;
+            swap(p_size, ht.p_size);
+            swap(p_len, ht.p_len);
+            swap(p_chunks, ht.p_chunks);
+            swap(p_unused, ht.p_unused);
+            swap(p_data.first(), ht.p_data.first());
+            swap(p_data.second().second(), ht.p_data.second().second());
             if (AllocatorPropagateOnContainerSwap<A>) {
-                swap_adl(p_data.second().first(), ht.p_data.second().first());
+                swap(p_data.second().first(), ht.p_data.second().first());
             }
         }
 

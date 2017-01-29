@@ -24,7 +24,8 @@ inline R partition(R range, U pred) {
     R ret = range;
     for (; !range.empty(); range.pop_front()) {
         if (pred(range.front())) {
-            detail::swap_adl(range.front(), ret.front());
+            using std::swap;
+            swap(range.front(), ret.front());
             ret.pop_front();
         }
     }
@@ -92,7 +93,8 @@ namespace detail {
                 sw = ch + 1;
             }
             if (sw != r) {
-                detail::swap_adl(range[r], range[sw]);
+                using std::swap;
+                swap(range[r], range[sw]);
                 r = sw;
             } else {
                 return;
@@ -112,7 +114,8 @@ namespace detail {
         }
         RangeSize<R> e = len - 1;
         while (e > 0) {
-            detail::swap_adl(range[e], range[0]);
+            using std::swap;
+            swap(range[e], range[0]);
             --e;
             detail::hs_sift_down(range, 0, e, compare);
         }
@@ -120,6 +123,7 @@ namespace detail {
 
     template<typename R, typename C>
     static void introloop(R range, C &compare, RangeSize<R> depth) {
+        using std::swap;
         if (range.size() <= 10) {
             detail::insort(range, compare);
             return;
@@ -128,16 +132,16 @@ namespace detail {
             detail::heapsort(range, compare);
             return;
         }
-        detail::swap_adl(range[range.size() / 2], range.back());
+        swap(range[range.size() / 2], range.back());
         RangeSize<R> pi = 0;
         R pr = range;
         pr.pop_back();
         for (; !pr.empty(); pr.pop_front()) {
             if (compare(pr.front(), range.back())) {
-                detail::swap_adl(pr.front(), range[pi++]);
+                swap(pr.front(), range[pi++]);
             }
         }
-        detail::swap_adl(range[pi], range.back());
+        swap(range[pi], range.back());
         detail::introloop(range.slice(0, pi), compare, depth - 1);
         detail::introloop(
             range.slice(pi + 1, range.size()), compare, depth - 1
@@ -656,7 +660,8 @@ inline R2 move(R1 irange, R2 orange) {
 template<typename R>
 inline void reverse(R range) {
     while (!range.empty()) {
-        detail::swap_adl(range.front(), range.back());
+        using std::swap;
+        swap(range.front(), range.back());
         range.pop_front();
         range.pop_back();
     }
@@ -687,7 +692,8 @@ inline void generate(R range, F gen) {
 template<typename R1, typename R2>
 inline std::pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
     while (!range1.empty() && !range2.empty()) {
-        detail::swap_adl(range1.front(), range2.front());
+        using std::swap;
+        swap(range1.front(), range2.front());
         range1.pop_front();
         range2.pop_front();
     }

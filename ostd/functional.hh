@@ -841,8 +841,14 @@ void Function<R(Args...)>::swap(Function &f) noexcept {
         f.p_f = p_f;
         p_f = as_base(&p_buf);
     } else {
-        detail::swap_adl(p_f, f.p_f);
+        using std::swap;
+        swap(p_f, f.p_f);
     }
+}
+
+template<typename R, typename ...Args>
+inline void swap(Function<R(Args...)> &a, Function<R(Args...)> &b) {
+    a.swap(b);
 }
 
 template<typename R, typename ...Args>

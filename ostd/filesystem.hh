@@ -17,6 +17,8 @@
 #include <direct.h>
 #endif
 
+#include <utility>
+
 #include "ostd/types.hh"
 #include "ostd/range.hh"
 #include "ostd/vector.hh"
@@ -125,13 +127,14 @@ struct FileInfo {
     time_t ctime() const { return p_ctime; }
 
     void swap(FileInfo &i) {
-        detail::swap_adl(i.p_slash, p_slash);
-        detail::swap_adl(i.p_dot, p_dot);
-        detail::swap_adl(i.p_type, p_type);
-        detail::swap_adl(i.p_path, p_path);
-        detail::swap_adl(i.p_atime, p_atime);
-        detail::swap_adl(i.p_mtime, p_mtime);
-        detail::swap_adl(i.p_ctime, p_ctime);
+        using std::swap;
+        swap(i.p_slash, p_slash);
+        swap(i.p_dot, p_dot);
+        swap(i.p_type, p_type);
+        swap(i.p_path, p_path);
+        swap(i.p_atime, p_atime);
+        swap(i.p_mtime, p_mtime);
+        swap(i.p_ctime, p_ctime);
     }
 
 private:
@@ -218,6 +221,10 @@ private:
 
     time_t p_atime = 0, p_mtime = 0, p_ctime = 0;
 };
+
+inline void swap(FileInfo &a, FileInfo &b) {
+    a.swap(b);
+}
 
 struct DirectoryRange;
 
@@ -312,9 +319,10 @@ struct DirectoryStream {
     }
 
     void swap(DirectoryStream &s) {
-        detail::swap_adl(p_d, s.p_d);
-        detail::swap_adl(p_de, s.p_de);
-        detail::swap_adl(p_path, s.p_path);
+        using std::swap;
+        swap(p_d, s.p_d);
+        swap(p_de, s.p_de);
+        swap(p_path, s.p_path);
     }
 
     DirectoryRange iter();
@@ -482,9 +490,10 @@ struct DirectoryStream {
     }
 
     void swap(DirectoryStream &s) {
-        detail::swap_adl(p_handle, s.p_handle);
-        detail::swap_adl(p_data, s.p_data);
-        detail::swap_adl(p_path, s.p_path);
+        using std::swap;
+        swap(p_handle, s.p_handle);
+        swap(p_data, s.p_data);
+        swap(p_path, s.p_path);
     }
 
     DirectoryRange iter();
@@ -516,6 +525,10 @@ private:
     String p_path;
 };
 #endif /* OSTD_PLATFORM_WIN32 */
+
+inline void swap(DirectoryStream &a, DirectoryStream &b) {
+    a.swap(b);
+}
 
 struct DirectoryRange: InputRange<
     DirectoryRange, InputRangeTag, FileInfo, FileInfo, Size, long

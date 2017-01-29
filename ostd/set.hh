@@ -27,7 +27,10 @@ namespace detail {
         }
         template<typename U>
         static inline void set_key(T &, U const &, A &) {}
-        static inline void swap_elem(T &a, T &b) { swap_adl(a, b); }
+        static inline void swap_elem(T &a, T &b) {
+            using std::swap;
+            swap(a, b);
+        }
     };
 
     template<typename T, typename H, typename C, typename A, bool IsMultihash>
@@ -160,6 +163,11 @@ template<
 >
 using Set = detail::SetImpl<T, H, C, A, false>;
 
+template<typename T, typename H, typename C, typename A>
+inline void swap(Set<T, H, C, A> &a, Set<T, H, C, A> &b) {
+    a.swap(b);
+}
+
 template<
     typename T,
     typename H = ToHash<T>,
@@ -167,6 +175,11 @@ template<
     typename A = Allocator<T>
 >
 using Multiset = detail::SetImpl<T, H, C, A, true>;
+
+template<typename T, typename H, typename C, typename A>
+inline void swap(Multiset<T, H, C, A> &a, Multiset<T, H, C, A> &b) {
+    a.swap(b);
+}
 
 } /* namespace ostd */
 
