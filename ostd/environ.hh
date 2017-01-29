@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <vector>
+
 #include "ostd/maybe.hh"
 #include "ostd/string.hh"
 
@@ -19,7 +21,7 @@
 
 namespace ostd {
 
-inline Maybe<String> env_get(ConstCharRange name) {
+inline Maybe<std::string> env_get(ConstCharRange name) {
     char buf[256];
     auto tbuf = to_temp_cstr(name, buf, sizeof(buf));
 #ifndef OSTD_PLATFORM_WIN32
@@ -27,23 +29,21 @@ inline Maybe<String> env_get(ConstCharRange name) {
     if (!ret) {
         return ostd::nothing;
     }
-    return std::move(String(ret));
+    return std::string{ret};
 #else
-    String rbuf;
+    std::vector<char> rbuf;
+    DWORD sz;
     for (;;) {
-        auto ret = GetEnvironmentVariable(
-            tbuf.get(), rbuf.data(), rbuf.capacity() + 1
-        );
-        if (!ret) {
+        sz = GetEnvironmentVariable(tbuf.get(), rbuf.data(), rbuf.capacity());
+        if (!sz) {
             return ostd::nothing;
         }
-        if (ret <= rbuf.capacity()) {
-            rbuf.advance(ret);
+        if (sz < rbuf.capacity()) {
             break;
         }
-        rbuf.reserve(ret - 1);
+        rbuf.reserve(sz);
     }
-    return std::move(rbuf);
+    return std::string{rbuf.data(), sz};
 #endif
 }
 
@@ -86,9 +86,9 @@ inline bool env_unset(ConstCharRange name) {
 #endif
     }
 #ifndef OSTD_PLATFORM_WIN32
-    return !unsetenv(String(name).data());
+    return !unsetenv(std::string{name}.data());
 #else
-    return !!SetEnvironmentVariable(String(name).data(), nullptr);
+    return !!SetEnvironmentVariable(std::string{name}.data(), nullptr);
 #endif
 }
 

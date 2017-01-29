@@ -26,7 +26,7 @@ int main() {
 
     /* prints ABCDEF (ASCII 65, 66, 67, 68, 69, 70) */
     writeln("string gen test");
-    String s(map(range(6), [](int v) -> char { return v + 65; }));
+    auto s = make_string(map(range(6), [](int v) -> char { return v + 65; }));
     writeln(s);
 
     /* join a few ranges together - prints 11, 22, 33 ... 99 each on new line */

@@ -52,7 +52,7 @@ int main() {
         return range(v + 1);
     }));
 
-    Map<String, int> m = {
+    Map<std::string, int> m = {
         { "foo", 5  },
         { "bar", 10 },
         { "baz", 15 }
@@ -81,7 +81,7 @@ int main() {
     writefln("%i", Bar{});
 
     /* format into string */
-    auto s = appender<String>();
+    auto s = appender<std::string>();
     format(s, "hello %s", "world");
     writeln(s.get());
 }

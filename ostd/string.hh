@@ -1,4 +1,4 @@
-/* String for OctaSTD.
+/* String utilities for OctaSTD.
  *
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
@@ -21,10 +21,6 @@
 #include "ostd/algorithm.hh"
 
 namespace ostd {
-static constexpr Size npos = -1;
-
-template<typename T, typename A = Allocator<T>>
-class StringBase;
 
 template<typename T>
 struct CharRangeBase: InputRange<
@@ -56,8 +52,8 @@ public:
         p_beg(beg), p_end(beg + N - (beg[N - 1] == '\0'))
     {}
 
-    template<typename U, typename A>
-    CharRangeBase(StringBase<U, A> const &s, EnableIf<
+    template<typename U, typename TR, typename A>
+    CharRangeBase(std::basic_string<U, TR, A> const &s, EnableIf<
         IsConvertible<U *, T *>, Nat
     > = Nat()):
         p_beg(s.data()), p_end(s.data() + s.size())
@@ -72,8 +68,8 @@ public:
         p_beg = v.p_beg; p_end = v.p_end; return *this;
     }
 
-    template<typename A>
-    CharRangeBase &operator=(StringBase<T, A> const &s) {
+    template<typename TR, typename A>
+    CharRangeBase &operator=(std::basic_string<T, TR, A> const &s) {
         p_beg = s.data(); p_end = s.data() + s.size(); return *this;
     }
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
@@ -268,439 +264,26 @@ struct ranged_traits<std::basic_string<T> const> {
     }
 };
 
-template<typename T, typename A>
-class StringBase {
-    using StrPair = detail::CompressedPair<AllocatorPointer<A>, A>;
-
-    ostd::Size p_len, p_cap;
-    StrPair p_buf;
-
-    template<typename R>
-    void ctor_from_range(R &range, EnableIf<
-        IsFiniteRandomAccessRange<R> && IsSame<T, RemoveCv<RangeValue<R>>>, bool
-    > = true) {
-        if (range.empty()) {
-            return;
-        }
-        RangeSize<R> l = range.size();
-        reserve(l);
-        p_len = l;
-        range.copy(p_buf.first(), l);
-        p_buf.first()[l] = '\0';
+template<typename T, typename R>
+inline std::basic_string<T> make_string(R range) {
+    /* TODO: specialize for contiguous ranges and matching value types */
+    std::basic_string<T> ret;
+    for (; !range.empty(); range.pop_front()) {
+        ret.push_back(range.front());
     }
-
-    template<typename R>
-    void ctor_from_range(R &range, EnableIf<
-        !IsFiniteRandomAccessRange<R> || !IsSame<T, RemoveCv<RangeValue<R>>>,
-        bool
-    > = true) {
-        if (range.empty()) {
-            return;
-        }
-        Size i = 0;
-        for (; !range.empty(); range.pop_front()) {
-            reserve(i + 1);
-            allocator_construct(
-                p_buf.second(), &p_buf.first()[i],
-                range.front()
-            );
-            ++i;
-            p_len = i;
-        }
-        p_buf.first()[p_len] = '\0';
-    }
-
-public:
-    using Size = ostd::Size;
-    using Difference = Ptrdiff;
-    using Value = T;
-    using Reference = T &;
-    using ConstReference = T const &;
-    using Pointer = AllocatorPointer<A>;
-    using ConstPointer = AllocatorConstPointer<A>;
-    using Range = CharRangeBase<T>;
-    using ConstRange = CharRangeBase<T const>;
-    using Allocator = A;
-
-    StringBase(A const &a = A()):
-        p_len(0), p_cap(0),
-        p_buf(reinterpret_cast<Pointer>(&p_len), a)
-    {}
-
-    explicit StringBase(Size n, T val = T(), A const &al = A()):
-        StringBase(al)
-    {
-        if (!n) {
-            return;
-        }
-        p_buf.first() = allocator_allocate(p_buf.second(), n + 1);
-        p_len = p_cap = n;
-        Pointer cur = p_buf.first(), last = p_buf.first() + n;
-        while (cur != last) {
-            *cur++ = val;
-        }
-        *cur = '\0';
-    }
-
-    StringBase(StringBase const &s):
-        p_len(0), p_cap(0), p_buf(reinterpret_cast<Pointer>(&p_len),
-        allocator_container_copy(s.p_buf.second()))
-    {
-        if (!s.p_len) {
-            return;
-        }
-        reserve(s.p_len);
-        p_len = s.p_len;
-        memcpy(p_buf.first(), s.p_buf.first(), (p_len + 1) * sizeof(T));
-    }
-    StringBase(StringBase const &s, A const &a):
-        p_len(0), p_cap(0), p_buf(reinterpret_cast<Pointer>(&p_len), a)
-     {
-        if (!s.p_len) {
-            return;
-        }
-        reserve(s.p_len);
-        p_len = s.p_len;
-        memcpy(p_buf.first(), s.p_buf.first(), (p_len + 1) * sizeof(T));
-    }
-    StringBase(StringBase &&s):
-        p_len(s.p_len), p_cap(s.p_cap),
-        p_buf(s.p_buf.first(), std::move(s.p_buf.second()))
-    {
-        s.p_len = s.p_cap = 0;
-        s.p_buf.first() = reinterpret_cast<Pointer>(&s.p_len);
-    }
-    StringBase(StringBase &&s, A const &a):
-        p_len(0), p_cap(0), p_buf(reinterpret_cast<Pointer>(&p_len), a)
-    {
-        if (!s.p_len) {
-            return;
-        }
-        if (a != s.p_buf.second()) {
-            reserve(s.p_cap);
-            p_len = s.p_len;
-            memcpy(p_buf.first(), s.p_buf.first(), (p_len + 1) * sizeof(T));
-            return;
-        }
-        p_buf.first() = s.p_buf.first();
-        p_len = s.p_len;
-        p_cap = s.p_cap;
-        s.p_len = s.p_cap = 0;
-        s.p_buf.first() = &s.p_cap;
-    }
-
-    StringBase(
-        StringBase const &s, Size pos, Size len = npos, A const &a = A()
-    ): StringBase(a) {
-        Size end = (len == npos) ? s.size() : (pos + len);
-        Size nch = (end - pos);
-        reserve(nch);
-        memcpy(p_buf.first(), s.p_buf.first() + pos, nch);
-        p_len += nch;
-        p_buf.first()[p_len] = '\0';
-    }
-
-    /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
-    StringBase(ConstRange v, A const &a = A()): StringBase(a) {
-        if (!v.size()) {
-            return;
-        }
-        reserve(v.size());
-        memcpy(p_buf.first(), &v[0], v.size());
-        p_buf.first()[v.size()] = '\0';
-        p_len = v.size();
-    }
-
-    template<typename U>
-    StringBase(U v, EnableIf<
-        IsConvertible<U, Value const *> && !IsArray<U>, A
-    > const &a = A()): StringBase(ConstRange(v), a) {}
-
-    template<typename U, Size N>
-    StringBase(U (&v)[N], EnableIf<
-        IsConvertible<U *, Value const *>, A
-    > const &a = A()): StringBase(ConstRange(v), a) {}
-
-    template<typename R, typename = EnableIf<
-        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-    >>
-    StringBase(R range, A const &a = A()): StringBase(a) {
-        ctor_from_range(range);
-    }
-
-    ~StringBase() {
-        if (!p_cap) {
-            return;
-        }
-        allocator_deallocate(p_buf.second(), p_buf.first(), p_cap + 1);
-    }
-
-    void clear() {
-        if (!p_len) {
-            return;
-        }
-        p_len = 0;
-        *p_buf.first() = '\0';
-    }
-
-    StringBase &operator=(StringBase const &v) {
-        if (this == &v) {
-            return *this;
-        }
-        clear();
-        if (AllocatorPropagateOnContainerCopyAssignment<A>) {
-            if ((p_buf.second() != v.p_buf.second()) && p_cap) {
-                allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
-                p_cap = 0;
-                p_buf.first() = reinterpret_cast<Pointer>(&p_len);
-            }
-            p_buf.second() = v.p_buf.second();
-        }
-        reserve(v.p_cap);
-        p_len = v.p_len;
-        if (p_len) {
-            memcpy(p_buf.first(), v.p_buf.first(), p_len);
-            p_buf.first()[p_len] = '\0';
-        } else {
-            p_buf.first() = reinterpret_cast<Pointer>(&p_len);
-        }
-        return *this;
-    }
-
-    StringBase &operator=(StringBase &&v) {
-        clear();
-        if (p_cap) {
-            allocator_deallocate(p_buf.second(), p_buf.first(), p_cap);
-        }
-        if (AllocatorPropagateOnContainerMoveAssignment<A>) {
-            p_buf.second() = v.p_buf.second();
-        }
-        p_len = v.p_len;
-        p_cap = v.p_cap;
-        p_buf.~StrPair();
-        new (&p_buf) StrPair(v.release(), std::move(v.p_buf.second()));
-        if (!p_cap) {
-            p_buf.first() = reinterpret_cast<Pointer>(&p_len);
-        }
-        return *this;
-    }
-
-    StringBase &operator=(ConstRange v) {
-        reserve(v.size());
-        if (v.size()) {
-            memcpy(p_buf.first(), &v[0], v.size());
-        }
-        p_buf.first()[v.size()] = '\0';
-        p_len = v.size();
-        return *this;
-    }
-
-    template<typename U>
-    EnableIf<
-        IsConvertible<U, Value const *> && !IsArray<U>, StringBase &
-    > operator=(U v) {
-        return operator=(ConstRange(v));
-    }
-
-    template<typename U, Size N>
-    EnableIf<
-        IsConvertible<U *, Value const *>, StringBase &
-    > operator=(U (&v)[N]) {
-        return operator=(ConstRange(v));
-    }
-
-    template<typename R, typename = EnableIf<
-        IsInputRange<R> && IsConvertible<RangeReference<R>, Value>
-    >> StringBase &operator=(R const &r) {
-        clear();
-        ctor_from_range(r);
-        return *this;
-    }
-
-    void resize(Size n, T v = T()) {
-        if (!n) {
-            clear();
-            return;
-        }
-        Size l = p_len;
-        reserve(n);
-        p_len = n;
-        for (Size i = l; i < p_len; ++i) {
-            p_buf.first()[i] = T(v);
-        }
-        p_buf.first()[l] = '\0';
-    }
-
-    void reserve(Size n) {
-        if (n <= p_cap) {
-            return;
-        }
-        Size oc = p_cap;
-        if (!oc) {
-            p_cap = max(n, Size(8));
-        } else {
-            while (p_cap < n) p_cap *= 2;
-        }
-        Pointer tmp = allocator_allocate(p_buf.second(), p_cap + 1);
-        if (oc > 0) {
-            memcpy(tmp, p_buf.first(), (p_len + 1) * sizeof(T));
-            allocator_deallocate(p_buf.second(), p_buf.first(), oc + 1);
-        }
-        tmp[p_len] = '\0';
-        p_buf.first() = tmp;
-    }
-
-    T &operator[](Size i) { return p_buf.first()[i]; }
-    T const &operator[](Size i) const { return p_buf.first()[i]; }
-
-    T &at(Size i) { return p_buf.first()[i]; }
-    T const &at(Size i) const { return p_buf.first()[i]; }
-
-    T &front() { return p_buf.first()[0]; }
-    T const &front() const { return p_buf.first()[0]; };
-
-    T &back() { return p_buf.first()[size() - 1]; }
-    T const &back() const { return p_buf.first()[size() - 1]; }
-
-    Value *data() { return p_buf.first(); }
-    Value const *data() const { return p_buf.first(); }
-
-    Size size() const {
-        return p_len;
-    }
-
-    Size capacity() const {
-        return p_cap;
-    }
-
-    void advance(Size s) { p_len += s; }
-
-    Size length() const {
-        /* TODO: unicode */
-        return size();
-    }
-
-    bool empty() const { return (size() == 0); }
-
-    Value *release() {
-        Pointer r = p_buf.first();
-        p_buf.first() = nullptr;
-        p_len = p_cap = 0;
-        return reinterpret_cast<Value *>(r);
-    }
-
-    void push(T v) {
-        reserve(p_len + 1);
-        p_buf.first()[p_len++] = v;
-        p_buf.first()[p_len] = '\0';
-    }
-
-    StringBase &append(ConstRange r) {
-        if (!r.size()) {
-            return *this;
-        }
-        reserve(p_len + r.size());
-        memcpy(p_buf.first() + p_len, &r[0], r.size());
-        p_len += r.size();
-        p_buf.first()[p_len] = '\0';
-        return *this;
-    }
-
-    StringBase &append(Size n, T c) {
-        if (!n) {
-            return *this;
-        }
-        reserve(p_len + n);
-        for (Size i = 0; i < n; ++i) {
-            p_buf.first()[p_len + i] = c;
-        }
-        p_len += n;
-        p_buf.first()[p_len] = '\0';
-        return *this;
-    }
-
-    template<typename R, typename = EnableIf<
-        IsInputRange<R> && IsConvertible<RangeReference<R>, Value> &&
-        !IsConvertible<R, ConstRange>
-    >> StringBase &append(R range) {
-        Size nadd = 0;
-        for (; !range.empty(); range.pop_front()) {
-            reserve(p_len + nadd + 1);
-            p_buf.first()[p_len + nadd++] = range.front(); 
-        }
-        p_len += nadd;
-        p_buf.first()[p_len] = '\0';
-        return *this;
-    }
-
-    StringBase &operator+=(ConstRange r) {
-        return append(r);
-    }
-    StringBase &operator+=(T c) {
-        return append(1, c);
-    }
-    template<typename R>
-    StringBase &operator+=(R const &v) {
-        return append(v);
-    }
-
-    int compare(ConstRange r) const {
-        return iter().compare(r);
-    }
-
-    int case_compare(ConstRange r) const {
-        return iter().case_compare(r);
-    }
-
-    Range iter() {
-        return Range(p_buf.first(), size());
-    }
-    ConstRange iter() const {
-        return ConstRange(p_buf.first(), size());
-    }
-    ConstRange citer() const {
-        return ConstRange(p_buf.dfirst(), size());
-    }
-
-    Range iter_cap() {
-        return Range(p_buf.first(), capacity());
-    }
-
-    void swap(StringBase &v) {
-        using std::swap;
-        swap(p_len, v.p_len);
-        swap(p_cap, v.p_cap);
-        swap(p_buf.first(), v.p_buf.first());
-        if (AllocatorPropagateOnContainerSwap<A>) {
-            swap(p_buf.second(), v.p_buf.second());
-        }
-    }
-
-    Size to_hash() const {
-        return iter().to_hash();
-    }
-
-    A get_allocator() const {
-        return p_buf.second();
-    }
-};
-
-template<typename T>
-inline void swap(StringBase<T> &a, StringBase<T> &b) {
-    a.swap(b);
+    return ret;
 }
 
-using String = StringBase<char>;
+template<typename R>
+inline std::basic_string<RemoveCv<RangeValue<R>>> make_string(R range) {
+    return make_string<RemoveCv<RangeValue<R>>>(std::move(range));
+}
 
 /* string literals */
 
 inline namespace literals {
 inline namespace string_literals {
-    inline String operator "" _s(char const *str, Size len) {
-        return String(ConstCharRange(str, len));
-    }
-
-    inline ConstCharRange operator "" _S(char const *str, Size len) {
+    inline ConstCharRange operator "" _sr(char const *str, Size len) {
         return ConstCharRange(str, len);
     }
 }
@@ -807,7 +390,7 @@ namespace detail {
 
     template<typename T, typename R>
     static auto test_stringify(int) ->
-        BoolConstant<IsSame<decltype(std::declval<T>().stringify()), String>>;
+        BoolConstant<IsSame<decltype(std::declval<T>().stringify()), std::string>>;
 
     template<typename T, typename R>
     static True test_stringify(decltype(std::declval<T const &>().to_string
@@ -834,11 +417,11 @@ struct ToString;
 template<typename T>
 struct ToString<T, EnableIf<detail::IterableTest<T>>> {
     using Argument = RemoveCv<RemoveReference<T>>;
-    using Result = String;
+    using Result = std::string;
 
-    String operator()(T const &v) const {
-        String ret("{");
-        auto x = appender<String>();
+    std::string operator()(T const &v) const {
+        std::string ret("{");
+        auto x = appender<std::string>();
         if (concat(x, ostd::iter(v), ", ", ToString<
             RemoveConst<RemoveReference<
                 RangeReference<decltype(ostd::iter(v))>
@@ -853,44 +436,26 @@ struct ToString<T, EnableIf<detail::IterableTest<T>>> {
 
 template<typename T>
 struct ToString<T, EnableIf<
-    detail::StringifyTest<T, detail::TostrRange<AppenderRange<String>>>
+    detail::StringifyTest<T, detail::TostrRange<AppenderRange<std::string>>>
 >> {
     using Argument = RemoveCv<RemoveReference<T>>;
-    using Result = String;
+    using Result = std::string;
 
-    String operator()(T const &v) const {
-        auto app = appender<String>();
-        detail::TostrRange<AppenderRange<String>> sink(app);
+    std::string operator()(T const &v) const {
+        auto app = appender<std::string>();
+        detail::TostrRange<AppenderRange<std::string>> sink(app);
         if (!v.to_string(sink)) {
-            return String();
+            return std::string{};
         }
         return std::move(app.get());
     }
 };
 
-namespace detail {
-    template<typename T>
-    void str_printf(String &s, char const *fmt, T v) {
-        char buf[256];
-        int n = snprintf(buf, sizeof(buf), fmt, v);
-        s.clear();
-        s.reserve(n);
-        if (n >= int(sizeof(buf))) {
-            snprintf(s.data(), n + 1, fmt, v);
-        } else if (n > 0) {
-            memcpy(s.data(), buf, n + 1);
-        } else {
-            s.clear();
-        }
-        *reinterpret_cast<Size *>(&s) = n;
-    }
-}
-
 template<>
 struct ToString<bool> {
     using Argument = bool;
-    using Result = String;
-    String operator()(bool b) {
+    using Result = std::string;
+    std::string operator()(bool b) {
         return b ? "true" : "false";
     }
 };
@@ -898,77 +463,66 @@ struct ToString<bool> {
 template<>
 struct ToString<char> {
     using Argument = char;
-    using Result = String;
-    String operator()(char c) {
-        String ret;
-        ret.push(c);
+    using Result = std::string;
+    std::string operator()(char c) {
+        std::string ret;
+        ret += c;
         return ret;
     }
 };
 
-#define OSTD_TOSTR_NUM(T, fmt) \
+#define OSTD_TOSTR_NUM(T) \
 template<> \
 struct ToString<T> { \
     using Argument = T; \
-    using Result = String; \
-    String operator()(T v) { \
-        String ret; \
-        detail::str_printf(ret, fmt, v); \
-        return ret; \
+    using Result = std::string; \
+    std::string operator()(T v) { \
+        return std::to_string(v); \
     } \
 };
 
-OSTD_TOSTR_NUM(sbyte, "%hhd")
-OSTD_TOSTR_NUM(short, "%hd")
-OSTD_TOSTR_NUM(int, "%d")
-OSTD_TOSTR_NUM(long, "%ld")
-OSTD_TOSTR_NUM(float, "%f")
-OSTD_TOSTR_NUM(double, "%f")
+OSTD_TOSTR_NUM(sbyte)
+OSTD_TOSTR_NUM(short)
+OSTD_TOSTR_NUM(int)
+OSTD_TOSTR_NUM(long)
+OSTD_TOSTR_NUM(float)
+OSTD_TOSTR_NUM(double)
 
-OSTD_TOSTR_NUM(byte, "%hhu")
-OSTD_TOSTR_NUM(ushort, "%hu")
-OSTD_TOSTR_NUM(uint, "%u")
-OSTD_TOSTR_NUM(ulong, "%lu")
-OSTD_TOSTR_NUM(llong, "%lld")
-OSTD_TOSTR_NUM(ullong, "%llu")
-OSTD_TOSTR_NUM(ldouble, "%Lf")
+OSTD_TOSTR_NUM(byte)
+OSTD_TOSTR_NUM(ushort)
+OSTD_TOSTR_NUM(uint)
+OSTD_TOSTR_NUM(ulong)
+OSTD_TOSTR_NUM(llong)
+OSTD_TOSTR_NUM(ullong)
+OSTD_TOSTR_NUM(ldouble)
 
 #undef OSTD_TOSTR_NUM
 
 template<typename T>
 struct ToString<T *> {
     using Argument = T *;
-    using Result = String;
-    String operator()(Argument v) {
-        String ret;
-        detail::str_printf(ret, "%p", v);
-        return ret;
+    using Result = std::string;
+    std::string operator()(Argument v) {
+        char buf[16];
+        sprintf(buf, "%p", v);
+        return buf;
     }
 };
 
 template<>
 struct ToString<char const *> {
     using Argument = char const *;
-    using Result = String;
-    String operator()(char const *s) {
-        return String(s);
+    using Result = std::string;
+    std::string operator()(char const *s) {
+        return s;
     }
 };
 
 template<>
 struct ToString<char *> {
     using Argument = char *;
-    using Result = String;
-    String operator()(char *s) {
-        return String(s);
-    }
-};
-
-template<>
-struct ToString<String> {
-    using Argument = String;
-    using Result = String;
-    String operator()(Argument const &s) {
+    using Result = std::string;
+    std::string operator()(char *s) {
         return s;
     }
 };
@@ -976,36 +530,36 @@ struct ToString<String> {
 template<>
 struct ToString<std::string> {
     using Argument = std::string;
-    using Result = String;
-    String operator()(Argument const &s) {
-        return iter(s);
+    using Result = std::string;
+    std::string operator()(Argument const &s) {
+        return s;
     }
 };
 
 template<>
 struct ToString<CharRange> {
     using Argument = CharRange;
-    using Result = String;
-    String operator()(Argument const &s) {
-        return String(s);
+    using Result = std::string;
+    std::string operator()(Argument const &s) {
+        return std::string{s};
     }
 };
 
 template<>
 struct ToString<ConstCharRange> {
     using Argument = ConstCharRange;
-    using Result = String;
-    String operator()(Argument const &s) {
-        return String(s);
+    using Result = std::string;
+    std::string operator()(Argument const &s) {
+        return std::string{s};
     }
 };
 
 template<typename T, typename U>
 struct ToString<std::pair<T, U>> {
     using Argument = std::pair<T, U>;
-    using Result = String;
-    String operator()(Argument const &v) {
-        String ret("{");
+    using Result = std::string;
+    std::string operator()(Argument const &v) {
+        std::string ret{"{"};
         ret += ToString<RemoveCv<RemoveReference<T>>>()(v.first);
         ret += ", ";
         ret += ToString<RemoveCv<RemoveReference<U>>>()(v.second);
@@ -1018,7 +572,7 @@ namespace detail {
     template<Size I, Size N>
     struct TupleToString {
         template<typename T>
-        static void append(String &ret, T const &tup) {
+        static void append(std::string &ret, T const &tup) {
             ret += ", ";
             ret += ToString<RemoveCv<RemoveReference<
                 decltype(std::get<I>(tup))
@@ -1030,13 +584,13 @@ namespace detail {
     template<Size N>
     struct TupleToString<N, N> {
         template<typename T>
-        static void append(String &, T const &) {}
+        static void append(std::string &, T const &) {}
     };
 
     template<Size N>
     struct TupleToString<0, N> {
         template<typename T>
-        static void append(String &ret, T const &tup) {
+        static void append(std::string &ret, T const &tup) {
             ret += ToString<RemoveCv<RemoveReference<
                 decltype(std::get<0>(tup))
             >>>()(std::get<0>(tup));
@@ -1048,9 +602,9 @@ namespace detail {
 template<typename ...T>
 struct ToString<std::tuple<T...>> {
     using Argument = std::tuple<T...>;
-    using Result = String;
-    String operator()(Argument const &v) {
-        String ret("{");
+    using Result = std::string;
+    std::string operator()(Argument const &v) {
+        std::string ret("{");
         detail::TupleToString<0, sizeof...(T)>::append(ret, v);
         ret += "}";
         return ret;
@@ -1063,34 +617,8 @@ typename ToString<T>::Result to_string(T const &v) {
 }
 
 template<typename T>
-String to_string(std::initializer_list<T> init) {
+std::string to_string(std::initializer_list<T> init) {
     return to_string(iter(init));
-}
-
-/* TODO: rvalue ref versions for rhs when we have efficient prepend */
-
-inline String operator+(String const &lhs, ConstCharRange rhs) {
-    String ret(lhs); ret += rhs; return ret;
-}
-
-inline String operator+(ConstCharRange lhs, String const &rhs) {
-    String ret(lhs); ret += rhs; return ret;
-}
-
-inline String operator+(String const &lhs, char rhs) {
-    String ret(lhs); ret += rhs; return ret;
-}
-
-inline String operator+(char lhs, String const &rhs) {
-    String ret(lhs); ret += rhs; return ret;
-}
-
-inline String operator+(String &&lhs, ConstCharRange rhs) {
-    String ret(std::move(lhs)); ret += rhs; return ret;
-}
-
-inline String operator+(String &&lhs, char rhs) {
-    String ret(std::move(lhs)); ret += rhs; return ret;
 }
 
 template<typename R>
@@ -1152,6 +680,17 @@ inline TempCString<R> to_temp_cstr(
 ) {
     return TempCString<R>(input, buf, bufsize);
 }
+
+/* temporary */
+template<>
+struct ToHash<std::string> {
+    using Argument = std::string;
+    using Result = size_t;
+
+    size_t operator()(std::string const &v) const {
+        return std::hash<std::string>{}(v);
+    }
+};
 
 } /* namespace ostd */
 

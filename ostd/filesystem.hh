@@ -69,7 +69,7 @@ struct FileInfo {
         p_path(std::move(i.p_path)), p_atime(i.p_atime), p_mtime(i.p_mtime),
         p_ctime(i.p_ctime)
     {
-        i.p_slash = i.p_dot = npos;
+        i.p_slash = i.p_dot = std::string::npos;
         i.p_type = FileType::unknown;
         i.p_atime = i.p_ctime = i.p_mtime = 0;
     }
@@ -94,23 +94,23 @@ struct FileInfo {
         return *this;
     }
 
-    ConstCharRange path() const { return p_path.iter(); }
+    ConstCharRange path() const { return ostd::iter(p_path); }
 
     ConstCharRange filename() const {
         return path().slice(
-            (p_slash == npos) ? 0 : (p_slash + 1), p_path.size()
+            (p_slash == std::string::npos) ? 0 : (p_slash + 1), p_path.size()
         );
     }
 
     ConstCharRange stem() const {
         return path().slice(
-            (p_slash == npos) ? 0 : (p_slash + 1),
-            (p_dot == npos) ? p_path.size() : p_dot
+            (p_slash == std::string::npos) ? 0 : (p_slash + 1),
+            (p_dot == std::string::npos) ? p_path.size() : p_dot
         );
     }
 
     ConstCharRange extension() const {
-        return (p_dot == npos)
+        return (p_dot == std::string::npos)
             ? ConstCharRange()
             : path().slice(p_dot, p_path.size());
     }
@@ -118,8 +118,8 @@ struct FileInfo {
     FileType type() const { return p_type; }
 
     void normalize() {
-        path_normalize(p_path.iter());
-        init_from_str(p_path.iter());
+        path_normalize(ostd::iter(p_path));
+        init_from_str(ostd::iter(p_path));
     }
 
     time_t atime() const { return p_atime; }
@@ -150,24 +150,24 @@ private:
         if (lstat(p_path.data(), &st) < 0)
 #endif
         {
-            p_slash = p_dot = npos;
+            p_slash = p_dot = std::string::npos;
             p_type = FileType::unknown;
             p_path.clear();
             p_atime = p_mtime = p_ctime = 0;
             return;
         }
-        ConstCharRange r = p_path.iter();
+        ConstCharRange r = p_path;
 
         ConstCharRange found = find_last(r, PathSeparator);
         if (found.empty()) {
-            p_slash = npos;
+            p_slash = std::string::npos;
         } else {
             p_slash = r.distance_front(found);
         }
 
         found = find(filename(), '.');
         if (found.empty()) {
-            p_dot = npos;
+            p_dot = std::string::npos;
         } else {
             p_dot = r.distance_front(found);
         }
@@ -215,9 +215,9 @@ private:
 #endif
     }
 
-    Size p_slash = npos, p_dot = npos;
+    Size p_slash = std::string::npos, p_dot = std::string::npos;
     FileType p_type = FileType::unknown;
-    String p_path;
+    std::string p_path;
 
     time_t p_atime = 0, p_mtime = 0, p_ctime = 0;
 };
@@ -353,7 +353,7 @@ private:
         if (!p_de) {
             return FileInfo();
         }
-        String ap = p_path;
+        std::string ap = p_path;
         ap += PathSeparator;
         ap += static_cast<char const *>(p_de->d_name);
         return FileInfo(ap);
@@ -361,7 +361,7 @@ private:
 
     DIR *p_d;
     struct dirent *p_de;
-    String p_path;
+    std::string p_path;
 };
 
 #else /* OSTD_PLATFORM_WIN32 */
@@ -514,7 +514,7 @@ private:
         if (empty()) {
             return FileInfo();
         }
-        String ap = p_path;
+        std::string ap = p_path;
         ap += PathSeparator;
         ap += static_cast<char const *>(p_data.cFileName);
         return FileInfo(ap);
@@ -522,7 +522,7 @@ private:
 
     HANDLE p_handle;
     WIN32_FIND_DATA p_data;
-    String p_path;
+    std::string p_path;
 };
 #endif /* OSTD_PLATFORM_WIN32 */
 
@@ -570,7 +570,7 @@ namespace detail {
     template<Size I>
     struct PathJoin {
         template<typename T, typename ...A>
-        static void join(String &s, T const &a, A const &...b) {
+        static void join(std::string &s, T const &a, A const &...b) {
             s += a;
             s += PathSeparator;
             PathJoin<I - 1>::join(s, b...);
@@ -580,7 +580,7 @@ namespace detail {
     template<>
     struct PathJoin<1> {
         template<typename T>
-        static void join(String &s, T const &a) {
+        static void join(std::string &s, T const &a) {
             s += a;
         }
     };
@@ -588,9 +588,9 @@ namespace detail {
 
 template<typename ...A>
 inline FileInfo path_join(A const &...args) {
-    String path;
+    std::string path;
     detail::PathJoin<sizeof...(A)>::join(path, args...);
-    path_normalize(path.iter());
+    path_normalize(ostd::iter(path));
     return FileInfo(path);
 }
 

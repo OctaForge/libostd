@@ -644,19 +644,19 @@ namespace detail {
         return nullptr;
     }
 
-    inline String escape_fmt_str(ConstCharRange val) {
-        String ret;
-        ret.push('"');
+    inline std::string escape_fmt_str(ConstCharRange val) {
+        std::string ret;
+        ret.push_back('"');
         while (!val.empty()) {
             char const *esc = escape_fmt_char(val.front(), '"');
             if (esc) {
                 ret.append(esc);
             } else {
-                ret.push(val.front());
+                ret.push_back(val.front());
             }
             val.pop_front();
         }
-        ret.push('"');
+        ret.push_back('"');
         return ret;
     }
 

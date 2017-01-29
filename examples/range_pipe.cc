@@ -23,7 +23,7 @@ int main() {
 
     /* prints ABCDEF (ASCII 65, 66, 67, 68, 69, 70) */
     writeln("string gen test");
-    String s(range(6) | map([](int v) -> char { return v + 65; }));
+    auto s = make_string(range(6) | map([](int v) -> char { return v + 65; }));
     writeln(s);
 
     /* join a few ranges together - prints 11, 22, 33 ... 99 each on new line */
@@ -76,7 +76,7 @@ int main() {
         | filter([](auto v) { return v >= 65 && v <= 90; })
         | map   ([](auto v) { return char(v); });
 
-    writeln(String(r));
+    writeln(make_string(r));
 
     /* "list comprehensions" */
     writeln("list initialization");

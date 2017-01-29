@@ -1693,8 +1693,8 @@ public:
 };
 
 template<typename T>
-struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value,
-    typename T::Reference, typename T::Size, typename T::Difference> {
+struct AppenderRange: OutputRange<AppenderRange<T>, typename T::value_type,
+    typename T::reference, typename T::size_type, typename T::difference_type> {
     AppenderRange(): p_data() {}
     AppenderRange(T const &v): p_data(v) {}
     AppenderRange(T &&v): p_data(std::move(v)) {}
@@ -1723,19 +1723,19 @@ struct AppenderRange: OutputRange<AppenderRange<T>, typename T::Value,
 
     void clear() { p_data.clear(); }
 
-    void reserve(typename T::Size cap) { p_data.reserve(cap); }
-    void resize(typename T::Size len) { p_data.resize(len); }
+    void reserve(typename T::size_type cap) { p_data.reserve(cap); }
+    void resize(typename T::size_type len) { p_data.resize(len); }
 
-    typename T::Size size() const { return p_data.size(); }
-    typename T::Size capacity() const { return p_data.capacity(); }
+    typename T::size_type size() const { return p_data.size(); }
+    typename T::size_type capacity() const { return p_data.capacity(); }
 
-    bool put(typename T::ConstReference v) {
-        p_data.push(v);
+    bool put(typename T::const_reference v) {
+        p_data.push_back(v);
         return true;
     }
 
-    bool put(typename T::Value &&v) {
-        p_data.push(std::move(v));
+    bool put(typename T::value_type &&v) {
+        p_data.push_back(std::move(v));
         return true;
     }
 

@@ -9,7 +9,7 @@ int main() {
 
     FileStream wtest{"test.txt", StreamMode::write};
 
-    String smpl = 
+    std::string smpl =
         "This is a test file for later read.\n"
         "It contains some sample text in order to see whether "
         "things actually read correctly.\n\n\n"
@@ -24,14 +24,14 @@ int main() {
 
     writeln("## WHOLE FILE READ ##\n");
 
-    String ts1{test.iter()};
+    auto ts1 = make_string(test.iter());
     writefln("-- str beg --\n%s-- str end --", ts1);
 
     test.seek(0);
 
     writeln("\n## PART FILE READ ##\n");
 
-    String ts2{test.iter().take(25)};
+    auto ts2 = make_string(test.iter().take(25));
     writefln("-- str beg --\n%s\n-- str end --", ts2);
 
     return 0;

@@ -163,7 +163,7 @@ namespace detail {
             !IsConstructible<ConstCharRange, T const &>, IoNat
         > = IoNat()
     ) {
-        write(ostd::to_string(v));
+        write_impl(ostd::to_string(v));
     }
 }
 
