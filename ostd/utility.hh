@@ -15,17 +15,13 @@
 
 namespace ostd {
 
-/* declval */
-
-template<typename T>
-AddRvalueReference<T> declval() noexcept;
-
 /* swap */
 
 namespace detail {
     template<typename T>
-    auto test_swap(int) ->
-        BoolConstant<IsVoid<decltype(declval<T>().swap(declval<T &>()))>>;
+    auto test_swap(int) -> BoolConstant<IsVoid<
+        decltype(std::declval<T>().swap(std::declval<T &>()))
+    >>;
     template<typename>
     False test_swap(...);
 

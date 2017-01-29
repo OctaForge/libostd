@@ -756,7 +756,7 @@ struct ranged_traits;
 
 namespace detail {
     template<typename C>
-    static True test_direct_iter(decltype(declval<C>().iter()) *);
+    static True test_direct_iter(decltype(std::declval<C>().iter()) *);
 
     template<typename>
     static False test_direct_iter(...);

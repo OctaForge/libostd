@@ -779,11 +779,11 @@ namespace detail {
 
     template<typename T, typename R>
     static auto test_stringify(int) ->
-        BoolConstant<IsSame<decltype(declval<T>().stringify()), String>>;
+        BoolConstant<IsSame<decltype(std::declval<T>().stringify()), String>>;
 
     template<typename T, typename R>
-    static True test_stringify(decltype(declval<T const &>().to_string
-        (declval<R &>())) *);
+    static True test_stringify(decltype(std::declval<T const &>().to_string
+        (std::declval<R &>())) *);
 
     template<typename, typename>
     static False test_stringify(...);
@@ -792,7 +792,7 @@ namespace detail {
     constexpr bool StringifyTest = decltype(test_stringify<T, R>(0))::value;
 
     template<typename T>
-    static True test_iterable(decltype(ostd::iter(declval<T>())) *);
+    static True test_iterable(decltype(ostd::iter(std::declval<T>())) *);
     template<typename>
     static False test_iterable(...);
 

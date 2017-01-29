@@ -438,9 +438,9 @@ protected:
 
 template<
     typename T, typename R, typename = EnableIf<
-        IsSame<decltype(declval<T const &>()
-            .to_format(declval<R &>(), declval<FormatSpec const &>())), bool
-        >
+        IsSame<decltype(std::declval<T const &>().to_format(
+            std::declval<R &>(), std::declval<FormatSpec const &>()
+        )), bool>
     >
 >
 inline bool to_format(T const &v, R &writer, FormatSpec const &fs) {
@@ -615,7 +615,7 @@ namespace detail {
     }
 
     template<typename T>
-    static True test_fmt_tostr(decltype(ostd::to_string(declval<T>())) *);
+    static True test_fmt_tostr(decltype(ostd::to_string(std::declval<T>())) *);
     template<typename>
     static False test_fmt_tostr(...);
 
@@ -662,7 +662,8 @@ namespace detail {
 
     template<typename T, typename R>
     static True test_tofmt(decltype(to_format(
-        declval<T const &>(), declval<R &>(), declval<FormatSpec const &>()
+        std::declval<T const &>(), std::declval<R &>(),
+        std::declval<FormatSpec const &>()
     )) *);
 
     template<typename, typename>

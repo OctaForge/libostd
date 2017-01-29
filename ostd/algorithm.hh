@@ -849,7 +849,9 @@ public:
 
 namespace detail {
     template<typename R, typename F>
-    using MapReturnType = decltype(declval<F>()(declval<RangeReference<R>>()));
+    using MapReturnType = decltype(
+        std::declval<F>()(std::declval<RangeReference<R>>())
+    );
 }
 
 template<typename R, typename F>
@@ -928,9 +930,9 @@ public:
 
 namespace detail {
     template<typename R, typename P>
-    using FilterPred = EnableIf<
-        IsSame<decltype(declval<P>()(declval<RangeReference<R>>())), bool>, P
-    >;
+    using FilterPred = EnableIf<IsSame<
+        decltype(std::declval<P>()(std::declval<RangeReference<R>>())), bool
+    >, P>;
 }
 
 template<typename R, typename P>

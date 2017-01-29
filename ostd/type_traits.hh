@@ -10,6 +10,8 @@
 #include <limits.h>
 #include <stddef.h>
 
+#include <utility>
+
 #include "ostd/types.hh"
 
 namespace ostd {
@@ -50,11 +52,6 @@ using RemoveReference = typename detail::RemoveReferenceBase<T>::Type;
 
 template<typename T>
 using RemoveAllExtents = typename detail::RemoveAllExtentsBase<T>::Type;
-
-namespace detail {
-    template<typename T>
-    AddRvalueReference<T> declval_in() noexcept;
-}
 
 /* size in bits */
 
@@ -613,8 +610,6 @@ constexpr bool HasVirtualDestructor = __has_virtual_destructor(T);
 /* is constructible */
 
 namespace detail {
-#define OSTD_MOVE(v) static_cast<RemoveReference<decltype(v)> &&>(v)
-
     template<typename, typename T>
     struct Select2nd { using Type = T; };
 
@@ -622,10 +617,8 @@ namespace detail {
 
     template<typename T, typename ...A>
     typename Select2nd<
-        decltype(OSTD_MOVE(T(declval_in<A>()...))), True
+        decltype(std::move(T(std::declval<A>()...))), True
     >::Type is_ctible_test(T &&, A &&...);
-
-#undef OSTD_MOVE
 
     template<typename ...A>
     False is_ctible_test(Any, A &&...);
@@ -633,7 +626,7 @@ namespace detail {
     template<bool, typename T, typename ...A>
     constexpr bool CtibleCore =
         CommonTypeBase<
-            decltype(is_ctible_test(declval_in<T>(), declval_in<A>()...))
+            decltype(is_ctible_test(std::declval<T>(), std::declval<A>()...))
         >::Type::value;
 
     /* function types are not constructible */
@@ -654,7 +647,7 @@ namespace detail {
 
     template<typename T, typename U>
     constexpr bool CtibleCore<true, T, U> = CommonTypeBase<
-        decltype(CtibleRef<T>::test(declval_in<U>()))
+        decltype(CtibleRef<T>::test(std::declval<U>()))
     >::Type::value;
 
     /* scalars and references are not constructible from multiple args */
@@ -726,14 +719,14 @@ namespace detail {
 
     template<typename T, typename ...A>
     constexpr bool NothrowCtibleCore<true, false, T, A...> =
-        noexcept(T(declval_in<A>()...));
+        noexcept(T(std::declval<A>()...));
 
     template<typename T>
     void implicit_conv_to(T) noexcept {}
 
     template<typename T, typename A>
     constexpr bool NothrowCtibleCore<true, true, T, A> =
-        noexcept(ostd::detail::implicit_conv_to<T>(declval_in<A>()));
+        noexcept(ostd::detail::implicit_conv_to<T>(std::declval<A>()));
 
     template<typename T, bool R, typename ...A>
     constexpr bool NothrowCtibleCore<false, R, T, A...> = false;
@@ -767,7 +760,7 @@ constexpr bool IsNothrowMoveConstructible =
 namespace detail {
     template<typename T, typename U>
     typename detail::Select2nd<
-        decltype((declval_in<T>() = declval_in<U>())), True
+        decltype((std::declval<T>() = std::declval<U>())), True
     >::Type assign_test(T &&, U &&);
 
     template<typename T>
@@ -775,7 +768,7 @@ namespace detail {
 
     template<typename T, typename U, bool = IsVoid<T> || IsVoid<U>>
     constexpr bool IsAssignableBase = CommonTypeBase<
-        decltype(assign_test(declval_in<T>(), declval_in<U>()))
+        decltype(assign_test(std::declval<T>(), std::declval<U>()))
     >::Type::value;
 
     template<typename T, typename U>
@@ -808,7 +801,7 @@ namespace detail {
 
     template<typename T, typename A>
     constexpr bool NothrowAssignableCore<true, T, A> =
-        noexcept(declval_in<T>() = declval_in<A>());
+        noexcept(std::declval<T>() = std::declval<A>());
 }
 
 template<typename T, typename A> constexpr bool IsNothrowAssignable =
@@ -835,7 +828,7 @@ namespace detail {
     template<typename T> struct IsDestructorWellformed {
         template<typename TT>
         static char test(typename IsDtibleApply<
-            decltype(detail::declval_in<TT &>().~TT())
+            decltype(std::declval<TT &>().~TT())
         >::Type);
 
         template<typename TT>
@@ -885,7 +878,7 @@ namespace detail {
     constexpr bool NothrowDtibleCore<false, T> = false;
 
     template<typename T>
-    constexpr bool NothrowDtibleCore<true, T> = noexcept(declval_in<T>().~T());
+    constexpr bool NothrowDtibleCore<true, T> = noexcept(std::declval<T>().~T());
 }
 
 template<typename T>
@@ -995,7 +988,7 @@ namespace detail {
         static void test_f(TT);
 
         template<typename FF, typename TT,
-            typename = decltype(test_f<TT>(declval_in<FF>()))
+            typename = decltype(test_f<TT>(std::declval<FF>()))
         >
         static True test(int);
 
@@ -1456,7 +1449,6 @@ namespace detail {
 
     struct InvokeAny { InvokeAny(...); };
 
-#define OSTD_FWD(T, _v) static_cast<T &&>(_v)
     template<typename ...A>
     inline auto func_invoke(InvokeAny, A &&...) -> InvokeNat;
 
@@ -1472,9 +1464,9 @@ namespace detail {
         >
     >
     inline auto func_invoke(F &&f, T &&v, A &&...args) ->
-        decltype((OSTD_FWD(T, v).*f)(OSTD_FWD(A, args)...))
+        decltype((std::forward<T>(v).*f)(std::forward<A>(args)...))
     {
-        return (OSTD_FWD(T, v).*f)(OSTD_FWD(A, args)...);
+        return (std::forward<T>(v).*f)(std::forward<A>(args)...);
     }
 
     template<
@@ -1488,9 +1480,9 @@ namespace detail {
         >
     >
     inline auto func_invoke(F &&f, T &&v, A &&...args) ->
-        decltype(((*OSTD_FWD(T, v)).*f)(OSTD_FWD(A, args)...))
+        decltype(((*std::forward<T>(v)).*f)(std::forward<A>(args)...))
     {
-        return ((*OSTD_FWD(T, v)).*f)(OSTD_FWD(A, args)...);
+        return ((*std::forward<T>(v)).*f)(std::forward<A>(args)...);
     }
 
     template<
@@ -1503,8 +1495,8 @@ namespace detail {
             >
         >
     >
-    inline auto func_invoke(F &&f, T &&v) -> decltype(OSTD_FWD(T, v).*f) {
-        return OSTD_FWD(T, v).*f;
+    inline auto func_invoke(F &&f, T &&v) -> decltype(std::forward<T>(v).*f) {
+        return std::forward<T>(v).*f;
     }
 
     template<
@@ -1517,22 +1509,21 @@ namespace detail {
             >
         >
     >
-    inline auto func_invoke(F &&f, T &&v) -> decltype((*OSTD_FWD(T, v)).*f) {
-        return (*OSTD_FWD(T, v)).*f;
+    inline auto func_invoke(F &&f, T &&v) -> decltype((*std::forward<T>(v)).*f) {
+        return (*std::forward<T>(v)).*f;
     }
 
     template<typename F, typename ...A>
     inline auto func_invoke(F &&f, A &&...args) ->
-        decltype(OSTD_FWD(F, f)(OSTD_FWD(A, args)...))
+        decltype(std::forward<F>(f)(std::forward<A>(args)...))
     {
-        return OSTD_FWD(F, f)(OSTD_FWD(A, args)...);
+        return std::forward<F>(f)(std::forward<A>(args)...);
     }
-#undef OSTD_FWD
 
     template<typename F, typename ...A>
     struct FuncInvokableBase {
         using Type = decltype(
-            func_invoke(declval_in<F>(), declval_in<A>()...)
+            func_invoke(std::declval<F>(), std::declval<A>()...)
         );
         static constexpr bool value = !IsSame<Type, InvokeNat>;
     };
@@ -1596,7 +1587,7 @@ namespace detail {
     template<typename T, typename U>
     struct CommonTypeBase<T, U> {
         using Type = Decay<decltype(
-            true ? detail::declval_in<T>(): detail::declval_in<U>()
+            true ? std::declval<T>(): std::declval<U>()
         )>;
     };
 

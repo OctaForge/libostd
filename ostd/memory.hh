@@ -533,7 +533,7 @@ namespace detail {
     constexpr bool AllocateHintTest =
         IsSame<
             decltype(allocate_hint_test(
-                declval<A>(), declval<S>(), declval<CVP>()
+                std::declval<A>(), std::declval<S>(), std::declval<CVP>()
             )), True
         >;
 
@@ -586,7 +586,7 @@ namespace detail {
     constexpr bool ConstructTest =
         IsSame<
             decltype(construct_test(
-                declval<A>(), declval<T>(), declval<Args>()...
+                std::declval<A>(), std::declval<T>(), std::declval<Args>()...
             )), True
         >;
 
@@ -619,8 +619,9 @@ namespace detail {
     auto destroy_test(A const &, P &&) -> False;
 
     template<typename A, typename P>
-    constexpr bool DestroyTest =
-        IsSame<decltype(destroy_test(declval<A>(), declval<P>())), True>;
+    constexpr bool DestroyTest = IsSame<
+        decltype(destroy_test(std::declval<A>(), std::declval<P>())), True
+    >;
 
     template<typename A, typename T>
     inline void destroy(True, A &a, T *p) {
@@ -649,7 +650,7 @@ namespace detail {
 
     template<typename A>
     constexpr bool AllocMaxSizeTest =
-        IsSame<decltype(alloc_max_size_test(declval<A &>())), True>;
+        IsSame<decltype(alloc_max_size_test(std::declval<A &>())), True>;
 
     template<typename A>
     inline AllocatorSize<A> alloc_max_size(True, A const &a) {
@@ -680,7 +681,7 @@ namespace detail {
 
     template<typename A>
     constexpr bool AllocCopyTest =
-        IsSame<decltype(alloc_copy_test(declval<A &>())), True>;
+        IsSame<decltype(alloc_copy_test(std::declval<A &>())), True>;
 
     template<typename A>
     inline AllocatorType<A> alloc_container_copy(True, A const &a) {

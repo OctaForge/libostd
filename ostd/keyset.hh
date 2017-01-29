@@ -19,7 +19,7 @@ namespace ostd {
 
 namespace detail {
     template<typename T>
-    using KeysetKeyRet = decltype(declval<T const &>().get_key());
+    using KeysetKeyRet = decltype(std::declval<T const &>().get_key());
     template<typename T>
     using KeysetKey = Decay<KeysetKeyRet<T>> const;
 
