@@ -13,21 +13,21 @@
 #include <string.h>
 
 #include <vector>
+#include <optional>
 
-#include "ostd/maybe.hh"
 #include "ostd/string.hh"
 
 /* TODO: make POSIX version thread safe, the Windows version is... */
 
 namespace ostd {
 
-inline Maybe<std::string> env_get(ConstCharRange name) {
+inline std::optional<std::string> env_get(ConstCharRange name) {
     char buf[256];
     auto tbuf = to_temp_cstr(name, buf, sizeof(buf));
 #ifndef OSTD_PLATFORM_WIN32
     char const *ret = getenv(tbuf.get());
     if (!ret) {
-        return ostd::nothing;
+        return std::nullopt;
     }
     return std::string{ret};
 #else
@@ -36,7 +36,7 @@ inline Maybe<std::string> env_get(ConstCharRange name) {
     for (;;) {
         sz = GetEnvironmentVariable(tbuf.get(), rbuf.data(), rbuf.capacity());
         if (!sz) {
-            return ostd::nothing;
+            return std::nullopt;
         }
         if (sz < rbuf.capacity()) {
             break;
