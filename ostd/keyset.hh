@@ -184,7 +184,7 @@ namespace detail {
 
 template<
     typename T,
-    typename H = ToHash<detail::KeysetKey<T>>,
+    typename H = std::hash<detail::KeysetKey<T>>,
     typename C = EqualWithCstr<detail::KeysetKey<T>>,
     typename A = Allocator<T>
 >
@@ -197,7 +197,7 @@ inline void swap(Keyset<T, H, C, A> &a, Keyset<T, H, C, A> &b) {
 
 template<
     typename T,
-    typename H = ToHash<detail::KeysetKey<T>>,
+    typename H = std::hash<detail::KeysetKey<T>>,
     typename C = EqualWithCstr<detail::KeysetKey<T>>,
     typename A = Allocator<T>
 >

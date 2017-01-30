@@ -186,7 +186,7 @@ namespace detail {
 
 template<
     typename K, typename T,
-    typename H = ToHash<K>,
+    typename H = std::hash<K>,
     typename C = EqualWithCstr<K>,
     typename A = Allocator<std::pair<K const, T>>
 >
@@ -199,7 +199,7 @@ inline void swap(Map<K, T, H, C, A> &a, Map<K, T, H, C, A> &b) {
 
 template<
     typename K, typename T,
-    typename H = ToHash<K>,
+    typename H = std::hash<K>,
     typename C = EqualWithCstr<K>,
     typename A = Allocator<std::pair<K const, T>>
 >

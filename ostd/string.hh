@@ -167,10 +167,6 @@ public:
     T *data() { return p_beg; }
     T const *data() const { return p_beg; }
 
-    Size to_hash() const {
-        return detail::mem_hash(data(), size());
-    }
-
     /* non-range */
     int compare(CharRangeBase<T const> s) const {
         ostd::Size s1 = size(), s2 = s.size();
@@ -680,17 +676,6 @@ inline TempCString<R> to_temp_cstr(
 ) {
     return TempCString<R>(input, buf, bufsize);
 }
-
-/* temporary */
-template<>
-struct ToHash<std::string> {
-    using Argument = std::string;
-    using Result = size_t;
-
-    size_t operator()(std::string const &v) const {
-        return std::hash<std::string>{}(v);
-    }
-};
 
 } /* namespace ostd */
 

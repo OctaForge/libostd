@@ -301,10 +301,6 @@ public:
             swap(this->p_engaged, v.p_engaged);
         }
     }
-
-    Size to_hash() const {
-        return this->p_engaged ? ostd::ToHash<T>()(this->p_value) : 0;
-    }
 };
 
 template<typename T>

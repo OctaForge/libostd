@@ -157,7 +157,7 @@ namespace detail {
 
 template<
     typename T,
-    typename H = ToHash<T>,
+    typename H = std::hash<T>,
     typename C = EqualWithCstr<T>,
     typename A = Allocator<T>
 >
@@ -170,7 +170,7 @@ inline void swap(Set<T, H, C, A> &a, Set<T, H, C, A> &b) {
 
 template<
     typename T,
-    typename H = ToHash<T>,
+    typename H = std::hash<T>,
     typename C = EqualWithCstr<T>,
     typename A = Allocator<T>
 >
