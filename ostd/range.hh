@@ -12,6 +12,7 @@
 #include <new>
 #include <tuple>
 #include <utility>
+#include <iterator>
 
 #include "ostd/types.hh"
 #include "ostd/utility.hh"
@@ -1752,6 +1753,158 @@ inline AppenderRange<T> appender() {
 template<typename T>
 inline AppenderRange<T> appender(T &&v) {
     return AppenderRange<T>(std::forward<T>(v));
+}
+
+namespace detail {
+    template<typename>
+    struct IteratorRangeTagBase {
+        /* fallback, the most basic range */
+        using Type = InputRangeTag;
+    };
+
+    template<>
+    struct IteratorRangeTagBase<std::output_iterator_tag> {
+        using Type = OutputRangeTag;
+    };
+
+    template<>
+    struct IteratorRangeTagBase<std::forward_iterator_tag> {
+        using Type = ForwardRangeTag;
+    };
+
+    template<>
+    struct IteratorRangeTagBase<std::bidirectional_iterator_tag> {
+        using Type = BidirectionalRangeTag;
+    };
+
+    template<>
+    struct IteratorRangeTagBase<std::random_access_iterator_tag> {
+        using Type = FiniteRandomAccessRangeTag;
+    };
+}
+
+template<typename T>
+using IteratorRangeTag = typename detail::IteratorRangeTagBase<T>::Type;
+
+template<typename T>
+struct IteratorRange: InputRange<
+    IteratorRange<T>,
+    IteratorRangeTag<typename std::iterator_traits<T>::iterator_category>,
+    typename std::iterator_traits<T>::value_type,
+    typename std::iterator_traits<T>::reference,
+    size_t,
+    typename std::iterator_traits<T>::difference_type
+> {
+private:
+    struct Nat {};
+
+    using RefT = typename std::iterator_traits<T>::reference;
+    using DiffT = typename std::iterator_traits<T>::difference_type;
+
+public:
+    IteratorRange(T beg = T{}, T end = T{}): p_beg(beg), p_end(end) {}
+    IteratorRange(T beg, size_t n): p_beg(beg), p_end(beg + n) {}
+
+    IteratorRange(IteratorRange const &v): p_beg(v.p_beg), p_end(v.p_end) {}
+    IteratorRange(IteratorRange &&v):
+        p_beg(std::move(v.p_beg)), p_end(std::move(v.p_end))
+    {}
+
+    IteratorRange &operator=(IteratorRange const &v) {
+        p_beg = v.p_beg;
+        p_end = v.p_end;
+        return *this;
+    }
+
+    IteratorRange &operator=(IteratorRange &&v) {
+        p_beg = std::move(v.p_beg);
+        p_end = std::move(v.p_end);
+        return *this;
+    }
+
+    /* satisfy InputRange / ForwardRange */
+    bool empty() const { return p_beg == p_end; }
+
+    bool pop_front() {
+        if (p_beg == p_end) {
+            return false;
+        }
+        ++p_beg;
+        return true;
+    }
+    bool push_front() {
+        --p_beg; return true;
+    }
+
+    RefT front() const { return *p_beg; }
+
+    bool equals_front(IteratorRange const &range) const {
+        return p_beg == range.p_beg;
+    }
+
+    DiffT distance_front(IteratorRange const &range) const {
+        return range.p_beg - p_beg;
+    }
+
+    /* satisfy BidirectionalRange */
+    bool pop_back() {
+        if (p_end == p_beg) {
+            return false;
+        }
+        --p_end;
+        return true;
+    }
+    bool push_back() {
+        ++p_end; return true;
+    }
+
+    RefT back() const { return *(p_end - 1); }
+
+    bool equals_back(IteratorRange const &range) const {
+        return p_end == range.p_end;
+    }
+
+    ptrdiff_t distance_back(IteratorRange const &range) const {
+        return range.p_end - p_end;
+    }
+
+    /* satisfy FiniteRandomAccessRange */
+    size_t size() const { return p_end - p_beg; }
+
+    IteratorRange slice(size_t start, size_t end) const {
+        return IteratorRange(p_beg + start, p_beg + end);
+    }
+
+    RefT operator[](size_t i) const { return p_beg[i]; }
+
+    /* satisfy OutputRange */
+    bool put(T const &v) {
+        if (empty()) {
+            return false;
+        }
+        *(p_beg++) = v;
+        return true;
+    }
+    bool put(T &&v) {
+        if (empty()) {
+            return false;
+        }
+        *(p_beg++) = std::move(v);
+        return true;
+    }
+
+private:
+    T p_beg, p_end;
+};
+
+template<typename T>
+IteratorRange<T> make_range(T beg, T end) {
+    return IteratorRange<T>{beg, end};
+}
+
+template<typename T>
+IteratorRange<T> make_range(T beg, size_t n) {
+    return IteratorRange<T>{beg, beg + n};
 }
 
 } /* namespace ostd */
