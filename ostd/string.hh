@@ -45,7 +45,7 @@ public:
         U beg, EnableIf<IsConvertible<U, T *> && !IsArray<U>, Nat> = Nat()
     ): p_beg(beg), p_end(static_cast<T *>(beg) + (beg ? strlen(beg) : 0)) {}
 
-    CharRangeBase(Nullptr): p_beg(nullptr), p_end(nullptr) {}
+    CharRangeBase(std::nullptr_t): p_beg(nullptr), p_end(nullptr) {}
 
     template<typename U, size_t N>
     CharRangeBase(U (&beg)[N], EnableIf<IsConvertible<U *, T *>, Nat> = Nat()):

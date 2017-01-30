@@ -7,7 +7,7 @@
 #define OSTD_PLATFORM_HH
 
 #include <stdlib.h>
-#include <stdint.h>
+#include <cstdint>
 
 #if defined(WIN32) || defined(_WIN32) || (defined(__WIN32) && !defined(__CYGWIN__))
 #  define OSTD_PLATFORM_WIN32 1
@@ -102,42 +102,43 @@ namespace ostd {
 #if defined(OSTD_TOOLCHAIN_GNU)
 
 /* using gcc/clang builtins */
-inline uint16_t endian_swap16(uint16_t x) noexcept {
+inline std::uint16_t endian_swap16(std::uint16_t x) noexcept {
     return __builtin_bswap16(x);
 }
-inline uint32_t endian_swap32(uint32_t x) noexcept {
+inline std::uint32_t endian_swap32(std::uint32_t x) noexcept {
     return __builtin_bswap32(x);
 }
-inline uint64_t endian_swap64(uint64_t x) noexcept {
+inline std::uint64_t endian_swap64(std::uint64_t x) noexcept {
     return __builtin_bswap64(x);
 }
 
 #elif defined(OSTD_TOOLCHAIN_MSVC)
 
 /* using msvc builtins */
-inline uint16_t endian_swap16(uint16_t x) noexcept {
+inline std::uint16_t endian_swap16(std::uint16_t x) noexcept {
     return _byteswap_ushort(x);
 }
-inline uint32_t endian_swap32(uint32_t x) noexcept {
+inline std::uint32_t endian_swap32(std::uint32_t x) noexcept {
     /* win64 is llp64 */
     return _byteswap_ulong(x);
 }
-inline uint64_t endian_swap64(uint64_t x) noexcept {
+inline std::uint64_t endian_swap64(std::uint64_t x) noexcept {
     return _byteswap_uint64(x);
 }
 
 #else
 
 /* fallback */
-inline uint16_t endian_swap16(uint16_t x) noexcept {
+inline std::uint16_t endian_swap16(std::uint16_t x) noexcept {
     return (x << 8) | (x >> 8);
 }
-inline uint32_t endian_swap32(uint32_t x) noexcept {
+inline std::uint32_t endian_swap32(std::uint32_t x) noexcept {
     return (x << 24) | (x >> 24) | ((x >> 8) & 0xFF00) | ((x << 8) & 0xFF0000);
 }
-inline uint64_t endian_swap64(uint64_t x) noexcept {
+inline std::uint64_t endian_swap64(std::uint64_t x) noexcept {
     return endian_swap32(
-        uint32_t(x >> 32)) | (uint64_t(endian_swap32(uint32_t(x))) << 32
+        std::uint32_t(x >> 32)) |
+            (std::uint64_t(endian_swap32(std::uint32_t(x))) << 32
     );
 }
 

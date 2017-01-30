@@ -95,70 +95,17 @@ constexpr bool IsVoid = IsSame<RemoveCv<T>, void>;
 /* is null pointer */
 
 template<typename T>
-constexpr bool IsNullPointer = IsSame<RemoveCv<T>, Nullptr>;
+constexpr bool IsNullPointer = IsSame<RemoveCv<T>, std::nullptr_t>;
 
 /* is integer */
 
-namespace detail {
-    template<typename>
-    constexpr bool IsIntegralBase = false;
-
-    template<>
-    constexpr bool IsIntegralBase<bool> = true;
-    template<>
-    constexpr bool IsIntegralBase<char> = true;
-    template<>
-    constexpr bool IsIntegralBase<short> = true;
-    template<>
-    constexpr bool IsIntegralBase<int> = true;
-    template<>
-    constexpr bool IsIntegralBase<long> = true;
-
-    template<>
-    constexpr bool IsIntegralBase<sbyte> = true;
-    template<>
-    constexpr bool IsIntegralBase<byte> = true;
-    template<>
-    constexpr bool IsIntegralBase<ushort> = true;
-    template<>
-    constexpr bool IsIntegralBase<uint> = true;
-    template<>
-    constexpr bool IsIntegralBase<ulong> = true;
-    template<>
-    constexpr bool IsIntegralBase<llong> = true;
-    template<>
-    constexpr bool IsIntegralBase<ullong> = true;
-
-#ifndef OSTD_TYPES_CHAR_16_32_NO_BUILTINS
-    template<>
-    constexpr bool IsIntegralBase<Char16> = true;
-    template<>
-    constexpr bool IsIntegralBase<Char32> = true;
-#endif
-    template<>
-    constexpr bool IsIntegralBase<Wchar> = true;
-}
-
 template<typename T>
-constexpr bool IsIntegral = detail::IsIntegralBase<RemoveCv<T>>;
+constexpr bool IsIntegral = std::is_integral_v<T>;
 
 /* is floating point */
 
-namespace detail {
-    template<typename>
-    constexpr bool IsFloatingPointBase = false;
-
-    template<>
-    constexpr bool IsFloatingPointBase<float> = true;
-    template<>
-    constexpr bool IsFloatingPointBase<double> = true;
-
-    template<>
-    constexpr bool IsFloatingPointBase<ldouble> = true;
-}
-
 template<typename T>
-constexpr bool IsFloatingPoint = detail::IsFloatingPointBase<RemoveCv<T>>;
+constexpr bool IsFloatingPoint = std::is_floating_point_v<T>;
 
 /* is array */
 
@@ -1609,7 +1556,7 @@ namespace detail {
     struct AlignedTest {
         union Type {
             byte data[N];
-            MaxAlign align;
+            std::max_align_t align;
         };
     };
 

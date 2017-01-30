@@ -147,7 +147,7 @@ struct EndianSwap<T, 2, true> {
     using Argument = T;
     using Result = T;
     T operator()(T v) const {
-        union { T iv; uint16_t sv; } u;
+        union { T iv; std::uint16_t sv; } u;
         u.iv = v;
         u.sv = endian_swap16(u.sv);
         return u.iv;
@@ -159,7 +159,7 @@ struct EndianSwap<T, 4, true> {
     using Argument = T;
     using Result = T;
     T operator()(T v) const {
-        union { T iv; uint32_t sv; } u;
+        union { T iv; std::uint32_t sv; } u;
         u.iv = v;
         u.sv = endian_swap32(u.sv);
         return u.iv;
@@ -171,7 +171,7 @@ struct EndianSwap<T, 8, true> {
     using Argument = T;
     using Result = T;
     T operator()(T v) const {
-        union { T iv; uint64_t sv; } u;
+        union { T iv; std::uint64_t sv; } u;
         u.iv = v;
         u.sv = endian_swap64(u.sv);
         return u.iv;
