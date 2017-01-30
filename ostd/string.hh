@@ -683,14 +683,14 @@ namespace std {
 
 template<>
 struct hash<ostd::CharRange> {
-    size_t operator()(ostd::CharRange const &v) {
+    size_t operator()(ostd::CharRange const &v) const {
         return hash<std::string_view>{}(v);
     }
 };
 
 template<>
 struct hash<ostd::ConstCharRange> {
-    size_t operator()(ostd::CharRange const &v) {
+    size_t operator()(ostd::ConstCharRange const &v) const {
         return hash<std::string_view>{}(v);
     }
 };
