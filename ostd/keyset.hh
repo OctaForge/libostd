@@ -55,8 +55,8 @@ namespace detail {
     public:
         using Key = KeysetKey<T>;
         using Mapped = T;
-        using Size = ostd::Size;
-        using Difference = Ptrdiff;
+        using Size = size_t;
+        using Difference = ptrdiff_t;
         using Hasher = H;
         using KeyEqual = C;
         using Value = T;

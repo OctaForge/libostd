@@ -20,29 +20,29 @@ namespace detail {
         bool = IsSame<RemoveCv<T>, RemoveCv<U>>,
         bool = IsEmpty<T>, bool = IsEmpty<U>
     >
-    constexpr Size CompressedPairSwitch = detail::Undefined<T>();
+    constexpr size_t CompressedPairSwitch = detail::Undefined<T>();
 
     /* neither empty */
     template<typename T, typename U, bool Same>
-    constexpr Size CompressedPairSwitch<T, U, Same, false, false> = 0;
+    constexpr size_t CompressedPairSwitch<T, U, Same, false, false> = 0;
 
     /* first empty */
     template<typename T, typename U, bool Same>
-    constexpr Size CompressedPairSwitch<T, U, Same, true, false> = 1;
+    constexpr size_t CompressedPairSwitch<T, U, Same, true, false> = 1;
 
     /* second empty */
     template<typename T, typename U, bool Same>
-    constexpr Size CompressedPairSwitch<T, U, Same, false, true> = 2;
+    constexpr size_t CompressedPairSwitch<T, U, Same, false, true> = 2;
 
     /* both empty, not the same */
     template<typename T, typename U>
-    constexpr Size CompressedPairSwitch<T, U, false, true, true> = 3;
+    constexpr size_t CompressedPairSwitch<T, U, false, true, true> = 3;
 
     /* both empty and same */
     template<typename T, typename U>
-    constexpr Size CompressedPairSwitch<T, U, true, true, true> = 1;
+    constexpr size_t CompressedPairSwitch<T, U, true, true, true> = 1;
 
-    template<typename T, typename U, Size = CompressedPairSwitch<T, U>>
+    template<typename T, typename U, size_t = CompressedPairSwitch<T, U>>
     struct CompressedPairBase;
 
     template<typename T, typename U>
@@ -55,7 +55,7 @@ namespace detail {
             p_first(std::forward<TT>(a)), p_second(std::forward<UU>(b))
         {}
 
-        template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+        template<typename ...A1, typename ...A2, size_t ...I1, size_t ...I2>
         CompressedPairBase(
             std::piecewise_construct_t,
             std::tuple<A1...> &fa, std::tuple<A2...> &sa,
@@ -83,7 +83,7 @@ namespace detail {
             T(std::forward<TT>(a)), p_second(std::forward<UU>(b))
         {}
 
-        template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+        template<typename ...A1, typename ...A2, size_t ...I1, size_t ...I2>
         CompressedPairBase(
             std::piecewise_construct_t,
             std::tuple<A1...> &fa, std::tuple<A2...> &sa,
@@ -110,7 +110,7 @@ namespace detail {
             U(std::forward<UU>(b)), p_first(std::forward<TT>(a))
         {}
 
-        template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+        template<typename ...A1, typename ...A2, size_t ...I1, size_t ...I2>
         CompressedPairBase(
             std::piecewise_construct_t,
             std::tuple<A1...> &fa, std::tuple<A2...> &sa,
@@ -135,7 +135,7 @@ namespace detail {
             T(std::forward<TT>(a)), U(std::forward<UU>(b))
         {}
 
-        template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+        template<typename ...A1, typename ...A2, size_t ...I1, size_t ...I2>
         CompressedPairBase(
             std::piecewise_construct_t,
             std::tuple<A1...> &fa, std::tuple<A2...> &sa,
@@ -184,7 +184,7 @@ namespace detail {
     };
 
     template<typename T, typename U>
-    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    template<typename ...A1, typename ...A2, size_t ...I1, size_t ...I2>
     CompressedPairBase<T, U, 0>::CompressedPairBase(
         std::piecewise_construct_t, std::tuple<A1...> &fa, std::tuple<A2...> &sa,
         std::index_sequence<I1...>, std::index_sequence<I2...>
@@ -194,7 +194,7 @@ namespace detail {
     {}
 
     template<typename T, typename U>
-    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    template<typename ...A1, typename ...A2, size_t ...I1, size_t ...I2>
     CompressedPairBase<T, U, 1>::CompressedPairBase(
         std::piecewise_construct_t, std::tuple<A1...> &fa, std::tuple<A2...> &sa,
         std::index_sequence<I1...>, std::index_sequence<I2...>
@@ -204,7 +204,7 @@ namespace detail {
     {}
 
     template<typename T, typename U>
-    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    template<typename ...A1, typename ...A2, size_t ...I1, size_t ...I2>
     CompressedPairBase<T, U, 2>::CompressedPairBase(
         std::piecewise_construct_t, std::tuple<A1...> &fa, std::tuple<A2...> &sa,
         std::index_sequence<I1...>, std::index_sequence<I2...>
@@ -214,7 +214,7 @@ namespace detail {
     {}
 
     template<typename T, typename U>
-    template<typename ...A1, typename ...A2, Size ...I1, Size ...I2>
+    template<typename ...A1, typename ...A2, size_t ...I1, size_t ...I2>
     CompressedPairBase<T, U, 3>::CompressedPairBase(
         std::piecewise_construct_t, std::tuple<A1...> &fa, std::tuple<A2...> &sa,
         std::index_sequence<I1...>, std::index_sequence<I2...>

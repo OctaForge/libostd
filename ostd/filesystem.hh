@@ -215,7 +215,7 @@ private:
 #endif
     }
 
-    Size p_slash = std::string::npos, p_dot = std::string::npos;
+    size_t p_slash = std::string::npos, p_dot = std::string::npos;
     FileType p_type = FileType::unknown;
     std::string p_path;
 
@@ -531,7 +531,7 @@ inline void swap(DirectoryStream &a, DirectoryStream &b) {
 }
 
 struct DirectoryRange: InputRange<
-    DirectoryRange, InputRangeTag, FileInfo, FileInfo, Size, long
+    DirectoryRange, InputRangeTag, FileInfo, FileInfo, size_t, long
 > {
     DirectoryRange() = delete;
     DirectoryRange(DirectoryStream &s): p_stream(&s) {}
@@ -567,7 +567,7 @@ inline DirectoryRange DirectoryStream::iter() {
 }
 
 namespace detail {
-    template<Size I>
+    template<size_t I>
     struct PathJoin {
         template<typename T, typename ...A>
         static void join(std::string &s, T const &a, A const &...b) {

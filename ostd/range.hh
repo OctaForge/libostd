@@ -507,7 +507,7 @@ struct ZipRange;
 
 template<
     typename B, typename C, typename V, typename R = V &,
-    typename S = Size, typename D = Ptrdiff
+    typename S = size_t, typename D = ptrdiff_t
 >
 struct InputRange {
     using Category = C;
@@ -689,7 +689,7 @@ inline auto chunks(T n) {
 }
 
 namespace detail {
-    template<typename T, typename ...R, Size ...I>
+    template<typename T, typename ...R, size_t ...I>
     inline auto join_proxy(
         T &&obj, std::tuple<R &&...> &&tup, std::index_sequence<I...>
     ) {
@@ -698,7 +698,7 @@ namespace detail {
         )...);
     }
 
-    template<typename T, typename ...R, Size ...I>
+    template<typename T, typename ...R, size_t ...I>
     inline auto zip_proxy(
         T &&obj, std::tuple<R &&...> &&tup, std::index_sequence<I...>
     ) {
@@ -790,7 +790,7 @@ inline auto citer(T const &r) -> decltype(ranged_traits<T const>::iter(r)) {
 
 template<
     typename B, typename V, typename R = V &,
-    typename S = Size, typename D = Ptrdiff
+    typename S = size_t, typename D = ptrdiff_t
 >
 struct OutputRange {
     using Category = OutputRangeTag;
@@ -1100,7 +1100,7 @@ public:
         (IsPointer<U> || IsNullPointer<U>) && IsConvertible<U, T *>, Nat
     > = Nat()): p_beg(beg), p_end(end) {}
 
-    PointerRange(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
+    PointerRange(T *beg, size_t n): p_beg(beg), p_end(beg + n) {}
 
     template<typename U, typename = EnableIf<IsConvertible<U *, T *>>>
     PointerRange(PointerRange<U> const &v): p_beg(&v[0]), p_end(&v[v.size()]) {}
@@ -1125,8 +1125,8 @@ public:
         --p_beg; return true;
     }
 
-    Size pop_front_n(Size n) {
-        Size olen = p_end - p_beg;
+    size_t pop_front_n(size_t n) {
+        size_t olen = p_end - p_beg;
         p_beg += n;
         if (p_beg > p_end) {
             p_beg = p_end;
@@ -1135,7 +1135,7 @@ public:
         return n;
     }
 
-    Size push_front_n(Size n) {
+    size_t push_front_n(size_t n) {
         p_beg -= n; return true;
     }
 
@@ -1145,7 +1145,7 @@ public:
         return p_beg == range.p_beg;
     }
 
-    Ptrdiff distance_front(PointerRange const &range) const {
+    ptrdiff_t distance_front(PointerRange const &range) const {
         return range.p_beg - p_beg;
     }
 
@@ -1161,8 +1161,8 @@ public:
         ++p_end; return true;
     }
 
-    Size pop_back_n(Size n) {
-        Size olen = p_end - p_beg;
+    size_t pop_back_n(size_t n) {
+        size_t olen = p_end - p_beg;
         p_end -= n;
         if (p_end < p_beg) {
             p_end = p_beg;
@@ -1171,7 +1171,7 @@ public:
         return n;
     }
 
-    Size push_back_n(Size n) {
+    size_t push_back_n(size_t n) {
         p_end += n; return true;
     }
 
@@ -1181,18 +1181,18 @@ public:
         return p_end == range.p_end;
     }
 
-    Ptrdiff distance_back(PointerRange const &range) const {
+    ptrdiff_t distance_back(PointerRange const &range) const {
         return range.p_end - p_end;
     }
 
     /* satisfy FiniteRandomAccessRange */
-    Size size() const { return p_end - p_beg; }
+    size_t size() const { return p_end - p_beg; }
 
-    PointerRange slice(Size start, Size end) const {
+    PointerRange slice(size_t start, size_t end) const {
         return PointerRange(p_beg + start, p_beg + end);
     }
 
-    T &operator[](Size i) const { return p_beg[i]; }
+    T &operator[](size_t i) const { return p_beg[i]; }
 
     /* satisfy OutputRange */
     bool put(T const &v) {
@@ -1210,8 +1210,8 @@ public:
         return true;
     }
 
-    Size put_n(T const *p, Size n) {
-        Size ret = size();
+    size_t put_n(T const *p, size_t n) {
+        size_t ret = size();
         if (n < ret) {
             ret = n;
         }
@@ -1220,23 +1220,23 @@ public:
             p_beg += ret;
             return ret;
         }
-        for (Size i = ret; i; --i) {
+        for (size_t i = ret; i; --i) {
             *p_beg++ = *p++;
         }
         return ret;
     }
 
     template<typename R>
-    EnableIf<IsOutputRange<R>, Size> copy(R &&orange, Size n = -1) {
-        Size c = size();
+    EnableIf<IsOutputRange<R>, size_t> copy(R &&orange, size_t n = -1) {
+        size_t c = size();
         if (n < c) {
             c = n;
         }
         return orange.put_n(p_beg, c);
     }
 
-    Size copy(RemoveCv<T> *p, Size n = -1) {
-        Size c = size();
+    size_t copy(RemoveCv<T> *p, size_t n = -1) {
+        size_t c = size();
         if (n < c) {
             c = n;
         }
@@ -1254,17 +1254,17 @@ private:
     T *p_beg, *p_end;
 };
 
-template<typename T, Size N>
+template<typename T, size_t N>
 inline PointerRange<T> iter(T (&array)[N]) {
     return PointerRange<T>(array, N);
 }
 
-template<typename T, Size N>
+template<typename T, size_t N>
 inline PointerRange<T const> iter(T const (&array)[N]) {
     return PointerRange<T const>(array, N);
 }
 
-template<typename T, Size N>
+template<typename T, size_t N>
 inline PointerRange<T const> citer(T const (&array)[N]) {
     return PointerRange<T const>(array, N);
 }
@@ -1281,7 +1281,7 @@ inline PointerRange<T> iter(T *a, U b, EnableIf<
 }
 
 template<typename T>
-inline PointerRange<T> iter(T *a, ostd::Size b) {
+inline PointerRange<T> iter(T *a, size_t b) {
     return PointerRange<T>(a, b);
 }
 
@@ -1459,7 +1459,7 @@ public:
 };
 
 namespace detail {
-    template<Size I, Size N>
+    template<size_t I, size_t N>
     struct JoinRangeEmpty {
         template<typename T>
         static bool empty(T const &tup) {
@@ -1470,7 +1470,7 @@ namespace detail {
         }
     };
 
-    template<Size N>
+    template<size_t N>
     struct JoinRangeEmpty<N, N> {
         template<typename T>
         static bool empty(T const &) {
@@ -1478,7 +1478,7 @@ namespace detail {
         }
     };
 
-    template<Size I, Size N>
+    template<size_t I, size_t N>
     struct TupleRangeEqual {
         template<typename T>
         static bool equal(T const &tup1, T const &tup2) {
@@ -1489,7 +1489,7 @@ namespace detail {
         }
     };
 
-    template<Size N>
+    template<size_t N>
     struct TupleRangeEqual<N, N> {
         template<typename T>
         static bool equal(T const &, T const &) {
@@ -1497,7 +1497,7 @@ namespace detail {
         }
     };
 
-    template<Size I, Size N>
+    template<size_t I, size_t N>
     struct JoinRangePop {
         template<typename T>
         static bool pop(T &tup) {
@@ -1508,7 +1508,7 @@ namespace detail {
         }
     };
 
-    template<Size N>
+    template<size_t N>
     struct JoinRangePop<N, N> {
         template<typename T>
         static bool pop(T &) {
@@ -1516,7 +1516,7 @@ namespace detail {
         }
     };
 
-    template<Size I, Size N, typename T>
+    template<size_t I, size_t N, typename T>
     struct JoinRangeFront {
         template<typename U>
         static T front(U const &tup) {
@@ -1527,7 +1527,7 @@ namespace detail {
         }
     };
 
-    template<Size N, typename T>
+    template<size_t N, typename T>
     struct JoinRangeFront<N, N, T> {
         template<typename U>
         static T front(U const &tup) {
@@ -1595,7 +1595,7 @@ namespace detail {
     template<typename ...T>
     using ZipValue = typename detail::ZipValueType<T...>::Type;
 
-    template<Size I, Size N>
+    template<size_t I, size_t N>
     struct ZipRangeEmpty {
         template<typename T>
         static bool empty(T const &tup) {
@@ -1606,7 +1606,7 @@ namespace detail {
         }
     };
 
-    template<Size N>
+    template<size_t N>
     struct ZipRangeEmpty<N, N> {
         template<typename T>
         static bool empty(T const &) {
@@ -1614,7 +1614,7 @@ namespace detail {
         }
     };
 
-    template<Size I, Size N>
+    template<size_t I, size_t N>
     struct ZipRangePop {
         template<typename T>
         static bool pop(T &tup) {
@@ -1624,7 +1624,7 @@ namespace detail {
         }
     };
 
-    template<Size N>
+    template<size_t N>
     struct ZipRangePop<N, N> {
         template<typename T>
         static bool pop(T &) {
@@ -1634,7 +1634,7 @@ namespace detail {
 
     template<typename ...T>
     struct ZipRangeFront {
-        template<typename U, Size ...I>
+        template<typename U, size_t ...I>
         static ZipValue<T...> tup_get(U const &tup, std::index_sequence<I...>) {
             return ZipValue<T...>(std::get<I>(tup).front()...);
         }

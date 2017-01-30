@@ -56,7 +56,7 @@ using RemoveAllExtents = typename detail::RemoveAllExtentsBase<T>::Type;
 /* size in bits */
 
 template<typename T>
-constexpr Size SizeInBits = sizeof(T) * CHAR_BIT;
+constexpr size_t SizeInBits = sizeof(T) * CHAR_BIT;
 
 /* integral constant */
 
@@ -166,7 +166,7 @@ template<typename>
 constexpr bool IsArray = false;
 template<typename T>
 constexpr bool IsArray<T[]> = true;
-template<typename T, Size N> 
+template<typename T, size_t N> 
 constexpr bool IsArray<T[N]> = true;
 
 /* is pointer */
@@ -679,11 +679,11 @@ namespace detail {
         CtibleVoidCheck<CtibleContainsVoid<T, A...> || IsAbstract<T>, T, A...>;
 
     /* array types are default constructible if their element type is */
-    template<typename T, Size N>
+    template<typename T, size_t N>
     constexpr bool CtibleCore<false, T[N]> = Ctible<RemoveAllExtents<T>>;
 
     /* otherwise array types are not constructible by this syntax */
-    template<typename T, Size N, typename ...A>
+    template<typename T, size_t N, typename ...A>
     constexpr bool CtibleCore<false, T[N], A...> = false;
 
     /* incomplete array types are not constructible */
@@ -735,7 +735,7 @@ namespace detail {
 template<typename T, typename ...A> constexpr bool IsNothrowConstructible =
     detail::NothrowCtibleCore<IsConstructible<T, A...>, IsReference<T>, T, A...>;
 
-template<typename T, Size N> constexpr bool IsNothrowConstructible<T[N]> =
+template<typename T, size_t N> constexpr bool IsNothrowConstructible<T[N]> =
     detail::NothrowCtibleCore<IsConstructible<T>, IsReference<T>, T>;
 
 /* is nothrow default constructible */
@@ -884,7 +884,7 @@ namespace detail {
 template<typename T>
 constexpr bool IsNothrowDestructible = detail::NothrowDtibleCore<IsDestructible<T>, T>;
 
-template<typename T, Size N>
+template<typename T, size_t N>
 constexpr bool IsNothrowDestructible<T[N]> = IsNothrowDestructible<T>;
 
 /* is trivially constructible */
@@ -1006,39 +1006,39 @@ constexpr bool IsConvertible = detail::IsConvertibleBase<F, T>::value;
 
 namespace detail {
     template<typename, uint>
-    constexpr Size ExtentBase = 0;
+    constexpr size_t ExtentBase = 0;
 
     template<typename T>
-    constexpr Size ExtentBase<T[], 0> = 0;
+    constexpr size_t ExtentBase<T[], 0> = 0;
 
     template<typename T, uint I>
-    constexpr Size ExtentBase<T[], I> = detail::ExtentBase<T, I - 1>;
+    constexpr size_t ExtentBase<T[], I> = detail::ExtentBase<T, I - 1>;
 
-    template<typename T, Size N>
-    constexpr Size ExtentBase<T[N], 0> = N;
+    template<typename T, size_t N>
+    constexpr size_t ExtentBase<T[N], 0> = N;
 
-    template<typename T, Size N, uint I>
-    constexpr Size ExtentBase<T[N], I> = detail::ExtentBase<T, I - 1>;
+    template<typename T, size_t N, uint I>
+    constexpr size_t ExtentBase<T[N], I> = detail::ExtentBase<T, I - 1>;
 } /* namespace detail */
 
 template<typename T, uint I = 0>
-constexpr Size Extent = detail::ExtentBase<T, I>;
+constexpr size_t Extent = detail::ExtentBase<T, I>;
 
 /* rank */
 
 namespace detail {
     template<typename>
-    constexpr Size RankBase = 0;
+    constexpr size_t RankBase = 0;
 
     template<typename T>
-    constexpr Size RankBase<T[]> = detail::RankBase<T> + 1;
+    constexpr size_t RankBase<T[]> = detail::RankBase<T> + 1;
 
-    template<typename T, Size N>
-    constexpr Size RankBase<T[N]> = detail::RankBase<T> + 1;
+    template<typename T, size_t N>
+    constexpr size_t RankBase<T[N]> = detail::RankBase<T> + 1;
 }
 
 template<typename T>
-constexpr Size Rank = detail::RankBase<T>;
+constexpr size_t Rank = detail::RankBase<T>;
 
 /* remove const, volatile, cv */
 
@@ -1205,7 +1205,7 @@ namespace detail {
     struct RemoveExtentBase { using Type = T; };
     template<typename T>
     struct RemoveExtentBase<T[]> { using Type = T; };
-    template<typename T, Size N>
+    template<typename T, size_t N>
     struct RemoveExtentBase<T[N]> { using Type = T; };
 }
 
@@ -1223,7 +1223,7 @@ namespace detail {
         using Type = RemoveAllExtentsBase<T>;
     };
 
-    template<typename T, Size N>
+    template<typename T, size_t N>
     struct RemoveAllExtentsBase<T[N]> {
         using Type = RemoveAllExtentsBase<T>;
     };
@@ -1272,15 +1272,15 @@ namespace detail {
             >
         >;
 
-    template<typename T, Size N, bool = (N <= sizeof(typename T::First))>
+    template<typename T, size_t N, bool = (N <= sizeof(typename T::First))>
     struct TypeFindFirst;
 
-    template<typename T, typename U, Size N>
+    template<typename T, typename U, size_t N>
     struct TypeFindFirst<TypeList<T, U>, N, true> {
         using Type = T;
     };
 
-    template<typename T, typename U, Size N>
+    template<typename T, typename U, size_t N>
     struct TypeFindFirst<TypeList<T, U>, N, false> {
         using Type = typename TypeFindFirst<U, N>::Type;
     };
@@ -1605,7 +1605,7 @@ using CommonType = typename detail::CommonTypeBase<A...>::Type;
 /* aligned storage */
 
 namespace detail {
-    template<Size N>
+    template<size_t N>
     struct AlignedTest {
         union Type {
             byte data[N];
@@ -1613,7 +1613,7 @@ namespace detail {
         };
     };
 
-    template<Size N, Size A>
+    template<size_t N, size_t A>
     struct AlignedStorageBase {
         struct Type {
             alignas(A) byte data[N];
@@ -1621,7 +1621,7 @@ namespace detail {
     };
 }
 
-template<Size N, Size A
+template<size_t N, size_t A
     = alignof(typename detail::AlignedTest<N>::Type)
 >
 using AlignedStorage = typename detail::AlignedStorageBase<N, A>::Type;
@@ -1629,20 +1629,20 @@ using AlignedStorage = typename detail::AlignedStorageBase<N, A>::Type;
 /* aligned union */
 
 namespace detail {
-    template<Size ...N>
-    constexpr Size AlignMax = 0;
-    template<Size N>
-    constexpr Size AlignMax<N> = N;
+    template<size_t ...N>
+    constexpr size_t AlignMax = 0;
+    template<size_t N>
+    constexpr size_t AlignMax<N> = N;
 
-    template<Size N1, Size N2>
-    constexpr Size AlignMax<N1, N2> = (N1 > N2) ? N1 : N2;
+    template<size_t N1, size_t N2>
+    constexpr size_t AlignMax<N1, N2> = (N1 > N2) ? N1 : N2;
 
-    template<Size N1, Size N2, Size ...N>
-    constexpr Size AlignMax<N1, N2, N...> = AlignMax<AlignMax<N1, N2>, N...>;
+    template<size_t N1, size_t N2, size_t ...N>
+    constexpr size_t AlignMax<N1, N2, N...> = AlignMax<AlignMax<N1, N2>, N...>;
 
-    template<Size N, typename ...T>
+    template<size_t N, typename ...T>
     struct AlignedUnionBase {
-        static constexpr Size alignment_value = AlignMax<alignof(T)...>;
+        static constexpr size_t alignment_value = AlignMax<alignof(T)...>;
 
         struct Type {
             alignas(alignment_value) byte data[AlignMax<N, sizeof(T)...>];
@@ -1650,7 +1650,7 @@ namespace detail {
     };
 } /* namespace detail */
 
-template<Size N, typename ...T>
+template<size_t N, typename ...T>
 using AlignedUnion = typename detail::AlignedUnionBase<N, T...>::Type;
 
 /* underlying type */

@@ -22,8 +22,8 @@ struct Vec2 {
     Vec2(T v): x(v), y(v) {}
     Vec2(T x, T y): x(x), y(y) {}
 
-    T &operator[](Size idx)       { return value[idx]; }
-    T  operator[](Size idx) const { return value[idx]; }
+    T &operator[](size_t idx)       { return value[idx]; }
+    T  operator[](size_t idx) const { return value[idx]; }
 
     Vec2 &add(T v) {
         x += v; y += v;
@@ -148,8 +148,8 @@ struct Vec3 {
     Vec3(T v): x(v), y(v), z(v) {}
     Vec3(T x, T y, T z): x(x), y(y), z(z) {}
 
-    T &operator[](Size idx)       { return value[idx]; }
-    T  operator[](Size idx) const { return value[idx]; }
+    T &operator[](size_t idx)       { return value[idx]; }
+    T  operator[](size_t idx) const { return value[idx]; }
 
     Vec3 &add(T v) {
         x += v; y += v; z += v;
@@ -274,8 +274,8 @@ struct Vec4 {
     Vec4(T v): x(v), y(v), z(v), w(v) {}
     Vec4(T x, T y, T z, T w): x(x), y(y), z(z), w(w) {}
 
-    T &operator[](Size idx)       { return value[idx]; }
-    T  operator[](Size idx) const { return value[idx]; }
+    T &operator[](size_t idx)       { return value[idx]; }
+    T  operator[](size_t idx) const { return value[idx]; }
 
     Vec4 &add(T v) {
         x += v; y += v; z += v; w += v;

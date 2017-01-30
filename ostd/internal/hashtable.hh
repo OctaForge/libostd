@@ -26,14 +26,14 @@ namespace detail {
     };
 
     template<typename R>
-    static inline Size estimate_hrsize(
+    static inline size_t estimate_hrsize(
         const R &range, EnableIf<IsFiniteRandomAccessRange<R>, bool> = true
     ) {
         return range.size();
     }
 
     template<typename R>
-    static inline Size estimate_hrsize(
+    static inline size_t estimate_hrsize(
         const R &, EnableIf<!IsFiniteRandomAccessRange<R>, bool> = true
     ) {
         /* we have no idea how big the range actually is */
@@ -139,49 +139,49 @@ namespace detail {
      * If this is not possible, use the upper bound and pad the
      * structure with some extra bytes.
      */
-    static constexpr Size CacheLineSize = 64;
-    static constexpr Size ChunkLowerBound = 32;
-    static constexpr Size ChunkUpperBound = 128;
+    static constexpr size_t CacheLineSize = 64;
+    static constexpr size_t ChunkLowerBound = 32;
+    static constexpr size_t ChunkUpperBound = 128;
 
-    template<typename E, Size N> constexpr Size HashChainAlign =
+    template<typename E, size_t N> constexpr size_t HashChainAlign =
         (((sizeof(HashChain<E>[N]) + sizeof(void *)) % CacheLineSize) == 0)
             ? N : HashChainAlign<E, N + 1>;
 
     template<typename E>
-    constexpr Size HashChainAlign<E, ChunkUpperBound> = ChunkUpperBound;
+    constexpr size_t HashChainAlign<E, ChunkUpperBound> = ChunkUpperBound;
 
-    template<Size N, bool B>
+    template<size_t N, bool B>
     struct HashChainPad;
 
-    template<Size N>
+    template<size_t N>
     struct HashChainPad<N, true> {};
 
-    template<Size N>
+    template<size_t N>
     struct HashChainPad<N, false> {
         byte pad[CacheLineSize - (N % CacheLineSize)];
     };
 
-    template<Size N>
+    template<size_t N>
     struct HashPad: HashChainPad<N, N % CacheLineSize == 0> {};
 
     template<
-        typename E, Size V = HashChainAlign<E, ChunkLowerBound>,
+        typename E, size_t V = HashChainAlign<E, ChunkLowerBound>,
         bool P = (V == ChunkUpperBound)
     >
     struct HashChunk;
 
-    template<typename E, Size V>
+    template<typename E, size_t V>
     struct HashChunk<E, V, false> {
-        static constexpr Size num = V;
+        static constexpr size_t num = V;
         HashChain<E> chains[num];
         HashChunk *next;
     };
 
-    template<typename E, Size V>
+    template<typename E, size_t V>
     struct HashChunk<E, V, true>: HashPad<
         sizeof(HashChain<E>[V]) + sizeof(void *)
     > {
-        static constexpr Size num = V;
+        static constexpr size_t num = V;
         HashChain<E> chains[num];
         HashChunk *next;
     };
@@ -201,8 +201,8 @@ private:
         using Chain = HashChain<E>;
         using Chunk = HashChunk<E>;
 
-        Size p_size;
-        Size p_len;
+        size_t p_size;
+        size_t p_len;
 
         Chunk *p_chunks;
         Chain *p_unused;
@@ -234,7 +234,7 @@ private:
             clear_buckets();
         }
 
-        Chain *find(const K &key, Size &h) const {
+        Chain *find(const K &key, size_t &h) const {
             if (!p_size) {
                 return nullptr;
             }
@@ -248,7 +248,7 @@ private:
             return nullptr;
         }
 
-        Chain *insert_node(Size h, Chain *c) {
+        Chain *insert_node(size_t h, Chain *c) {
             Chain **cp = p_data.first();
             Chain *it = cp[h + 1];
             c->next = it;
@@ -287,7 +287,7 @@ private:
                 allocator_construct(get_challoc(), chunk);
                 chunk->next = p_chunks;
                 p_chunks = chunk;
-                for (Size i = 0; i < (Chunk::num - 1); ++i) {
+                for (size_t i = 0; i < (Chunk::num - 1); ++i) {
                     chunk->chains[i].next = &chunk->chains[i + 1];
                 }
                 chunk->chains[Chunk::num - 1].next = p_unused;
@@ -299,7 +299,7 @@ private:
             return c;
         }
 
-        Chain *insert(Size h) {
+        Chain *insert(size_t h) {
             return insert_node(h, request_node());
         }
 
@@ -311,24 +311,24 @@ private:
             }
         }
 
-        void rehash_ahead(Size n) {
+        void rehash_ahead(size_t n) {
             if (!bucket_count()) {
                 reserve(n);
             } else if ((float(size() + n) / bucket_count()) > max_load_factor()) {
-                rehash(Size((size() + 1) / max_load_factor()) * 2);
+                rehash(size_t((size() + 1) / max_load_factor()) * 2);
             }
         }
 
 protected:
         template<typename U>
-        T &insert(Size h, U &&key) {
+        T &insert(size_t h, U &&key) {
             Chain *c = insert(h);
             B::set_key(c->value, std::forward<U>(key), get_alloc());
             return B::get_data(c->value);
         }
 
         T &access_or_insert(const K &key) {
-            Size h = 0;
+            size_t h = 0;
             Chain *c = find(key, h);
             if (c) {
                 return B::get_data(c->value);
@@ -338,7 +338,7 @@ protected:
         }
 
         T &access_or_insert(K &&key) {
-            Size h = 0;
+            size_t h = 0;
             Chain *c = find(key, h);
             if (c) {
                 return B::get_data(c->value);
@@ -348,7 +348,7 @@ protected:
         }
 
         T *access(const K &key) const {
-            Size h;
+            size_t h;
             Chain *c = find(key, h);
             if (c) {
                 return &B::get_data(c->value);
@@ -391,7 +391,7 @@ protected:
             return p_data.second().first().second().second();
         }
 
-        Hashtable(Size size, const H &hf, const C &eqf, const A &alloc):
+        Hashtable(size_t size, const H &hf, const C &eqf, const A &alloc):
         p_size(size), p_len(0), p_chunks(nullptr), p_unused(nullptr),
         p_data(nullptr, FAPair(AllocPair(alloc, CoreAllocPair(alloc, alloc)),
             FuncPair(hf, eqf))),
@@ -413,7 +413,7 @@ protected:
             init_buckets();
             Chain **och = ht.p_data.first();
             for (Chain *oc = *och; oc; oc = oc->next) {
-                Size h = bucket(B::get_key(oc->value));
+                size_t h = bucket(B::get_key(oc->value));
                 Chain *nc = insert(h);
                 allocator_destroy(get_alloc(), &nc->value);
                 allocator_construct(get_alloc(), &nc->value, oc->value);
@@ -451,7 +451,7 @@ protected:
             init_buckets();
             Chain **och = ht.p_data.first();
             for (Chain *oc = *och; oc; oc = oc->next) {
-                Size h = bucket(B::get_key(oc->value));
+                size_t h = bucket(B::get_key(oc->value));
                 Chain *nc = insert(h);
                 B::swap_elem(oc->value, nc->value);
             }
@@ -495,11 +495,11 @@ protected:
             if (load_factor() <= max_load_factor()) {
                 return;
             }
-            rehash(Size(size() / max_load_factor()) * 2);
+            rehash(size_t(size() / max_load_factor()) * 2);
         }
 
-        void reserve_at_least(Size count) {
-            Size nc = Size(ceil(count / max_load_factor()));
+        void reserve_at_least(size_t count) {
+            size_t nc = size_t(ceil(count / max_load_factor()));
             if (p_size > nc) {
                 return;
             }
@@ -542,18 +542,18 @@ public:
         }
 
         bool empty() const { return p_len == 0; }
-        Size size() const { return p_len; }
-        Size max_size() const { return Size(~0) / sizeof(E); }
+        size_t size() const { return p_len; }
+        size_t max_size() const { return size_t(~0) / sizeof(E); }
 
-        Size bucket_count() const { return p_size; }
-        Size max_bucket_count() const { return Size(~0) / sizeof(Chain); }
+        size_t bucket_count() const { return p_size; }
+        size_t max_bucket_count() const { return size_t(~0) / sizeof(Chain); }
 
-        Size bucket(const K &key) const {
+        size_t bucket(const K &key) const {
             return get_hash()(key) & (p_size - 1);
         }
 
-        Size bucket_size(Size n) const {
-            Size ret = 0;
+        size_t bucket_size(size_t n) const {
+            size_t ret = 0;
             if (n >= p_size) {
                 return ret;
             }
@@ -573,12 +573,12 @@ public:
                  * gotta make sure that equal keys always come  after
                  * each other (this is then used by other APIs)
                  */
-                Size h = bucket(B::get_key(elem));
+                size_t h = bucket(B::get_key(elem));
                 Chain *ch = insert(h);
                 B::swap_elem(ch->value, elem);
                 return std::make_pair(Range(ch), true);
             }
-            Size h = bucket(B::get_key(elem));
+            size_t h = bucket(B::get_key(elem));
             Chain *found = nullptr;
             bool ins = true;
             Chain **cp = p_data.first();
@@ -596,20 +596,20 @@ public:
             return std::make_pair(Range(found), ins);
         }
 
-        Size erase(const K &key) {
-            Size h = 0;
+        size_t erase(const K &key) {
+            size_t h = 0;
             Chain *c = find(key, h);
             if (!c) {
                 return 0;
             }
             Chain **cp = p_data.first();
-            Size olen = p_len;
+            size_t olen = p_len;
             for (Chain *e = cp[h + 1]; c != e; c = c->next) {
                 if (!get_eq()(key, B::get_key(c->value))) {
                     break;
                 }
                 --p_len;
-                Size hh = h;
+                size_t hh = h;
                 Chain *next = c->next;
                 for (; cp[hh] == c; --hh) {
                     cp[hh] = next;
@@ -635,13 +635,13 @@ public:
             return olen - p_len;
         }
 
-        Size count(const K &key) {
-            Size h = 0;
+        size_t count(const K &key) {
+            size_t h = 0;
             Chain *c = find(key, h);
             if (!c) {
                 return 0;
             }
-            Size ret = 1;
+            size_t ret = 1;
             if (!Multihash) {
                 return ret;
             }
@@ -654,12 +654,12 @@ public:
         }
 
         Range find(const K &key) {
-            Size h = 0;
+            size_t h = 0;
             return Range(find(key, h));
         }
 
         ConstRange find(const K &key) const {
-            Size h = 0;
+            size_t h = 0;
             return ConstRange(reinterpret_cast<detail::HashChain<const E> *>(
                 find(key, h)
             ));
@@ -669,14 +669,14 @@ public:
         float max_load_factor() const { return p_maxlf; }
         void max_load_factor(float lf) { p_maxlf = lf; }
 
-        void rehash(Size count) {
-            Size fbcount = Size(p_len / max_load_factor());
+        void rehash(size_t count) {
+            size_t fbcount = size_t(p_len / max_load_factor());
             if (fbcount > count) {
                 count = fbcount;
             }
 
             Chain **och = p_data.first();
-            Size osize = p_size;
+            size_t osize = p_size;
 
             p_size = count;
             init_buckets();
@@ -684,7 +684,7 @@ public:
             Chain *p = och ? *och : nullptr;
             while (p) {
                 Chain *pp = p->next;
-                Size h = bucket(B::get_key(p->value));
+                size_t h = bucket(B::get_key(p->value));
                 p->prev = p->next = nullptr;
                 insert_node(h, p);
                 p = pp;
@@ -695,8 +695,8 @@ public:
             }
         }
 
-        void reserve(Size count) {
-            rehash(Size(ceil(count / max_load_factor())));
+        void reserve(size_t count) {
+            rehash(size_t(ceil(count / max_load_factor())));
         }
 
         Range iter() {
@@ -720,13 +720,13 @@ public:
             return ConstRange(reinterpret_cast<Chain *>(*p_data.first()));
         }
 
-        LocalRange iter(Size n) {
+        LocalRange iter(size_t n) {
             if (n >= p_size) {
                 return LocalRange();
             }
             return LocalRange(p_data.first()[n], p_data.first()[n + 1]);
         }
-        ConstLocalRange iter(Size n) const {
+        ConstLocalRange iter(size_t n) const {
             using Chain = detail::HashChain<const E>;
             if (n >= p_size) {
                 return ConstLocalRange();
@@ -736,7 +736,7 @@ public:
                 reinterpret_cast<Chain *>(p_data.first()[n + 1])
             );
         }
-        ConstLocalRange citer(Size n) const {
+        ConstLocalRange citer(size_t n) const {
             using Chain = detail::HashChain<const E>;
             if (n >= p_size) {
                 return ConstLocalRange();

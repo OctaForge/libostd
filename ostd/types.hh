@@ -55,11 +55,6 @@ using MaxAlign = ::max_align_t;
 using MaxAlign = long double;
 #endif
 
-/* stddef */
-
-using Ptrdiff = ptrdiff_t;
-using Size = size_t;
-
 /* stdint */
 
 using Intmax = intmax_t;

@@ -75,7 +75,7 @@ namespace detail {
 
     template<typename T, bool = HasDifference<T>::value>
     struct PointerDifferenceBase {
-        using Type = Ptrdiff;
+        using Type = ptrdiff_t;
     };
 
     template<typename T>
@@ -90,7 +90,7 @@ namespace detail {
 
     template<typename T>
     struct PointerDifferenceType<T *> {
-        using Type = Ptrdiff;
+        using Type = ptrdiff_t;
     };
 
     template<typename T, typename U>
@@ -225,11 +225,11 @@ struct Allocator {
     template<typename U>
     Allocator(Allocator<U> const &) noexcept {}
 
-    Value *allocate(Size n) {
+    Value *allocate(size_t n) {
         return reinterpret_cast<Value *>(::new byte[n * sizeof(T)]);
     }
 
-    void deallocate(Value *p, Size) noexcept {
+    void deallocate(Value *p, size_t) noexcept {
         ::delete[] reinterpret_cast<byte *>(p);
     }
 };
@@ -752,7 +752,7 @@ namespace detail {
     template<typename A>
     struct AllocatorDestructor {
         using Pointer = AllocatorPointer<A>;
-        using Size = ostd::Size;
+        using Size = size_t;
         AllocatorDestructor(A &a, Size s) noexcept: p_alloc(a), p_size(s) {}
         void operator()(Pointer p) noexcept {
             allocator_deallocate(p_alloc, p, p_size);

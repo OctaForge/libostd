@@ -59,9 +59,9 @@ struct FileStream: Stream {
         buf[path.size()] = '\0';
         p_owned = false;
 #ifndef OSTD_PLATFORM_WIN32
-        p_f = fopen(buf, detail::filemodes[Size(mode)]);
+        p_f = fopen(buf, detail::filemodes[size_t(mode)]);
 #else
-        if (fopen_s(&p_f, buf, detail::filemodes[Size(mode)]) != 0) {
+        if (fopen_s(&p_f, buf, detail::filemodes[size_t(mode)]) != 0) {
             return false;
         }
 #endif
@@ -111,11 +111,11 @@ struct FileStream: Stream {
 
     bool flush() { return !fflush(p_f); }
 
-    Size read_bytes(void *buf, Size count) {
+    size_t read_bytes(void *buf, size_t count) {
         return fread(buf, 1, count, p_f);
     }
 
-    Size write_bytes(void const *buf, Size count) {
+    size_t write_bytes(void const *buf, size_t count) {
         return fwrite(buf, 1, count, p_f);
     }
 
@@ -194,12 +194,12 @@ inline void writeln(T const &v, A const &...args) {
 template<typename ...A>
 inline void writef(ConstCharRange fmt, A const &...args) {
     char buf[512];
-    Ptrdiff need = format(
+    ptrdiff_t need = format(
         detail::FormatOutRange<sizeof(buf)>(buf), fmt, args...
     );
     if (need < 0) {
         return;
-    } else if (Size(need) < sizeof(buf)) {
+    } else if (size_t(need) < sizeof(buf)) {
         fwrite(buf, 1, need, stdout);
         return;
     }

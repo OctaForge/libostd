@@ -37,7 +37,7 @@ public:
         (IsPointer<U> || IsNullPointer<U>) && IsConvertible<U, T *>, Nat
     > = Nat()): p_beg(beg), p_end(end) {}
 
-    CharRangeBase(T *beg, Size n): p_beg(beg), p_end(beg + n) {}
+    CharRangeBase(T *beg, size_t n): p_beg(beg), p_end(beg + n) {}
 
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     template<typename U>
@@ -47,7 +47,7 @@ public:
 
     CharRangeBase(Nullptr): p_beg(nullptr), p_end(nullptr) {}
 
-    template<typename U, Size N>
+    template<typename U, size_t N>
     CharRangeBase(U (&beg)[N], EnableIf<IsConvertible<U *, T *>, Nat> = Nat()):
         p_beg(beg), p_end(beg + N - (beg[N - 1] == '\0'))
     {}
@@ -88,8 +88,8 @@ public:
     }
     bool push_front() { --p_beg; return true; }
 
-    Size pop_front_n(Size n) {
-        Size olen = p_end - p_beg;
+    size_t pop_front_n(size_t n) {
+        size_t olen = p_end - p_beg;
         p_beg += n;
         if (p_beg > p_end) {
             p_beg = p_end;
@@ -98,7 +98,7 @@ public:
         return n;
     }
 
-    Size push_front_n(Size n) { p_beg -= n; return true; }
+    size_t push_front_n(size_t n) { p_beg -= n; return true; }
 
     T &front() const { return *p_beg; }
 
@@ -106,7 +106,7 @@ public:
         return p_beg == range.p_beg;
     }
 
-    Ptrdiff distance_front(CharRangeBase const &range) const {
+    ptrdiff_t distance_front(CharRangeBase const &range) const {
         return range.p_beg - p_beg;
     }
 
@@ -119,8 +119,8 @@ public:
     }
     bool push_back() { ++p_end; return true; }
 
-    Size pop_back_n(Size n) {
-        Size olen = p_end - p_beg;
+    size_t pop_back_n(size_t n) {
+        size_t olen = p_end - p_beg;
         p_end -= n;
         if (p_end < p_beg) {
             p_end = p_beg;
@@ -129,7 +129,7 @@ public:
         return n;
     }
 
-    Size push_back_n(Size n) { p_end += n; return true; }
+    size_t push_back_n(size_t n) { p_end += n; return true; }
 
     T &back() const { return *(p_end - 1); }
 
@@ -137,17 +137,17 @@ public:
         return p_end == range.p_end;
     }
 
-    Ptrdiff distance_back(CharRangeBase const &range) const {
+    ptrdiff_t distance_back(CharRangeBase const &range) const {
         return range.p_end - p_end;
     }
 
-    Size size() const { return p_end - p_beg; }
+    size_t size() const { return p_end - p_beg; }
 
-    CharRangeBase slice(Size start, Size end) const {
+    CharRangeBase slice(size_t start, size_t end) const {
         return CharRangeBase(p_beg + start, p_beg + end);
     }
 
-    T &operator[](Size i) const { return p_beg[i]; }
+    T &operator[](size_t i) const { return p_beg[i]; }
 
     bool put(T v) {
         if (empty()) {
@@ -157,8 +157,8 @@ public:
         return true;
     }
 
-    Size put_n(T const *p, Size n) {
-        Size an = ostd::min(n, size());
+    size_t put_n(T const *p, size_t n) {
+        size_t an = ostd::min(n, size());
         memcpy(p_beg, p, an * sizeof(T));
         p_beg += an;
         return an;
@@ -169,7 +169,7 @@ public:
 
     /* non-range */
     int compare(CharRangeBase<T const> s) const {
-        ostd::Size s1 = size(), s2 = s.size();
+        size_t s1 = size(), s2 = s.size();
         int ret;
         if (!s1 || !s2) {
             goto diffsize;
@@ -182,8 +182,8 @@ diffsize:
     }
 
     int case_compare(CharRangeBase<T const> s) const {
-        ostd::Size s1 = size(), s2 = s.size();
-        for (ostd::Size i = 0, ms = ostd::min(s1, s2); i < ms; ++i) {
+        size_t s1 = size(), s2 = s.size();
+        for (size_t i = 0, ms = ostd::min(s1, s2); i < ms; ++i) {
             int d = toupper(p_beg[i]) - toupper(s[i]);
             if (d) {
                 return d;
@@ -193,12 +193,12 @@ diffsize:
     }
 
     template<typename R>
-    EnableIf<IsOutputRange<R>, Size> copy(R &&orange, Size n = -1) {
+    EnableIf<IsOutputRange<R>, size_t> copy(R &&orange, size_t n = -1) {
         return orange.put_n(data(), ostd::min(n, size()));
     }
 
-    Size copy(RemoveCv<T> *p, Size n = -1) {
-        Size c = ostd::min(n, size());
+    size_t copy(RemoveCv<T> *p, size_t n = -1) {
+        size_t c = ostd::min(n, size());
         memcpy(p, data(), c * sizeof(T));
         return c;
     }
@@ -279,7 +279,7 @@ inline std::basic_string<RemoveCv<RangeValue<R>>> make_string(R range) {
 
 inline namespace literals {
 inline namespace string_literals {
-    inline ConstCharRange operator "" _sr(char const *str, Size len) {
+    inline ConstCharRange operator "" _sr(char const *str, size_t len) {
         return ConstCharRange(str, len);
     }
 }
@@ -370,18 +370,18 @@ namespace detail {
             p_written += ret;
             return ret;
         }
-        Size put_n(char const *v, Size n) {
-            Size ret = p_out.put_n(v, n);
+        size_t put_n(char const *v, size_t n) {
+            size_t ret = p_out.put_n(v, n);
             p_written += ret;
             return ret;
         }
-        Size put_string(ConstCharRange r) {
+        size_t put_string(ConstCharRange r) {
             return put_n(&r[0], r.size());
         }
-        Size get_written() const { return p_written; }
+        size_t get_written() const { return p_written; }
     private:
         R &p_out;
-        Size p_written;
+        size_t p_written;
     };
 
     template<typename T, typename R>
@@ -565,7 +565,7 @@ struct ToString<std::pair<T, U>> {
 };
 
 namespace detail {
-    template<Size I, Size N>
+    template<size_t I, size_t N>
     struct TupleToString {
         template<typename T>
         static void append(std::string &ret, T const &tup) {
@@ -577,13 +577,13 @@ namespace detail {
         }
     };
 
-    template<Size N>
+    template<size_t N>
     struct TupleToString<N, N> {
         template<typename T>
         static void append(std::string &, T const &) {}
     };
 
-    template<Size N>
+    template<size_t N>
     struct TupleToString<0, N> {
         template<typename T>
         static void append(std::string &ret, T const &tup) {
@@ -630,7 +630,7 @@ public:
         s.p_buf = nullptr;
         s.p_allocated = false;
     }
-    TempCString(R input, RemoveCv<RangeValue<R>> *sbuf, Size bufsize)
+    TempCString(R input, RemoveCv<RangeValue<R>> *sbuf, size_t bufsize)
     : p_buf(nullptr), p_allocated(false) {
         if (input.empty()) {
             return;
@@ -672,7 +672,7 @@ inline void swap(TempCString<R> &a, TempCString<R> &b) {
 
 template<typename R>
 inline TempCString<R> to_temp_cstr(
-    R input, RemoveCv<RangeValue<R>> *buf, Size bufsize
+    R input, RemoveCv<RangeValue<R>> *buf, size_t bufsize
 ) {
     return TempCString<R>(input, buf, bufsize);
 }

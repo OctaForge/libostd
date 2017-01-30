@@ -43,8 +43,8 @@ namespace detail {
         return ret;
     }
 
-    inline Size read_digits(ConstCharRange &fmt, char *buf) {
-        Size ret = 0;
+    inline size_t read_digits(ConstCharRange &fmt, char *buf) {
+        size_t ret = 0;
         for (; !fmt.empty() && isdigit(fmt.front()); ++ret) {
             *buf++ = fmt.front();
             fmt.pop_front();
@@ -127,7 +127,7 @@ namespace detail {
     }
 
     template<typename T>
-    bool get_arg_param(Size idx, int &param, T const &val) {
+    bool get_arg_param(size_t idx, int &param, T const &val) {
         if (idx) {
             assert(false && "not enough format args");
             return false;
@@ -135,7 +135,7 @@ namespace detail {
         return convert_arg_param(val, param);
     }
     template<typename T, typename ...A>
-    bool get_arg_param(Size idx, int &param, T const &val, A const &...args) {
+    bool get_arg_param(size_t idx, int &param, T const &val, A const &...args) {
         if (idx) {
             return get_arg_param(idx - 1, param, args...);
         }
@@ -150,8 +150,8 @@ struct FormatSpec {
     {}
 
     template<typename R>
-    bool read_until_spec(R &writer, Size *wret) {
-        Size written = 0;
+    bool read_until_spec(R &writer, size_t *wret) {
+        size_t written = 0;
         if (wret) {
             *wret = 0;
         }
@@ -182,7 +182,7 @@ struct FormatSpec {
     }
 
     template<typename R>
-    Size write_spaces(R &writer, Size n, bool left, char c = ' ') const {
+    size_t write_spaces(R &writer, size_t n, bool left, char c = ' ') const {
         if (left == bool(p_flags & FMT_FLAG_DASH)) {
             return 0;
         }
@@ -199,8 +199,8 @@ struct FormatSpec {
     }
 
     template<typename R>
-    Size build_spec(R &&out, ConstCharRange spec) {
-        Size ret = out.put('%');
+    size_t build_spec(R &&out, ConstCharRange spec) {
+        size_t ret = out.put('%');
         if (p_flags & FMT_FLAG_DASH ) {
             ret += out.put('-');
         }
@@ -231,12 +231,12 @@ struct FormatSpec {
     bool arg_precision() const { return p_arg_precision; }
 
     template<typename ...A>
-    bool set_width(Size idx, A const &...args) {
+    bool set_width(size_t idx, A const &...args) {
         return detail::get_arg_param(idx, p_width, args...);
     }
 
     template<typename ...A>
-    bool set_precision(Size idx, A const &...args) {
+    bool set_precision(size_t idx, A const &...args) {
         return detail::get_arg_param(idx, p_precision, args...);
     }
 
@@ -348,7 +348,7 @@ protected:
     }
 
     bool read_spec() {
-        Size ndig = detail::read_digits(p_fmt, p_buf);
+        size_t ndig = detail::read_digits(p_fmt, p_buf);
 
         bool havepos = false;
         p_index = 0;
@@ -364,11 +364,11 @@ protected:
 
         /* parse flags */
         p_flags = 0;
-        Size skipd = 0;
+        size_t skipd = 0;
         if (havepos || !ndig) {
             p_flags = detail::parse_fmt_flags(p_fmt, 0);
         } else {
-            for (Size i = 0; i < ndig; ++i) {
+            for (size_t i = 0; i < ndig; ++i) {
                 if (p_buf[i] != '0') {
                     break;
                 }
@@ -449,10 +449,10 @@ inline bool to_format(T const &v, R &writer, FormatSpec const &fs) {
 
 namespace detail {
     template<typename R, typename T>
-    inline Ptrdiff write_u(R &writer, FormatSpec const *fl, bool neg, T val) {
+    inline ptrdiff_t write_u(R &writer, FormatSpec const *fl, bool neg, T val) {
         char buf[20];
-        Ptrdiff r = 0;
-        Size n = 0;
+        ptrdiff_t r = 0;
+        size_t n = 0;
 
         char spec = fl->spec();
         if (spec == 's') spec = 'd';
@@ -505,16 +505,16 @@ namespace detail {
     }
 
     template<typename R, typename ...A>
-    static Ptrdiff format_impl(
-        R &writer, Size &fmtn, bool escape,
+    static ptrdiff_t format_impl(
+        R &writer, size_t &fmtn, bool escape,
         ConstCharRange fmt, A const &...args
     );
 
-    template<Size I>
+    template<size_t I>
     struct FmtTupleUnpacker {
         template<typename R, typename T, typename ...A>
-        static inline Ptrdiff unpack(
-            R &writer, Size &fmtn, bool esc, ConstCharRange fmt,
+        static inline ptrdiff_t unpack(
+            R &writer, size_t &fmtn, bool esc, ConstCharRange fmt,
             T const &item, A const &...args
         ) {
             return FmtTupleUnpacker<I - 1>::unpack(
@@ -526,8 +526,8 @@ namespace detail {
     template<>
     struct FmtTupleUnpacker<0> {
         template<typename R, typename T, typename ...A>
-        static inline Ptrdiff unpack(
-            R &writer, Size &fmtn, bool esc, ConstCharRange fmt,
+        static inline ptrdiff_t unpack(
+            R &writer, size_t &fmtn, bool esc, ConstCharRange fmt,
             T const &, A const &...args
         ) {
             return format_impl(writer, fmtn, esc, fmt, args...);
@@ -547,16 +547,16 @@ namespace detail {
     constexpr bool is_tuple_like = decltype(tuple_like_test<T>(0))::value;
 
     template<typename R, typename T>
-    inline Ptrdiff format_ritem(
-        R &writer, Size &fmtn, bool esc, bool, ConstCharRange fmt,
+    inline ptrdiff_t format_ritem(
+        R &writer, size_t &fmtn, bool esc, bool, ConstCharRange fmt,
         T const &item, EnableIf<!is_tuple_like<T>, bool> = true
     ) {
         return format_impl(writer, fmtn, esc, fmt, item);
     }
 
     template<typename R, typename T>
-    inline Ptrdiff format_ritem(
-        R &writer, Size &fmtn, bool esc, bool expandval, ConstCharRange fmt,
+    inline ptrdiff_t format_ritem(
+        R &writer, size_t &fmtn, bool esc, bool expandval, ConstCharRange fmt,
         T const &item, EnableIf<is_tuple_like<T>, bool> = true
     ) {
         if (expandval) {
@@ -568,7 +568,7 @@ namespace detail {
     }
 
     template<typename R, typename T>
-    inline Ptrdiff write_range(
+    inline ptrdiff_t write_range(
         R &writer, FormatSpec const *fl, bool escape, bool expandval,
         ConstCharRange sep, T const &val, EnableIf<detail::IterableTest<T>, bool> = true
     ) {
@@ -576,10 +576,10 @@ namespace detail {
         if (range.empty()) {
             return 0;
         }
-        Ptrdiff ret = 0;
-        Size fmtn = 0;
+        ptrdiff_t ret = 0;
+        size_t fmtn = 0;
         /* test first item */
-        Ptrdiff fret = format_ritem(
+        ptrdiff_t fret = format_ritem(
             writer, fmtn, escape, expandval, fl->rest(), range.front()
         );
         if (fret < 0) {
@@ -606,7 +606,7 @@ namespace detail {
     }
 
     template<typename R, typename T>
-    inline Ptrdiff write_range(
+    inline ptrdiff_t write_range(
         R &, FormatSpec const *, bool, bool, ConstCharRange,
         T const &, EnableIf<!detail::IterableTest<T>, bool> = true
     ) {
@@ -637,7 +637,7 @@ namespace detail {
 
     inline char const *escape_fmt_char(char v, char quote) {
         if ((v >= 0 && v < 0x20) || (v == quote)) {
-            return fmt_escapes[Size(v)];
+            return fmt_escapes[size_t(v)];
         } else if (v == 0x7F) {
             return "\\x7F";
         }
@@ -678,15 +678,15 @@ namespace detail {
 
         /* string base writer */
         template<typename R>
-        Ptrdiff write_str(R &writer, bool escape, ConstCharRange val) {
+        ptrdiff_t write_str(R &writer, bool escape, ConstCharRange val) {
             if (escape) {
                 return write_str(writer, false, escape_fmt_str(val));
             }
-            Size n = val.size();
+            size_t n = val.size();
             if (this->precision()) {
                 n = this->precision();
             }
-            Ptrdiff r = n;
+            ptrdiff_t r = n;
             r += this->write_spaces(writer, n, true);
             writer.put_n(&val[0], n);
             r += this->write_spaces(writer, n, false);
@@ -695,7 +695,7 @@ namespace detail {
 
         /* any string value */
         template<typename R, typename T>
-        Ptrdiff write(
+        ptrdiff_t write(
             R &writer, bool escape, T const &val, EnableIf<
                 IsConstructible<ConstCharRange, T const &>, bool
             > = true
@@ -709,7 +709,7 @@ namespace detail {
 
         /* character */
         template<typename R>
-        Ptrdiff write(R &writer, bool escape, char val) {
+        ptrdiff_t write(R &writer, bool escape, char val) {
             if (this->spec() != 's' && this->spec() != 'c') {
                 assert(false && "cannot print chars with the given spec");
                 return -1;
@@ -719,7 +719,7 @@ namespace detail {
                 if (esc) {
                     char buf[6];
                     buf[0] = '\'';
-                    Size elen = strlen(esc);
+                    size_t elen = strlen(esc);
                     memcpy(buf + 1, esc, elen);
                     buf[elen + 1] = '\'';
                     /* invoke proper overload via ptr */
@@ -727,7 +727,7 @@ namespace detail {
                     return write(writer, false, bufp, elen + 2);
                 }
             }
-            Ptrdiff r = 1 + escape * 2;
+            ptrdiff_t r = 1 + escape * 2;
             r += this->write_spaces(writer, 1 + escape * 2, true);
             if (escape) {
                 writer.put('\'');
@@ -742,7 +742,7 @@ namespace detail {
 
         /* bool */
         template<typename R>
-        Ptrdiff write(R &writer, bool, bool val) {
+        ptrdiff_t write(R &writer, bool, bool val) {
             if (this->spec() == 's') {
                 return write(writer, ("false\0true") + (6 * val));
             } else {
@@ -752,7 +752,7 @@ namespace detail {
 
         /* signed integers */
         template<typename R, typename T>
-        Ptrdiff write(
+        ptrdiff_t write(
             R &writer, bool, T val, EnableIf<
                 IsIntegral<T> && IsSigned<T>, bool
             > = true
@@ -766,7 +766,7 @@ namespace detail {
 
         /* unsigned integers */
         template<typename R, typename T>
-        Ptrdiff write(
+        ptrdiff_t write(
             R &writer, bool, T val, EnableIf<
                 IsIntegral<T> && IsUnsigned<T>, bool
             > = true
@@ -775,7 +775,7 @@ namespace detail {
         }
 
         template<typename R, typename T, bool Long = IsSame<T, ldouble>>
-        Ptrdiff write(
+        ptrdiff_t write(
             R &writer, bool, T val, EnableIf<IsFloatingPoint<T>, bool> = true
         ) {
             char buf[16], rbuf[128];
@@ -795,13 +795,13 @@ namespace detail {
             }
 
             buf[this->build_spec(iter(buf), fmtspec)] = '\0';
-            Ptrdiff ret = snprintf(
+            ptrdiff_t ret = snprintf(
                 rbuf, sizeof(rbuf), buf, this->width(),
                 this->has_precision() ? this->precision() : 6, val
             );
 
             char *dbuf = nullptr;
-            if (Size(ret) >= sizeof(rbuf)) {
+            if (size_t(ret) >= sizeof(rbuf)) {
                 /* this should typically never happen */
                 dbuf = new char[ret + 1];
                 ret = snprintf(
@@ -818,7 +818,7 @@ namespace detail {
 
         /* pointer value */
         template<typename R, typename T>
-        Ptrdiff write(
+        ptrdiff_t write(
             R &writer, bool, T *val, EnableIf<
                 !IsConstructible<ConstCharRange, T *>, bool
             > = true
@@ -827,12 +827,12 @@ namespace detail {
                 this->p_spec = 'x';
                 this->p_flags |= FMT_FLAG_HASH;
             }
-            return write(writer, false, Size(val));
+            return write(writer, false, size_t(val));
         }
 
         /* generic value */
         template<typename R, typename T>
-        Ptrdiff write(
+        ptrdiff_t write(
             R &writer, bool, T const &val, EnableIf<
                 !IsArithmetic<T> &&
                 !IsConstructible<ConstCharRange, T const &> &&
@@ -848,7 +848,7 @@ namespace detail {
 
         /* custom format case */
         template<typename R, typename T>
-        Ptrdiff write(
+        ptrdiff_t write(
             R &writer, bool, T const &val,
             EnableIf<FmtTofmtTest<T, TostrRange<R>>, bool> = true
         ) {
@@ -861,7 +861,7 @@ namespace detail {
 
         /* generic failure case */
         template<typename R, typename T>
-        Ptrdiff write(
+        ptrdiff_t write(
             R &, bool, T const &, EnableIf<
                 !IsArithmetic<T> &&
                 !IsConstructible<ConstCharRange, T const &> &&
@@ -874,7 +874,7 @@ namespace detail {
 
         /* actual writer */
         template<typename R, typename T>
-        Ptrdiff write_arg(R &writer, Size idx, T const &val) {
+        ptrdiff_t write_arg(R &writer, size_t idx, T const &val) {
             if (idx) {
                 assert(false && "not enough format args");
                 return -1;
@@ -883,8 +883,8 @@ namespace detail {
         }
 
         template<typename R, typename T, typename ...A>
-        Ptrdiff write_arg(
-            R &writer, Size idx, T const &val, A const &...args
+        ptrdiff_t write_arg(
+            R &writer, size_t idx, T const &val, A const &...args
         ) {
             if (idx) {
                 return write_arg(writer, idx - 1, args...);
@@ -894,8 +894,8 @@ namespace detail {
 
         /* range writer */
         template<typename R, typename T>
-        Ptrdiff write_range(
-            R &writer, Size idx, bool expandval,
+        ptrdiff_t write_range(
+            R &writer, size_t idx, bool expandval,
             ConstCharRange sep, T const &val
         ) {
             if (idx) {
@@ -908,8 +908,8 @@ namespace detail {
         }
 
         template<typename R, typename T, typename ...A>
-        Ptrdiff write_range(
-            R &writer, Size idx, bool expandval, ConstCharRange sep,
+        ptrdiff_t write_range(
+            R &writer, size_t idx, bool expandval, ConstCharRange sep,
             T const &val, A const &...args
         ) {
             if (idx) {
@@ -922,22 +922,22 @@ namespace detail {
     };
 
     template<typename R, typename ...A>
-    inline Ptrdiff format_impl(
-        R &writer, Size &fmtn, bool escape, ConstCharRange fmt, A const &...args
+    inline ptrdiff_t format_impl(
+        R &writer, size_t &fmtn, bool escape, ConstCharRange fmt, A const &...args
     ) {
-        Size argidx = 1, retn = 0, twr = 0;
-        Ptrdiff written = 0;
+        size_t argidx = 1, retn = 0, twr = 0;
+        ptrdiff_t written = 0;
         detail::WriteSpec spec(fmt, escape);
         while (spec.read_until_spec(writer, &twr)) {
             written += twr;
-            Size argpos = spec.index();
+            size_t argpos = spec.index();
             if (spec.is_nested()) {
                 if (!argpos) {
                     argpos = argidx++;
                 }
                 /* FIXME: figure out a better way */
                 detail::WriteSpec nspec(spec.nested(), spec.nested_escape());
-                Ptrdiff sw = nspec.write_range(
+                ptrdiff_t sw = nspec.write_range(
                     writer, argpos - 1, (spec.flags() & FMT_FLAG_HASH),
                     spec.nested_sep(), args...
                 );
@@ -973,7 +973,7 @@ namespace detail {
                     }
                 }
                 if (spec.arg_width()) {
-                    if (argpos <= (Size(argprec) + 1)) {
+                    if (argpos <= (size_t(argprec) + 1)) {
                         assert(false && "argument width not given");
                         return -1;
                     }
@@ -982,7 +982,7 @@ namespace detail {
                     }
                 }
             }
-            Ptrdiff sw = spec.write_arg(writer, argpos - 1, args...);
+            ptrdiff_t sw = spec.write_arg(writer, argpos - 1, args...);
             if (sw < 0) {
                 return sw;
             }
@@ -994,10 +994,10 @@ namespace detail {
     }
 
     template<typename R, typename ...A>
-    inline Ptrdiff format_impl(
-        R &writer, Size &fmtn, bool, ConstCharRange fmt
+    inline ptrdiff_t format_impl(
+        R &writer, size_t &fmtn, bool, ConstCharRange fmt
     ) {
-        Size written = 0;
+        size_t written = 0;
         detail::WriteSpec spec(fmt, false);
         if (spec.read_until_spec(writer, &written)) {
             return -1;
@@ -1008,15 +1008,15 @@ namespace detail {
 } /* namespace detail */
 
 template<typename R, typename ...A>
-inline Ptrdiff format(
-    R &&writer, Size &fmtn, ConstCharRange fmt, A const &...args
+inline ptrdiff_t format(
+    R &&writer, size_t &fmtn, ConstCharRange fmt, A const &...args
 ) {
     return detail::format_impl(writer, fmtn, false, fmt, args...);
 }
 
 template<typename R, typename ...A>
-Ptrdiff format(R &&writer, ConstCharRange fmt, A const &...args) {
-    Size fmtn = 0;
+ptrdiff_t format(R &&writer, ConstCharRange fmt, A const &...args) {
+    size_t fmtn = 0;
     return format(writer, fmtn, fmt, args...);
 }
 

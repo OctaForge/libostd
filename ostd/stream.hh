@@ -36,12 +36,12 @@ template<typename T = char, bool = IsPod<T>>
 struct StreamRange;
 
 namespace detail {
-    template<Size N>
+    template<size_t N>
     struct FormatOutRange: OutputRange<FormatOutRange<N>, char> {
         FormatOutRange(char *ibuf): buf(ibuf), idx(0) {}
         FormatOutRange(FormatOutRange const &r): buf(r.buf), idx(r.idx) {}
         char *buf;
-        Size idx;
+        size_t idx;
         bool put(char v) {
             if (idx < N) {
                 buf[idx++] = v;
@@ -104,8 +104,8 @@ public:
 
     virtual bool flush() { return true; }
 
-    virtual Size read_bytes(void *, Size) { return 0; }
-    virtual Size write_bytes(void const *, Size) { return 0; }
+    virtual size_t read_bytes(void *, size_t) { return 0; }
+    virtual size_t write_bytes(void const *, size_t) { return 0; }
 
     virtual int getchar() {
         byte c;
@@ -140,18 +140,18 @@ public:
     template<typename ...A>
     bool writef(ConstCharRange fmt, A const &...args) {
         char buf[512];
-        Ptrdiff need = format(
+        ptrdiff_t need = format(
             detail::FormatOutRange<sizeof(buf)>(buf), fmt, args...
         );
         if (need < 0) {
             return false;
-        } else if (Size(need) < sizeof(buf)) {
-            return write_bytes(buf, need) == Size(need);
+        } else if (size_t(need) < sizeof(buf)) {
+            return write_bytes(buf, need) == size_t(need);
         }
         std::vector<char> s;
         s.reserve(need);
         format(detail::UnsafeWritefRange(s.data()), fmt, args...);
-        return write_bytes(s.data(), need) == Size(need);
+        return write_bytes(s.data(), need) == size_t(need);
     }
 
     template<typename ...A>
@@ -163,7 +163,7 @@ public:
     StreamRange<T> iter();
 
     template<typename T>
-    Size put(T const *v, Size count) {
+    size_t put(T const *v, size_t count) {
         return write_bytes(v, count * sizeof(T)) / sizeof(T);
     }
 
@@ -173,7 +173,7 @@ public:
     }
 
     template<typename T>
-    Size get(T *v, Size count) {
+    size_t get(T *v, size_t count) {
         return read_bytes(v, count * sizeof(T)) / sizeof(T);
     }
 
@@ -191,7 +191,7 @@ public:
 
 template<typename T>
 struct StreamRange<T, true>: InputRange<
-    StreamRange<T>, InputRangeTag, T, T, Size, StreamOffset
+    StreamRange<T>, InputRangeTag, T, T, size_t, StreamOffset
 > {
     StreamRange() = delete;
     StreamRange(Stream &s): p_stream(&s), p_size(s.size()) {}
@@ -220,17 +220,17 @@ struct StreamRange<T, true>: InputRange<
     }
 
     bool put(T val) {
-        Size v = p_stream->write_bytes(&val, sizeof(T));
+        size_t v = p_stream->write_bytes(&val, sizeof(T));
         p_size += v;
         return (v == sizeof(T));
     }
 
-    Size put_n(T const *p, Size n) {
+    size_t put_n(T const *p, size_t n) {
         return p_stream->put(p, n);
     }
 
-    Size copy(RemoveCv<T> *p, Size n = -1) {
-        if (n == Size(-1)) {
+    size_t copy(RemoveCv<T> *p, size_t n = -1) {
+        if (n == size_t(-1)) {
             n = p_stream->size() / sizeof(T);
         }
         return p_stream->get(p, n);

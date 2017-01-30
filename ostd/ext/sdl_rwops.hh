@@ -50,12 +50,12 @@ inline SDL_RWops *stream_to_rwops(Stream &s) {
         return -1;
     };
 
-    rwr->read = [](SDL_RWops *rw, void *buf, Size size, Size nb) -> Size {
+    rwr->read = [](SDL_RWops *rw, void *buf, size_t size, size_t nb) -> size_t {
         Stream *is = static_cast<Stream *>(rw->hidden.unknown.data1);
         return is->read_bytes(buf, size * nb) / size;
     };
 
-    rwr->write = [](SDL_RWops *rw, const void *buf, Size size, Size nb) -> Size {
+    rwr->write = [](SDL_RWops *rw, const void *buf, size_t size, size_t nb) -> size_t {
         Stream *is = static_cast<Stream *>(rw->hidden.unknown.data1);
         return is->write_bytes(buf, size * nb) / size;
     };

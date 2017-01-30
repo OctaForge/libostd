@@ -139,7 +139,7 @@ BinaryNegate<T> not2(T const &fn) {
 
 /* endian swap */
 
-template<typename T, Size N = sizeof(T), bool IsNum = IsArithmetic<T>>
+template<typename T, size_t N = sizeof(T), bool IsNum = IsArithmetic<T>>
 struct EndianSwap;
 
 template<typename T>
@@ -182,7 +182,7 @@ template<typename T>
 T endian_swap(T x) { return EndianSwap<T>()(x); }
 
 namespace detail {
-    template<typename T, Size N = sizeof(T), bool IsNum = IsArithmetic<T>>
+    template<typename T, size_t N = sizeof(T), bool IsNum = IsArithmetic<T>>
     struct EndianSame;
 
     template<typename T>
