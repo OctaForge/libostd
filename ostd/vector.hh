@@ -37,8 +37,8 @@ inline std::vector<T> make_vector(R range) {
 }
 
 template<typename R>
-inline std::vector<RangeValue<R>> make_vector(R range) {
-    return make_vector<RangeValue<R>>(std::move(range));
+inline std::vector<RangeValue<R>> make_vector(R &&range) {
+    return make_vector<RangeValue<R>>(std::forward<R>(range));
 }
 
 } /* namespace ostd */

@@ -30,7 +30,6 @@ struct ranged_traits<std::unordered_map<K, T> const> {
 
 template<typename K, typename T, typename R>
 inline std::unordered_map<K, T> make_unordered_map(R range) {
-    /* TODO: specialize for contiguous ranges and matching value types */
     std::unordered_map<K, T> ret;
     for (; !range.empty(); range.pop_front()) {
         ret.emplace(range.front());
@@ -42,11 +41,11 @@ template<typename R>
 inline std::unordered_map<
     typename RangeValue<R>::first_type,
     typename RangeValue<R>::second_type
-> make_unordered_map(R range) {
+> make_unordered_map(R &&range) {
     return make_unordered_map<
         typename RangeValue<R>::first_type,
         typename RangeValue<R>::second_type
-    >(std::move(range));
+    >(std::forward<R>(range));
 }
 
 } /* namespace ostd */
