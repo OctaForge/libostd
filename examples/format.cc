@@ -2,7 +2,7 @@
 
 #include <ostd/algorithm.hh>
 #include <ostd/vector.hh>
-#include <ostd/map.hh>
+#include <ostd/unordered_map.hh>
 #include <ostd/range.hh>
 #include <ostd/io.hh>
 
@@ -52,7 +52,7 @@ int main() {
         return range(v + 1);
     }));
 
-    Map<std::string, int> m = {
+    std::unordered_map<std::string, int> m = {
         { "foo", 5  },
         { "bar", 10 },
         { "baz", 15 }
