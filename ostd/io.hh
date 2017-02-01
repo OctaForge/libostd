@@ -165,6 +165,17 @@ namespace detail {
     ) {
         write_impl(ostd::to_string(v));
     }
+
+    /* lightweight output range for direct stdout */
+    struct StdoutRange: OutputRange<StdoutRange, char> {
+        StdoutRange() {}
+        bool put(char c) {
+            return putchar(c) != EOF;
+        }
+        size_t put_n(char const *p, size_t n) {
+            return fwrite(p, 1, n, stdout);
+        }
+    };
 }
 
 template<typename T>
@@ -181,38 +192,25 @@ inline void write(T const &v, A const &...args) {
 template<typename T>
 inline void writeln(T const &v) {
     write(v);
-    putc('\n', stdout);
+    putchar('\n');
 }
 
 template<typename T, typename ...A>
 inline void writeln(T const &v, A const &...args) {
     write(v);
     write(args...);
-    putc('\n', stdout);
+    putchar('\n');
 }
 
 template<typename ...A>
 inline void writef(ConstCharRange fmt, A const &...args) {
-    char buf[512];
-    ptrdiff_t need = format(
-        detail::FormatOutRange<sizeof(buf)>(buf), fmt, args...
-    );
-    if (need < 0) {
-        return;
-    } else if (size_t(need) < sizeof(buf)) {
-        fwrite(buf, 1, need, stdout);
-        return;
-    }
-    std::vector<char> s;
-    s.reserve(need);
-    format(detail::UnsafeWritefRange(s.data()), fmt, args...);
-    fwrite(s.data(), 1, need, stdout);
+    format(detail::StdoutRange{}, fmt, args...);
 }
 
 template<typename ...A>
 inline void writefln(ConstCharRange fmt, A const &...args) {
     writef(fmt, args...);
-    putc('\n', stdout);
+    putchar('\n');
 }
 
 } /* namespace ostd */

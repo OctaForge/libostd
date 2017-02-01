@@ -35,32 +35,6 @@ enum class StreamSeek {
 template<typename T = char, bool = IsPod<T>>
 struct StreamRange;
 
-namespace detail {
-    template<size_t N>
-    struct FormatOutRange: OutputRange<FormatOutRange<N>, char> {
-        FormatOutRange(char *ibuf): buf(ibuf), idx(0) {}
-        FormatOutRange(FormatOutRange const &r): buf(r.buf), idx(r.idx) {}
-        char *buf;
-        size_t idx;
-        bool put(char v) {
-            if (idx < N) {
-                buf[idx++] = v;
-                return true;
-            }
-            return false;
-        }
-    };
-
-    struct UnsafeWritefRange: OutputRange<UnsafeWritefRange, char> {
-        UnsafeWritefRange(char *p): p_ptr(p) {}
-        bool put(char c) {
-            *p_ptr++ = c;
-            return true;
-        }
-        char *p_ptr;
-    };
-}
-
 struct Stream {
 private:
     struct StNat {};
@@ -138,21 +112,7 @@ public:
     }
 
     template<typename ...A>
-    bool writef(ConstCharRange fmt, A const &...args) {
-        char buf[512];
-        ptrdiff_t need = format(
-            detail::FormatOutRange<sizeof(buf)>(buf), fmt, args...
-        );
-        if (need < 0) {
-            return false;
-        } else if (size_t(need) < sizeof(buf)) {
-            return write_bytes(buf, need) == size_t(need);
-        }
-        std::vector<char> s;
-        s.reserve(need);
-        format(detail::UnsafeWritefRange(s.data()), fmt, args...);
-        return write_bytes(s.data(), need) == size_t(need);
-    }
+    bool writef(ConstCharRange fmt, A const &...args);
 
     template<typename ...A>
     bool writefln(ConstCharRange fmt, A const &...args) {
@@ -244,6 +204,11 @@ private:
 template<typename T>
 inline StreamRange<T> Stream::iter() {
     return StreamRange<T>(*this);
+}
+
+template<typename ...A>
+inline bool Stream::writef(ConstCharRange fmt, A const &...args) {
+    return format(iter(), fmt, args...) >= 0;
 }
 
 }
