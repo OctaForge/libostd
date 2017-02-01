@@ -38,11 +38,11 @@ template<
     typename E = std::equal_to<K>,
     typename A = std::allocator<std::pair<K const, T>>, typename R
 >
-inline std::unordered_map<K, T> make_unordered_map(
+inline std::unordered_map<K, T, H, E, A> make_unordered_map(
     R range, size_t bcount = 1, H const &hash = H{},
     E const &kequal = E{}, A const &alloc = A{}
 ) {
-    std::unordered_map<K, T> ret{bcount, hash, kequal, alloc};
+    std::unordered_map<K, T, H, E, A> ret{bcount, hash, kequal, alloc};
     using C = RangeCategory<R>;
     if constexpr(std::is_convertible_v<C, FiniteRandomAccessRangeTag>) {
         /* at least try to preallocate here... */
@@ -64,14 +64,14 @@ template<
 >
 inline std::unordered_map<
     typename RangeValue<R>::first_type,
-    typename RangeValue<R>::second_type
+    typename RangeValue<R>::second_type, H, E, A
 > make_unordered_map(
     R &&range, size_t bcount = 1, H const &hash = H{},
     E const &kequal = E{}, A const &alloc = A{}
 ) {
     return make_unordered_map<
         typename RangeValue<R>::first_type,
-        typename RangeValue<R>::second_type
+        typename RangeValue<R>::second_type, H, E, A
     >(std::forward<R>(range), bcount, hash, kequal, alloc);
 }
 
