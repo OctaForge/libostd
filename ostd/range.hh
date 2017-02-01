@@ -322,12 +322,46 @@ namespace detail {
     };
 }
 
+namespace detail {
+    template<typename>
+    struct RangeIteratorTag {
+        /* better range types all become random access iterators */
+        using Type = std::random_access_iterator_tag;
+    };
+
+    template<>
+    struct RangeIteratorTag<InputRangeTag> {
+        using Type = std::input_iterator_tag;
+    };
+
+    template<>
+    struct RangeIteratorTag<OutputRangeTag> {
+        using Type = std::output_iterator_tag;
+    };
+
+    template<>
+    struct RangeIteratorTag<ForwardRangeTag> {
+        using Type = std::forward_iterator_tag;
+    };
+
+    template<>
+    struct RangeIteratorTag<BidirectionalRangeTag> {
+        using Type = std::bidirectional_iterator_tag;
+    };
+}
+
 template<typename T>
 struct RangeHalf {
 private:
     T p_range;
 public:
     using Range = T;
+
+    using iterator_category = typename detail::RangeIteratorTag<T>::Type;
+    using value_type        = RangeValue<T>;
+    using difference_type   = RangeDifference<T>;
+    using pointer           = RangeValue<T> *;
+    using reference         = RangeReference<T>;
 
     RangeHalf() = delete;
     RangeHalf(T const &range): p_range(range) {}
@@ -387,7 +421,7 @@ public:
     /* iterator like interface */
 
     RangeReference<T> operator*() const {
-        return get();
+        return p_range.front();
     }
 
     RangeReference<T> operator[](RangeSize<T> idx) const {
@@ -445,7 +479,9 @@ public:
 };
 
 template<typename R>
-inline RangeDifference<R> operator-(R const &lhs, R const &rhs) {
+inline RangeDifference<R> operator-(
+    RangeHalf<R> const &lhs, RangeHalf<R> const &rhs
+) {
     return rhs.distance(lhs);
 }
 
@@ -612,7 +648,7 @@ struct InputRange {
      * this is sometimes convenient as it can be used within expressions */
 
     Reference operator*() const {
-        return static_cast<B const *>(this)->front();
+        return std::forward<Reference>(static_cast<B const *>(this)->front());
     }
 
     B &operator++() {

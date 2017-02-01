@@ -7,6 +7,7 @@
 #define OSTD_VECTOR_HH
 
 #include <vector>
+#include <type_traits>
 
 #include "ostd/range.hh"
 
@@ -28,10 +29,17 @@ struct ranged_traits<std::vector<T> const> {
 
 template<typename T, typename R>
 inline std::vector<T> make_vector(R range) {
-    /* TODO: specialize for contiguous ranges and matching value types */
     std::vector<T> ret;
-    for (; !range.empty(); range.pop_front()) {
-        ret.push_back(range.front());
+    using C = RangeCategory<R>;
+    if constexpr(std::is_convertible_v<C, FiniteRandomAccessRangeTag>) {
+        /* finite random access or contiguous */
+        auto h = range.half();
+        ret.insert(ret.end(), h, h + range.size());
+    } else {
+        /* infinite random access and below */
+        for (; !range.empty(); range.pop_front()) {
+            ret.push_back(range.front());
+        }
     }
     return ret;
 }
