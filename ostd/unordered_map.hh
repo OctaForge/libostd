@@ -110,7 +110,7 @@ inline std::unordered_map<
 ) {
     static_assert(
         detail::is_2tuple_like<RangeValue<R>>,
-        "the range elements must be pairs/2-tuples"
+        "the range element must be a pair/2-tuple"
     );
     return make_unordered_map<
         std::tuple_element_t<0, RangeValue<R>>,
