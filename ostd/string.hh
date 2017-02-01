@@ -12,6 +12,7 @@
 
 #include <string>
 #include <string_view>
+#include <type_traits>
 
 #include "ostd/utility.hh"
 #include "ostd/range.hh"
@@ -246,33 +247,49 @@ inline bool starts_with(ConstCharRange a, ConstCharRange b) {
     return a.slice(0, b.size()) == b;
 }
 
-template<typename T>
-struct ranged_traits<std::basic_string<T>> {
-    static CharRangeBase<T> iter(std::basic_string<T> &v) {
+template<typename T, typename TR, typename A>
+struct ranged_traits<std::basic_string<T, TR, A>> {
+    static CharRangeBase<T> iter(std::basic_string<T, TR, A> &v) {
         return CharRangeBase<T>{v.data(), v.size()};
     }
 };
 
-template<typename T>
-struct ranged_traits<std::basic_string<T> const> {
-    static CharRangeBase<T const> iter(std::basic_string<T> const &v) {
+template<typename T, typename TR, typename A>
+struct ranged_traits<std::basic_string<T, TR, A> const> {
+    static CharRangeBase<T const> iter(std::basic_string<T, TR, A> const &v) {
         return CharRangeBase<T const>{v.data(), v.size()};
     }
 };
 
-template<typename T, typename R>
-inline std::basic_string<T> make_string(R range) {
-    /* TODO: specialize for contiguous ranges and matching value types */
-    std::basic_string<T> ret;
-    for (; !range.empty(); range.pop_front()) {
-        ret.push_back(range.front());
+template<
+    typename T, typename TR = std::char_traits<T>,
+    typename A = std::allocator<T>, typename R
+>
+inline std::basic_string<T, TR, A> make_string(R range, A const &alloc = A{}) {
+    std::basic_string<T, TR, A> ret{alloc};
+    using C = RangeCategory<R>;
+    if constexpr(std::is_convertible_v<C, FiniteRandomAccessRangeTag>) {
+        /* finite random access or contiguous */
+        auto h = range.half();
+        ret.reserve(range.size());
+        ret.insert(ret.end(), h, h + range.size());
+    } else {
+        /* infinite random access and below */
+        for (; !range.empty(); range.pop_front()) {
+            ret.push_back(range.front());
+        }
     }
     return ret;
 }
 
-template<typename R>
-inline std::basic_string<RemoveCv<RangeValue<R>>> make_string(R range) {
-    return make_string<RemoveCv<RangeValue<R>>>(std::move(range));
+template<
+    typename R, typename TR = std::char_traits<RemoveCv<RangeValue<R>>>,
+    typename A = std::allocator<RemoveCv<RangeValue<R>>>
+>
+inline std::basic_string<RemoveCv<RangeValue<R>>, TR, A> make_string(
+    R range, A const &alloc = A{}
+) {
+    return make_string<RemoveCv<RangeValue<R>>, TR, A>(std::move(range), alloc);
 }
 
 /* string literals */

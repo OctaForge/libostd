@@ -7,33 +7,35 @@
 #define OSTD_VECTOR_HH
 
 #include <vector>
+#include <memory>
 #include <type_traits>
 
 #include "ostd/range.hh"
 
 namespace ostd {
 
-template<typename T>
-struct ranged_traits<std::vector<T>> {
-    static PointerRange<T> iter(std::vector<T> &v) {
+template<typename T, typename A>
+struct ranged_traits<std::vector<T, A>> {
+    static PointerRange<T> iter(std::vector<T, A> &v) {
         return PointerRange<T>{v.data(), v.size()};
     }
 };
 
-template<typename T>
-struct ranged_traits<std::vector<T> const> {
-    static PointerRange<T const> iter(std::vector<T> const &v) {
+template<typename T, typename A>
+struct ranged_traits<std::vector<T, A> const> {
+    static PointerRange<T const> iter(std::vector<T, A> const &v) {
         return PointerRange<T const>{v.data(), v.size()};
     }
 };
 
-template<typename T, typename R>
-inline std::vector<T> make_vector(R range) {
-    std::vector<T> ret;
+template<typename T, typename A = std::allocator<T>, typename R>
+inline std::vector<T, A> make_vector(R range, A const &alloc = A{}) {
+    std::vector<T, A> ret{alloc};
     using C = RangeCategory<R>;
     if constexpr(std::is_convertible_v<C, FiniteRandomAccessRangeTag>) {
         /* finite random access or contiguous */
         auto h = range.half();
+        ret.reserve(range.size());
         ret.insert(ret.end(), h, h + range.size());
     } else {
         /* infinite random access and below */
@@ -44,9 +46,11 @@ inline std::vector<T> make_vector(R range) {
     return ret;
 }
 
-template<typename R>
-inline std::vector<RangeValue<R>> make_vector(R &&range) {
-    return make_vector<RangeValue<R>>(std::forward<R>(range));
+template<typename R, typename A = std::allocator<RangeValue<R>>>
+inline std::vector<RangeValue<R>, A> make_vector(
+    R &&range, A const &alloc = A{}
+) {
+    return make_vector<RangeValue<R>, A>(std::forward<R>(range), alloc);
 }
 
 } /* namespace ostd */
