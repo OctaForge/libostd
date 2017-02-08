@@ -9,8 +9,8 @@
 #include <math.h>
 
 #include <utility>
+#include <functional>
 
-#include "ostd/functional.hh"
 #include "ostd/range.hh"
 #include "ostd/utility.hh"
 #include "ostd/initializer_list.hh"
@@ -173,7 +173,7 @@ inline auto sort_cmp(C &&compare) {
 
 template<typename R>
 inline R sort(R range) {
-    return sort_cmp(range, Less<RangeValue<R>>());
+    return sort_cmp(range, std::less<RangeValue<R>>());
 }
 inline auto sort() {
     return [](auto &&obj) { return sort(std::forward<decltype(obj)>(obj)); };

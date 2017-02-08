@@ -1,4 +1,4 @@
-#include <ostd/functional.hh>
+#include <ostd/platform.hh>
 #include <ostd/io.hh>
 
 using namespace ostd;

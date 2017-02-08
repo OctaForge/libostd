@@ -6,7 +6,8 @@
 #ifndef OSTD_EVENT_HH
 #define OSTD_EVENT_HH
 
-#include "ostd/functional.hh"
+#include <functional>
+
 #include "ostd/utility.hh"
 
 namespace ostd {

@@ -13,11 +13,11 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <functional>
 
 #include "ostd/utility.hh"
 #include "ostd/range.hh"
 #include "ostd/vector.hh"
-#include "ostd/functional.hh"
 #include "ostd/type_traits.hh"
 #include "ostd/algorithm.hh"
 
