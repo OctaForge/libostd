@@ -1820,18 +1820,15 @@ struct IteratorRange: InputRange<
     IteratorRangeTag<typename std::iterator_traits<T>::iterator_category>,
     typename std::iterator_traits<T>::value_type,
     typename std::iterator_traits<T>::reference,
-    size_t,
+    std::make_unsigned_t<typename std::iterator_traits<T>::difference_type>,
     typename std::iterator_traits<T>::difference_type
 > {
 private:
-    struct Nat {};
-
     using RefT = typename std::iterator_traits<T>::reference;
     using DiffT = typename std::iterator_traits<T>::difference_type;
 
 public:
     IteratorRange(T beg = T{}, T end = T{}): p_beg(beg), p_end(end) {}
-    IteratorRange(T beg, size_t n): p_beg(beg), p_end(beg + n) {}
 
     IteratorRange(IteratorRange const &v): p_beg(v.p_beg), p_end(v.p_end) {}
     IteratorRange(IteratorRange &&v):
