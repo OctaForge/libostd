@@ -31,14 +31,7 @@ private:
 
 public:
     CharRangeBase(): p_beg(nullptr), p_end(nullptr) {};
-
-    template<typename U>
-    CharRangeBase(T *beg, U end, std::enable_if_t<
-        (std::is_pointer_v<U> || std::is_null_pointer_v<U>) &&
-         std::is_convertible_v<U, T *>, Nat
-    > = Nat()): p_beg(beg), p_end(end) {}
-
-    CharRangeBase(T *beg, size_t n): p_beg(beg), p_end(beg + n) {}
+    CharRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
 
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     template<typename U>
@@ -57,10 +50,8 @@ public:
         p_beg(beg), p_end(beg + N - (beg[N - 1] == '\0'))
     {}
 
-    template<typename U, typename TR, typename A>
-    CharRangeBase(std::basic_string<U, TR, A> const &s, std::enable_if_t<
-        std::is_convertible_v<U *, T *>, Nat
-    > = Nat()):
+    template<typename TR, typename A>
+    CharRangeBase(std::basic_string<std::remove_const_t<T>, TR, A> const &s):
         p_beg(s.data()), p_end(s.data() + s.size())
     {}
 
@@ -256,14 +247,14 @@ inline bool starts_with(ConstCharRange a, ConstCharRange b) {
 template<typename T, typename TR, typename A>
 struct ranged_traits<std::basic_string<T, TR, A>> {
     static CharRangeBase<T> iter(std::basic_string<T, TR, A> &v) {
-        return CharRangeBase<T>{v.data(), v.size()};
+        return CharRangeBase<T>{v.data(), v.data() + v.size()};
     }
 };
 
 template<typename T, typename TR, typename A>
 struct ranged_traits<std::basic_string<T, TR, A> const> {
     static CharRangeBase<T const> iter(std::basic_string<T, TR, A> const &v) {
-        return CharRangeBase<T const>{v.data(), v.size()};
+        return CharRangeBase<T const>{v.data(), v.data() + v.size()};
     }
 };
 
@@ -305,7 +296,7 @@ inline std::basic_string<std::remove_cv_t<RangeValue<R>>, TR, A> make_string(
 inline namespace literals {
 inline namespace string_literals {
     inline ConstCharRange operator "" _sr(char const *str, size_t len) {
-        return ConstCharRange(str, len);
+        return ConstCharRange(str, str + len);
     }
 }
 }
