@@ -17,14 +17,14 @@ namespace ostd {
 template<typename T, typename A>
 struct ranged_traits<std::vector<T, A>> {
     static PointerRange<T> iter(std::vector<T, A> &v) {
-        return PointerRange<T>{v.data(), v.size()};
+        return PointerRange<T>{v.data(), v.data() + v.size()};
     }
 };
 
 template<typename T, typename A>
 struct ranged_traits<std::vector<T, A> const> {
     static PointerRange<T const> iter(std::vector<T, A> const &v) {
-        return PointerRange<T const>{v.data(), v.size()};
+        return PointerRange<T const>{v.data(), v.data() + v.size()};
     }
 };
 

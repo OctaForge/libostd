@@ -1131,14 +1131,7 @@ private:
 
 public:
     PointerRange(): p_beg(nullptr), p_end(nullptr) {}
-
-    template<typename U>
-    PointerRange(T *beg, U end, std::enable_if_t<
-        (std::is_pointer_v<U> || std::is_null_pointer_v<U>) &&
-         std::is_convertible_v<U, T *>, Nat
-    > = Nat()): p_beg(beg), p_end(end) {}
-
-    PointerRange(T *beg, size_t n): p_beg(beg), p_end(beg + n) {}
+    PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
 
     template<typename U, typename = std::enable_if_t<
         std::is_convertible_v<U *, T *>
@@ -1297,7 +1290,7 @@ private:
 template<typename T, size_t N>
 struct ranged_traits<T[N]> {
     static PointerRange<T> iter(T (&array)[N]) {
-        return PointerRange<T>(array, N);
+        return PointerRange<T>(array, array + N);
     }
 };
 
@@ -1315,7 +1308,7 @@ inline PointerRange<T> iter(T *a, U b, std::enable_if_t<
 
 template<typename T>
 inline PointerRange<T> iter(T *a, size_t b) {
-    return PointerRange<T>(a, b);
+    return PointerRange<T>(a, a + b);
 }
 
 template<typename T, typename S>
