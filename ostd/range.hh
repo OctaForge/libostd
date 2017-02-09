@@ -1274,10 +1274,10 @@ public:
             c = n;
         }
         if constexpr(std::is_pod_v<T>) {
-            memcpy(p_beg, data(), c * sizeof(T));
+            memcpy(p, p_beg, c * sizeof(T));
             return c;
         }
-        return copy(PointerRange(p, c), c);
+        return copy(PointerRange(p, p + c), c);
     }
 
     T *data() { return p_beg; }
@@ -1815,18 +1815,30 @@ using IteratorRangeTag = typename detail::IteratorRangeTagBase<T>::Type;
 template<typename T>
 struct IteratorRange: InputRange<
     IteratorRange<T>,
-    IteratorRangeTag<typename std::iterator_traits<T>::iterator_category>,
+    std::conditional_t<
+        std::is_pointer_v<T>,
+        ContiguousRangeTag,
+        IteratorRangeTag<typename std::iterator_traits<T>::iterator_category>
+    >,
     typename std::iterator_traits<T>::value_type,
     typename std::iterator_traits<T>::reference,
     std::make_unsigned_t<typename std::iterator_traits<T>::difference_type>,
     typename std::iterator_traits<T>::difference_type
 > {
 private:
+    using ValT = typename std::iterator_traits<T>::value_type;
     using RefT = typename std::iterator_traits<T>::reference;
     using DiffT = typename std::iterator_traits<T>::difference_type;
+    using SizeT = std::make_unsigned_t<typename std::iterator_traits<T>::difference_type>;
 
 public:
     IteratorRange(T beg = T{}, T end = T{}): p_beg(beg), p_end(end) {}
+
+    template<typename U, typename = std::enable_if_t<
+        std::is_pointer_v<T> && std::is_pointer_v<U> &&
+        std::is_convertible_v<U, T>
+    >>
+    IteratorRange(IteratorRange<U> const &v): p_beg(&v[0]), p_end(&v[v.size()]) {}
 
     IteratorRange(IteratorRange const &v): p_beg(v.p_beg), p_end(v.p_end) {}
     IteratorRange(IteratorRange &&v):
@@ -1859,6 +1871,31 @@ public:
         --p_beg; return true;
     }
 
+    SizeT pop_front_n(SizeT n) {
+        using IC = typename std::iterator_traits<T>::iterator_category;
+        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
+            SizeT olen = SizeT(p_end - p_beg);
+            p_beg += n;
+            if (p_beg > p_end) {
+                p_beg = p_end;
+                return olen;
+            }
+            return n;
+        } else {
+            return detail::pop_front_n(*this, n);
+        }
+    }
+
+    SizeT push_front_n(SizeT n) {
+        using IC = typename std::iterator_traits<T>::iterator_category;
+        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
+            p_beg -= n;
+            return true;
+        } else {
+            return detail::push_front_n(*this, n);
+        }
+    }
+
     RefT front() const { return *p_beg; }
 
     bool equals_front(IteratorRange const &range) const {
@@ -1881,6 +1918,31 @@ public:
         ++p_end; return true;
     }
 
+    SizeT pop_back_n(SizeT n) {
+        using IC = typename std::iterator_traits<T>::iterator_category;
+        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
+            SizeT olen = SizeT(p_end - p_beg);
+            p_end -= n;
+            if (p_end < p_beg) {
+                p_end = p_beg;
+                return olen;
+            }
+            return n;
+        } else {
+            return detail::pop_back_n(*this, n);
+        }
+    }
+
+    SizeT push_back_n(SizeT n) {
+        using IC = typename std::iterator_traits<T>::iterator_category;
+        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
+            p_end += n;
+            return true;
+        } else {
+            return detail::push_back_n(*this, n);
+        }
+    }
+
     RefT back() const { return *(p_end - 1); }
 
     bool equals_back(IteratorRange const &range) const {
@@ -1892,13 +1954,13 @@ public:
     }
 
     /* satisfy FiniteRandomAccessRange */
-    size_t size() const { return p_end - p_beg; }
+    SizeT size() const { return SizeT(p_end - p_beg); }
 
-    IteratorRange slice(size_t start, size_t end) const {
+    IteratorRange slice(SizeT start, SizeT end) const {
         return IteratorRange(p_beg + start, p_beg + end);
     }
 
-    RefT operator[](size_t i) const { return p_beg[i]; }
+    RefT operator[](SizeT i) const { return p_beg[i]; }
 
     /* satisfy OutputRange */
     bool put(T const &v) {
@@ -1916,6 +1978,71 @@ public:
         return true;
     }
 
+    SizeT put_n(ValT const *p, SizeT n) {
+        using IC = typename std::iterator_traits<T>::iterator_category;
+        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
+            SizeT ret = size();
+            if (n < ret) {
+                ret = n;
+            }
+            if constexpr(std::is_pointer_v<T> && std::is_pod_v<ValT>) {
+                memcpy(p_beg, p, ret * sizeof(ValT));
+                p_beg += ret;
+            } else {
+                for (SizeT i = ret; i; --i) {
+                    *p_beg++ = *p++;
+                }
+            }
+            return ret;
+        } else {
+            SizeT on = n;
+            for (; n && put(*p++); --n);
+            return (on - n);
+        }
+    }
+
+    template<typename R>
+    std::enable_if_t<IsOutputRange<R>, SizeT> copy(R &&orange, SizeT n = -1) {
+        if constexpr(std::is_pointer_v<T>) {
+            SizeT c = size();
+            if (n < c) {
+                c = n;
+            }
+            return orange.put_n(p_beg, c);
+        } else {
+            SizeT on = n;
+            for (; n && !empty(); --n) {
+                if (!orange.put(front())) {
+                    break;
+                }
+                pop_front();
+            }
+            return (on - n);
+        }
+    }
+
+    SizeT copy(std::remove_cv_t<ValT> *p, SizeT n = -1) {
+        using IC = typename std::iterator_traits<T>::iterator_category;
+        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
+            SizeT c = size();
+            if (n < c) {
+                c = n;
+            }
+            if constexpr(std::is_pointer_v<T> && std::is_pod_v<ValT>) {
+                memcpy(p, p_beg, c * sizeof(ValT));
+                return c;
+            } else {
+                return copy(IteratorRange<std::remove_cv_t<ValT> *>(p, p + c), c);
+            }
+        } else {
+            SizeT on = n;
+            for (; n && !empty(); --n) {
+                *p++ = front();
+                pop_front();
+            }
+            return (on - n);
+        }
+    }
 private:
     T p_beg, p_end;
 };
