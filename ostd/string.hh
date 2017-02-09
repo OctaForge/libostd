@@ -22,7 +22,7 @@
 
 namespace ostd {
 
-template<typename T>
+template<typename T, typename TR = std::char_traits<T>>
 struct CharRangeBase: InputRange<
     CharRangeBase<T>, ContiguousRangeTag, T
 > {
@@ -33,13 +33,12 @@ public:
     CharRangeBase(): p_beg(nullptr), p_end(nullptr) {};
     CharRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
 
-    /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     template<typename U>
     CharRangeBase(
         U beg, std::enable_if_t<
             std::is_convertible_v<U, T *> && !std::is_array_v<U>, Nat
         > = Nat()
-    ): p_beg(beg), p_end(static_cast<T *>(beg) + (beg ? strlen(beg) : 0)) {}
+    ): p_beg(beg), p_end(static_cast<T *>(beg) + (beg ? TR::length(beg) : 0)) {}
 
     CharRangeBase(std::nullptr_t): p_beg(nullptr), p_end(nullptr) {}
 
@@ -50,8 +49,8 @@ public:
         p_beg(beg), p_end(beg + N - (beg[N - 1] == '\0'))
     {}
 
-    template<typename TR, typename A>
-    CharRangeBase(std::basic_string<std::remove_const_t<T>, TR, A> const &s):
+    template<typename STR, typename A>
+    CharRangeBase(std::basic_string<std::remove_const_t<T>, STR, A> const &s):
         p_beg(s.data()), p_end(s.data() + s.size())
     {}
 
@@ -66,13 +65,13 @@ public:
         p_beg = v.p_beg; p_end = v.p_end; return *this;
     }
 
-    template<typename TR, typename A>
-    CharRangeBase &operator=(std::basic_string<T, TR, A> const &s) {
+    template<typename STR, typename A>
+    CharRangeBase &operator=(std::basic_string<T, STR, A> const &s) {
         p_beg = s.data(); p_end = s.data() + s.size(); return *this;
     }
-    /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
+
     CharRangeBase &operator=(T *s) {
-        p_beg = s; p_end = s + (s ? strlen(s) : 0); return *this;
+        p_beg = s; p_end = s + (s ? TR::length(s) : 0); return *this;
     }
 
     bool empty() const { return p_beg == p_end; }
@@ -157,7 +156,7 @@ public:
 
     size_t put_n(T const *p, size_t n) {
         size_t an = ostd::min(n, size());
-        memcpy(p_beg, p, an * sizeof(T));
+        TR::copy(p_beg, p, an);
         p_beg += an;
         return an;
     }
@@ -172,7 +171,7 @@ public:
         if (!s1 || !s2) {
             goto diffsize;
         }
-        if ((ret = memcmp(data(), s.data(), ostd::min(s1, s2)))) {
+        if ((ret = TR::compare(data(), s.data(), ostd::min(s1, s2)))) {
             return ret;
         }
 diffsize:
@@ -197,7 +196,7 @@ diffsize:
 
     size_t copy(std::remove_cv_t<T> *p, size_t n = -1) {
         size_t c = ostd::min(n, size());
-        memcpy(p, data(), c * sizeof(T));
+        TR::copy(p, data(), c);
         return c;
     }
 
