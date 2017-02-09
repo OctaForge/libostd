@@ -112,7 +112,9 @@ namespace detail {
     /* retrieve width/precision */
     template<typename T>
     bool convert_arg_param(
-        T const &val, int &param, EnableIf<IsIntegral<T>, bool> = true
+        T const &val, int &param, std::enable_if_t<
+            std::is_integral_v<T>, bool
+        > = true
     ) {
         param = int(val);
         return true;
@@ -120,7 +122,7 @@ namespace detail {
 
     template<typename T>
     bool convert_arg_param(
-        T const &, int &, EnableIf<!IsIntegral<T>, bool> = true
+        T const &, int &, std::enable_if_t<!std::is_integral_v<T>, bool> = true
     ) {
         assert(false && "invalid argument for width/precision");
         return false;
@@ -437,8 +439,8 @@ protected:
 /* for custom container formatting */
 
 template<
-    typename T, typename R, typename = EnableIf<
-        IsSame<decltype(std::declval<T const &>().to_format(
+    typename T, typename R, typename = std::enable_if_t<
+        std::is_same_v<decltype(std::declval<T const &>().to_format(
             std::declval<R &>(), std::declval<FormatSpec const &>()
         )), bool>
     >
@@ -549,7 +551,7 @@ namespace detail {
     template<typename R, typename T>
     inline ptrdiff_t format_ritem(
         R &writer, size_t &fmtn, bool esc, bool, ConstCharRange fmt,
-        T const &item, EnableIf<!is_tuple_like<T>, bool> = true
+        T const &item, std::enable_if_t<!is_tuple_like<T>, bool> = true
     ) {
         return format_impl(writer, fmtn, esc, fmt, item);
     }
@@ -557,7 +559,7 @@ namespace detail {
     template<typename R, typename T>
     inline ptrdiff_t format_ritem(
         R &writer, size_t &fmtn, bool esc, bool expandval, ConstCharRange fmt,
-        T const &item, EnableIf<is_tuple_like<T>, bool> = true
+        T const &item, std::enable_if_t<is_tuple_like<T>, bool> = true
     ) {
         if (expandval) {
             return FmtTupleUnpacker<std::tuple_size<T>::value>::unpack(
@@ -570,7 +572,8 @@ namespace detail {
     template<typename R, typename T>
     inline ptrdiff_t write_range(
         R &writer, FormatSpec const *fl, bool escape, bool expandval,
-        ConstCharRange sep, T const &val, EnableIf<detail::IterableTest<T>, bool> = true
+        ConstCharRange sep, T const &val,
+        std::enable_if_t<detail::IterableTest<T>, bool> = true
     ) {
         auto range = ostd::iter(val);
         if (range.empty()) {
@@ -608,16 +611,18 @@ namespace detail {
     template<typename R, typename T>
     inline ptrdiff_t write_range(
         R &, FormatSpec const *, bool, bool, ConstCharRange,
-        T const &, EnableIf<!detail::IterableTest<T>, bool> = true
+        T const &, std::enable_if_t<!detail::IterableTest<T>, bool> = true
     ) {
         assert(false && "invalid value for ranged format");
         return -1;
     }
 
     template<typename T>
-    static True test_fmt_tostr(decltype(ostd::to_string(std::declval<T>())) *);
+    static std::true_type test_fmt_tostr(
+        decltype(ostd::to_string(std::declval<T>())) *
+    );
     template<typename>
-    static False test_fmt_tostr(...);
+    static std::false_type test_fmt_tostr(...);
 
     template<typename T>
     constexpr bool FmtTostrTest = decltype(test_fmt_tostr<T>(0))::value;
@@ -661,13 +666,13 @@ namespace detail {
     }
 
     template<typename T, typename R>
-    static True test_tofmt(decltype(to_format(
+    static std::true_type test_tofmt(decltype(to_format(
         std::declval<T const &>(), std::declval<R &>(),
         std::declval<FormatSpec const &>()
     )) *);
 
     template<typename, typename>
-    static False test_tofmt(...);
+    static std::false_type test_tofmt(...);
 
     template<typename T, typename R>
     constexpr bool FmtTofmtTest = decltype(test_tofmt<T, R>(0))::value;
@@ -696,8 +701,8 @@ namespace detail {
         /* any string value */
         template<typename R, typename T>
         ptrdiff_t write(
-            R &writer, bool escape, T const &val, EnableIf<
-                IsConstructible<ConstCharRange, T const &>, bool
+            R &writer, bool escape, T const &val, std::enable_if_t<
+                std::is_constructible_v<ConstCharRange, T const &>, bool
             > = true
         ) {
             if (this->spec() != 's') {
@@ -753,11 +758,11 @@ namespace detail {
         /* signed integers */
         template<typename R, typename T>
         ptrdiff_t write(
-            R &writer, bool, T val, EnableIf<
-                IsIntegral<T> && IsSigned<T>, bool
+            R &writer, bool, T val, std::enable_if_t<
+                std::is_integral_v<T> && std::is_signed_v<T>, bool
             > = true
         ) {
-            using UT = MakeUnsigned<T>;
+            using UT = std::make_unsigned_t<T>;
             return detail::write_u(
                 writer, this, val < 0,
                 (val < 0) ? static_cast<UT>(-val) : static_cast<UT>(val)
@@ -767,16 +772,17 @@ namespace detail {
         /* unsigned integers */
         template<typename R, typename T>
         ptrdiff_t write(
-            R &writer, bool, T val, EnableIf<
-                IsIntegral<T> && IsUnsigned<T>, bool
+            R &writer, bool, T val, std::enable_if_t<
+                std::is_integral_v<T> && std::is_unsigned_v<T>, bool
             > = true
         ) {
             return detail::write_u(writer, this, false, val);
         }
 
-        template<typename R, typename T, bool Long = IsSame<T, ldouble>>
+        template<typename R, typename T, bool Long = std::is_same_v<T, ldouble>>
         ptrdiff_t write(
-            R &writer, bool, T val, EnableIf<IsFloatingPoint<T>, bool> = true
+            R &writer, bool, T val,
+            std::enable_if_t<std::is_floating_point_v<T>, bool> = true
         ) {
             char buf[16], rbuf[128];
             char fmtspec[Long + 1];
@@ -819,8 +825,8 @@ namespace detail {
         /* pointer value */
         template<typename R, typename T>
         ptrdiff_t write(
-            R &writer, bool, T *val, EnableIf<
-                !IsConstructible<ConstCharRange, T *>, bool
+            R &writer, bool, T *val, std::enable_if_t<
+                !std::is_constructible_v<ConstCharRange, T *>, bool
             > = true
         ) {
             if (this->p_spec == 's') {
@@ -833,9 +839,9 @@ namespace detail {
         /* generic value */
         template<typename R, typename T>
         ptrdiff_t write(
-            R &writer, bool, T const &val, EnableIf<
-                !IsArithmetic<T> &&
-                !IsConstructible<ConstCharRange, T const &> &&
+            R &writer, bool, T const &val, std::enable_if_t<
+                !std::is_arithmetic_v<T> &&
+                !std::is_constructible_v<ConstCharRange, T const &> &&
                 FmtTostrTest<T> && !FmtTofmtTest<T, TostrRange<R>>, bool
             > = true
         ) {
@@ -850,7 +856,7 @@ namespace detail {
         template<typename R, typename T>
         ptrdiff_t write(
             R &writer, bool, T const &val,
-            EnableIf<FmtTofmtTest<T, TostrRange<R>>, bool> = true
+            std::enable_if_t<FmtTofmtTest<T, TostrRange<R>>, bool> = true
         ) {
             TostrRange<R> sink(writer);
             if (!to_format(val, sink, *this)) {
@@ -862,9 +868,9 @@ namespace detail {
         /* generic failure case */
         template<typename R, typename T>
         ptrdiff_t write(
-            R &, bool, T const &, EnableIf<
-                !IsArithmetic<T> &&
-                !IsConstructible<ConstCharRange, T const &> &&
+            R &, bool, T const &, std::enable_if_t<
+                !std::is_arithmetic_v<T> &&
+                !std::is_constructible_v<ConstCharRange, T const &> &&
                 !FmtTostrTest<T> && !FmtTofmtTest<T, TostrRange<R>>, bool
             > = true
         ) {

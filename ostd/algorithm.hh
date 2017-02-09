@@ -781,7 +781,7 @@ struct MapRange: InputRange<
 > {
 private:
     T p_range;
-    Decay<F> p_func;
+    std::decay_t<F> p_func;
 
 public:
     MapRange() = delete;
@@ -874,12 +874,12 @@ inline auto map(F &&func) {
 
 template<typename T, typename F>
 struct FilterRange: InputRange<
-    FilterRange<T, F>, CommonType<RangeCategory<T>, ForwardRangeTag>,
+    FilterRange<T, F>, std::common_type_t<RangeCategory<T>, ForwardRangeTag>,
     RangeValue<T>, RangeReference<T>, RangeSize<T>
 > {
 private:
     T p_range;
-    Decay<F> p_pred;
+    std::decay_t<F> p_pred;
 
     void advance_valid() {
         while (!p_range.empty() && !p_pred(front())) {
@@ -936,7 +936,7 @@ public:
 
 namespace detail {
     template<typename R, typename P>
-    using FilterPred = EnableIf<IsSame<
+    using FilterPred = std::enable_if_t<std::is_same_v<
         decltype(std::declval<P>()(std::declval<RangeReference<R>>())), bool
     >, P>;
 }

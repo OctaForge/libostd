@@ -10,15 +10,16 @@
 
 #include <utility>
 #include <tuple>
+#include <type_traits>
 
-#include "ostd/type_traits.hh"
+#include "ostd/types.hh"
 
 namespace ostd {
 
 namespace detail {
     template<typename T, typename U,
-        bool = IsSame<RemoveCv<T>, RemoveCv<U>>,
-        bool = IsEmpty<T>, bool = IsEmpty<U>
+        bool = std::is_same_v<std::remove_cv_t<T>, std::remove_cv_t<U>>,
+        bool = std::is_empty_v<T>, bool = std::is_empty_v<U>
     >
     constexpr size_t CompressedPairSwitch = detail::Undefined<T>();
 

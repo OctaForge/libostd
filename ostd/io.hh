@@ -159,8 +159,8 @@ namespace detail {
 
     template<typename T>
     inline void write_impl(
-        T const &v, EnableIf<
-            !IsConstructible<ConstCharRange, T const &>, IoNat
+        T const &v, std::enable_if_t<
+            !std::is_constructible_v<ConstCharRange, T const &>, IoNat
         > = IoNat()
     ) {
         write_impl(ostd::to_string(v));

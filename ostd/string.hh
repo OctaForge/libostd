@@ -18,7 +18,6 @@
 #include "ostd/utility.hh"
 #include "ostd/range.hh"
 #include "ostd/vector.hh"
-#include "ostd/type_traits.hh"
 #include "ostd/algorithm.hh"
 
 namespace ostd {
@@ -34,8 +33,9 @@ public:
     CharRangeBase(): p_beg(nullptr), p_end(nullptr) {};
 
     template<typename U>
-    CharRangeBase(T *beg, U end, EnableIf<
-        (IsPointer<U> || IsNullPointer<U>) && IsConvertible<U, T *>, Nat
+    CharRangeBase(T *beg, U end, std::enable_if_t<
+        (std::is_pointer_v<U> || std::is_null_pointer_v<U>) &&
+         std::is_convertible_v<U, T *>, Nat
     > = Nat()): p_beg(beg), p_end(end) {}
 
     CharRangeBase(T *beg, size_t n): p_beg(beg), p_end(beg + n) {}
@@ -43,24 +43,30 @@ public:
     /* TODO: traits for utf-16/utf-32 string lengths, for now assume char */
     template<typename U>
     CharRangeBase(
-        U beg, EnableIf<IsConvertible<U, T *> && !IsArray<U>, Nat> = Nat()
+        U beg, std::enable_if_t<
+            std::is_convertible_v<U, T *> && !std::is_array_v<U>, Nat
+        > = Nat()
     ): p_beg(beg), p_end(static_cast<T *>(beg) + (beg ? strlen(beg) : 0)) {}
 
     CharRangeBase(std::nullptr_t): p_beg(nullptr), p_end(nullptr) {}
 
     template<typename U, size_t N>
-    CharRangeBase(U (&beg)[N], EnableIf<IsConvertible<U *, T *>, Nat> = Nat()):
+    CharRangeBase(U (&beg)[N], std::enable_if_t<
+        std::is_convertible_v<U *, T *>, Nat
+    > = Nat()):
         p_beg(beg), p_end(beg + N - (beg[N - 1] == '\0'))
     {}
 
     template<typename U, typename TR, typename A>
-    CharRangeBase(std::basic_string<U, TR, A> const &s, EnableIf<
-        IsConvertible<U *, T *>, Nat
+    CharRangeBase(std::basic_string<U, TR, A> const &s, std::enable_if_t<
+        std::is_convertible_v<U *, T *>, Nat
     > = Nat()):
         p_beg(s.data()), p_end(s.data() + s.size())
     {}
 
-    template<typename U, typename = EnableIf<IsConvertible<U *, T *>>>
+    template<typename U, typename = std::enable_if_t<
+        std::is_convertible_v<U *, T *>
+    >>
     CharRangeBase(CharRangeBase<U> const &v):
         p_beg(&v[0]), p_end(&v[v.size()])
     {}
@@ -194,19 +200,19 @@ diffsize:
     }
 
     template<typename R>
-    EnableIf<IsOutputRange<R>, size_t> copy(R &&orange, size_t n = -1) {
+    std::enable_if_t<IsOutputRange<R>, size_t> copy(R &&orange, size_t n = -1) {
         return orange.put_n(data(), ostd::min(n, size()));
     }
 
-    size_t copy(RemoveCv<T> *p, size_t n = -1) {
+    size_t copy(std::remove_cv_t<T> *p, size_t n = -1) {
         size_t c = ostd::min(n, size());
         memcpy(p, data(), c * sizeof(T));
         return c;
     }
 
     /* that way we can assign, append etc to std::string */
-    operator std::basic_string_view<RemoveCv<T>>() const {
-        return std::basic_string_view<RemoveCv<T>>{data(), size()};
+    operator std::basic_string_view<std::remove_cv_t<T>>() const {
+        return std::basic_string_view<std::remove_cv_t<T>>{data(), size()};
     }
 
 private:
@@ -283,13 +289,15 @@ inline std::basic_string<T, TR, A> make_string(R range, A const &alloc = A{}) {
 }
 
 template<
-    typename R, typename TR = std::char_traits<RemoveCv<RangeValue<R>>>,
-    typename A = std::allocator<RemoveCv<RangeValue<R>>>
+    typename R, typename TR = std::char_traits<std::remove_cv_t<RangeValue<R>>>,
+    typename A = std::allocator<std::remove_cv_t<RangeValue<R>>>
 >
-inline std::basic_string<RemoveCv<RangeValue<R>>, TR, A> make_string(
+inline std::basic_string<std::remove_cv_t<RangeValue<R>>, TR, A> make_string(
     R range, A const &alloc = A{}
 ) {
-    return make_string<RemoveCv<RangeValue<R>>, TR, A>(std::move(range), alloc);
+    return make_string<std::remove_cv_t<RangeValue<R>>, TR, A>(
+        std::move(range), alloc
+    );
 }
 
 /* string literals */
@@ -304,8 +312,8 @@ inline namespace string_literals {
 
 namespace detail {
     template<
-        typename T, bool = IsConvertible<T, ConstCharRange>,
-        bool = IsConvertible<T, char>
+        typename T, bool = std::is_convertible_v<T, ConstCharRange>,
+        bool = std::is_convertible_v<T, char>
     >
     struct ConcatPut;
 
@@ -402,23 +410,25 @@ namespace detail {
     };
 
     template<typename T, typename R>
-    static auto test_stringify(int) ->
-        BoolConstant<IsSame<decltype(std::declval<T>().stringify()), std::string>>;
+    static auto test_stringify(int) -> std::integral_constant<
+        bool, std::is_same_v<decltype(std::declval<T>().stringify()), std::string>
+    >;
 
     template<typename T, typename R>
-    static True test_stringify(decltype(std::declval<T const &>().to_string
-        (std::declval<R &>())) *);
+    static std::true_type test_stringify(
+        decltype(std::declval<T const &>().to_string(std::declval<R &>())) *
+    );
 
     template<typename, typename>
-    static False test_stringify(...);
+    static std::false_type test_stringify(...);
 
     template<typename T, typename R>
     constexpr bool StringifyTest = decltype(test_stringify<T, R>(0))::value;
 
     template<typename T>
-    static True test_iterable(decltype(ostd::iter(std::declval<T>())) *);
+    static std::true_type test_iterable(decltype(ostd::iter(std::declval<T>())) *);
     template<typename>
-    static False test_iterable(...);
+    static std::false_type test_iterable(...);
 
     template<typename T>
     constexpr bool IterableTest = decltype(test_iterable<T>(0))::value;
@@ -428,15 +438,15 @@ template<typename T, typename = void>
 struct ToString;
 
 template<typename T>
-struct ToString<T, EnableIf<detail::IterableTest<T>>> {
-    using Argument = RemoveCv<RemoveReference<T>>;
+struct ToString<T, std::enable_if_t<detail::IterableTest<T>>> {
+    using Argument = std::remove_cv_t<std::remove_reference_t<T>>;
     using Result = std::string;
 
     std::string operator()(T const &v) const {
         std::string ret("{");
         auto x = appender<std::string>();
         if (concat(x, ostd::iter(v), ", ", ToString<
-            RemoveConst<RemoveReference<
+            std::remove_const_t<std::remove_reference_t<
                 RangeReference<decltype(ostd::iter(v))>
             >>
         >())) {
@@ -448,10 +458,10 @@ struct ToString<T, EnableIf<detail::IterableTest<T>>> {
 };
 
 template<typename T>
-struct ToString<T, EnableIf<
+struct ToString<T, std::enable_if_t<
     detail::StringifyTest<T, detail::TostrRange<AppenderRange<std::string>>>
 >> {
-    using Argument = RemoveCv<RemoveReference<T>>;
+    using Argument = std::remove_cv_t<std::remove_reference_t<T>>;
     using Result = std::string;
 
     std::string operator()(T const &v) const {
@@ -573,9 +583,9 @@ struct ToString<std::pair<T, U>> {
     using Result = std::string;
     std::string operator()(Argument const &v) {
         std::string ret{"{"};
-        ret += ToString<RemoveCv<RemoveReference<T>>>()(v.first);
+        ret += ToString<std::remove_cv_t<std::remove_reference_t<T>>>()(v.first);
         ret += ", ";
-        ret += ToString<RemoveCv<RemoveReference<U>>>()(v.second);
+        ret += ToString<std::remove_cv_t<std::remove_reference_t<U>>>()(v.second);
         ret += "}";
         return ret;
     }
@@ -587,7 +597,7 @@ namespace detail {
         template<typename T>
         static void append(std::string &ret, T const &tup) {
             ret += ", ";
-            ret += ToString<RemoveCv<RemoveReference<
+            ret += ToString<std::remove_cv_t<std::remove_reference_t<
                 decltype(std::get<I>(tup))
             >>>()(std::get<I>(tup));
             TupleToString<I + 1, N>::append(ret, tup);
@@ -604,7 +614,7 @@ namespace detail {
     struct TupleToString<0, N> {
         template<typename T>
         static void append(std::string &ret, T const &tup) {
-            ret += ToString<RemoveCv<RemoveReference<
+            ret += ToString<std::remove_cv_t<std::remove_reference_t<
                 decltype(std::get<0>(tup))
             >>>()(std::get<0>(tup));
             TupleToString<1, N>::append(ret, tup);
@@ -626,7 +636,7 @@ struct ToString<std::tuple<T...>> {
 
 template<typename T>
 typename ToString<T>::Result to_string(T const &v) {
-    return ToString<RemoveCv<RemoveReference<T>>>()(v);
+    return ToString<std::remove_cv_t<std::remove_reference_t<T>>>()(v);
 }
 
 template<typename T>
@@ -637,7 +647,7 @@ std::string to_string(std::initializer_list<T> init) {
 template<typename R>
 struct TempCString {
 private:
-    RemoveCv<RangeValue<R>> *p_buf;
+    std::remove_cv_t<RangeValue<R>> *p_buf;
     bool p_allocated;
 
 public:
@@ -647,13 +657,13 @@ public:
         s.p_buf = nullptr;
         s.p_allocated = false;
     }
-    TempCString(R input, RemoveCv<RangeValue<R>> *sbuf, size_t bufsize)
+    TempCString(R input, std::remove_cv_t<RangeValue<R>> *sbuf, size_t bufsize)
     : p_buf(nullptr), p_allocated(false) {
         if (input.empty()) {
             return;
         }
         if (input.size() >= bufsize) {
-            p_buf = new RemoveCv<RangeValue<R>>[input.size() + 1];
+            p_buf = new std::remove_cv_t<RangeValue<R>>[input.size() + 1];
             p_allocated = true;
         } else {
             p_buf = sbuf;
@@ -672,8 +682,8 @@ public:
         return *this;
     }
 
-    operator RemoveCv<RangeValue<R>> const *() const { return p_buf; }
-    RemoveCv<RangeValue<R>> const *get() const { return p_buf; }
+    operator std::remove_cv_t<RangeValue<R>> const *() const { return p_buf; }
+    std::remove_cv_t<RangeValue<R>> const *get() const { return p_buf; }
 
     void swap(TempCString &s) {
         using std::swap;
@@ -689,7 +699,7 @@ inline void swap(TempCString<R> &a, TempCString<R> &b) {
 
 template<typename R>
 inline TempCString<R> to_temp_cstr(
-    R input, RemoveCv<RangeValue<R>> *buf, size_t bufsize
+    R input, std::remove_cv_t<RangeValue<R>> *buf, size_t bufsize
 ) {
     return TempCString<R>(input, buf, bufsize);
 }

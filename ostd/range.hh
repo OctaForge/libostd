@@ -13,10 +13,10 @@
 #include <tuple>
 #include <utility>
 #include <iterator>
+#include <type_traits>
 
 #include "ostd/types.hh"
 #include "ostd/utility.hh"
-#include "ostd/type_traits.hh"
 
 namespace ostd {
 
@@ -36,7 +36,7 @@ namespace detail { \
     template<typename T> \
     struct Range##Name##Test { \
         template<typename U> \
-        static char test(RemoveReference<typename U::Name> *); \
+        static char test(std::remove_reference_t<typename U::Name> *); \
         template<typename U> \
         static int test(...); \
         static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char)); \
@@ -64,7 +64,7 @@ namespace detail {
     static char is_range_test(
         typename U::Category *, typename U::Size *,
         typename U::Difference *, typename U::Value *,
-        RemoveReference<typename U::Reference> *
+        std::remove_reference_t<typename U::Reference> *
     );
     template<typename U>
     static int is_range_test(...);
@@ -78,7 +78,7 @@ namespace detail {
 namespace detail {
     template<typename T>
     constexpr bool IsInputRangeCore =
-        IsConvertible<RangeCategory<T>, InputRangeTag>;
+        std::is_convertible_v<RangeCategory<T>, InputRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsInputRangeBase = false;
@@ -95,7 +95,7 @@ constexpr bool IsInputRange = detail::IsInputRangeBase<T>;
 namespace detail {
     template<typename T>
     constexpr bool IsForwardRangeCore =
-        IsConvertible<RangeCategory<T>, ForwardRangeTag>;
+        std::is_convertible_v<RangeCategory<T>, ForwardRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsForwardRangeBase = false;
@@ -112,7 +112,7 @@ constexpr bool IsForwardRange = detail::IsForwardRangeBase<T>;
 namespace detail {
     template<typename T>
     constexpr bool IsBidirectionalRangeCore =
-        IsConvertible<RangeCategory<T>, BidirectionalRangeTag>;
+        std::is_convertible_v<RangeCategory<T>, BidirectionalRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsBidirectionalRangeBase = false;
@@ -130,7 +130,7 @@ template<typename T> constexpr bool IsBidirectionalRange =
 namespace detail {
     template<typename T>
     constexpr bool IsRandomAccessRangeCore =
-        IsConvertible<RangeCategory<T>, RandomAccessRangeTag>;
+        std::is_convertible_v<RangeCategory<T>, RandomAccessRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsRandomAccessRangeBase = false;
@@ -148,7 +148,7 @@ template<typename T> constexpr bool IsRandomAccessRange =
 namespace detail {
     template<typename T>
     constexpr bool IsFiniteRandomAccessRangeCore =
-        IsConvertible<RangeCategory<T>, FiniteRandomAccessRangeTag>;
+        std::is_convertible_v<RangeCategory<T>, FiniteRandomAccessRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsFiniteRandomAccessRangeBase = false;
@@ -171,7 +171,7 @@ template<typename T> constexpr bool IsInfiniteRandomAccessRange =
 namespace detail {
     template<typename T>
     constexpr bool IsContiguousRangeCore =
-        IsConvertible<RangeCategory<T>, ContiguousRangeTag>;
+        std::is_convertible_v<RangeCategory<T>, ContiguousRangeTag>;
 
     template<typename T, bool = detail::IsRangeTest<T>>
     constexpr bool IsContiguousRangeBase = false;
@@ -200,7 +200,7 @@ namespace detail {
 
     template<typename T>
     constexpr bool IsOutputRangeCore =
-        IsConvertible<RangeCategory<T>, OutputRangeTag> || (
+        std::is_convertible_v<RangeCategory<T>, OutputRangeTag> || (
             IsInputRange<T> && (
                 detail::OutputRangeTest<T, RangeValue<T> const &>::value ||
                 detail::OutputRangeTest<T, RangeValue<T>      &&>::value ||
@@ -271,7 +271,7 @@ namespace detail {
                 p_init = false;
             }
         }
-        AlignedStorage<sizeof(T), alignof(T)> p_range;
+        std::aligned_storage_t<sizeof(T), alignof(T)> p_range;
         bool p_init;
     };
 }
@@ -366,7 +366,7 @@ public:
     RangeHalf() = delete;
     RangeHalf(T const &range): p_range(range) {}
 
-    template<typename U, typename = EnableIf<IsConvertible<U, T>>>
+    template<typename U, typename = std::enable_if_t<std::is_convertible_v<U, T>>>
     RangeHalf(RangeHalf<U> const &half): p_range(half.p_range) {}
 
     RangeHalf(RangeHalf const &half): p_range(half.p_range) {}
@@ -622,7 +622,7 @@ struct InputRange {
     }
 
     template<typename OR>
-    EnableIf<IsOutputRange<OR>, Size> copy(OR &&orange, Size n = -1) {
+    std::enable_if_t<IsOutputRange<OR>, Size> copy(OR &&orange, Size n = -1) {
         B r(*static_cast<B const *>(this));
         Size on = n;
         for (; n && !r.empty(); --n) {
@@ -634,7 +634,7 @@ struct InputRange {
         return (on - n);
     }
 
-    Size copy(RemoveCv<Value> *p, Size n = -1) {
+    Size copy(std::remove_cv_t<Value> *p, Size n = -1) {
         B r(*static_cast<B const *>(this));
         Size on = n;
         for (; n && !r.empty(); --n) {
@@ -698,7 +698,7 @@ struct InputRange {
     }
 };
 
-template<typename R, typename F, typename = EnableIf<IsInputRange<R>>>
+template<typename R, typename F, typename = std::enable_if_t<IsInputRange<R>>>
 inline auto operator|(R &&range, F &&func) {
     return func(std::forward<R>(range));
 }
@@ -794,17 +794,17 @@ struct ranged_traits;
 
 namespace detail {
     template<typename C>
-    static True test_direct_iter(decltype(std::declval<C>().iter()) *);
+    static std::true_type test_direct_iter(decltype(std::declval<C>().iter()) *);
 
     template<typename>
-    static False test_direct_iter(...);
+    static std::false_type test_direct_iter(...);
 
     template<typename C>
     constexpr bool direct_iter_test = decltype(test_direct_iter<C>(0))::value;
 }
 
 template<typename C>
-struct ranged_traits<C, EnableIf<detail::direct_iter_test<C>>> {
+struct ranged_traits<C, std::enable_if_t<detail::direct_iter_test<C>>> {
     static auto iter(C &r) -> decltype(r.iter()) {
         return r.iter();
     }
@@ -944,7 +944,7 @@ public:
 
 template<typename T>
 struct ReverseRange: InputRange<ReverseRange<T>,
-    CommonType<RangeCategory<T>, FiniteRandomAccessRangeTag>,
+    std::common_type_t<RangeCategory<T>, FiniteRandomAccessRangeTag>,
     RangeValue<T>, RangeReference<T>, RangeSize<T>, RangeDifference<T>
 > {
 private:
@@ -1018,7 +1018,7 @@ public:
 
 template<typename T>
 struct MoveRange: InputRange<MoveRange<T>,
-    CommonType<RangeCategory<T>, FiniteRandomAccessRangeTag>,
+    std::common_type_t<RangeCategory<T>, FiniteRandomAccessRangeTag>,
     RangeValue<T>, RangeValue<T> &&, RangeSize<T>, RangeDifference<T>
 > {
 private:
@@ -1133,13 +1133,16 @@ public:
     PointerRange(): p_beg(nullptr), p_end(nullptr) {}
 
     template<typename U>
-    PointerRange(T *beg, U end, EnableIf<
-        (IsPointer<U> || IsNullPointer<U>) && IsConvertible<U, T *>, Nat
+    PointerRange(T *beg, U end, std::enable_if_t<
+        (std::is_pointer_v<U> || std::is_null_pointer_v<U>) &&
+         std::is_convertible_v<U, T *>, Nat
     > = Nat()): p_beg(beg), p_end(end) {}
 
     PointerRange(T *beg, size_t n): p_beg(beg), p_end(beg + n) {}
 
-    template<typename U, typename = EnableIf<IsConvertible<U *, T *>>>
+    template<typename U, typename = std::enable_if_t<
+        std::is_convertible_v<U *, T *>
+    >>
     PointerRange(PointerRange<U> const &v): p_beg(&v[0]), p_end(&v[v.size()]) {}
 
     PointerRange &operator=(PointerRange const &v) {
@@ -1252,7 +1255,7 @@ public:
         if (n < ret) {
             ret = n;
         }
-        if (IsPod<T>) {
+        if constexpr(std::is_pod_v<T>) {
             memcpy(p_beg, p, ret * sizeof(T));
             p_beg += ret;
             return ret;
@@ -1264,7 +1267,7 @@ public:
     }
 
     template<typename R>
-    EnableIf<IsOutputRange<R>, size_t> copy(R &&orange, size_t n = -1) {
+    std::enable_if_t<IsOutputRange<R>, size_t> copy(R &&orange, size_t n = -1) {
         size_t c = size();
         if (n < c) {
             c = n;
@@ -1272,12 +1275,12 @@ public:
         return orange.put_n(p_beg, c);
     }
 
-    size_t copy(RemoveCv<T> *p, size_t n = -1) {
+    size_t copy(std::remove_cv_t<T> *p, size_t n = -1) {
         size_t c = size();
         if (n < c) {
             c = n;
         }
-        if (IsPod<T>) {
+        if constexpr(std::is_pod_v<T>) {
             memcpy(p_beg, data(), c * sizeof(T));
             return c;
         }
@@ -1303,8 +1306,9 @@ namespace detail {
 }
 
 template<typename T, typename U>
-inline PointerRange<T> iter(T *a, U b, EnableIf<
-    (IsPointer<U> || IsNullPointer<U>) && IsConvertible<U, T *>, detail::PtrNat
+inline PointerRange<T> iter(T *a, U b, std::enable_if_t<
+    (std::is_pointer_v<U> || std::is_null_pointer_v<U>) &&
+     std::is_convertible_v<U, T *>, detail::PtrNat
 > = detail::PtrNat()) {
     return PointerRange<T>(a, b);
 }
@@ -1322,7 +1326,7 @@ struct EnumeratedValue {
 
 template<typename T>
 struct EnumeratedRange: InputRange<EnumeratedRange<T>,
-    CommonType<RangeCategory<T>, ForwardRangeTag>, RangeValue<T>,
+    std::common_type_t<RangeCategory<T>, ForwardRangeTag>, RangeValue<T>,
     EnumeratedValue<RangeReference<T>, RangeSize<T>>,
     RangeSize<T>
 > {
@@ -1394,7 +1398,7 @@ public:
 
 template<typename T>
 struct TakeRange: InputRange<TakeRange<T>,
-    CommonType<RangeCategory<T>, ForwardRangeTag>,
+    std::common_type_t<RangeCategory<T>, ForwardRangeTag>,
     RangeValue<T>, RangeReference<T>, RangeSize<T>
 > {
 private:
@@ -1446,7 +1450,7 @@ public:
 
 template<typename T>
 struct ChunksRange: InputRange<ChunksRange<T>,
-    CommonType<RangeCategory<T>, ForwardRangeTag>,
+    std::common_type_t<RangeCategory<T>, ForwardRangeTag>,
     TakeRange<T>, TakeRange<T>, RangeSize<T>
 > {
 private:
@@ -1567,9 +1571,9 @@ namespace detail {
 
 template<typename ...R>
 struct JoinRange: InputRange<JoinRange<R...>,
-    CommonType<ForwardRangeTag, RangeCategory<R>...>,
-    CommonType<RangeValue<R>...>, CommonType<RangeReference<R>...>,
-    CommonType<RangeSize<R>...>, CommonType<RangeDifference<R>...>> {
+    std::common_type_t<ForwardRangeTag, RangeCategory<R>...>,
+    std::common_type_t<RangeValue<R>...>, std::common_type_t<RangeReference<R>...>,
+    std::common_type_t<RangeSize<R>...>, std::common_type_t<RangeDifference<R>...>> {
 private:
     std::tuple<R...> p_ranges;
 public:
@@ -1603,9 +1607,9 @@ public:
         return detail::JoinRangePop<0, sizeof...(R)>::pop(p_ranges);
     }
 
-    CommonType<RangeReference<R>...> front() const {
+    std::common_type_t<RangeReference<R>...> front() const {
         return detail::JoinRangeFront<
-            0, sizeof...(R), CommonType<RangeReference<R>...>
+            0, sizeof...(R), std::common_type_t<RangeReference<R>...>
         >::front(p_ranges);
     }
 };
@@ -1679,10 +1683,11 @@ namespace detail {
 
 template<typename ...R>
 struct ZipRange: InputRange<ZipRange<R...>,
-    CommonType<ForwardRangeTag, RangeCategory<R>...>,
+    std::common_type_t<ForwardRangeTag, RangeCategory<R>...>,
     detail::ZipValue<RangeValue<R>...>,
     detail::ZipValue<RangeReference<R>...>,
-    CommonType<RangeSize<R>...>, CommonType<RangeDifference<R>...>> {
+    std::common_type_t<RangeSize<R>...>,
+    std::common_type_t<RangeDifference<R>...>> {
 private:
     std::tuple<R...> p_ranges;
 public:

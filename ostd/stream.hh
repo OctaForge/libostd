@@ -7,13 +7,11 @@
 #define OSTD_STREAM_HH
 
 #include <sys/types.h>
-
-#include <vector>
+#include <type_traits>
 
 #include "ostd/platform.hh"
 #include "ostd/types.hh"
 #include "ostd/range.hh"
-#include "ostd/type_traits.hh"
 #include "ostd/string.hh"
 #include "ostd/utility.hh"
 #include "ostd/format.hh"
@@ -32,7 +30,7 @@ enum class StreamSeek {
     set = SEEK_SET
 };
 
-template<typename T = char, bool = IsPod<T>>
+template<typename T = char, bool = std::is_pod_v<T>>
 struct StreamRange;
 
 struct Stream {
@@ -45,8 +43,8 @@ private:
 
     template<typename T>
     inline bool write_impl(
-        T const &v, EnableIf<
-            !IsConstructible<ConstCharRange, T const &>, StNat
+        T const &v, std::enable_if_t<
+            !std::is_constructible_v<ConstCharRange, T const &>, StNat
         > = StNat()
     ) {
         return write(ostd::to_string(v));
@@ -189,7 +187,7 @@ struct StreamRange<T, true>: InputRange<
         return p_stream->put(p, n);
     }
 
-    size_t copy(RemoveCv<T> *p, size_t n = -1) {
+    size_t copy(std::remove_cv_t<T> *p, size_t n = -1) {
         if (n == size_t(-1)) {
             n = p_stream->size() / sizeof(T);
         }
