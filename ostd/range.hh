@@ -1292,19 +1292,11 @@ private:
 };
 
 template<typename T, size_t N>
-inline PointerRange<T> iter(T (&array)[N]) {
-    return PointerRange<T>(array, N);
-}
-
-template<typename T, size_t N>
-inline PointerRange<T const> iter(T const (&array)[N]) {
-    return PointerRange<T const>(array, N);
-}
-
-template<typename T, size_t N>
-inline PointerRange<T const> citer(T const (&array)[N]) {
-    return PointerRange<T const>(array, N);
-}
+struct ranged_traits<T[N]> {
+    static PointerRange<T> iter(T (&array)[N]) {
+        return PointerRange<T>(array, N);
+    }
+};
 
 namespace detail {
     struct PtrNat {};
