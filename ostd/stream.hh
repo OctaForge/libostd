@@ -190,10 +190,10 @@ namespace detail {
     struct FmtStreamRange: OutputRange<FmtStreamRange, char> {
         FmtStreamRange(Stream &s): p_s(s) {}
         bool put(char c) {
-            return p_s.putchar(c);
+            return p_s.write_bytes(&c, 1) == 1;
         }
         size_t put_n(char const *p, size_t n) {
-            return p_s.put(p, n);
+            return p_s.write_bytes(p, n);
         }
         Stream &p_s;
     };
