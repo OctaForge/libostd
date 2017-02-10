@@ -13,7 +13,7 @@ struct Foo {
 
 /* implementing formatting for custom objects - external function */
 template<typename R>
-bool to_format(Foo const &, R &writer, FormatSpec const &fs) {
+void to_format(Foo const &, R &writer, FormatSpec const &fs) {
     switch (fs.spec()) {
         case 'i':
             writer.put_string("Foo1");
@@ -22,13 +22,12 @@ bool to_format(Foo const &, R &writer, FormatSpec const &fs) {
             writer.put_string("Foo2");
             break;
     }
-    return true;
 }
 
 struct Bar {
     /* implementing formatting for custom objects - method */
     template<typename R>
-    bool to_format(R &writer, FormatSpec const &fs) const {
+    void to_format(R &writer, FormatSpec const &fs) const {
         switch (fs.spec()) {
             case 'i':
                 writer.put_string("Bar1");
@@ -37,7 +36,6 @@ struct Bar {
                 writer.put_string("Bar2");
                 break;
         }
-        return true;
     }
 };
 
