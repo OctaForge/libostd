@@ -197,7 +197,7 @@ struct FormatSpec {
     }
 
     template<typename R>
-    size_t build_spec(R &&out, ConstCharRange spec) {
+    size_t build_spec(R &&out, ConstCharRange spec) const {
         size_t ret = out.put('%');
         if (p_flags & FMT_FLAG_DASH ) {
             ret += out.put('-');
@@ -503,19 +503,18 @@ namespace detail {
 
     template<typename R, typename ...A>
     static ptrdiff_t format_impl(
-        R &writer, size_t &fmtn, bool escape,
-        ConstCharRange fmt, A const &...args
+        R &writer, bool escape, ConstCharRange fmt, A const &...args
     );
 
     template<size_t I>
     struct FmtTupleUnpacker {
         template<typename R, typename T, typename ...A>
         static inline ptrdiff_t unpack(
-            R &writer, size_t &fmtn, bool esc, ConstCharRange fmt,
+            R &writer, bool esc, ConstCharRange fmt,
             T const &item, A const &...args
         ) {
             return FmtTupleUnpacker<I - 1>::unpack(
-                writer, fmtn, esc, fmt, item, std::get<I - 1>(item), args...
+                writer, esc, fmt, item, std::get<I - 1>(item), args...
             );
         }
     };
@@ -524,10 +523,10 @@ namespace detail {
     struct FmtTupleUnpacker<0> {
         template<typename R, typename T, typename ...A>
         static inline ptrdiff_t unpack(
-            R &writer, size_t &fmtn, bool esc, ConstCharRange fmt,
+            R &writer, bool esc, ConstCharRange fmt,
             T const &, A const &...args
         ) {
-            return format_impl(writer, fmtn, esc, fmt, args...);
+            return format_impl(writer, esc, fmt, args...);
         }
     };
 
@@ -545,23 +544,23 @@ namespace detail {
 
     template<typename R, typename T>
     inline ptrdiff_t format_ritem(
-        R &writer, size_t &fmtn, bool esc, bool, ConstCharRange fmt,
+        R &writer, bool esc, bool, ConstCharRange fmt,
         T const &item, std::enable_if_t<!is_tuple_like<T>, bool> = true
     ) {
-        return format_impl(writer, fmtn, esc, fmt, item);
+        return format_impl(writer, esc, fmt, item);
     }
 
     template<typename R, typename T>
     inline ptrdiff_t format_ritem(
-        R &writer, size_t &fmtn, bool esc, bool expandval, ConstCharRange fmt,
+        R &writer, bool esc, bool expandval, ConstCharRange fmt,
         T const &item, std::enable_if_t<is_tuple_like<T>, bool> = true
     ) {
         if (expandval) {
             return FmtTupleUnpacker<std::tuple_size<T>::value>::unpack(
-                writer, fmtn, esc, fmt, item
+                writer, esc, fmt, item
             );
         }
-        return format_impl(writer, fmtn, esc, fmt, item);
+        return format_impl(writer, esc, fmt, item);
     }
 
     template<typename R, typename T>
@@ -576,17 +575,16 @@ namespace detail {
             return 0;
         }
         ptrdiff_t ret = 0;
-        size_t fmtn = 0;
         /* test first item */
         ret += format_ritem(
-            writer, fmtn, escape, expandval, fl->rest(), range.front()
+            writer, escape, expandval, fl->rest(), range.front()
         );
         range.pop_front();
         /* write the rest (if any) */
         for (; !range.empty(); range.pop_front()) {
             ret += writer.put_n(&sep[0], sep.size());
             ret += format_ritem(
-                writer, fmtn, escape, expandval, fl->rest(), range.front()
+                writer, escape, expandval, fl->rest(), range.front()
             );
         }
         return ret;
@@ -661,12 +659,11 @@ namespace detail {
     constexpr bool FmtTofmtTest = decltype(test_tofmt<T, R>(0))::value;
 
     struct WriteSpec: FormatSpec {
-        WriteSpec(): FormatSpec() {}
-        WriteSpec(ConstCharRange fmt, bool esc): FormatSpec(fmt, esc) {}
+        using FormatSpec::FormatSpec;
 
         /* string base writer */
         template<typename R>
-        ptrdiff_t write_str(R &writer, bool escape, ConstCharRange val) {
+        ptrdiff_t write_str(R &writer, bool escape, ConstCharRange val) const {
             if (escape) {
                 return write_str(writer, false, escape_fmt_str(val));
             }
@@ -683,7 +680,7 @@ namespace detail {
 
         /* char values */
         template<typename R>
-        ptrdiff_t write_char(R &writer, bool escape, char val) {
+        ptrdiff_t write_char(R &writer, bool escape, char val) const {
             if (escape) {
                 char const *esc = escape_fmt_char(val, '\'');
                 if (esc) {
@@ -712,7 +709,7 @@ namespace detail {
 
         /* floating point */
         template<typename R, typename T, bool Long = std::is_same_v<T, ldouble>>
-        ptrdiff_t write_float(R &writer, bool, T val) {
+        ptrdiff_t write_float(R &writer, bool, T val) const {
             char buf[16], rbuf[128];
             char fmtspec[Long + 1];
 
@@ -751,7 +748,7 @@ namespace detail {
         }
 
         template<typename R, typename T>
-        ptrdiff_t write_val(R &writer, bool escape, T const &val) {
+        ptrdiff_t write_val(R &writer, bool escape, T const &val) const {
             /* stuff fhat can be custom-formatted goes first */
             if constexpr(FmtTofmtTest<T, TostrRange<R>>) {
                 TostrRange<R> sink(writer);
@@ -784,11 +781,13 @@ namespace detail {
              * char pointers are handled by the string case above
              */
             if constexpr(std::is_pointer_v<T>) {
-                if (this->p_spec == 's') {
-                    this->p_spec = 'x';
-                    this->p_flags |= FMT_FLAG_HASH;
-                }
-                return write_val(writer, false, size_t(val));
+                FormatSpec sp{
+                    (spec() == 's') ? 'x' : spec(),
+                    has_width() ? width() : -1,
+                    has_precision() ? precision() : -1,
+                    (spec() == 's') ? (flags() | FMT_FLAG_HASH) : flags()
+                };
+                return detail::write_u(writer, &sp, false, size_t(val));
             }
             /* integers */
             if constexpr(std::is_integral_v<T>) {
@@ -823,7 +822,7 @@ namespace detail {
         template<typename R, typename T, typename ...A>
         ptrdiff_t write_arg(
             R &writer, size_t idx, T const &val, A const &...args
-        ) {
+        ) const {
             if (idx) {
                 if constexpr(!sizeof...(A)) {
                     throw format_error{"not enough format arguments"};
@@ -840,7 +839,7 @@ namespace detail {
         ptrdiff_t write_range(
             R &writer, size_t idx, bool expandval, ConstCharRange sep,
             T const &val, A const &...args
-        ) {
+        ) const {
             if (idx) {
                 if constexpr(!sizeof...(A)) {
                     throw format_error{"not enough format arguments"};
@@ -857,9 +856,9 @@ namespace detail {
 
     template<typename R, typename ...A>
     inline ptrdiff_t format_impl(
-        R &writer, size_t &fmtn, bool escape, ConstCharRange fmt, A const &...args
+        R &writer, bool escape, ConstCharRange fmt, A const &...args
     ) {
-        size_t argidx = 1, retn = 0, twr = 0;
+        size_t argidx = 1, twr = 0;
         ptrdiff_t written = 0;
         detail::WriteSpec spec(fmt, escape);
         while (spec.read_until_spec(writer, &twr)) {
@@ -913,35 +912,30 @@ namespace detail {
             written += sw;
         }
         written += twr;
-        fmtn = retn;
         return written;
     }
 
-    template<typename R, typename ...A>
-    inline ptrdiff_t format_impl(
-        R &writer, size_t &fmtn, bool, ConstCharRange fmt
-    ) {
+    template<typename R>
+    inline ptrdiff_t format_impl(R &writer, bool, ConstCharRange fmt) {
         size_t written = 0;
         detail::WriteSpec spec(fmt, false);
         if (spec.read_until_spec(writer, &written)) {
             throw format_error{"format spec without format arguments"};
         }
-        fmtn = 0;
         return written;
     }
 } /* namespace detail */
 
 template<typename R, typename ...A>
-inline ptrdiff_t format(
-    R &&writer, size_t &fmtn, ConstCharRange fmt, A const &...args
-) {
-    return detail::format_impl(writer, fmtn, false, fmt, args...);
+inline ptrdiff_t format(R &&writer, ConstCharRange fmt, A const &...args) {
+    return detail::format_impl(writer, false, fmt, args...);
 }
 
-template<typename R, typename ...A>
-ptrdiff_t format(R &&writer, ConstCharRange fmt, A const &...args) {
-    size_t fmtn = 0;
-    return format(writer, fmtn, fmt, args...);
+template<typename R, typename T>
+inline ptrdiff_t format(R &&writer, FormatSpec const &fmt, T const &val) {
+    /* we can do this as there are no members added... but ugly, FIXME later */
+    detail::WriteSpec const &wsp = static_cast<detail::WriteSpec const &>(fmt);
+    return wsp.write_arg(writer, 0, val);
 }
 
 } /* namespace ostd */

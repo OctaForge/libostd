@@ -165,8 +165,7 @@ namespace detail {
 
 template<typename T>
 inline void write(T const &v) {
-    // TODO: switch to direct FormatSpec later
-    format(detail::StdoutRange{}, "%s", v);
+    format(detail::StdoutRange{}, FormatSpec{'s'}, v);
 }
 
 template<typename T, typename ...A>

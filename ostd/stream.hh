@@ -201,8 +201,7 @@ namespace detail {
 
 template<typename T>
 inline bool Stream::write(T const &v) {
-    // TODO: switch to direct FormatSpec later
-    return format(detail::FmtStreamRange{*this}, "%s", v) >= 0;
+    return format(detail::FmtStreamRange{*this}, FormatSpec{'s'}, v) >= 0;
 }
 
 template<typename ...A>
