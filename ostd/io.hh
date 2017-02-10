@@ -151,21 +151,6 @@ static FileStream err(stderr);
 /* no need to call anything from FileStream, prefer simple calls... */
 
 namespace detail {
-    struct IoNat {};
-
-    inline void write_impl(ConstCharRange s) {
-        fwrite(&s[0], 1, s.size(), stdout);
-    }
-
-    template<typename T>
-    inline void write_impl(
-        T const &v, std::enable_if_t<
-            !std::is_constructible_v<ConstCharRange, T const &>, IoNat
-        > = IoNat()
-    ) {
-        write_impl(ostd::to_string(v));
-    }
-
     /* lightweight output range for direct stdout */
     struct StdoutRange: OutputRange<StdoutRange, char> {
         StdoutRange() {}
@@ -180,7 +165,8 @@ namespace detail {
 
 template<typename T>
 inline void write(T const &v) {
-    detail::write_impl(v);
+    // TODO: switch to direct FormatSpec later
+    format(detail::StdoutRange{}, "%s", v);
 }
 
 template<typename T, typename ...A>

@@ -34,23 +34,6 @@ template<typename T = char, bool = std::is_pod_v<T>>
 struct StreamRange;
 
 struct Stream {
-private:
-    struct StNat {};
-
-    bool write_impl(ConstCharRange s) {
-        return write_bytes(s.data(), s.size()) == s.size();
-    }
-
-    template<typename T>
-    inline bool write_impl(
-        T const &v, std::enable_if_t<
-            !std::is_constructible_v<ConstCharRange, T const &>, StNat
-        > = StNat()
-    ) {
-        return write(ostd::to_string(v));
-    }
-
-public:
     using Offset = StreamOffset;
 
     virtual ~Stream() {}
@@ -90,9 +73,7 @@ public:
     }
 
     template<typename T>
-    bool write(T const &v) {
-        return write_impl(v);
-    }
+    bool write(T const &v);
 
     template<typename T, typename ...A>
     bool write(T const &v, A const &...args) {
@@ -204,9 +185,29 @@ inline StreamRange<T> Stream::iter() {
     return StreamRange<T>(*this);
 }
 
+namespace detail {
+    /* lightweight output range for write/writef on streams */
+    struct FmtStreamRange: OutputRange<FmtStreamRange, char> {
+        FmtStreamRange(Stream &s): p_s(s) {}
+        bool put(char c) {
+            return p_s.putchar(c);
+        }
+        size_t put_n(char const *p, size_t n) {
+            return p_s.put(p, n);
+        }
+        Stream &p_s;
+    };
+}
+
+template<typename T>
+inline bool Stream::write(T const &v) {
+    // TODO: switch to direct FormatSpec later
+    return format(detail::FmtStreamRange{*this}, "%s", v) >= 0;
+}
+
 template<typename ...A>
 inline bool Stream::writef(ConstCharRange fmt, A const &...args) {
-    return format(iter(), fmt, args...) >= 0;
+    return format(detail::FmtStreamRange{*this}, fmt, args...) >= 0;
 }
 
 }

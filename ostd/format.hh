@@ -151,6 +151,15 @@ struct FormatSpec {
         p_nested_escape(escape), p_fmt(fmt)
     {}
 
+    FormatSpec(char spec, int width = -1, int prec = -1, int flags = 0):
+        p_flags(flags),
+        p_width((width >= 0) ? width : 0),
+        p_precision((prec >= 0) ? prec : 0),
+        p_has_width(width >= 0),
+        p_has_precision(prec >= 0),
+        p_spec(spec)
+    {}
+
     template<typename R>
     bool read_until_spec(R &writer, size_t *wret) {
         size_t written = 0;
