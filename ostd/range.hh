@@ -1486,44 +1486,6 @@ public:
 
 namespace detail {
     template<size_t I, size_t N>
-    struct JoinRangeEmpty {
-        template<typename T>
-        static bool empty(T const &tup) {
-            if (!std::get<I>(tup).empty()) {
-                return false;
-            }
-            return JoinRangeEmpty<I + 1, N>::empty(tup);
-        }
-    };
-
-    template<size_t N>
-    struct JoinRangeEmpty<N, N> {
-        template<typename T>
-        static bool empty(T const &) {
-            return true;
-        }
-    };
-
-    template<size_t I, size_t N>
-    struct TupleRangeEqual {
-        template<typename T>
-        static bool equal(T const &tup1, T const &tup2) {
-            if (!std::get<I>(tup1).equals_front(std::get<I>(tup2))) {
-                return false;
-            }
-            return TupleRangeEqual<I + 1, N>::equal(tup1, tup2);
-        }
-    };
-
-    template<size_t N>
-    struct TupleRangeEqual<N, N> {
-        template<typename T>
-        static bool equal(T const &, T const &) {
-            return true;
-        }
-    };
-
-    template<size_t I, size_t N>
     struct JoinRangePop {
         template<typename T>
         static bool pop(T &tup) {
@@ -1587,13 +1549,17 @@ public:
     }
 
     bool empty() const {
-        return detail::JoinRangeEmpty<0, sizeof...(R)>::empty(p_ranges);
+        return std::apply([](auto const &...args) {
+            return (... && args.empty());
+        }, p_ranges);
     }
 
     bool equals_front(JoinRange const &r) const {
-        return detail::TupleRangeEqual<0, sizeof...(R)>::equal(
-            p_ranges, r.p_ranges
-        );
+        return std::apply([&r](auto const &...r1) {
+            return std::apply([&](auto const &...r2) {
+                return (... && r1.equals_front(r2));
+            }, r);
+        }, p_ranges);
     }
 
     bool pop_front() {
@@ -1620,58 +1586,6 @@ namespace detail {
 
     template<typename ...T>
     using ZipValue = typename detail::ZipValueType<T...>::Type;
-
-    template<size_t I, size_t N>
-    struct ZipRangeEmpty {
-        template<typename T>
-        static bool empty(T const &tup) {
-            if (std::get<I>(tup).empty()) {
-                return true;
-            }
-            return ZipRangeEmpty<I + 1, N>::empty(tup);
-        }
-    };
-
-    template<size_t N>
-    struct ZipRangeEmpty<N, N> {
-        template<typename T>
-        static bool empty(T const &) {
-            return false;
-        }
-    };
-
-    template<size_t I, size_t N>
-    struct ZipRangePop {
-        template<typename T>
-        static bool pop(T &tup) {
-            return (
-                std::get<I>(tup).pop_front() && ZipRangePop<I + 1, N>::pop(tup)
-            );
-        }
-    };
-
-    template<size_t N>
-    struct ZipRangePop<N, N> {
-        template<typename T>
-        static bool pop(T &) {
-            return true;
-        }
-    };
-
-    template<typename ...T>
-    struct ZipRangeFront {
-        template<typename U, size_t ...I>
-        static ZipValue<T...> tup_get(U const &tup, std::index_sequence<I...>) {
-            return ZipValue<T...>(std::get<I>(tup).front()...);
-        }
-
-        template<typename U>
-        static ZipValue<T...> front(U const &tup) {
-            return ZipRangeFront<T...>::tup_get(
-                tup, std::make_index_sequence<sizeof...(T)>()
-            );
-        }
-    };
 }
 
 template<typename ...R>
@@ -1701,21 +1615,29 @@ public:
     }
 
     bool empty() const {
-        return detail::ZipRangeEmpty<0, sizeof...(R)>::empty(p_ranges);
+        return std::apply([](auto const &...args) {
+            return (... || args.empty());
+        }, p_ranges);
     }
 
     bool equals_front(ZipRange const &r) const {
-        return detail::TupleRangeEqual<0, sizeof...(R)>::equal(
-            p_ranges, r.p_ranges
-        );
+        return std::apply([&r](auto const &...r1) {
+            return std::apply([&](auto const &...r2) {
+                return (... && r1.equals_front(r2));
+            }, r);
+        }, p_ranges);
     }
 
     bool pop_front() {
-        return detail::ZipRangePop<0, sizeof...(R)>::pop(p_ranges);
+        return std::apply([](auto &...args) {
+            return (... && args.pop_front());
+        }, p_ranges);
     }
 
     detail::ZipValue<RangeReference<R>...> front() const {
-        return detail::ZipRangeFront<RangeReference<R>...>::front(p_ranges);
+        return std::apply([](auto &&...args) {
+            return detail::ZipValue<RangeReference<R>...>{args.front()...};
+        }, p_ranges);
     }
 };
 

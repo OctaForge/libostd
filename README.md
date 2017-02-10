@@ -8,10 +8,6 @@ make the language easier and more convenient to use.
 
 Documentation for OctaSTD can be found at https://wiki.octaforge.org/docs/octastd.
 
-It's not necessary that your compiler fully supports C++17, only C++14
-language is used, but new C++17 containers have to be present, such as
-`string_view` and `optional`.
-
 ## Supported compilers
 
 Compiler | Version
@@ -35,12 +31,10 @@ use GCC/Clang, if you need Visual Studio, LLVM integration exists.
 Sadly, it's not possible to properly integrate `std::string` and `std::hash`
 with OctaSTD ranges without utilizing `std::string_view`. Also, C++17 provides
 library features that OctaSTD would have to implement otherwise, which would
-lead to potentially incompatible APIs. However, OctaSTD does not make wide
-use of C++17 language features, limiting itself mostly to library features
-which have been present for more or less a pretty long time (in experimental
-namespace for example) which should avoid buggy behavior. There is still the
-problem of requiring a very recent toolchain, but this situation should solve
-itself in near future.
+lead to potentially incompatible APIs. C++17 also provides some nice language
+features (such as `if constexpr` and fold epxressions) which allow a lot of
+code to be written in a cleaner way. However, it is made sure that no features
+beyond the minimum supported compiler are necessary to use the library.
 
 ## Supported operating systems
 
