@@ -1485,43 +1485,27 @@ public:
 };
 
 namespace detail {
-    template<size_t I, size_t N>
-    struct JoinRangePop {
-        template<typename T>
-        static bool pop(T &tup) {
+    template<size_t I, size_t N, typename T>
+    inline bool join_range_pop(T &tup) {
+        if constexpr(I != N) {
             if (!std::get<I>(tup).empty()) {
                 return std::get<I>(tup).pop_front();
             }
-            return JoinRangePop<I + 1, N>::pop(tup);
+            return join_range_pop<I + 1, N>(tup);
         }
-    };
-
-    template<size_t N>
-    struct JoinRangePop<N, N> {
-        template<typename T>
-        static bool pop(T &) {
-            return false;
-        }
-    };
+        return false;
+    }
 
     template<size_t I, size_t N, typename T>
-    struct JoinRangeFront {
-        template<typename U>
-        static T front(U const &tup) {
+    inline auto join_range_front(T &tup) {
+        if constexpr(I != N) {
             if (!std::get<I>(tup).empty()) {
                 return std::get<I>(tup).front();
             }
-            return JoinRangeFront<I + 1, N, T>::front(tup);
+            return join_range_front<I + 1, N>(tup);
         }
-    };
-
-    template<size_t N, typename T>
-    struct JoinRangeFront<N, N, T> {
-        template<typename U>
-        static T front(U const &tup) {
-            return std::get<0>(tup).front();
-        }
-    };
+        return std::get<0>(tup).front();
+    }
 }
 
 template<typename ...R>
@@ -1563,13 +1547,11 @@ public:
     }
 
     bool pop_front() {
-        return detail::JoinRangePop<0, sizeof...(R)>::pop(p_ranges);
+        return detail::join_range_pop<0, sizeof...(R)>(p_ranges);
     }
 
     std::common_type_t<RangeReference<R>...> front() const {
-        return detail::JoinRangeFront<
-            0, sizeof...(R), std::common_type_t<RangeReference<R>...>
-        >::front(p_ranges);
+        return detail::join_range_front<0, sizeof...(R)>(p_ranges);
     }
 };
 
