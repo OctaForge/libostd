@@ -914,16 +914,6 @@ namespace detail {
         written += twr;
         return written;
     }
-
-    template<typename R>
-    inline ptrdiff_t format_impl(R &writer, bool, ConstCharRange fmt) {
-        size_t written = 0;
-        detail::WriteSpec spec(fmt, false);
-        if (spec.read_until_spec(writer, &written)) {
-            throw format_error{"format spec without format arguments"};
-        }
-        return written;
-    }
 } /* namespace detail */
 
 template<typename R, typename ...A>
