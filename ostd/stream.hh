@@ -73,29 +73,41 @@ struct Stream {
     }
 
     template<typename T>
-    bool write(T const &v);
+    void write(T const &v);
 
     template<typename T, typename ...A>
-    bool write(T const &v, A const &...args) {
-        return write(v) && write(args...);
+    void write(T const &v, A const &...args) {
+        write(v);
+        write(args...);
     }
 
     template<typename T>
-    bool writeln(T const &v) {
-        return write(v) && putchar('\n');
+    void writeln(T const &v) {
+        write(v);
+        if (!putchar('\n')) {
+            /* consistency with format module */
+            throw format_error{"stream EOF"};
+        }
     }
 
     template<typename T, typename ...A>
     bool writeln(T const &v, A const &...args) {
-        return write(v) && write(args...) && putchar('\n');
+        write(v);
+        write(args...);
+        if (!putchar('\n')) {
+            throw format_error{"stream EOF"};
+        }
     }
 
     template<typename ...A>
-    bool writef(ConstCharRange fmt, A const &...args);
+    void writef(ConstCharRange fmt, A const &...args);
 
     template<typename ...A>
-    bool writefln(ConstCharRange fmt, A const &...args) {
-        return writef(fmt, args...) && putchar('\n');
+    void writefln(ConstCharRange fmt, A const &...args) {
+        writef(fmt, args...);
+        if (!putchar('\n')) {
+            throw format_error{"stream EOF"};
+        }
     }
 
     template<typename T = char>
@@ -200,13 +212,13 @@ namespace detail {
 }
 
 template<typename T>
-inline bool Stream::write(T const &v) {
-    return format(detail::FmtStreamRange{*this}, FormatSpec{'s'}, v) >= 0;
+inline void Stream::write(T const &v) {
+    format(detail::FmtStreamRange{*this}, FormatSpec{'s'}, v);
 }
 
 template<typename ...A>
-inline bool Stream::writef(ConstCharRange fmt, A const &...args) {
-    return format(detail::FmtStreamRange{*this}, fmt, args...) >= 0;
+inline void Stream::writef(ConstCharRange fmt, A const &...args) {
+    format(detail::FmtStreamRange{*this}, fmt, args...);
 }
 
 }

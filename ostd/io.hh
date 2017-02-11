@@ -177,14 +177,19 @@ inline void write(T const &v, A const &...args) {
 template<typename T>
 inline void writeln(T const &v) {
     write(v);
-    putchar('\n');
+    if (putchar('\n') == EOF) {
+        /* consistency with format module */
+        throw format_error{"stream EOF"};
+    }
 }
 
 template<typename T, typename ...A>
 inline void writeln(T const &v, A const &...args) {
     write(v);
     write(args...);
-    putchar('\n');
+    if (putchar('\n') == EOF) {
+        throw format_error{"stream EOF"};
+    }
 }
 
 template<typename ...A>
@@ -195,7 +200,9 @@ inline void writef(ConstCharRange fmt, A const &...args) {
 template<typename ...A>
 inline void writefln(ConstCharRange fmt, A const &...args) {
     writef(fmt, args...);
-    putchar('\n');
+    if (putchar('\n') == EOF) {
+        throw format_error{"stream EOF"};
+    }
 }
 
 } /* namespace ostd */
