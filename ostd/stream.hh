@@ -91,7 +91,7 @@ struct Stream {
     }
 
     template<typename T, typename ...A>
-    bool writeln(T const &v, A const &...args) {
+    void writeln(T const &v, A const &...args) {
         write(v);
         write(args...);
         if (!putchar('\n')) {
