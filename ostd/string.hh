@@ -22,7 +22,7 @@
 
 namespace ostd {
 
-template<typename T, typename TR = std::char_traits<T>>
+template<typename T, typename TR = std::char_traits<std::remove_const_t<T>>>
 struct CharRangeBase: InputRange<
     CharRangeBase<T>, ContiguousRangeTag, T
 > {
