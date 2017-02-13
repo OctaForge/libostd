@@ -27,7 +27,7 @@ enum FormatFlags {
     FMT_FLAG_HASH  = 1 << 4
 };
 
-struct format_error: public std::runtime_error {
+struct format_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 

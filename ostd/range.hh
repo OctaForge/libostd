@@ -698,8 +698,10 @@ struct InputRange {
     }
 };
 
-template<typename R, typename F, typename = std::enable_if_t<IsInputRange<R>>>
-inline auto operator|(R &&range, F &&func) {
+template<typename R, typename F>
+inline auto operator|(R &&range, F &&func) ->
+    std::enable_if_t<IsInputRange<R>, decltype(func(std::forward<R>(range)))>
+{
     return func(std::forward<R>(range));
 }
 
