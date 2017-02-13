@@ -691,19 +691,31 @@ struct InputRange {
         return *static_cast<B *>(this);
     }
 
+    /* pipe op, must be a member to work for user ranges automagically */
+
+    template<typename F>
+    auto operator|(F &&func) & {
+        return func(*static_cast<B *>(this));
+    }
+    template<typename F>
+    auto operator|(F &&func) const & {
+        return func(*static_cast<B const *>(this));
+    }
+    template<typename F>
+    auto operator|(F &&func) && {
+        return func(std::move(*static_cast<B *>(this)));
+    }
+    template<typename F>
+    auto operator|(F &&func) const && {
+        return func(std::move(*static_cast<B const *>(this)));
+    }
+
     /* universal bool operator */
 
     explicit operator bool() const {
         return !(static_cast<B const *>(this)->empty());
     }
 };
-
-template<typename R, typename F>
-inline auto operator|(R &&range, F &&func) ->
-    std::enable_if_t<IsInputRange<R>, decltype(func(std::forward<R>(range)))>
-{
-    return func(std::forward<R>(range));
-}
 
 inline auto reverse() {
     return [](auto &&obj) { return obj.reverse(); };
