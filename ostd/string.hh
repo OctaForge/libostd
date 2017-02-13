@@ -23,9 +23,13 @@
 namespace ostd {
 
 template<typename T, typename TR = std::char_traits<std::remove_const_t<T>>>
-struct CharRangeBase: InputRange<
-    CharRangeBase<T>, ContiguousRangeTag, T
-> {
+struct CharRangeBase: InputRange<CharRangeBase<T>> {
+    using Category   = ContiguousRangeTag;
+    using Value      = T;
+    using Reference  = T &;
+    using Size       = size_t;
+    using Difference = ptrdiff_t;
+
 private:
     struct Nat {};
 
@@ -154,13 +158,6 @@ public:
         return true;
     }
 
-    size_t put_n(T const *p, size_t n) {
-        size_t an = ostd::min(n, size());
-        TR::copy(p_beg, p, an);
-        p_beg += an;
-        return an;
-    }
-
     T *data() { return p_beg; }
     T const *data() const { return p_beg; }
 
@@ -191,7 +188,7 @@ diffsize:
 
     template<typename R>
     std::enable_if_t<IsOutputRange<R>, size_t> copy(R &&orange, size_t n = -1) {
-        return orange.put_n(data(), ostd::min(n, size()));
+        return range_put_n(orange, data(), ostd::min(n, size()));
     }
 
     size_t copy(std::remove_cv_t<T> *p, size_t n = -1) {
@@ -208,6 +205,14 @@ diffsize:
 private:
     T *p_beg, *p_end;
 };
+
+template<typename T, typename TR>
+inline size_t range_put_n(CharRangeBase<T, TR> &range, T const *p, size_t n) {
+    size_t an = ostd::min(n, range.size());
+    TR::copy(range.data(), p, an);
+    range.pop_front_n(an);
+    return an;
+}
 
 using CharRange = CharRangeBase<char>;
 using ConstCharRange = CharRangeBase<char const>;
@@ -311,7 +316,7 @@ namespace detail {
     struct ConcatPut<T, true, B> {
         template<typename R>
         static bool put(R &sink, ConstCharRange v) {
-            return v.size() && (sink.put_n(&v[0], v.size()) == v.size());
+            return v.size() && (range_put_n(sink, &v[0], v.size()) == v.size());
         }
     };
 
@@ -340,7 +345,7 @@ bool concat(R &&sink, T const &v, ConstCharRange sep, F func) {
         if (range.empty()) {
             break;
         }
-        sink.put_n(&sep[0], sep.size());
+        range_put_n(sink, &sep[0], sep.size());
     }
     return true;
 }
@@ -353,14 +358,14 @@ bool concat(R &&sink, T const &v, ConstCharRange sep = " ") {
     }
     for (;;) {
         ConstCharRange ret = range.front();
-        if (!ret.size() || (sink.put_n(&ret[0], ret.size()) != ret.size())) {
+        if (!ret.size() || (range_put_n(sink, &ret[0], ret.size()) != ret.size())) {
             return false;
         }
         range.pop_front();
         if (range.empty()) {
             break;
         }
-        sink.put_n(&sep[0], sep.size());
+        range_put_n(sink, &sep[0], sep.size());
     }
     return true;
 }
@@ -377,7 +382,15 @@ bool concat(R &&sink, std::initializer_list<T> v, ConstCharRange sep = " ") {
 
 namespace detail {
     template<typename R>
-    struct TostrRange: OutputRange<TostrRange<R>, char> {
+    struct TostrRange: OutputRange<TostrRange<R>> {
+        using Value      = char;
+        using Reference  = char &;
+        using Size       = size_t;
+        using Difference = ptrdiff_t;
+
+        template<typename RR>
+        friend size_t range_put_n(TostrRange<RR> &range, char const *p, size_t n);
+
         TostrRange() = delete;
         TostrRange(R &out): p_out(out), p_written(0) {}
         bool put(char v) {
@@ -385,19 +398,23 @@ namespace detail {
             p_written += ret;
             return ret;
         }
-        size_t put_n(char const *v, size_t n) {
-            size_t ret = p_out.put_n(v, n);
+        size_t put_string(ConstCharRange r) {
+            size_t ret = range_put_n(p_out, r.data(), r.size());
             p_written += ret;
             return ret;
-        }
-        size_t put_string(ConstCharRange r) {
-            return put_n(&r[0], r.size());
         }
         size_t get_written() const { return p_written; }
     private:
         R &p_out;
         size_t p_written;
     };
+
+    template<typename R>
+    inline size_t range_put_n(TostrRange<R> &range, char const *p, size_t n) {
+        size_t ret = range_put_n(range.p_out, p, n);
+        range.p_written += ret;
+        return ret;
+    }
 
     template<typename T, typename R>
     static auto test_stringify(int) -> std::integral_constant<

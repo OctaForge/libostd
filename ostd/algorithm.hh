@@ -776,9 +776,13 @@ inline auto foldr_f(T &&init, F &&func) {
 }
 
 template<typename T, typename F, typename R>
-struct MapRange: InputRange<
-    MapRange<T, F, R>, RangeCategory<T>, R, R, RangeSize<T>
-> {
+struct MapRange: InputRange<MapRange<T, F, R>> {
+    using Category   = RangeCategory<T>;
+    using Value      = R;
+    using Reference  = R;
+    using Size       = RangeSize<T>;
+    using Difference = RangeDifference<T>;
+
 private:
     T p_range;
     std::decay_t<F> p_func;
@@ -873,10 +877,13 @@ inline auto map(F &&func) {
 }
 
 template<typename T, typename F>
-struct FilterRange: InputRange<
-    FilterRange<T, F>, std::common_type_t<RangeCategory<T>, ForwardRangeTag>,
-    RangeValue<T>, RangeReference<T>, RangeSize<T>
-> {
+struct FilterRange: InputRange<FilterRange<T, F>> {
+    using Category   = std::common_type_t<RangeCategory<T>, ForwardRangeTag>;
+    using Value      = RangeValue<T>;
+    using Reference  = RangeReference<T>;
+    using Size       = RangeSize<T>;
+    using Difference = RangeDifference<T>;
+
 private:
     T p_range;
     std::decay_t<F> p_pred;

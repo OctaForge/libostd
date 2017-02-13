@@ -141,9 +141,19 @@ struct Stream {
 };
 
 template<typename T>
-struct StreamRange<T, true>: InputRange<
-    StreamRange<T>, InputRangeTag, T, T, size_t, StreamOffset
-> {
+size_t range_put_n(StreamRange<T> &range, T const *p, size_t n);
+
+template<typename T>
+struct StreamRange<T, true>: InputRange<StreamRange<T>> {
+    using Category   = InputRangeTag;
+    using Value      = T;
+    using Reference  = T;
+    using Size       = size_t;
+    using Difference = StreamOffset;
+
+    template<typename TT>
+    friend size_t range_put_n(StreamRange<TT> &range, TT const *p, size_t n);
+
     StreamRange() = delete;
     StreamRange(Stream &s): p_stream(&s), p_size(s.size()) {}
     StreamRange(StreamRange const &r): p_stream(r.p_stream), p_size(r.p_size) {}
@@ -176,10 +186,6 @@ struct StreamRange<T, true>: InputRange<
         return (v == sizeof(T));
     }
 
-    size_t put_n(T const *p, size_t n) {
-        return p_stream->put(p, n);
-    }
-
     size_t copy(std::remove_cv_t<T> *p, size_t n = -1) {
         if (n == size_t(-1)) {
             n = p_stream->size() / sizeof(T);
@@ -193,22 +199,33 @@ private:
 };
 
 template<typename T>
+inline size_t range_put_n(StreamRange<T> &range, T const *p, size_t n) {
+    return range.p_stream->put(p, n);
+}
+
+template<typename T>
 inline StreamRange<T> Stream::iter() {
     return StreamRange<T>(*this);
 }
 
 namespace detail {
     /* lightweight output range for write/writef on streams */
-    struct FmtStreamRange: OutputRange<FmtStreamRange, char> {
+    struct FmtStreamRange: OutputRange<FmtStreamRange> {
+        using Value      = char;
+        using Reference  = char &;
+        using Size       = size_t;
+        using Difference = ptrdiff_t;
+
         FmtStreamRange(Stream &s): p_s(s) {}
         bool put(char c) {
             return p_s.write_bytes(&c, 1) == 1;
         }
-        size_t put_n(char const *p, size_t n) {
-            return p_s.write_bytes(p, n);
-        }
         Stream &p_s;
     };
+
+    inline size_t range_put_n(FmtStreamRange &range, char const *p, size_t n) {
+        return range.p_s.write_bytes(p, n);
+    }
 }
 
 template<typename T>

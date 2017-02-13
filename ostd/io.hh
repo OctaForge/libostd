@@ -152,15 +152,21 @@ static FileStream err(stderr);
 
 namespace detail {
     /* lightweight output range for direct stdout */
-    struct StdoutRange: OutputRange<StdoutRange, char> {
+    struct StdoutRange: OutputRange<StdoutRange> {
+        using Value      = char;
+        using Reference  = char &;
+        using Size       = size_t;
+        using Difference = ptrdiff_t;
+
         StdoutRange() {}
         bool put(char c) {
             return putchar(c) != EOF;
         }
-        size_t put_n(char const *p, size_t n) {
-            return fwrite(p, 1, n, stdout);
-        }
     };
+
+    inline size_t range_put_n(StdoutRange &, char const *p, size_t n) {
+        return fwrite(p, 1, n, stdout);
+    }
 }
 
 template<typename T>

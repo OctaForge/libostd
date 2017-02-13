@@ -214,8 +214,8 @@ struct FormatSpec {
         if (p_flags & FMT_FLAG_HASH ) {
             ret += out.put('#');
         }
-        ret += out.put_n("*.*", 3);
-        ret += out.put_n(&spec[0], spec.size());
+        ret += range_put_n(out, "*.*", 3);
+        ret += range_put_n(out, &spec[0], spec.size());
         return ret;
     }
 
@@ -488,7 +488,7 @@ namespace detail {
         if (sign) {
             writer.put(neg ? '-' : *((" \0+") + lsgn * 2));
         }
-        writer.put_n(pfx, pfxlen);
+        range_put_n(writer, pfx, pfxlen);
         if (zero) {
             r += fl->write_spaces(writer, n + pfxlen + sign, true, '0');
         }
@@ -581,7 +581,7 @@ namespace detail {
         range.pop_front();
         /* write the rest (if any) */
         for (; !range.empty(); range.pop_front()) {
-            ret += writer.put_n(&sep[0], sep.size());
+            ret += range_put_n(writer, &sep[0], sep.size());
             ret += format_ritem(
                 writer, escape, expandval, fl->rest(), range.front()
             );
@@ -672,7 +672,7 @@ namespace detail {
             }
             size_t r = n;
             r += this->write_spaces(writer, n, true);
-            writer.put_n(&val[0], n);
+            range_put_n(writer, &val[0], n);
             r += this->write_spaces(writer, n, false);
             return r;
         }
@@ -746,10 +746,10 @@ namespace detail {
                     /* see above */
                     throw format_error{"invalid float format"};
                 }
-                writer.put_n(dbuf, ret);
+                range_put_n(writer, dbuf, ret);
                 delete[] dbuf;
             } else {
-                writer.put_n(rbuf, ret);
+                range_put_n(writer, rbuf, ret);
             }
             return ret;
         }

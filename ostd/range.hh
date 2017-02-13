@@ -542,17 +542,8 @@ struct JoinRange;
 template<typename ...>
 struct ZipRange;
 
-template<
-    typename B, typename C, typename V, typename R = V &,
-    typename S = size_t, typename D = ptrdiff_t
->
+template<typename B>
 struct InputRange {
-    using Category = C;
-    using Size = S;
-    using Difference = D;
-    using Value = V;
-    using Reference = R;
-
     detail::RangeIterator<B> begin() const {
         return detail::RangeIterator<B>(*static_cast<B const *>(this));
     }
@@ -560,18 +551,22 @@ struct InputRange {
         return detail::RangeIterator<B>();
     }
 
+    template<typename Size>
     Size pop_front_n(Size n) {
         return detail::pop_front_n<B>(*static_cast<B *>(this), n);
     }
 
+    template<typename Size>
     Size pop_back_n(Size n) {
         return detail::pop_back_n<B>(*static_cast<B *>(this), n);
     }
 
+    template<typename Size>
     Size push_front_n(Size n) {
         return detail::push_front_n<B>(*static_cast<B *>(this), n);
     }
 
+    template<typename Size>
     Size push_back_n(Size n) {
         return detail::push_back_n<B>(*static_cast<B *>(this), n);
     }
@@ -592,10 +587,12 @@ struct InputRange {
         return EnumeratedRange<B>(iter());
     }
 
+    template<typename Size>
     TakeRange<B> take(Size n) const {
         return TakeRange<B>(iter(), n);
     }
 
+    template<typename Size>
     ChunksRange<B> chunks(Size n) const {
         return ChunksRange<B>(iter(), n);
     }
@@ -614,14 +611,7 @@ struct InputRange {
         return RangeHalf<B>(iter());
     }
 
-    Size put_n(Value const *p, Size n) {
-        B &r = *static_cast<B *>(this);
-        Size on = n;
-        for (; n && r.put(*p++); --n);
-        return (on - n);
-    }
-
-    template<typename OR>
+    template<typename OR, typename Size>
     std::enable_if_t<IsOutputRange<OR>, Size> copy(OR &&orange, Size n = -1) {
         B r(*static_cast<B const *>(this));
         Size on = n;
@@ -634,7 +624,8 @@ struct InputRange {
         return (on - n);
     }
 
-    Size copy(std::remove_cv_t<Value> *p, Size n = -1) {
+    template<typename Value, typename Size>
+    Size copy(Value *p, Size n = -1) {
         B r(*static_cast<B const *>(this));
         Size on = n;
         for (; n && !r.empty(); --n) {
@@ -647,8 +638,10 @@ struct InputRange {
     /* iterator like interface operating on the front part of the range
      * this is sometimes convenient as it can be used within expressions */
 
-    Reference operator*() const {
-        return std::forward<Reference>(static_cast<B const *>(this)->front());
+    auto operator*() const {
+        return std::forward<decltype(static_cast<B const *>(this)->front())>(
+            static_cast<B const *>(this)->front()
+        );
     }
 
     B &operator++() {
@@ -671,21 +664,25 @@ struct InputRange {
         return tmp;
     }
 
+    template<typename Difference>
     B operator+(Difference n) const {
         B tmp(*static_cast<B const *>(this));
         tmp.pop_front_n(n);
         return tmp;
     }
+    template<typename Difference>
     B operator-(Difference n) const {
         B tmp(*static_cast<B const *>(this));
         tmp.push_front_n(n);
         return tmp;
     }
 
+    template<typename Difference>
     B &operator+=(Difference n) {
         static_cast<B *>(this)->pop_front_n(n);
         return *static_cast<B *>(this);
     }
+    template<typename Difference>
     B &operator-=(Difference n) {
         static_cast<B *>(this)->push_front_n(n);
         return *static_cast<B *>(this);
@@ -716,6 +713,20 @@ struct InputRange {
         return !(static_cast<B const *>(this)->empty());
     }
 };
+
+template<typename B>
+struct OutputRange {
+    using Category = OutputRangeTag;
+};
+
+template<typename R>
+inline RangeSize<R> range_put_n(
+    R &range, RangeValue<R> const *p, RangeSize<R> n
+) {
+    RangeSize<R> on = n;
+    for (; n && range.put(*p++); --n);
+    return (on - n);
+}
 
 inline auto reverse() {
     return [](auto &&obj) { return obj.reverse(); };
@@ -839,37 +850,19 @@ inline auto citer(T const &r) -> decltype(ranged_traits<T const>::iter(r)) {
     return ranged_traits<T const>::iter(r);
 }
 
-template<
-    typename B, typename V, typename R = V &,
-    typename S = size_t, typename D = ptrdiff_t
->
-struct OutputRange {
-    using Category = OutputRangeTag;
-    using Size = S;
-    using Difference = D;
-    using Value = V;
-    using Reference = R;
-
-    Size put_n(Value const *p, Size n) {
-        B &r = *static_cast<B *>(this);
-        Size on = n;
-        for (; n && r.put(*p++); --n);
-        return (on - n);
-    }
-};
-
 template<typename T>
-struct HalfRange: InputRange<HalfRange<T>,
-    RangeCategory<typename T::Range>,
-    RangeValue<typename T::Range>,
-    RangeReference<typename T::Range>,
-    RangeSize<typename T::Range>,
-    RangeDifference<typename T::Range>
-> {
+struct HalfRange: InputRange<HalfRange<T>> {
+    using Category   = RangeCategory  <typename T::Range>;
+    using Value      = RangeValue     <typename T::Range>;
+    using Reference  = RangeReference <typename T::Range>;
+    using Size       = RangeSize      <typename T::Range>;
+    using Difference = RangeDifference<typename T::Range>;
+
 private:
     using Rtype = typename T::Range;
     T p_beg;
     T p_end;
+
 public:
     HalfRange() = delete;
     HalfRange(HalfRange const &range):
@@ -957,14 +950,16 @@ public:
 };
 
 template<typename T>
-struct ReverseRange: InputRange<ReverseRange<T>,
-    std::common_type_t<RangeCategory<T>, FiniteRandomAccessRangeTag>,
-    RangeValue<T>, RangeReference<T>, RangeSize<T>, RangeDifference<T>
-> {
-private:
-    using Rref = RangeReference<T>;
-    using Rsize = RangeSize<T>;
+struct ReverseRange: InputRange<ReverseRange<T>> {
+    using Category = std::common_type_t<
+        RangeCategory<T>, FiniteRandomAccessRangeTag
+    >;
+    using Value      = RangeValue     <T>;
+    using Reference  = RangeReference <T>;
+    using Size       = RangeSize      <T>;
+    using Difference = RangeDifference<T>;
 
+private:
     T p_range;
 
 public:
@@ -991,7 +986,7 @@ public:
     }
 
     bool empty() const { return p_range.empty(); }
-    Rsize size() const { return p_range.size(); }
+    Size size() const { return p_range.size(); }
 
     bool equals_front(ReverseRange const &r) const {
         return p_range.equals_back(r.p_range);
@@ -1013,33 +1008,34 @@ public:
     bool push_front() { return p_range.push_back(); }
     bool push_back() { return p_range.push_front(); }
 
-    Rsize pop_front_n(Rsize n) { return p_range.pop_front_n(n); }
-    Rsize pop_back_n(Rsize n) { return p_range.pop_back_n(n); }
+    Size pop_front_n(Size n) { return p_range.pop_front_n(n); }
+    Size pop_back_n(Size n) { return p_range.pop_back_n(n); }
 
-    Rsize push_front_n(Rsize n) { return p_range.push_front_n(n); }
-    Rsize push_back_n(Rsize n) { return p_range.push_back_n(n); }
+    Size push_front_n(Size n) { return p_range.push_front_n(n); }
+    Size push_back_n(Size n) { return p_range.push_back_n(n); }
 
-    Rref front() const { return p_range.back(); }
-    Rref back() const { return p_range.front(); }
+    Reference front() const { return p_range.back(); }
+    Reference back() const { return p_range.front(); }
 
-    Rref operator[](Rsize i) const { return p_range[size() - i - 1]; }
+    Reference operator[](Size i) const { return p_range[size() - i - 1]; }
 
-    ReverseRange<T> slice(Rsize start, Rsize end) const {
-        Rsize len = p_range.size();
+    ReverseRange<T> slice(Size start, Size end) const {
+        Size len = p_range.size();
         return ReverseRange<T>(p_range.slice(len - end, len - start));
     }
 };
 
 template<typename T>
-struct MoveRange: InputRange<MoveRange<T>,
-    std::common_type_t<RangeCategory<T>, FiniteRandomAccessRangeTag>,
-    RangeValue<T>, RangeValue<T> &&, RangeSize<T>, RangeDifference<T>
-> {
-private:
-    using Rval = RangeValue<T>;
-    using Rref = RangeValue<T> &&;
-    using Rsize = RangeSize<T>;
+struct MoveRange: InputRange<MoveRange<T>> {
+    using Category = std::common_type_t<
+        RangeCategory<T>, FiniteRandomAccessRangeTag
+    >;
+    using Value      = RangeValue     <T>;
+    using Reference  = RangeValue     <T> &&;
+    using Size       = RangeSize      <T>;
+    using Difference = RangeDifference<T>;
 
+private:
     T p_range;
 
 public:
@@ -1066,7 +1062,7 @@ public:
     }
 
     bool empty() const { return p_range.empty(); }
-    Rsize size() const { return p_range.size(); }
+    Size size() const { return p_range.size(); }
 
     bool equals_front(MoveRange const &r) const {
         return p_range.equals_front(r.p_range);
@@ -1088,27 +1084,33 @@ public:
     bool push_front() { return p_range.push_front(); }
     bool push_back() { return p_range.push_back(); }
 
-    Rsize pop_front_n(Rsize n) { return p_range.pop_front_n(n); }
-    Rsize pop_back_n(Rsize n) { return p_range.pop_back_n(n); }
+    Size pop_front_n(Size n) { return p_range.pop_front_n(n); }
+    Size pop_back_n(Size n) { return p_range.pop_back_n(n); }
 
-    Rsize push_front_n(Rsize n) { return p_range.push_front_n(n); }
-    Rsize push_back_n(Rsize n) { return p_range.push_back_n(n); }
+    Size push_front_n(Size n) { return p_range.push_front_n(n); }
+    Size push_back_n(Size n) { return p_range.push_back_n(n); }
 
-    Rref front() const { return std::move(p_range.front()); }
-    Rref back() const { return std::move(p_range.back()); }
+    Reference front() const { return std::move(p_range.front()); }
+    Reference back() const { return std::move(p_range.back()); }
 
-    Rref operator[](Rsize i) const { return std::move(p_range[i]); }
+    Reference operator[](Size i) const { return std::move(p_range[i]); }
 
-    MoveRange<T> slice(Rsize start, Rsize end) const {
+    MoveRange<T> slice(Size start, Size end) const {
         return MoveRange<T>(p_range.slice(start, end));
     }
 
-    bool put(Rval const &v) { return p_range.put(v); }
-    bool put(Rval &&v) { return p_range.put(std::move(v)); }
+    bool put(Value const &v) { return p_range.put(v); }
+    bool put(Value &&v) { return p_range.put(std::move(v)); }
 };
 
 template<typename T>
-struct NumberRange: InputRange<NumberRange<T>, ForwardRangeTag, T, T> {
+struct NumberRange: InputRange<NumberRange<T>> {
+    using Category   = ForwardRangeTag;
+    using Value      = T;
+    using Reference  = T;
+    using Size       = size_t;
+    using Difference = ptrdiff_t;
+
     NumberRange() = delete;
     NumberRange(T a, T b, T step = T(1)):
         p_a(a), p_b(b), p_step(step)
@@ -1139,7 +1141,13 @@ inline NumberRange<T> range(T v) {
 }
 
 template<typename T>
-struct PointerRange: InputRange<PointerRange<T>, ContiguousRangeTag, T> {
+struct PointerRange: InputRange<PointerRange<T>> {
+    using Category   = ContiguousRangeTag;
+    using Value      = T;
+    using Reference  = T &;
+    using Size       = size_t;
+    using Difference = ptrdiff_t;
+
 private:
     struct Nat {};
 
@@ -1257,29 +1265,13 @@ public:
         return true;
     }
 
-    size_t put_n(T const *p, size_t n) {
-        size_t ret = size();
-        if (n < ret) {
-            ret = n;
-        }
-        if constexpr(std::is_pod_v<T>) {
-            memcpy(p_beg, p, ret * sizeof(T));
-            p_beg += ret;
-            return ret;
-        }
-        for (size_t i = ret; i; --i) {
-            *p_beg++ = *p++;
-        }
-        return ret;
-    }
-
     template<typename R>
     std::enable_if_t<IsOutputRange<R>, size_t> copy(R &&orange, size_t n = -1) {
         size_t c = size();
         if (n < c) {
             c = n;
         }
-        return orange.put_n(p_beg, c);
+        return range_put_n(orange, p_beg, c);
     }
 
     size_t copy(std::remove_cv_t<T> *p, size_t n = -1) {
@@ -1300,6 +1292,24 @@ public:
 private:
     T *p_beg, *p_end;
 };
+
+template<typename T>
+inline size_t range_put_n(PointerRange<T> &range, T const *p, size_t n) {
+    size_t ret = range.size();
+    if (n < ret) {
+        ret = n;
+    }
+    if constexpr(std::is_pod_v<T>) {
+        memcpy(&range.front(), p, ret * sizeof(T));
+        range.pop_front_n(ret);
+        return ret;
+    }
+    for (size_t i = ret; i; --i) {
+        range.front() = *p++;
+        range.pop_front();
+    }
+    return ret;
+}
 
 template<typename T, size_t N>
 struct ranged_traits<T[N]> {
@@ -1332,17 +1342,16 @@ struct EnumeratedValue {
 };
 
 template<typename T>
-struct EnumeratedRange: InputRange<EnumeratedRange<T>,
-    std::common_type_t<RangeCategory<T>, ForwardRangeTag>, RangeValue<T>,
-    EnumeratedValue<RangeReference<T>, RangeSize<T>>,
-    RangeSize<T>
-> {
-private:
-    using Rref = RangeReference<T>;
-    using Rsize = RangeSize<T>;
+struct EnumeratedRange: InputRange<EnumeratedRange<T>> {
+    using Category   = std::common_type_t<RangeCategory<T>, ForwardRangeTag>;
+    using Value      = RangeValue<T>;
+    using Reference  = EnumeratedValue<RangeReference<T>, RangeSize<T>>;
+    using Size       = RangeSize<T>;
+    using Difference = RangeDifference<T>;
 
+private:
     T p_range;
-    Rsize p_index;
+    Size p_index;
 
 public:
     EnumeratedRange() = delete;
@@ -1392,25 +1401,29 @@ public:
         return false;
     }
 
-    Rsize pop_front_n(Rsize n) {
-        Rsize ret = p_range.pop_front_n(n);
+    Size pop_front_n(Size n) {
+        Size ret = p_range.pop_front_n(n);
         p_index += ret;
         return ret;
     }
 
-    EnumeratedValue<Rref, Rsize> front() const {
-        return EnumeratedValue<Rref, Rsize> { p_index, p_range.front() };
+    Reference front() const {
+        return Reference{p_index, p_range.front()};
     }
 };
 
 template<typename T>
-struct TakeRange: InputRange<TakeRange<T>,
-    std::common_type_t<RangeCategory<T>, ForwardRangeTag>,
-    RangeValue<T>, RangeReference<T>, RangeSize<T>
-> {
+struct TakeRange: InputRange<TakeRange<T>> {
+    using Category   = std::common_type_t<RangeCategory<T>, ForwardRangeTag>;
+    using Value      = RangeValue     <T>;
+    using Reference  = RangeReference <T>;
+    using Size       = RangeSize      <T>;
+    using Difference = RangeDifference<T>;
+
 private:
     T p_range;
-    RangeSize<T> p_remaining;
+    Size p_remaining;
+
 public:
     TakeRange() = delete;
     TakeRange(T const &range, RangeSize<T> rem):
@@ -1442,13 +1455,13 @@ public:
         return false;
     }
 
-    RangeSize<T> pop_front_n(RangeSize<T> n) {
-        RangeSize<T> ret = p_range.pop_front_n(n);
+    Size pop_front_n(Size n) {
+        Size ret = p_range.pop_front_n(n);
         p_remaining -= ret;
         return ret;
     }
 
-    RangeReference<T> front() const { return p_range.front(); }
+    Reference front() const { return p_range.front(); }
 
     bool equals_front(TakeRange const &r) const {
         return p_range.equals_front(r.p_range);
@@ -1456,13 +1469,17 @@ public:
 };
 
 template<typename T>
-struct ChunksRange: InputRange<ChunksRange<T>,
-    std::common_type_t<RangeCategory<T>, ForwardRangeTag>,
-    TakeRange<T>, TakeRange<T>, RangeSize<T>
-> {
+struct ChunksRange: InputRange<ChunksRange<T>> {
+    using Category   = std::common_type_t<RangeCategory<T>, ForwardRangeTag>;
+    using Value      = TakeRange      <T>;
+    using Reference  = TakeRange      <T>;
+    using Size       = RangeSize      <T>;
+    using Difference = RangeDifference<T>;
+
 private:
     T p_range;
-    RangeSize<T> p_chunksize;
+    Size p_chunksize;
+
 public:
     ChunksRange() = delete;
     ChunksRange(T const &range, RangeSize<T> chs):
@@ -1491,11 +1508,11 @@ public:
     }
 
     bool pop_front() { return p_range.pop_front_n(p_chunksize) > 0; }
-    RangeSize<T> pop_front_n(RangeSize<T> n) {
+    Size pop_front_n(Size n) {
         return p_range.pop_front_n(p_chunksize * n) / p_chunksize;
     }
 
-    TakeRange<T> front() const { return p_range.take(p_chunksize); }
+    Reference front() const { return p_range.take(p_chunksize); }
 };
 
 namespace detail {
@@ -1523,12 +1540,16 @@ namespace detail {
 }
 
 template<typename ...R>
-struct JoinRange: InputRange<JoinRange<R...>,
-    std::common_type_t<ForwardRangeTag, RangeCategory<R>...>,
-    std::common_type_t<RangeValue<R>...>, std::common_type_t<RangeReference<R>...>,
-    std::common_type_t<RangeSize<R>...>, std::common_type_t<RangeDifference<R>...>> {
+struct JoinRange: InputRange<JoinRange<R...>> {
+    using Category   = std::common_type_t<ForwardRangeTag, RangeCategory<R>...>;
+    using Value      = std::common_type_t<RangeValue<R>...>;
+    using Reference  = std::common_type_t<RangeReference<R>...>;
+    using Size       = std::common_type_t<RangeSize<R>...>;
+    using Difference = std::common_type_t<RangeDifference<R>...>;
+
 private:
     std::tuple<R...> p_ranges;
+
 public:
     JoinRange() = delete;
     JoinRange(R const &...ranges): p_ranges(ranges...) {}
@@ -1585,14 +1606,16 @@ namespace detail {
 }
 
 template<typename ...R>
-struct ZipRange: InputRange<ZipRange<R...>,
-    std::common_type_t<ForwardRangeTag, RangeCategory<R>...>,
-    detail::ZipValue<RangeValue<R>...>,
-    detail::ZipValue<RangeReference<R>...>,
-    std::common_type_t<RangeSize<R>...>,
-    std::common_type_t<RangeDifference<R>...>> {
+struct ZipRange: InputRange<ZipRange<R...>> {
+    using Category   = std::common_type_t<ForwardRangeTag, RangeCategory<R>...>;
+    using Value      = detail::ZipValue<RangeValue<R>...>;
+    using Reference  = detail::ZipValue<RangeReference<R>...>;
+    using Size       = std::common_type_t<RangeSize<R>...>;
+    using Difference = std::common_type_t<RangeDifference<R>...>;
+
 private:
     std::tuple<R...> p_ranges;
+
 public:
     ZipRange() = delete;
     ZipRange(R const &...ranges): p_ranges(ranges...) {}
@@ -1638,8 +1661,12 @@ public:
 };
 
 template<typename T>
-struct AppenderRange: OutputRange<AppenderRange<T>, typename T::value_type,
-    typename T::reference, typename T::size_type, typename T::difference_type> {
+struct AppenderRange: OutputRange<AppenderRange<T>> {
+    using Value      = typename T::value_type;
+    using Reference  = typename T::reference;
+    using Size       = typename T::size_type;
+    using Difference = typename T::difference_type;
+
     AppenderRange(): p_data() {}
     AppenderRange(T const &v): p_data(v) {}
     AppenderRange(T &&v): p_data(std::move(v)) {}
@@ -1731,25 +1758,19 @@ template<typename T>
 using IteratorRangeTag = typename detail::IteratorRangeTagBase<T>::Type;
 
 template<typename T>
-struct IteratorRange: InputRange<
-    IteratorRange<T>,
-    std::conditional_t<
+struct IteratorRange: InputRange<IteratorRange<T>> {
+    using Category = std::conditional_t<
         std::is_pointer_v<T>,
         ContiguousRangeTag,
         IteratorRangeTag<typename std::iterator_traits<T>::iterator_category>
-    >,
-    typename std::iterator_traits<T>::value_type,
-    typename std::iterator_traits<T>::reference,
-    std::make_unsigned_t<typename std::iterator_traits<T>::difference_type>,
-    typename std::iterator_traits<T>::difference_type
-> {
-private:
-    using ValT = typename std::iterator_traits<T>::value_type;
-    using RefT = typename std::iterator_traits<T>::reference;
-    using DiffT = typename std::iterator_traits<T>::difference_type;
-    using SizeT = std::make_unsigned_t<typename std::iterator_traits<T>::difference_type>;
+    >;
+    using Value      = typename std::iterator_traits<T>::value_type;
+    using Reference  = typename std::iterator_traits<T>::reference;
+    using Size       = std::make_unsigned_t<
+        typename std::iterator_traits<T>::difference_type
+    >;
+    using Difference = typename std::iterator_traits<T>::difference_type;
 
-public:
     IteratorRange(T beg = T{}, T end = T{}): p_beg(beg), p_end(end) {}
 
     template<typename U, typename = std::enable_if_t<
@@ -1789,10 +1810,10 @@ public:
         --p_beg; return true;
     }
 
-    SizeT pop_front_n(SizeT n) {
+    Size pop_front_n(Size n) {
         using IC = typename std::iterator_traits<T>::iterator_category;
         if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            SizeT olen = SizeT(p_end - p_beg);
+            Size olen = Size(p_end - p_beg);
             p_beg += n;
             if (p_beg > p_end) {
                 p_beg = p_end;
@@ -1804,7 +1825,7 @@ public:
         }
     }
 
-    SizeT push_front_n(SizeT n) {
+    Size push_front_n(Size n) {
         using IC = typename std::iterator_traits<T>::iterator_category;
         if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
             p_beg -= n;
@@ -1814,13 +1835,13 @@ public:
         }
     }
 
-    RefT front() const { return *p_beg; }
+    Reference front() const { return *p_beg; }
 
     bool equals_front(IteratorRange const &range) const {
         return p_beg == range.p_beg;
     }
 
-    DiffT distance_front(IteratorRange const &range) const {
+    Difference distance_front(IteratorRange const &range) const {
         return range.p_beg - p_beg;
     }
 
@@ -1836,10 +1857,10 @@ public:
         ++p_end; return true;
     }
 
-    SizeT pop_back_n(SizeT n) {
+    Size pop_back_n(Size n) {
         using IC = typename std::iterator_traits<T>::iterator_category;
         if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            SizeT olen = SizeT(p_end - p_beg);
+            Size olen = Size(p_end - p_beg);
             p_end -= n;
             if (p_end < p_beg) {
                 p_end = p_beg;
@@ -1851,7 +1872,7 @@ public:
         }
     }
 
-    SizeT push_back_n(SizeT n) {
+    Size push_back_n(Size n) {
         using IC = typename std::iterator_traits<T>::iterator_category;
         if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
             p_end += n;
@@ -1861,7 +1882,7 @@ public:
         }
     }
 
-    RefT back() const { return *(p_end - 1); }
+    Reference back() const { return *(p_end - 1); }
 
     bool equals_back(IteratorRange const &range) const {
         return p_end == range.p_end;
@@ -1872,13 +1893,13 @@ public:
     }
 
     /* satisfy FiniteRandomAccessRange */
-    SizeT size() const { return SizeT(p_end - p_beg); }
+    Size size() const { return Size(p_end - p_beg); }
 
-    IteratorRange slice(SizeT start, SizeT end) const {
+    IteratorRange slice(Size start, Size end) const {
         return IteratorRange(p_beg + start, p_beg + end);
     }
 
-    RefT operator[](SizeT i) const { return p_beg[i]; }
+    Reference operator[](Size i) const { return p_beg[i]; }
 
     /* satisfy OutputRange */
     bool put(T const &v) {
@@ -1896,39 +1917,16 @@ public:
         return true;
     }
 
-    SizeT put_n(ValT const *p, SizeT n) {
-        using IC = typename std::iterator_traits<T>::iterator_category;
-        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            SizeT ret = size();
-            if (n < ret) {
-                ret = n;
-            }
-            if constexpr(std::is_pointer_v<T> && std::is_pod_v<ValT>) {
-                memcpy(p_beg, p, ret * sizeof(ValT));
-                p_beg += ret;
-            } else {
-                for (SizeT i = ret; i; --i) {
-                    *p_beg++ = *p++;
-                }
-            }
-            return ret;
-        } else {
-            SizeT on = n;
-            for (; n && put(*p++); --n);
-            return (on - n);
-        }
-    }
-
     template<typename R>
-    std::enable_if_t<IsOutputRange<R>, SizeT> copy(R &&orange, SizeT n = -1) {
+    std::enable_if_t<IsOutputRange<R>, Size> copy(R &&orange, Size n = -1) {
         if constexpr(std::is_pointer_v<T>) {
-            SizeT c = size();
+            Size c = size();
             if (n < c) {
                 c = n;
             }
-            return orange.put_n(p_beg, c);
+            return range_put_n(orange, p_beg, c);
         } else {
-            SizeT on = n;
+            Size on = n;
             for (; n && !empty(); --n) {
                 if (!orange.put(front())) {
                     break;
@@ -1939,21 +1937,21 @@ public:
         }
     }
 
-    SizeT copy(std::remove_cv_t<ValT> *p, SizeT n = -1) {
+    Size copy(std::remove_cv_t<Value> *p, Size n = -1) {
         using IC = typename std::iterator_traits<T>::iterator_category;
         if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            SizeT c = size();
+            Size c = size();
             if (n < c) {
                 c = n;
             }
-            if constexpr(std::is_pointer_v<T> && std::is_pod_v<ValT>) {
-                memcpy(p, p_beg, c * sizeof(ValT));
+            if constexpr(std::is_pointer_v<T> && std::is_pod_v<Value>) {
+                memcpy(p, p_beg, c * sizeof(Value));
                 return c;
             } else {
-                return copy(IteratorRange<std::remove_cv_t<ValT> *>(p, p + c), c);
+                return copy(IteratorRange<std::remove_cv_t<Value> *>(p, p + c), c);
             }
         } else {
-            SizeT on = n;
+            Size on = n;
             for (; n && !empty(); --n) {
                 *p++ = front();
                 pop_front();
@@ -1964,6 +1962,35 @@ public:
 private:
     T p_beg, p_end;
 };
+
+template<typename T>
+inline RangeSize<IteratorRange<T>> range_put_n(
+    IteratorRange<T> &range, RangeValue<IteratorRange<T>> const *p,
+    RangeSize<IteratorRange<T>> n
+) {
+    using IC = typename std::iterator_traits<T>::iterator_category;
+    if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
+        using Value = RangeValue<IteratorRange<T>>;
+        auto ret = range.size();
+        if (n < ret) {
+            ret = n;
+        }
+        if constexpr(std::is_pointer_v<T> && std::is_pod_v<Value>) {
+            memcpy(&range.front(), p, ret * sizeof(Value));
+            range.pop_front_n(ret);
+        } else {
+            for (auto i = ret; i; --i) {
+                range.front() = *p++;
+                range.pop_front();
+            }
+        }
+        return ret;
+    } else {
+        auto on = n;
+        for (; n && range.put(*p++); --n);
+        return (on - n);
+    }
+}
 
 template<typename T>
 IteratorRange<T> make_range(T beg, T end) {

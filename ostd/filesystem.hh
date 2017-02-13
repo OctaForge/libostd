@@ -530,9 +530,13 @@ inline void swap(DirectoryStream &a, DirectoryStream &b) {
     a.swap(b);
 }
 
-struct DirectoryRange: InputRange<
-    DirectoryRange, InputRangeTag, FileInfo, FileInfo, size_t, long
-> {
+struct DirectoryRange: InputRange<DirectoryRange> {
+    using Category   = InputRangeTag;
+    using Value      = FileInfo;
+    using Reference  = FileInfo;
+    using Size       = size_t;
+    using Difference = long;
+
     DirectoryRange() = delete;
     DirectoryRange(DirectoryStream &s): p_stream(&s) {}
     DirectoryRange(DirectoryRange const &r): p_stream(r.p_stream) {}
