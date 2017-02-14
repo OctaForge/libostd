@@ -1140,201 +1140,6 @@ inline NumberRange<T> range(T v) {
     return NumberRange<T>(v);
 }
 
-template<typename T>
-struct PointerRange: InputRange<PointerRange<T>> {
-    using Category   = ContiguousRangeTag;
-    using Value      = T;
-    using Reference  = T &;
-    using Size       = size_t;
-    using Difference = ptrdiff_t;
-
-private:
-    struct Nat {};
-
-public:
-    PointerRange(): p_beg(nullptr), p_end(nullptr) {}
-    PointerRange(T *beg, T *end): p_beg(beg), p_end(end) {}
-
-    template<typename U, typename = std::enable_if_t<
-        std::is_convertible_v<U *, T *>
-    >>
-    PointerRange(PointerRange<U> const &v): p_beg(&v[0]), p_end(&v[v.size()]) {}
-
-    PointerRange &operator=(PointerRange const &v) {
-        p_beg = v.p_beg;
-        p_end = v.p_end;
-        return *this;
-    }
-
-    /* satisfy InputRange / ForwardRange */
-    bool empty() const { return p_beg == p_end; }
-
-    bool pop_front() {
-        if (p_beg == p_end) {
-            return false;
-        }
-        ++p_beg;
-        return true;
-    }
-    bool push_front() {
-        --p_beg; return true;
-    }
-
-    size_t pop_front_n(size_t n) {
-        size_t olen = p_end - p_beg;
-        p_beg += n;
-        if (p_beg > p_end) {
-            p_beg = p_end;
-            return olen;
-        }
-        return n;
-    }
-
-    size_t push_front_n(size_t n) {
-        p_beg -= n; return true;
-    }
-
-    T &front() const { return *p_beg; }
-
-    bool equals_front(PointerRange const &range) const {
-        return p_beg == range.p_beg;
-    }
-
-    ptrdiff_t distance_front(PointerRange const &range) const {
-        return range.p_beg - p_beg;
-    }
-
-    /* satisfy BidirectionalRange */
-    bool pop_back() {
-        if (p_end == p_beg) {
-            return false;
-        }
-        --p_end;
-        return true;
-    }
-    bool push_back() {
-        ++p_end; return true;
-    }
-
-    size_t pop_back_n(size_t n) {
-        size_t olen = p_end - p_beg;
-        p_end -= n;
-        if (p_end < p_beg) {
-            p_end = p_beg;
-            return olen;
-        }
-        return n;
-    }
-
-    size_t push_back_n(size_t n) {
-        p_end += n; return true;
-    }
-
-    T &back() const { return *(p_end - 1); }
-
-    bool equals_back(PointerRange const &range) const {
-        return p_end == range.p_end;
-    }
-
-    ptrdiff_t distance_back(PointerRange const &range) const {
-        return range.p_end - p_end;
-    }
-
-    /* satisfy FiniteRandomAccessRange */
-    size_t size() const { return p_end - p_beg; }
-
-    PointerRange slice(size_t start, size_t end) const {
-        return PointerRange(p_beg + start, p_beg + end);
-    }
-
-    T &operator[](size_t i) const { return p_beg[i]; }
-
-    /* satisfy OutputRange */
-    bool put(T const &v) {
-        if (empty()) {
-            return false;
-        }
-        *(p_beg++) = v;
-        return true;
-    }
-    bool put(T &&v) {
-        if (empty()) {
-            return false;
-        }
-        *(p_beg++) = std::move(v);
-        return true;
-    }
-
-    template<typename R>
-    std::enable_if_t<IsOutputRange<R>, size_t> copy(R &&orange, size_t n = -1) {
-        size_t c = size();
-        if (n < c) {
-            c = n;
-        }
-        return range_put_n(orange, p_beg, c);
-    }
-
-    size_t copy(std::remove_cv_t<T> *p, size_t n = -1) {
-        size_t c = size();
-        if (n < c) {
-            c = n;
-        }
-        if constexpr(std::is_pod_v<T>) {
-            memcpy(p, p_beg, c * sizeof(T));
-            return c;
-        }
-        return copy(PointerRange(p, p + c), c);
-    }
-
-    T *data() { return p_beg; }
-    T const *data() const { return p_beg; }
-
-private:
-    T *p_beg, *p_end;
-};
-
-template<typename T>
-inline size_t range_put_n(PointerRange<T> &range, T const *p, size_t n) {
-    size_t ret = range.size();
-    if (n < ret) {
-        ret = n;
-    }
-    if constexpr(std::is_pod_v<T>) {
-        memcpy(&range.front(), p, ret * sizeof(T));
-        range.pop_front_n(ret);
-        return ret;
-    }
-    for (size_t i = ret; i; --i) {
-        range.front() = *p++;
-        range.pop_front();
-    }
-    return ret;
-}
-
-template<typename T, size_t N>
-struct ranged_traits<T[N]> {
-    static PointerRange<T> iter(T (&array)[N]) {
-        return PointerRange<T>(array, array + N);
-    }
-};
-
-namespace detail {
-    struct PtrNat {};
-}
-
-template<typename T, typename U>
-inline PointerRange<T> iter(T *a, U b, std::enable_if_t<
-    (std::is_pointer_v<U> || std::is_null_pointer_v<U>) &&
-     std::is_convertible_v<U, T *>, detail::PtrNat
-> = detail::PtrNat()) {
-    return PointerRange<T>(a, b);
-}
-
-template<typename T>
-inline PointerRange<T> iter(T *a, size_t b) {
-    return PointerRange<T>(a, a + b);
-}
-
 template<typename T, typename S>
 struct EnumeratedValue {
     S index;
@@ -1902,14 +1707,14 @@ struct IteratorRange: InputRange<IteratorRange<T>> {
     Reference operator[](Size i) const { return p_beg[i]; }
 
     /* satisfy OutputRange */
-    bool put(T const &v) {
+    bool put(Value const &v) {
         if (empty()) {
             return false;
         }
         *(p_beg++) = v;
         return true;
     }
-    bool put(T &&v) {
+    bool put(Value &&v) {
         if (empty()) {
             return false;
         }
@@ -1964,7 +1769,7 @@ private:
 };
 
 template<typename T>
-inline RangeSize<IteratorRange<T>> range_put_n(
+inline auto range_put_n(
     IteratorRange<T> &range, RangeValue<IteratorRange<T>> const *p,
     RangeSize<IteratorRange<T>> n
 ) {
@@ -2000,6 +1805,30 @@ IteratorRange<T> make_range(T beg, T end) {
 template<typename T>
 IteratorRange<T> make_range(T beg, size_t n) {
     return IteratorRange<T>{beg, beg + n};
+}
+
+template<typename T, size_t N>
+struct ranged_traits<T[N]> {
+    static IteratorRange<T *> iter(T (&array)[N]) {
+        return IteratorRange<T *>(array, array + N);
+    }
+};
+
+namespace detail {
+    struct PtrNat {};
+}
+
+template<typename T, typename U>
+inline IteratorRange<T *> iter(T *a, U b, std::enable_if_t<
+    (std::is_pointer_v<U> || std::is_null_pointer_v<U>) &&
+     std::is_convertible_v<U, T *>, detail::PtrNat
+> = detail::PtrNat()) {
+    return IteratorRange<T *>(a, b);
+}
+
+template<typename T>
+inline IteratorRange<T *> iter(T *a, size_t b) {
+    return IteratorRange<T *>(a, a + b);
 }
 
 } /* namespace ostd */

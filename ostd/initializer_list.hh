@@ -13,13 +13,13 @@
 namespace ostd {
 
 template<typename T>
-PointerRange<T const> iter(std::initializer_list<T> init) noexcept {
-    return PointerRange<T const>(init.begin(), init.end());
+IteratorRange<T const *> iter(std::initializer_list<T> init) noexcept {
+    return IteratorRange<T const *>(init.begin(), init.end());
 }
 
 template<typename T>
-PointerRange<T const> citer(std::initializer_list<T> init) noexcept {
-    return PointerRange<T const>(init.begin(), init.end());
+IteratorRange<T const *> citer(std::initializer_list<T> init) noexcept {
+    return IteratorRange<T const *>(init.begin(), init.end());
 }
 
 }
