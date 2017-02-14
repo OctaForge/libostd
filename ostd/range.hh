@@ -14,6 +14,7 @@
 #include <utility>
 #include <iterator>
 #include <type_traits>
+#include <initializer_list>
 
 #include "ostd/types.hh"
 #include "ostd/utility.hh"
@@ -1805,6 +1806,16 @@ IteratorRange<T> make_range(T beg, T end) {
 template<typename T>
 IteratorRange<T> make_range(T beg, size_t n) {
     return IteratorRange<T>{beg, beg + n};
+}
+
+template<typename T>
+IteratorRange<T const *> iter(std::initializer_list<T> init) noexcept {
+    return IteratorRange<T const *>(init.begin(), init.end());
+}
+
+template<typename T>
+IteratorRange<T const *> citer(std::initializer_list<T> init) noexcept {
+    return IteratorRange<T const *>(init.begin(), init.end());
 }
 
 template<typename T, size_t N>
