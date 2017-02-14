@@ -815,9 +815,6 @@ inline auto zip(R1 &&r1, R &&...rr) {
     };
 }
 
-template<typename C, typename = void>
-struct ranged_traits;
-
 namespace detail {
     template<typename C>
     static std::true_type test_direct_iter(decltype(std::declval<C>().iter()) *);
@@ -827,14 +824,20 @@ namespace detail {
 
     template<typename C>
     constexpr bool direct_iter_test = decltype(test_direct_iter<C>(0))::value;
+
+    template<typename C, typename = void>
+    struct ranged_traits_core {};
+
+    template<typename C>
+    struct ranged_traits_core<C, std::enable_if_t<detail::direct_iter_test<C>>> {
+        static auto iter(C &r) -> decltype(r.iter()) {
+            return r.iter();
+        }
+    };
 }
 
 template<typename C>
-struct ranged_traits<C, std::enable_if_t<detail::direct_iter_test<C>>> {
-    static auto iter(C &r) -> decltype(r.iter()) {
-        return r.iter();
-    }
-};
+struct ranged_traits: detail::ranged_traits_core<C> {};
 
 template<typename T>
 inline auto iter(T &r) -> decltype(ranged_traits<T>::iter(r)) {
@@ -1840,6 +1843,36 @@ inline IteratorRange<T *> iter(T *a, U b, std::enable_if_t<
 template<typename T>
 inline IteratorRange<T *> iter(T *a, size_t b) {
     return IteratorRange<T *>(a, a + b);
+}
+
+/* iter on standard containers */
+
+namespace detail {
+    template<typename C>
+    static std::true_type test_std_iter(
+        decltype(std::begin(std::declval<C>())) *,
+        decltype(std::end(std::declval<C>())) *
+    );
+
+    template<typename>
+    static std::false_type test_std_iter(...);
+
+    template<typename C>
+    constexpr bool std_iter_test = decltype(test_std_iter<C>(0, 0))::value;
+
+    template<typename C>
+    struct ranged_traits_core<C, std::enable_if_t<
+        detail::std_iter_test<C> && !detail::direct_iter_test<C>
+    >> {
+        using range_type = std::conditional_t<
+            std::is_const_v<C>,
+            IteratorRange<typename C::const_iterator>,
+            IteratorRange<typename C::iterator>
+        >;
+        static range_type iter(C &r) {
+            return range_type{r.begin(), r.end()};
+        }
+    };
 }
 
 } /* namespace ostd */

@@ -14,20 +14,6 @@
 
 namespace ostd {
 
-template<typename T, typename A>
-struct ranged_traits<std::vector<T, A>> {
-    static IteratorRange<T *> iter(std::vector<T, A> &v) {
-        return IteratorRange<T *>{v.data(), v.data() + v.size()};
-    }
-};
-
-template<typename T, typename A>
-struct ranged_traits<std::vector<T, A> const> {
-    static IteratorRange<T const *> iter(std::vector<T, A> const &v) {
-        return IteratorRange<T const *>{v.data(), v.data() + v.size()};
-    }
-};
-
 template<typename T, typename A = std::allocator<T>, typename R>
 inline std::vector<T, A> make_vector(R range, A const &alloc = A{}) {
     std::vector<T, A> ret{alloc};

@@ -13,26 +13,6 @@
 
 namespace ostd {
 
-template<typename K, typename T, typename H, typename E, typename A>
-struct ranged_traits<std::unordered_map<K, T, H, E, A>> {
-    using Range = IteratorRange<
-        typename std::unordered_map<K, T, H, E, A>::iterator
-    >;
-    static Range iter(std::unordered_map<K, T, H, E, A> &v) {
-        return Range{v.begin(), v.end()};
-    }
-};
-
-template<typename K, typename T, typename H, typename E, typename A>
-struct ranged_traits<std::unordered_map<K, T, H, E, A> const> {
-    using Range = IteratorRange<
-        typename std::unordered_map<K, T, H, E, A>::const_iterator
-    >;
-    static Range iter(std::unordered_map<K, T, H, E, A> const &v) {
-        return Range{v.cbegin(), v.cend()};
-    }
-};
-
 namespace detail {
     template<typename T>
     std::integral_constant<

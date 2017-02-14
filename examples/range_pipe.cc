@@ -1,6 +1,6 @@
-#include <time.h>
+#include <array>
+#include <ctime>
 
-#include <ostd/array.hh>
 #include <ostd/range.hh>
 #include <ostd/io.hh>
 #include <ostd/algorithm.hh>

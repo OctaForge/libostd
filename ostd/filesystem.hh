@@ -23,7 +23,6 @@
 #include "ostd/range.hh"
 #include "ostd/vector.hh"
 #include "ostd/string.hh"
-#include "ostd/array.hh"
 #include "ostd/algorithm.hh"
 
 namespace ostd {
