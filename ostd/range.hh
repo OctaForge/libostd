@@ -1845,21 +1845,9 @@ struct ranged_traits<T[N]> {
     }
 };
 
-namespace detail {
-    struct PtrNat {};
-}
-
 template<typename T, typename U>
-inline IteratorRange<T *> iter(T *a, U b, std::enable_if_t<
-    (std::is_pointer_v<U> || std::is_null_pointer_v<U>) &&
-     std::is_convertible_v<U, T *>, detail::PtrNat
-> = detail::PtrNat()) {
+inline IteratorRange<T *> iter(T *a, T *b) {
     return IteratorRange<T *>(a, b);
-}
-
-template<typename T>
-inline IteratorRange<T *> iter(T *a, size_t b) {
-    return IteratorRange<T *>(a, a + b);
 }
 
 /* iter on standard containers */
