@@ -817,7 +817,7 @@ inline auto zip(R1 &&r1, R &&...rr) {
 
 namespace detail {
     template<typename C>
-    static std::true_type test_direct_iter(decltype(std::declval<C>().iter()) *);
+    static std::true_type test_direct_iter(decltype(std::declval<C &>().iter()) *);
 
     template<typename>
     static std::false_type test_direct_iter(...);
@@ -830,7 +830,9 @@ namespace detail {
 
     template<typename C>
     struct ranged_traits_core<C, std::enable_if_t<detail::direct_iter_test<C>>> {
-        static auto iter(C &r) -> decltype(r.iter()) {
+        using range = decltype(std::declval<C &>().iter());
+
+        static range iter(C &r) {
             return r.iter();
         }
     };
@@ -1812,6 +1814,19 @@ IteratorRange<T> make_range(T beg, size_t n) {
 }
 
 template<typename T>
+struct ranged_traits<std::initializer_list<T>> {
+    using range = IteratorRange<T const *>;
+
+    static range iter(std::initializer_list<T> il) {
+        return range{il.begin(), il.end()};
+    }
+};
+
+/* ranged_traits for initializer lists is not enough; we need to be able to
+ * call ostd::iter({initializer list}) and that won't match against a generic
+ * template, so we also need to define that here explicitly...
+ */
+template<typename T>
 IteratorRange<T const *> iter(std::initializer_list<T> init) noexcept {
     return IteratorRange<T const *>(init.begin(), init.end());
 }
@@ -1823,8 +1838,10 @@ IteratorRange<T const *> citer(std::initializer_list<T> init) noexcept {
 
 template<typename T, size_t N>
 struct ranged_traits<T[N]> {
-    static IteratorRange<T *> iter(T (&array)[N]) {
-        return IteratorRange<T *>(array, array + N);
+    using range = IteratorRange<T *>;
+
+    static range iter(T (&array)[N]) {
+        return range{array, array + N};
     }
 };
 
@@ -1850,8 +1867,8 @@ inline IteratorRange<T *> iter(T *a, size_t b) {
 namespace detail {
     template<typename C>
     static std::true_type test_std_iter(
-        decltype(std::begin(std::declval<C>())) *,
-        decltype(std::end(std::declval<C>())) *
+        decltype(std::begin(std::declval<C &>())) *,
+        decltype(std::end(std::declval<C &>())) *
     );
 
     template<typename>
@@ -1864,13 +1881,10 @@ namespace detail {
     struct ranged_traits_core<C, std::enable_if_t<
         detail::std_iter_test<C> && !detail::direct_iter_test<C>
     >> {
-        using range_type = std::conditional_t<
-            std::is_const_v<C>,
-            IteratorRange<typename C::const_iterator>,
-            IteratorRange<typename C::iterator>
-        >;
-        static range_type iter(C &r) {
-            return range_type{r.begin(), r.end()};
+        using range = IteratorRange<decltype(std::begin(std::declval<C &>()))>;
+
+        static range iter(C &r) {
+            return range{r.begin(), r.end()};
         }
     };
 }

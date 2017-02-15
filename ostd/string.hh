@@ -250,15 +250,19 @@ inline bool starts_with(ConstCharRange a, ConstCharRange b) {
 
 template<typename T, typename TR, typename A>
 struct ranged_traits<std::basic_string<T, TR, A>> {
-    static CharRangeBase<T> iter(std::basic_string<T, TR, A> &v) {
-        return CharRangeBase<T>{v.data(), v.data() + v.size()};
+    using range = CharRangeBase<T>;
+
+    static range iter(std::basic_string<T, TR, A> &v) {
+        return range{v.data(), v.data() + v.size()};
     }
 };
 
 template<typename T, typename TR, typename A>
 struct ranged_traits<std::basic_string<T, TR, A> const> {
-    static CharRangeBase<T const> iter(std::basic_string<T, TR, A> const &v) {
-        return CharRangeBase<T const>{v.data(), v.data() + v.size()};
+    using range = CharRangeBase<T const>;
+
+    static range iter(std::basic_string<T, TR, A> const &v) {
+        return range{v.data(), v.data() + v.size()};
     }
 };
 
