@@ -1809,11 +1809,6 @@ IteratorRange<T> make_range(T beg, T end) {
 }
 
 template<typename T>
-IteratorRange<T> make_range(T beg, size_t n) {
-    return IteratorRange<T>{beg, beg + n};
-}
-
-template<typename T>
 struct ranged_traits<std::initializer_list<T>> {
     using range = IteratorRange<T const *>;
 
@@ -1845,7 +1840,7 @@ struct ranged_traits<T[N]> {
     }
 };
 
-template<typename T, typename U>
+template<typename T>
 inline IteratorRange<T *> iter(T *a, T *b) {
     return IteratorRange<T *>(a, b);
 }
