@@ -31,7 +31,7 @@ enum class StreamSeek {
 };
 
 template<typename T = char, bool = std::is_pod_v<T>>
-struct StreamRange;
+struct stream_range;
 
 struct Stream {
     using Offset = StreamOffset;
@@ -111,7 +111,7 @@ struct Stream {
     }
 
     template<typename T = char>
-    StreamRange<T> iter();
+    stream_range<T> iter();
 
     template<typename T>
     size_t put(T const *v, size_t count) {
@@ -141,22 +141,22 @@ struct Stream {
 };
 
 template<typename T>
-size_t range_put_n(StreamRange<T> &range, T const *p, size_t n);
+size_t range_put_n(stream_range<T> &range, T const *p, size_t n);
 
 template<typename T>
-struct StreamRange<T, true>: InputRange<StreamRange<T>> {
-    using Category   = InputRangeTag;
-    using Value      = T;
-    using Reference  = T;
-    using Size       = size_t;
-    using Difference = StreamOffset;
+struct stream_range<T, true>: input_range<stream_range<T>> {
+    using range_category  = input_range_tag;
+    using value_type      = T;
+    using reference       = T;
+    using size_type       = size_t;
+    using difference_type = StreamOffset;
 
     template<typename TT>
-    friend size_t range_put_n(StreamRange<TT> &range, TT const *p, size_t n);
+    friend size_t range_put_n(stream_range<TT> &range, TT const *p, size_t n);
 
-    StreamRange() = delete;
-    StreamRange(Stream &s): p_stream(&s), p_size(s.size()) {}
-    StreamRange(StreamRange const &r): p_stream(r.p_stream), p_size(r.p_size) {}
+    stream_range() = delete;
+    stream_range(Stream &s): p_stream(&s), p_size(s.size()) {}
+    stream_range(stream_range const &r): p_stream(r.p_stream), p_size(r.p_size) {}
 
     bool empty() const {
         return (p_size - p_stream->tell()) < StreamOffset(sizeof(T));
@@ -176,7 +176,7 @@ struct StreamRange<T, true>: InputRange<StreamRange<T>> {
         return val;
     }
 
-    bool equals_front(StreamRange const &s) const {
+    bool equals_front(stream_range const &s) const {
         return p_stream->tell() == s.p_stream->tell();
     }
 
@@ -199,43 +199,43 @@ private:
 };
 
 template<typename T>
-inline size_t range_put_n(StreamRange<T> &range, T const *p, size_t n) {
+inline size_t range_put_n(stream_range<T> &range, T const *p, size_t n) {
     return range.p_stream->put(p, n);
 }
 
 template<typename T>
-inline StreamRange<T> Stream::iter() {
-    return StreamRange<T>(*this);
+inline stream_range<T> Stream::iter() {
+    return stream_range<T>(*this);
 }
 
 namespace detail {
     /* lightweight output range for write/writef on streams */
-    struct FmtStreamRange: OutputRange<FmtStreamRange> {
-        using Value      = char;
-        using Reference  = char &;
-        using Size       = size_t;
-        using Difference = ptrdiff_t;
+    struct fmt_stream_range: output_range<fmt_stream_range> {
+        using value_type      = char;
+        using reference       = char &;
+        using size_type       = size_t;
+        using difference_type = ptrdiff_t;
 
-        FmtStreamRange(Stream &s): p_s(s) {}
+        fmt_stream_range(Stream &s): p_s(s) {}
         bool put(char c) {
             return p_s.write_bytes(&c, 1) == 1;
         }
         Stream &p_s;
     };
 
-    inline size_t range_put_n(FmtStreamRange &range, char const *p, size_t n) {
+    inline size_t range_put_n(fmt_stream_range &range, char const *p, size_t n) {
         return range.p_s.write_bytes(p, n);
     }
 }
 
 template<typename T>
 inline void Stream::write(T const &v) {
-    format(detail::FmtStreamRange{*this}, FormatSpec{'s'}, v);
+    format(detail::fmt_stream_range{*this}, FormatSpec{'s'}, v);
 }
 
 template<typename ...A>
 inline void Stream::writef(string_range fmt, A const &...args) {
-    format(detail::FmtStreamRange{*this}, fmt, args...);
+    format(detail::fmt_stream_range{*this}, fmt, args...);
 }
 
 }

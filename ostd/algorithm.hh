@@ -65,10 +65,10 @@ inline auto is_partitioned(F &&func) {
 namespace detail {
     template<typename R, typename C>
     static void insort(R range, C &compare) {
-        RangeSize<R> rlen = range.size();
-        for (RangeSize<R> i = 1; i < rlen; ++i) {
-            RangeSize<R> j = i;
-            RangeValue<R> v(std::move(range[i]));
+        range_size_t<R> rlen = range.size();
+        for (range_size_t<R> i = 1; i < rlen; ++i) {
+            range_size_t<R> j = i;
+            range_value_t<R> v(std::move(range[i]));
             while (j > 0 && !compare(range[j - 1], v)) {
                 range[j] = range[j - 1];
                 --j;
@@ -79,12 +79,12 @@ namespace detail {
 
     template<typename R, typename C>
     static void hs_sift_down(
-        R range, RangeSize<R> s, RangeSize<R> e, C &compare
+        R range, range_size_t<R> s, range_size_t<R> e, C &compare
     ) {
-        RangeSize<R> r = s;
+        range_size_t<R> r = s;
         while ((r * 2 + 1) <= e) {
-            RangeSize<R> ch = r * 2 + 1;
-            RangeSize<R> sw = r;
+            range_size_t<R> ch = r * 2 + 1;
+            range_size_t<R> sw = r;
             if (compare(range[sw], range[ch])) {
                 sw = ch;
             }
@@ -103,15 +103,15 @@ namespace detail {
 
     template<typename R, typename C>
     static void heapsort(R range, C &compare) {
-        RangeSize<R> len = range.size();
-        RangeSize<R> st = (len - 2) / 2;
+        range_size_t<R> len = range.size();
+        range_size_t<R> st = (len - 2) / 2;
         for (;;) {
             detail::hs_sift_down(range, st, len - 1, compare);
             if (st-- == 0) {
                 break;
             }
         }
-        RangeSize<R> e = len - 1;
+        range_size_t<R> e = len - 1;
         while (e > 0) {
             using std::swap;
             swap(range[e], range[0]);
@@ -121,7 +121,7 @@ namespace detail {
     }
 
     template<typename R, typename C>
-    static void introloop(R range, C &compare, RangeSize<R> depth) {
+    static void introloop(R range, C &compare, range_size_t<R> depth) {
         using std::swap;
         if (range.size() <= 10) {
             detail::insort(range, compare);
@@ -132,7 +132,7 @@ namespace detail {
             return;
         }
         swap(range[range.size() / 2], range.back());
-        RangeSize<R> pi = 0;
+        range_size_t<R> pi = 0;
         R pr = range;
         pr.pop_back();
         for (; !pr.empty(); pr.pop_front()) {
@@ -151,7 +151,7 @@ namespace detail {
     inline void introsort(R range, C &compare) {
         detail::introloop(
             range, compare,
-            static_cast<RangeSize<R>>(2 * (log(range.size()) / log(2)))
+            static_cast<range_size_t<R>>(2 * (log(range.size()) / log(2)))
         );
     }
 } /* namespace detail */
@@ -172,7 +172,7 @@ inline auto sort_cmp(C &&compare) {
 
 template<typename R>
 inline R sort(R range) {
-    return sort_cmp(range, std::less<RangeValue<R>>());
+    return sort_cmp(range, std::less<range_value_t<R>>());
 }
 inline auto sort() {
     return [](auto &&obj) { return sort(std::forward<decltype(obj)>(obj)); };
@@ -531,8 +531,8 @@ inline auto find_one_of(R &&values) {
 }
 
 template<typename R, typename T>
-inline RangeSize<R> count(R range, T const &v) {
-    RangeSize<R> ret = 0;
+inline range_size_t<R> count(R range, T const &v) {
+    range_size_t<R> ret = 0;
     for (; !range.empty(); range.pop_front()) {
         if (range.front() == v) {
             ++ret;
@@ -549,8 +549,8 @@ inline auto count(T &&v) {
 }
 
 template<typename R, typename P>
-inline RangeSize<R> count_if(R range, P pred) {
-    RangeSize<R> ret = 0;
+inline range_size_t<R> count_if(R range, P pred) {
+    range_size_t<R> ret = 0;
     for (; !range.empty(); range.pop_front()) {
         if (pred(range.front())) {
             ++ret;
@@ -567,8 +567,8 @@ inline auto count_if(F &&func) {
 }
 
 template<typename R, typename P>
-inline RangeSize<R> count_if_not(R range, P pred) {
-    RangeSize<R> ret = 0;
+inline range_size_t<R> count_if_not(R range, P pred) {
+    range_size_t<R> ret = 0;
     for (; !range.empty(); range.pop_front()) {
         if (!pred(range.front())) {
             ++ret;
@@ -775,52 +775,52 @@ inline auto foldr_f(T &&init, F &&func) {
 }
 
 template<typename T, typename F, typename R>
-struct MapRange: InputRange<MapRange<T, F, R>> {
-    using Category   = RangeCategory<T>;
-    using Value      = R;
-    using Reference  = R;
-    using Size       = RangeSize<T>;
-    using Difference = RangeDifference<T>;
+struct map_range: input_range<map_range<T, F, R>> {
+    using range_category  = range_category_t<T>;
+    using value_type      = R;
+    using reference       = R;
+    using size_type       = range_size_t<T>;
+    using difference_type = range_difference_t<T>;
 
 private:
     T p_range;
     std::decay_t<F> p_func;
 
 public:
-    MapRange() = delete;
+    map_range() = delete;
     template<typename FF>
-    MapRange(T const &range, FF &&func):
+    map_range(T const &range, FF &&func):
         p_range(range), p_func(std::forward<FF>(func)) {}
-    MapRange(MapRange const &it):
+    map_range(map_range const &it):
         p_range(it.p_range), p_func(it.p_func) {}
-    MapRange(MapRange &&it):
+    map_range(map_range &&it):
         p_range(std::move(it.p_range)), p_func(std::move(it.p_func)) {}
 
-    MapRange &operator=(MapRange const &v) {
+    map_range &operator=(map_range const &v) {
         p_range = v.p_range;
         p_func  = v.p_func;
         return *this;
     }
-    MapRange &operator=(MapRange &&v) {
+    map_range &operator=(map_range &&v) {
         p_range = std::move(v.p_range);
         p_func  = std::move(v.p_func);
         return *this;
     }
 
     bool empty() const { return p_range.empty(); }
-    RangeSize<T> size() const { return p_range.size(); }
+    range_size_t<T> size() const { return p_range.size(); }
 
-    bool equals_front(MapRange const &r) const {
+    bool equals_front(map_range const &r) const {
         return p_range.equals_front(r.p_range);
     }
-    bool equals_back(MapRange const &r) const {
+    bool equals_back(map_range const &r) const {
         return p_range.equals_front(r.p_range);
     }
 
-    RangeDifference<T> distance_front(MapRange const &r) const {
+    range_difference_t<T> distance_front(map_range const &r) const {
         return p_range.distance_front(r.p_range);
     }
-    RangeDifference<T> distance_back(MapRange const &r) const {
+    range_difference_t<T> distance_back(map_range const &r) const {
         return p_range.distance_back(r.p_range);
     }
 
@@ -830,42 +830,42 @@ public:
     bool push_front() { return p_range.pop_front(); }
     bool push_back() { return p_range.push_back(); }
 
-    RangeSize<T> pop_front_n(RangeSize<T> n) {
+    range_size_t<T> pop_front_n(range_size_t<T> n) {
         p_range.pop_front_n(n);
     }
-    RangeSize<T> pop_back_n(RangeSize<T> n) {
+    range_size_t<T> pop_back_n(range_size_t<T> n) {
         p_range.pop_back_n(n);
     }
 
-    RangeSize<T> push_front_n(RangeSize<T> n) {
+    range_size_t<T> push_front_n(range_size_t<T> n) {
         return p_range.push_front_n(n);
     }
-    RangeSize<T> push_back_n(RangeSize<T> n) {
+    range_size_t<T> push_back_n(range_size_t<T> n) {
         return p_range.push_back_n(n);
     }
 
     R front() const { return p_func(p_range.front()); }
     R back() const { return p_func(p_range.back()); }
 
-    R operator[](RangeSize<T> idx) const {
+    R operator[](range_size_t<T> idx) const {
         return p_func(p_range[idx]);
     }
 
-    MapRange slice(RangeSize<T> start, RangeSize<T> end) {
-        return MapRange(p_range.slice(start, end), p_func);
+    map_range slice(range_size_t<T> start, range_size_t<T> end) {
+        return map_range(p_range.slice(start, end), p_func);
     }
 };
 
 namespace detail {
     template<typename R, typename F>
     using MapReturnType = decltype(
-        std::declval<F>()(std::declval<RangeReference<R>>())
+        std::declval<F>()(std::declval<range_reference_t<R>>())
     );
 }
 
 template<typename R, typename F>
-inline MapRange<R, F, detail::MapReturnType<R, F>> map(R range, F func) {
-    return MapRange<R, F, detail::MapReturnType<R, F>>(range, std::move(func));
+inline map_range<R, F, detail::MapReturnType<R, F>> map(R range, F func) {
+    return map_range<R, F, detail::MapReturnType<R, F>>(range, std::move(func));
 }
 
 template<typename F>
@@ -876,12 +876,14 @@ inline auto map(F &&func) {
 }
 
 template<typename T, typename F>
-struct FilterRange: InputRange<FilterRange<T, F>> {
-    using Category   = std::common_type_t<RangeCategory<T>, ForwardRangeTag>;
-    using Value      = RangeValue<T>;
-    using Reference  = RangeReference<T>;
-    using Size       = RangeSize<T>;
-    using Difference = RangeDifference<T>;
+struct filter_range: input_range<filter_range<T, F>> {
+    using range_category  = std::common_type_t<
+        range_category_t<T>, forward_range_tag
+    >;
+    using value_type      = range_value_t<T>;
+    using reference       = range_reference_t<T>;
+    using size_type       = range_size_t<T>;
+    using difference_type = range_difference_t<T>;
 
 private:
     T p_range;
@@ -894,31 +896,31 @@ private:
     }
 
 public:
-    FilterRange() = delete;
+    filter_range() = delete;
     template<typename P>
-    FilterRange(T const &range, P &&pred):
+    filter_range(T const &range, P &&pred):
         p_range(range), p_pred(std::forward<P>(pred))
     {
         advance_valid();
     }
-    FilterRange(FilterRange const &it):
+    filter_range(filter_range const &it):
         p_range(it.p_range), p_pred(it.p_pred)
     {
         advance_valid();
     }
-    FilterRange(FilterRange &&it):
+    filter_range(filter_range &&it):
         p_range(std::move(it.p_range)), p_pred(std::move(it.p_pred))
     {
         advance_valid();
     }
 
-    FilterRange &operator=(FilterRange const &v) {
+    filter_range &operator=(filter_range const &v) {
         p_range = v.p_range;
         p_pred  = v.p_pred;
         advance_valid();
         return *this;
     }
-    FilterRange &operator=(FilterRange &&v) {
+    filter_range &operator=(filter_range &&v) {
         p_range = std::move(v.p_range);
         p_pred  = std::move(v.p_pred);
         advance_valid();
@@ -927,7 +929,7 @@ public:
 
     bool empty() const { return p_range.empty(); }
 
-    bool equals_front(FilterRange const &r) const {
+    bool equals_front(filter_range const &r) const {
         return p_range.equals_front(r.p_range);
     }
 
@@ -937,19 +939,19 @@ public:
         return ret;
     }
 
-    RangeReference<T> front() const { return p_range.front(); }
+    range_reference_t<T> front() const { return p_range.front(); }
 };
 
 namespace detail {
     template<typename R, typename P>
     using FilterPred = std::enable_if_t<std::is_same_v<
-        decltype(std::declval<P>()(std::declval<RangeReference<R>>())), bool
+        decltype(std::declval<P>()(std::declval<range_reference_t<R>>())), bool
     >, P>;
 }
 
 template<typename R, typename P>
-inline FilterRange<R, detail::FilterPred<R, P>> filter(R range, P pred) {
-    return FilterRange<R, P>(range, std::move(pred));
+inline filter_range<R, detail::FilterPred<R, P>> filter(R range, P pred) {
+    return filter_range<R, P>(range, std::move(pred));
 }
 
 template<typename F>

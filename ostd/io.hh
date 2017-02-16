@@ -152,11 +152,11 @@ static FileStream err(stderr);
 
 namespace detail {
     /* lightweight output range for direct stdout */
-    struct StdoutRange: OutputRange<StdoutRange> {
-        using Value      = char;
-        using Reference  = char &;
-        using Size       = size_t;
-        using Difference = ptrdiff_t;
+    struct StdoutRange: output_range<StdoutRange> {
+        using value_type      = char;
+        using reference       = char &;
+        using size_type       = size_t;
+        using difference_type = ptrdiff_t;
 
         StdoutRange() {}
         bool put(char c) {

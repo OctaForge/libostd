@@ -21,244 +21,245 @@
 
 namespace ostd {
 
-struct InputRangeTag {};
-struct OutputRangeTag {};
-struct ForwardRangeTag: InputRangeTag {};
-struct BidirectionalRangeTag: ForwardRangeTag {};
-struct RandomAccessRangeTag: BidirectionalRangeTag {};
-struct FiniteRandomAccessRangeTag: RandomAccessRangeTag {};
-struct ContiguousRangeTag: FiniteRandomAccessRangeTag {};
+struct input_range_tag {};
+struct output_range_tag {};
+struct forward_range_tag: input_range_tag {};
+struct bidirectional_range_tag: forward_range_tag {};
+struct random_access_range_tag: bidirectional_range_tag {};
+struct finite_random_access_range_tag: random_access_range_tag {};
+struct ContiguousRangeTag: finite_random_access_range_tag {};
 
 template<typename T>
-struct RangeHalf;
+struct range_half;
 
-#define OSTD_RANGE_TRAIT(Name) \
+#define OSTD_RANGE_TRAIT(Name, Member) \
 namespace detail { \
     template<typename T> \
-    struct Range##Name##Test { \
+    struct range_##Name##_test { \
         template<typename U> \
-        static char test(std::remove_reference_t<typename U::Name> *); \
+        static char test(std::remove_reference_t<typename U::Member> *); \
         template<typename U> \
         static int test(...); \
         static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char)); \
     }; \
-    template<typename T, bool = Range##Name##Test<T>::value> \
-    struct Range##Name##Base {}; \
+    template<typename T, bool = range_##Name##_test<T>::value> \
+    struct range_##Name##_base {}; \
     template<typename T> \
-    struct Range##Name##Base<T, true> { \
-        using Type = typename T::Name; \
+    struct range_##Name##_base<T, true> { \
+        using type = typename T::Member; \
     }; \
 } \
 template<typename T> \
-using Range##Name = typename detail::Range##Name##Base<T>::Type;
+using range_##Name##_t = typename detail::range_##Name##_base<T>::type;
 
-OSTD_RANGE_TRAIT(Category)
-OSTD_RANGE_TRAIT(Size)
-OSTD_RANGE_TRAIT(Value)
-OSTD_RANGE_TRAIT(Reference)
-OSTD_RANGE_TRAIT(Difference)
+OSTD_RANGE_TRAIT(category, range_category)
+OSTD_RANGE_TRAIT(size, size_type)
+OSTD_RANGE_TRAIT(value, value_type)
+OSTD_RANGE_TRAIT(reference, reference)
+OSTD_RANGE_TRAIT(difference, difference_type)
 
 #undef OSTD_RANGE_TRAIT
 
 namespace detail {
     template<typename U>
-    static char is_range_test(
-        typename U::Category *, typename U::Size *,
-        typename U::Difference *, typename U::Value *,
-        std::remove_reference_t<typename U::Reference> *
+    static char is_range_test_f(
+        typename U::range_category *, typename U::size_type *,
+        typename U::difference_type *, typename U::value_type *,
+        std::remove_reference_t<typename U::reference> *
     );
     template<typename U>
-    static int is_range_test(...);
+    static int is_range_test_f(...);
 
-    template<typename T> constexpr bool IsRangeTest =
-        (sizeof(is_range_test<T>(0, 0, 0, 0, 0)) == sizeof(char));
+    template<typename T> constexpr bool is_range_test =
+        (sizeof(is_range_test_f<T>(0, 0, 0, 0, 0)) == sizeof(char));
 }
 
 // is input range
 
 namespace detail {
     template<typename T>
-    constexpr bool IsInputRangeCore =
-        std::is_convertible_v<RangeCategory<T>, InputRangeTag>;
+    constexpr bool is_input_range_core =
+        std::is_convertible_v<range_category_t<T>, input_range_tag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>>
-    constexpr bool IsInputRangeBase = false;
+    template<typename T, bool = detail::is_range_test<T>>
+    constexpr bool is_input_range_base = false;
 
     template<typename T>
-    constexpr bool IsInputRangeBase<T, true> = detail::IsInputRangeCore<T>;
+    constexpr bool is_input_range_base<T, true> = detail::is_input_range_core<T>;
 }
 
 template<typename T>
-constexpr bool IsInputRange = detail::IsInputRangeBase<T>;
+constexpr bool is_input_range = detail::is_input_range_base<T>;
 
 // is forward range
 
 namespace detail {
     template<typename T>
-    constexpr bool IsForwardRangeCore =
-        std::is_convertible_v<RangeCategory<T>, ForwardRangeTag>;
+    constexpr bool is_forward_range_core =
+        std::is_convertible_v<range_category_t<T>, forward_range_tag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>>
-    constexpr bool IsForwardRangeBase = false;
+    template<typename T, bool = detail::is_range_test<T>>
+    constexpr bool is_forward_range_base = false;
 
     template<typename T>
-    constexpr bool IsForwardRangeBase<T, true> = detail::IsForwardRangeCore<T>;
+    constexpr bool is_forward_range_base<T, true> = detail::is_forward_range_core<T>;
 }
 
 template<typename T>
-constexpr bool IsForwardRange = detail::IsForwardRangeBase<T>;
+constexpr bool is_forward_range = detail::is_forward_range_base<T>;
 
 // is bidirectional range
 
 namespace detail {
     template<typename T>
-    constexpr bool IsBidirectionalRangeCore =
-        std::is_convertible_v<RangeCategory<T>, BidirectionalRangeTag>;
+    constexpr bool is_bidirectional_range_core =
+        std::is_convertible_v<range_category_t<T>, bidirectional_range_tag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>>
-    constexpr bool IsBidirectionalRangeBase = false;
+    template<typename T, bool = detail::is_range_test<T>>
+    constexpr bool is_bidirectional_range_base = false;
 
     template<typename T>
-    constexpr bool IsBidirectionalRangeBase<T, true> =
-        detail::IsBidirectionalRangeCore<T>;
+    constexpr bool is_bidirectional_range_base<T, true> =
+        detail::is_bidirectional_range_core<T>;
 }
 
-template<typename T> constexpr bool IsBidirectionalRange =
-    detail::IsBidirectionalRangeBase<T>;
+template<typename T> constexpr bool is_bidirectional_range =
+    detail::is_bidirectional_range_base<T>;
 
 // is random access range
 
 namespace detail {
     template<typename T>
-    constexpr bool IsRandomAccessRangeCore =
-        std::is_convertible_v<RangeCategory<T>, RandomAccessRangeTag>;
+    constexpr bool is_random_access_range_core =
+        std::is_convertible_v<range_category_t<T>, random_access_range_tag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>>
-    constexpr bool IsRandomAccessRangeBase = false;
+    template<typename T, bool = detail::is_range_test<T>>
+    constexpr bool is_random_access_range_base = false;
 
     template<typename T>
-    constexpr bool IsRandomAccessRangeBase<T, true> =
-        detail::IsRandomAccessRangeCore<T>;
+    constexpr bool is_random_access_range_base<T, true> =
+        detail::is_random_access_range_core<T>;
 }
 
-template<typename T> constexpr bool IsRandomAccessRange =
-    detail::IsRandomAccessRangeBase<T>;
+template<typename T> constexpr bool is_random_access_range =
+    detail::is_random_access_range_base<T>;
 
 // is finite random access range
 
 namespace detail {
     template<typename T>
-    constexpr bool IsFiniteRandomAccessRangeCore =
-        std::is_convertible_v<RangeCategory<T>, FiniteRandomAccessRangeTag>;
+    constexpr bool is_finite_random_access_range_core =
+        std::is_convertible_v<range_category_t<T>, finite_random_access_range_tag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>>
-    constexpr bool IsFiniteRandomAccessRangeBase = false;
+    template<typename T, bool = detail::is_range_test<T>>
+    constexpr bool is_finite_random_access_range_base = false;
 
     template<typename T>
-    constexpr bool IsFiniteRandomAccessRangeBase<T, true> =
-        detail::IsFiniteRandomAccessRangeCore<T>;
+    constexpr bool is_finite_random_access_range_base<T, true> =
+        detail::is_finite_random_access_range_core<T>;
 }
 
-template<typename T> constexpr bool IsFiniteRandomAccessRange =
-    detail::IsFiniteRandomAccessRangeBase<T>;
+template<typename T> constexpr bool is_finite_random_access_range =
+    detail::is_finite_random_access_range_base<T>;
 
 // is infinite random access range
 
-template<typename T> constexpr bool IsInfiniteRandomAccessRange =
-    IsRandomAccessRange<T> && !IsFiniteRandomAccessRange<T>;
+template<typename T> constexpr bool is_infinite_random_access_range =
+    is_random_access_range<T> && !is_finite_random_access_range<T>;
 
 // is contiguous range
 
 namespace detail {
     template<typename T>
-    constexpr bool IsContiguousRangeCore =
-        std::is_convertible_v<RangeCategory<T>, ContiguousRangeTag>;
+    constexpr bool is_contiguous_range_core =
+        std::is_convertible_v<range_category_t<T>, ContiguousRangeTag>;
 
-    template<typename T, bool = detail::IsRangeTest<T>>
-    constexpr bool IsContiguousRangeBase = false;
+    template<typename T, bool = detail::is_range_test<T>>
+    constexpr bool is_contiguous_range_base = false;
 
     template<typename T>
-    constexpr bool IsContiguousRangeBase<T, true> =
-        detail::IsContiguousRangeCore<T>;
+    constexpr bool is_contiguous_range_base<T, true> =
+        detail::is_contiguous_range_core<T>;
 }
 
-template<typename T> constexpr bool IsContiguousRange =
-    detail::IsContiguousRangeBase<T>;
+template<typename T> constexpr bool is_contiguous_range =
+    detail::is_contiguous_range_base<T>;
 
 // is output range
 
 namespace detail {
     template<typename T, typename P>
-    struct OutputRangeTest {
+    struct output_range_test {
         template<typename U, bool (U::*)(P)>
-        struct Test {};
+        struct test_t {};
         template<typename U>
-        static char test(Test<U, &U::put> *);
+        static char test(test_t<U, &U::put> *);
         template<typename U>
         static int test(...);
         static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
     };
 
     template<typename T>
-    constexpr bool IsOutputRangeCore =
-        std::is_convertible_v<RangeCategory<T>, OutputRangeTag> || (
-            IsInputRange<T> && (
-                detail::OutputRangeTest<T, RangeValue<T> const &>::value ||
-                detail::OutputRangeTest<T, RangeValue<T>      &&>::value ||
-                detail::OutputRangeTest<T, RangeValue<T>        >::value
+    constexpr bool is_output_range_core =
+        std::is_convertible_v<range_category_t<T>, output_range_tag> || (
+            is_input_range<T> && (
+                detail::output_range_test<T, range_value_t<T> const &>::value ||
+                detail::output_range_test<T, range_value_t<T>      &&>::value ||
+                detail::output_range_test<T, range_value_t<T>        >::value
             )
         );
 
-    template<typename T, bool = detail::IsRangeTest<T>>
-    constexpr bool IsOutputRangeBase = false;
+    template<typename T, bool = detail::is_range_test<T>>
+    constexpr bool is_output_range_base = false;
 
     template<typename T>
-    constexpr bool IsOutputRangeBase<T, true> = detail::IsOutputRangeCore<T>;
+    constexpr bool is_output_range_base<T, true> = detail::is_output_range_core<T>;
 }
 
-template<typename T> constexpr bool IsOutputRange = detail::IsOutputRangeBase<T>;
+template<typename T>
+constexpr bool is_output_range = detail::is_output_range_base<T>;
 
 namespace detail {
     // range iterator
 
     template<typename T>
-    struct RangeIterator {
-        RangeIterator(): p_range(), p_init(false) {}
-        explicit RangeIterator(T const &range): p_range(), p_init(true) {
+    struct range_iterator {
+        range_iterator(): p_range(), p_init(false) {}
+        explicit range_iterator(T const &range): p_range(), p_init(true) {
             ::new(&get_ref()) T(range);
         }
-        explicit RangeIterator(T &&range): p_range(), p_init(true) {
+        explicit range_iterator(T &&range): p_range(), p_init(true) {
             ::new(&get_ref()) T(std::move(range));
         }
-        RangeIterator(const RangeIterator &v): p_range(), p_init(true) {
+        range_iterator(const range_iterator &v): p_range(), p_init(true) {
             ::new(&get_ref()) T(v.get_ref());
         }
-        RangeIterator(RangeIterator &&v): p_range(), p_init(true) {
+        range_iterator(range_iterator &&v): p_range(), p_init(true) {
             ::new(&get_ref()) T(std::move(v.get_ref()));
         }
-        RangeIterator &operator=(const RangeIterator &v) {
+        range_iterator &operator=(const range_iterator &v) {
             destroy();
             ::new(&get_ref()) T(v.get_ref());
             p_init = true;
             return *this;
         }
-        RangeIterator &operator=(RangeIterator &&v) {
+        range_iterator &operator=(range_iterator &&v) {
             destroy();
             swap(v);
             return *this;
         }
-        ~RangeIterator() {
+        ~range_iterator() {
             destroy();
         }
-        RangeIterator &operator++() {
+        range_iterator &operator++() {
             get_ref().pop_front();
             return *this;
         }
-        RangeReference<T> operator*() const {
+        range_reference_t<T> operator*() const {
             return get_ref().front();
         }
-        bool operator!=(RangeIterator) const { return !get_ref().empty(); }
-        void swap(RangeIterator &v) {
+        bool operator!=(range_iterator) const { return !get_ref().empty(); }
+        void swap(range_iterator &v) {
             using std::swap;
             swap(get_ref(). v.get_ref());
             swap(p_init, v.p_init);
@@ -280,15 +281,15 @@ namespace detail {
 // range half
 
 template<typename T>
-struct HalfRange;
+struct half_range;
 
 namespace detail {
-    template<typename R, bool = IsBidirectionalRange<typename R::Range>>
+    template<typename R, bool = is_bidirectional_range<typename R::Range>>
     struct RangeAdd;
 
     template<typename R>
     struct RangeAdd<R, true> {
-        using Diff = RangeDifference<typename R::Range>;
+        using Diff = range_difference_t<typename R::Range>;
 
         static Diff add_n(R &half, Diff n) {
             if (n < 0) {
@@ -306,7 +307,7 @@ namespace detail {
 
     template<typename R>
     struct RangeAdd<R, false> {
-        using Diff = RangeDifference<typename R::Range>;
+        using Diff = range_difference_t<typename R::Range>;
 
         static Diff add_n(R &half, Diff n) {
             if (n < 0) {
@@ -325,60 +326,60 @@ namespace detail {
 
 namespace detail {
     template<typename>
-    struct RangeIteratorTag {
+    struct range_iteratorTag {
         /* better range types all become random access iterators */
         using Type = std::random_access_iterator_tag;
     };
 
     template<>
-    struct RangeIteratorTag<InputRangeTag> {
+    struct range_iteratorTag<input_range_tag> {
         using Type = std::input_iterator_tag;
     };
 
     template<>
-    struct RangeIteratorTag<OutputRangeTag> {
+    struct range_iteratorTag<output_range_tag> {
         using Type = std::output_iterator_tag;
     };
 
     template<>
-    struct RangeIteratorTag<ForwardRangeTag> {
+    struct range_iteratorTag<forward_range_tag> {
         using Type = std::forward_iterator_tag;
     };
 
     template<>
-    struct RangeIteratorTag<BidirectionalRangeTag> {
+    struct range_iteratorTag<bidirectional_range_tag> {
         using Type = std::bidirectional_iterator_tag;
     };
 }
 
 template<typename T>
-struct RangeHalf {
+struct range_half {
 private:
     T p_range;
 public:
     using Range = T;
 
-    using iterator_category = typename detail::RangeIteratorTag<T>::Type;
-    using value_type        = RangeValue<T>;
-    using difference_type   = RangeDifference<T>;
-    using pointer           = RangeValue<T> *;
-    using reference         = RangeReference<T>;
+    using iterator_category = typename detail::range_iteratorTag<T>::Type;
+    using value_type        = range_value_t<T>;
+    using difference_type   = range_difference_t<T>;
+    using pointer           = range_value_t<T> *;
+    using reference         = range_reference_t<T>;
 
-    RangeHalf() = delete;
-    RangeHalf(T const &range): p_range(range) {}
+    range_half() = delete;
+    range_half(T const &range): p_range(range) {}
 
     template<typename U, typename = std::enable_if_t<std::is_convertible_v<U, T>>>
-    RangeHalf(RangeHalf<U> const &half): p_range(half.p_range) {}
+    range_half(range_half<U> const &half): p_range(half.p_range) {}
 
-    RangeHalf(RangeHalf const &half): p_range(half.p_range) {}
-    RangeHalf(RangeHalf &&half): p_range(std::move(half.p_range)) {}
+    range_half(range_half const &half): p_range(half.p_range) {}
+    range_half(range_half &&half): p_range(std::move(half.p_range)) {}
 
-    RangeHalf &operator=(RangeHalf const &half) {
+    range_half &operator=(range_half const &half) {
         p_range = half.p_range;
         return *this;
     }
 
-    RangeHalf &operator=(RangeHalf &&half) {
+    range_half &operator=(range_half &&half) {
         p_range = std::move(half.p_range);
         return *this;
     }
@@ -386,110 +387,110 @@ public:
     bool next() { return p_range.pop_front(); }
     bool prev() { return p_range.push_front(); }
 
-    RangeSize<T> next_n(RangeSize<T> n) {
+    range_size_t<T> next_n(range_size_t<T> n) {
         return p_range.pop_front_n(n);
     }
-    RangeSize<T> prev_n(RangeSize<T> n) {
+    range_size_t<T> prev_n(range_size_t<T> n) {
         return p_range.push_front_n(n);
     }
 
-    RangeDifference<T> add_n(RangeDifference<T> n) {
-        return detail::RangeAdd<RangeHalf<T>>::add_n(*this, n);
+    range_difference_t<T> add_n(range_difference_t<T> n) {
+        return detail::RangeAdd<range_half<T>>::add_n(*this, n);
     }
-    RangeDifference<T> sub_n(RangeDifference<T> n) {
-        return detail::RangeAdd<RangeHalf<T>>::sub_n(*this, n);
+    range_difference_t<T> sub_n(range_difference_t<T> n) {
+        return detail::RangeAdd<range_half<T>>::sub_n(*this, n);
     }
 
-    RangeReference<T> get() const {
+    range_reference_t<T> get() const {
         return p_range.front();
     }
 
-    RangeDifference<T> distance(RangeHalf const &half) const {
+    range_difference_t<T> distance(range_half const &half) const {
         return p_range.distance_front(half.p_range);
     }
 
-    bool equals(RangeHalf const &half) const {
+    bool equals(range_half const &half) const {
         return p_range.equals_front(half.p_range);
     }
 
-    bool operator==(RangeHalf const &half) const {
+    bool operator==(range_half const &half) const {
         return equals(half);
     }
-    bool operator!=(RangeHalf const &half) const {
+    bool operator!=(range_half const &half) const {
         return !equals(half);
     }
 
     /* iterator like interface */
 
-    RangeReference<T> operator*() const {
+    range_reference_t<T> operator*() const {
         return p_range.front();
     }
 
-    RangeReference<T> operator[](RangeSize<T> idx) const {
+    range_reference_t<T> operator[](range_size_t<T> idx) const {
         return p_range[idx];
     }
 
-    RangeHalf &operator++() {
+    range_half &operator++() {
         next();
         return *this;
     }
-    RangeHalf operator++(int) {
-        RangeHalf tmp(*this);
+    range_half operator++(int) {
+        range_half tmp(*this);
         next();
         return tmp;
     }
 
-    RangeHalf &operator--() {
+    range_half &operator--() {
         prev();
         return *this;
     }
-    RangeHalf operator--(int) {
-        RangeHalf tmp(*this);
+    range_half operator--(int) {
+        range_half tmp(*this);
         prev();
         return tmp;
     }
 
-    RangeHalf operator+(RangeDifference<T> n) const {
-        RangeHalf tmp(*this);
+    range_half operator+(range_difference_t<T> n) const {
+        range_half tmp(*this);
         tmp.add_n(n);
         return tmp;
     }
-    RangeHalf operator-(RangeDifference<T> n) const {
-        RangeHalf tmp(*this);
+    range_half operator-(range_difference_t<T> n) const {
+        range_half tmp(*this);
         tmp.sub_n(n);
         return tmp;
     }
 
-    RangeHalf &operator+=(RangeDifference<T> n) {
+    range_half &operator+=(range_difference_t<T> n) {
         add_n(n);
         return *this;
     }
-    RangeHalf &operator-=(RangeDifference<T> n) {
+    range_half &operator-=(range_difference_t<T> n) {
         sub_n(n);
         return *this;
     }
 
     T iter() const { return p_range; }
 
-    HalfRange<RangeHalf> iter(RangeHalf const &other) const {
-        return HalfRange<RangeHalf>(*this, other);
+    half_range<range_half> iter(range_half const &other) const {
+        return half_range<range_half>(*this, other);
     }
 
-    RangeValue<T> *data() { return p_range.data(); }
-    RangeValue<T> const *data() const { return p_range.data(); }
+    range_value_t<T> *data() { return p_range.data(); }
+    range_value_t<T> const *data() const { return p_range.data(); }
 };
 
 template<typename R>
-inline RangeDifference<R> operator-(
-    RangeHalf<R> const &lhs, RangeHalf<R> const &rhs
+inline range_difference_t<R> operator-(
+    range_half<R> const &lhs, range_half<R> const &rhs
 ) {
     return rhs.distance(lhs);
 }
 
 namespace detail {
     template<typename R>
-    RangeSize<R> pop_front_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i) {
+    range_size_t<R> pop_front_n(R &range, range_size_t<R> n) {
+        for (range_size_t<R> i = 0; i < n; ++i) {
             if (!range.pop_front()) {
                 return i;
             }
@@ -498,8 +499,8 @@ namespace detail {
     }
 
     template<typename R>
-    RangeSize<R> pop_back_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i) {
+    range_size_t<R> pop_back_n(R &range, range_size_t<R> n) {
+        for (range_size_t<R> i = 0; i < n; ++i) {
             if (!range.pop_back()) {
                 return i;
             }
@@ -508,8 +509,8 @@ namespace detail {
     }
 
     template<typename R>
-    RangeSize<R> push_front_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i) {
+    range_size_t<R> push_front_n(R &range, range_size_t<R> n) {
+        for (range_size_t<R> i = 0; i < n; ++i) {
             if (!range.push_front()) {
                 return i;
             }
@@ -518,8 +519,8 @@ namespace detail {
     }
 
     template<typename R>
-    RangeSize<R> push_back_n(R &range, RangeSize<R> n) {
-        for (RangeSize<R> i = 0; i < n; ++i) {
+    range_size_t<R> push_back_n(R &range, range_size_t<R> n) {
+        for (range_size_t<R> i = 0; i < n; ++i) {
             if (!range.push_back()) {
                 return i;
             }
@@ -529,27 +530,27 @@ namespace detail {
 }
 
 template<typename>
-struct ReverseRange;
+struct reverse_range;
 template<typename>
-struct MoveRange;
+struct move_range;
 template<typename>
-struct EnumeratedRange;
+struct enumerated_range;
 template<typename>
-struct TakeRange;
+struct take_range;
 template<typename>
-struct ChunksRange;
+struct chunks_range;
 template<typename ...>
-struct JoinRange;
+struct join_range;
 template<typename ...>
-struct ZipRange;
+struct zip_range;
 
 template<typename B>
-struct InputRange {
-    detail::RangeIterator<B> begin() const {
-        return detail::RangeIterator<B>(*static_cast<B const *>(this));
+struct input_range {
+    detail::range_iterator<B> begin() const {
+        return detail::range_iterator<B>(*static_cast<B const *>(this));
     }
-    detail::RangeIterator<B> end() const {
-        return detail::RangeIterator<B>();
+    detail::range_iterator<B> end() const {
+        return detail::range_iterator<B>();
     }
 
     template<typename Size>
@@ -576,44 +577,44 @@ struct InputRange {
         return B(*static_cast<B const *>(this));
     }
 
-    ReverseRange<B> reverse() const {
-        return ReverseRange<B>(iter());
+    reverse_range<B> reverse() const {
+        return reverse_range<B>(iter());
     }
 
-    MoveRange<B> movable() const {
-        return MoveRange<B>(iter());
+    move_range<B> movable() const {
+        return move_range<B>(iter());
     }
 
-    EnumeratedRange<B> enumerate() const {
-        return EnumeratedRange<B>(iter());
-    }
-
-    template<typename Size>
-    TakeRange<B> take(Size n) const {
-        return TakeRange<B>(iter(), n);
+    enumerated_range<B> enumerate() const {
+        return enumerated_range<B>(iter());
     }
 
     template<typename Size>
-    ChunksRange<B> chunks(Size n) const {
-        return ChunksRange<B>(iter(), n);
+    take_range<B> take(Size n) const {
+        return take_range<B>(iter(), n);
+    }
+
+    template<typename Size>
+    chunks_range<B> chunks(Size n) const {
+        return chunks_range<B>(iter(), n);
     }
 
     template<typename R1, typename ...RR>
-    JoinRange<B, R1, RR...> join(R1 r1, RR ...rr) const {
-        return JoinRange<B, R1, RR...>(iter(), std::move(r1), std::move(rr)...);
+    join_range<B, R1, RR...> join(R1 r1, RR ...rr) const {
+        return join_range<B, R1, RR...>(iter(), std::move(r1), std::move(rr)...);
     }
 
     template<typename R1, typename ...RR>
-    ZipRange<B, R1, RR...> zip(R1 r1, RR ...rr) const {
-        return ZipRange<B, R1, RR...>(iter(), std::move(r1), std::move(rr)...);
+    zip_range<B, R1, RR...> zip(R1 r1, RR ...rr) const {
+        return zip_range<B, R1, RR...>(iter(), std::move(r1), std::move(rr)...);
     }
 
-    RangeHalf<B> half() const {
-        return RangeHalf<B>(iter());
+    range_half<B> half() const {
+        return range_half<B>(iter());
     }
 
     template<typename OR, typename Size>
-    std::enable_if_t<IsOutputRange<OR>, Size> copy(OR &&orange, Size n = -1) {
+    std::enable_if_t<is_output_range<OR>, Size> copy(OR &&orange, Size n = -1) {
         B r(*static_cast<B const *>(this));
         Size on = n;
         for (; n && !r.empty(); --n) {
@@ -716,15 +717,15 @@ struct InputRange {
 };
 
 template<typename B>
-struct OutputRange {
-    using Category = OutputRangeTag;
+struct output_range {
+    using range_category = output_range_tag;
 };
 
 template<typename R>
-inline RangeSize<R> range_put_n(
-    R &range, RangeValue<R> const *p, RangeSize<R> n
+inline range_size_t<R> range_put_n(
+    R &range, range_value_t<R> const *p, range_size_t<R> n
 ) {
-    RangeSize<R> on = n;
+    range_size_t<R> on = n;
     for (; n && range.put(*p++); --n);
     return (on - n);
 }
@@ -857,40 +858,39 @@ inline auto citer(T const &r) -> decltype(ranged_traits<T const>::iter(r)) {
 }
 
 template<typename T>
-struct HalfRange: InputRange<HalfRange<T>> {
-    using Category   = RangeCategory  <typename T::Range>;
-    using Value      = RangeValue     <typename T::Range>;
-    using Reference  = RangeReference <typename T::Range>;
-    using Size       = RangeSize      <typename T::Range>;
-    using Difference = RangeDifference<typename T::Range>;
+struct half_range: input_range<half_range<T>> {
+    using range_category  = range_category_t  <typename T::Range>;
+    using value_type      = range_value_t     <typename T::Range>;
+    using reference       = range_reference_t <typename T::Range>;
+    using size_type       = range_size_t      <typename T::Range>;
+    using difference_type = range_difference_t<typename T::Range>;
 
 private:
-    using Rtype = typename T::Range;
     T p_beg;
     T p_end;
 
 public:
-    HalfRange() = delete;
-    HalfRange(HalfRange const &range):
+    half_range() = delete;
+    half_range(half_range const &range):
         p_beg(range.p_beg), p_end(range.p_end)
     {}
-    HalfRange(HalfRange &&range):
+    half_range(half_range &&range):
         p_beg(std::move(range.p_beg)), p_end(std::move(range.p_end))
     {}
-    HalfRange(T const &beg, T const &end):
+    half_range(T const &beg, T const &end):
         p_beg(beg),p_end(end)
     {}
-    HalfRange(T &&beg, T &&end):
+    half_range(T &&beg, T &&end):
         p_beg(std::move(beg)), p_end(std::move(end))
     {}
 
-    HalfRange &operator=(HalfRange const &range) {
+    half_range &operator=(half_range const &range) {
         p_beg = range.p_beg;
         p_end = range.p_end;
         return *this;
     }
 
-    HalfRange &operator=(HalfRange &&range) {
+    half_range &operator=(half_range &&range) {
         p_beg = std::move(range.p_beg);
         p_end = std::move(range.p_end);
         return *this;
@@ -917,94 +917,94 @@ public:
         return p_end.next();
     }
 
-    RangeReference<Rtype> front() const { return *p_beg; }
-    RangeReference<Rtype> back() const { return *(p_end - 1); }
+    reference front() const { return *p_beg; }
+    reference back() const { return *(p_end - 1); }
 
-    bool equals_front(HalfRange const &range) const {
+    bool equals_front(half_range const &range) const {
         return p_beg == range.p_beg;
     }
-    bool equals_back(HalfRange const &range) const {
+    bool equals_back(half_range const &range) const {
         return p_end == range.p_end;
     }
 
-    RangeDifference<Rtype> distance_front(HalfRange const &range) const {
+    difference_type distance_front(half_range const &range) const {
         return range.p_beg - p_beg;
     }
-    RangeDifference<Rtype> distance_back(HalfRange const &range) const {
+    difference_type distance_back(half_range const &range) const {
         return range.p_end - p_end;
     }
 
-    RangeSize<Rtype> size() const { return p_end - p_beg; }
+    size_type size() const { return p_end - p_beg; }
 
-    HalfRange<Rtype> slice(RangeSize<Rtype> start, RangeSize<Rtype> end) const {
-        return HalfRange<Rtype>(p_beg + start, p_beg + end);
+    half_range slice(size_type start, size_type end) const {
+        return half_range{p_beg + start, p_beg + end};
     }
 
-    RangeReference<Rtype> operator[](RangeSize<Rtype> idx) const {
+    reference operator[](size_type idx) const {
         return p_beg[idx];
     }
 
-    bool put(RangeValue<Rtype> const &v) {
+    bool put(value_type const &v) {
         return p_beg.range().put(v);
     }
-    bool put(RangeValue<Rtype> &&v) {
+    bool put(value_type &&v) {
         return p_beg.range().put(std::move(v));
     }
 
-    RangeValue<Rtype> *data() { return p_beg.data(); }
-    RangeValue<Rtype> const *data() const { return p_beg.data(); }
+    value_type *data() { return p_beg.data(); }
+    value_type const *data() const { return p_beg.data(); }
 };
 
 template<typename T>
-struct ReverseRange: InputRange<ReverseRange<T>> {
-    using Category = std::common_type_t<
-        RangeCategory<T>, FiniteRandomAccessRangeTag
+struct reverse_range: input_range<reverse_range<T>> {
+    using range_category  = std::common_type_t<
+        range_category_t<T>, finite_random_access_range_tag
     >;
-    using Value      = RangeValue     <T>;
-    using Reference  = RangeReference <T>;
-    using Size       = RangeSize      <T>;
-    using Difference = RangeDifference<T>;
+    using value_type      = range_value_t     <T>;
+    using reference       = range_reference_t <T>;
+    using size_type       = range_size_t      <T>;
+    using difference_type = range_difference_t<T>;
 
 private:
     T p_range;
 
 public:
-    ReverseRange() = delete;
-    ReverseRange(T const &range): p_range(range) {}
-    ReverseRange(ReverseRange const &it): p_range(it.p_range) {}
-    ReverseRange(ReverseRange &&it): p_range(std::move(it.p_range)) {}
+    reverse_range() = delete;
+    reverse_range(T const &range): p_range(range) {}
+    reverse_range(reverse_range const &it): p_range(it.p_range) {}
+    reverse_range(reverse_range &&it): p_range(std::move(it.p_range)) {}
 
-    ReverseRange &operator=(ReverseRange const &v) {
+    reverse_range &operator=(reverse_range const &v) {
         p_range = v.p_range;
         return *this;
     }
-    ReverseRange &operator=(ReverseRange &&v) {
+    reverse_range &operator=(reverse_range &&v) {
         p_range = std::move(v.p_range);
         return *this;
     }
-    ReverseRange &operator=(T const &v) {
+    reverse_range &operator=(T const &v) {
         p_range = v;
         return *this;
     }
-    ReverseRange &operator=(T &&v) {
+    reverse_range &operator=(T &&v) {
         p_range = std::move(v);
         return *this;
     }
 
     bool empty() const { return p_range.empty(); }
-    Size size() const { return p_range.size(); }
+    size_type size() const { return p_range.size(); }
 
-    bool equals_front(ReverseRange const &r) const {
+    bool equals_front(reverse_range const &r) const {
         return p_range.equals_back(r.p_range);
     }
-    bool equals_back(ReverseRange const &r) const {
+    bool equals_back(reverse_range const &r) const {
         return p_range.equals_front(r.p_range);
     }
 
-    RangeDifference<T> distance_front(ReverseRange const &r) const {
+    difference_type distance_front(reverse_range const &r) const {
         return -p_range.distance_back(r.p_range);
     }
-    RangeDifference<T> distance_back(ReverseRange const &r) const {
+    difference_type distance_back(reverse_range const &r) const {
         return -p_range.distance_front(r.p_range);
     }
 
@@ -1014,73 +1014,73 @@ public:
     bool push_front() { return p_range.push_back(); }
     bool push_back() { return p_range.push_front(); }
 
-    Size pop_front_n(Size n) { return p_range.pop_front_n(n); }
-    Size pop_back_n(Size n) { return p_range.pop_back_n(n); }
+    size_type pop_front_n(size_type n) { return p_range.pop_front_n(n); }
+    size_type pop_back_n(size_type n) { return p_range.pop_back_n(n); }
 
-    Size push_front_n(Size n) { return p_range.push_front_n(n); }
-    Size push_back_n(Size n) { return p_range.push_back_n(n); }
+    size_type push_front_n(size_type n) { return p_range.push_front_n(n); }
+    size_type push_back_n(size_type n) { return p_range.push_back_n(n); }
 
-    Reference front() const { return p_range.back(); }
-    Reference back() const { return p_range.front(); }
+    reference front() const { return p_range.back(); }
+    reference back() const { return p_range.front(); }
 
-    Reference operator[](Size i) const { return p_range[size() - i - 1]; }
+    reference operator[](size_type i) const { return p_range[size() - i - 1]; }
 
-    ReverseRange<T> slice(Size start, Size end) const {
-        Size len = p_range.size();
-        return ReverseRange<T>(p_range.slice(len - end, len - start));
+    reverse_range slice(size_type start, size_type end) const {
+        size_type len = p_range.size();
+        return reverse_range{p_range.slice(len - end, len - start)};
     }
 };
 
 template<typename T>
-struct MoveRange: InputRange<MoveRange<T>> {
-    using Category = std::common_type_t<
-        RangeCategory<T>, FiniteRandomAccessRangeTag
+struct move_range: input_range<move_range<T>> {
+    using range_category  = std::common_type_t<
+        range_category_t<T>, finite_random_access_range_tag
     >;
-    using Value      = RangeValue     <T>;
-    using Reference  = RangeValue     <T> &&;
-    using Size       = RangeSize      <T>;
-    using Difference = RangeDifference<T>;
+    using value_type      = range_value_t     <T>;
+    using reference       = range_value_t     <T> &&;
+    using size_type       = range_size_t      <T>;
+    using difference_type = range_difference_t<T>;
 
 private:
     T p_range;
 
 public:
-    MoveRange() = delete;
-    MoveRange(T const &range): p_range(range) {}
-    MoveRange(MoveRange const &it): p_range(it.p_range) {}
-    MoveRange(MoveRange &&it): p_range(std::move(it.p_range)) {}
+    move_range() = delete;
+    move_range(T const &range): p_range(range) {}
+    move_range(move_range const &it): p_range(it.p_range) {}
+    move_range(move_range &&it): p_range(std::move(it.p_range)) {}
 
-    MoveRange &operator=(MoveRange const &v) {
+    move_range &operator=(move_range const &v) {
         p_range = v.p_range;
         return *this;
     }
-    MoveRange &operator=(MoveRange &&v) {
+    move_range &operator=(move_range &&v) {
         p_range = std::move(v.p_range);
         return *this;
     }
-    MoveRange &operator=(T const &v) {
+    move_range &operator=(T const &v) {
         p_range = v;
         return *this;
     }
-    MoveRange &operator=(T &&v) {
+    move_range &operator=(T &&v) {
         p_range = std::move(v);
         return *this;
     }
 
     bool empty() const { return p_range.empty(); }
-    Size size() const { return p_range.size(); }
+    size_type size() const { return p_range.size(); }
 
-    bool equals_front(MoveRange const &r) const {
+    bool equals_front(move_range const &r) const {
         return p_range.equals_front(r.p_range);
     }
-    bool equals_back(MoveRange const &r) const {
+    bool equals_back(move_range const &r) const {
         return p_range.equals_back(r.p_range);
     }
 
-    RangeDifference<T> distance_front(MoveRange const &r) const {
+    difference_type distance_front(move_range const &r) const {
         return p_range.distance_front(r.p_range);
     }
-    RangeDifference<T> distance_back(MoveRange const &r) const {
+    difference_type distance_back(move_range const &r) const {
         return p_range.distance_back(r.p_range);
     }
 
@@ -1090,42 +1090,42 @@ public:
     bool push_front() { return p_range.push_front(); }
     bool push_back() { return p_range.push_back(); }
 
-    Size pop_front_n(Size n) { return p_range.pop_front_n(n); }
-    Size pop_back_n(Size n) { return p_range.pop_back_n(n); }
+    size_type pop_front_n(size_type n) { return p_range.pop_front_n(n); }
+    size_type pop_back_n(size_type n) { return p_range.pop_back_n(n); }
 
-    Size push_front_n(Size n) { return p_range.push_front_n(n); }
-    Size push_back_n(Size n) { return p_range.push_back_n(n); }
+    size_type push_front_n(size_type n) { return p_range.push_front_n(n); }
+    size_type push_back_n(size_type n) { return p_range.push_back_n(n); }
 
-    Reference front() const { return std::move(p_range.front()); }
-    Reference back() const { return std::move(p_range.back()); }
+    reference front() const { return std::move(p_range.front()); }
+    reference back() const { return std::move(p_range.back()); }
 
-    Reference operator[](Size i) const { return std::move(p_range[i]); }
+    reference operator[](size_type i) const { return std::move(p_range[i]); }
 
-    MoveRange<T> slice(Size start, Size end) const {
-        return MoveRange<T>(p_range.slice(start, end));
+    move_range slice(size_type start, size_type end) const {
+        return move_range{p_range.slice(start, end)};
     }
 
-    bool put(Value const &v) { return p_range.put(v); }
-    bool put(Value &&v) { return p_range.put(std::move(v)); }
+    bool put(value_type const &v) { return p_range.put(v); }
+    bool put(value_type &&v) { return p_range.put(std::move(v)); }
 };
 
 template<typename T>
-struct NumberRange: InputRange<NumberRange<T>> {
-    using Category   = ForwardRangeTag;
-    using Value      = T;
-    using Reference  = T;
-    using Size       = size_t;
-    using Difference = ptrdiff_t;
+struct number_range: input_range<number_range<T>> {
+    using range_category  = forward_range_tag;
+    using value_type      = T;
+    using reference       = T;
+    using size_type       = size_t;
+    using difference_type = ptrdiff_t;
 
-    NumberRange() = delete;
-    NumberRange(T a, T b, T step = T(1)):
+    number_range() = delete;
+    number_range(T a, T b, T step = T(1)):
         p_a(a), p_b(b), p_step(step)
     {}
-    NumberRange(T v): p_a(0), p_b(v), p_step(1) {}
+    number_range(T v): p_a(0), p_b(v), p_step(1) {}
 
     bool empty() const { return p_a * p_step >= p_b * p_step; }
 
-    bool equals_front(NumberRange const &range) const {
+    bool equals_front(number_range const &range) const {
         return p_a == range.p_a;
     }
 
@@ -1137,62 +1137,66 @@ private:
 };
 
 template<typename T>
-inline NumberRange<T> range(T a, T b, T step = T(1)) {
-    return NumberRange<T>(a, b, step);
+inline number_range<T> range(T a, T b, T step = T(1)) {
+    return number_range<T>(a, b, step);
 }
 
 template<typename T>
-inline NumberRange<T> range(T v) {
-    return NumberRange<T>(v);
+inline number_range<T> range(T v) {
+    return number_range<T>(v);
 }
 
 template<typename T, typename S>
-struct EnumeratedValue {
+struct enumerated_value_t {
     S index;
     T value;
 };
 
 template<typename T>
-struct EnumeratedRange: InputRange<EnumeratedRange<T>> {
-    using Category   = std::common_type_t<RangeCategory<T>, ForwardRangeTag>;
-    using Value      = RangeValue<T>;
-    using Reference  = EnumeratedValue<RangeReference<T>, RangeSize<T>>;
-    using Size       = RangeSize<T>;
-    using Difference = RangeDifference<T>;
+struct enumerated_range: input_range<enumerated_range<T>> {
+    using range_category  = std::common_type_t<
+        range_category_t<T>, forward_range_tag
+    >;
+    using value_type      = range_value_t<T>;
+    using reference       = enumerated_value_t<
+        range_reference_t<T>, range_size_t<T>
+    >;
+    using size_type       = range_size_t      <T>;
+    using difference_type = range_difference_t<T>;
 
 private:
     T p_range;
-    Size p_index;
+    size_type p_index;
 
 public:
-    EnumeratedRange() = delete;
+    enumerated_range() = delete;
 
-    EnumeratedRange(T const &range): p_range(range), p_index(0) {}
+    enumerated_range(T const &range): p_range(range), p_index(0) {}
 
-    EnumeratedRange(EnumeratedRange const &it):
+    enumerated_range(enumerated_range const &it):
         p_range(it.p_range), p_index(it.p_index)
     {}
 
-    EnumeratedRange(EnumeratedRange &&it):
+    enumerated_range(enumerated_range &&it):
         p_range(std::move(it.p_range)), p_index(it.p_index)
     {}
 
-    EnumeratedRange &operator=(EnumeratedRange const &v) {
+    enumerated_range &operator=(enumerated_range const &v) {
         p_range = v.p_range;
         p_index = v.p_index;
         return *this;
     }
-    EnumeratedRange &operator=(EnumeratedRange &&v) {
+    enumerated_range &operator=(enumerated_range &&v) {
         p_range = std::move(v.p_range);
         p_index = v.p_index;
         return *this;
     }
-    EnumeratedRange &operator=(T const &v) {
+    enumerated_range &operator=(T const &v) {
         p_range = v;
         p_index = 0;
         return *this;
     }
-    EnumeratedRange &operator=(T &&v) {
+    enumerated_range &operator=(T &&v) {
         p_range = std::move(v);
         p_index = 0;
         return *this;
@@ -1200,7 +1204,7 @@ public:
 
     bool empty() const { return p_range.empty(); }
 
-    bool equals_front(EnumeratedRange const &r) const {
+    bool equals_front(enumerated_range const &r) const {
         return p_range.equals_front(r.p_range);
     }
 
@@ -1212,45 +1216,47 @@ public:
         return false;
     }
 
-    Size pop_front_n(Size n) {
-        Size ret = p_range.pop_front_n(n);
+    size_type pop_front_n(size_type n) {
+        size_type ret = p_range.pop_front_n(n);
         p_index += ret;
         return ret;
     }
 
-    Reference front() const {
-        return Reference{p_index, p_range.front()};
+    reference front() const {
+        return reference{p_index, p_range.front()};
     }
 };
 
 template<typename T>
-struct TakeRange: InputRange<TakeRange<T>> {
-    using Category   = std::common_type_t<RangeCategory<T>, ForwardRangeTag>;
-    using Value      = RangeValue     <T>;
-    using Reference  = RangeReference <T>;
-    using Size       = RangeSize      <T>;
-    using Difference = RangeDifference<T>;
+struct take_range: input_range<take_range<T>> {
+    using range_category  = std::common_type_t<
+        range_category_t<T>, forward_range_tag
+    >;
+    using value_type      = range_value_t     <T>;
+    using reference       = range_reference_t <T>;
+    using size_type       = range_size_t      <T>;
+    using difference_type = range_difference_t<T>;
 
 private:
     T p_range;
-    Size p_remaining;
+    size_type p_remaining;
 
 public:
-    TakeRange() = delete;
-    TakeRange(T const &range, RangeSize<T> rem):
+    take_range() = delete;
+    take_range(T const &range, range_size_t<T> rem):
         p_range(range), p_remaining(rem)
     {}
-    TakeRange(TakeRange const &it):
+    take_range(take_range const &it):
         p_range(it.p_range), p_remaining(it.p_remaining)
     {}
-    TakeRange(TakeRange &&it):
+    take_range(take_range &&it):
         p_range(std::move(it.p_range)), p_remaining(it.p_remaining)
     {}
 
-    TakeRange &operator=(TakeRange const &v) {
+    take_range &operator=(take_range const &v) {
         p_range = v.p_range; p_remaining = v.p_remaining; return *this;
     }
-    TakeRange &operator=(TakeRange &&v) {
+    take_range &operator=(take_range &&v) {
         p_range = std::move(v.p_range);
         p_remaining = v.p_remaining;
         return *this;
@@ -1266,47 +1272,49 @@ public:
         return false;
     }
 
-    Size pop_front_n(Size n) {
-        Size ret = p_range.pop_front_n(n);
+    size_type pop_front_n(size_type n) {
+        size_type ret = p_range.pop_front_n(n);
         p_remaining -= ret;
         return ret;
     }
 
-    Reference front() const { return p_range.front(); }
+    reference front() const { return p_range.front(); }
 
-    bool equals_front(TakeRange const &r) const {
+    bool equals_front(take_range const &r) const {
         return p_range.equals_front(r.p_range);
     }
 };
 
 template<typename T>
-struct ChunksRange: InputRange<ChunksRange<T>> {
-    using Category   = std::common_type_t<RangeCategory<T>, ForwardRangeTag>;
-    using Value      = TakeRange      <T>;
-    using Reference  = TakeRange      <T>;
-    using Size       = RangeSize      <T>;
-    using Difference = RangeDifference<T>;
+struct chunks_range: input_range<chunks_range<T>> {
+    using range_category   = std::common_type_t<
+        range_category_t<T>, forward_range_tag
+    >;
+    using value_type      = take_range        <T>;
+    using reference       = take_range        <T>;
+    using size_type       = range_size_t      <T>;
+    using difference_type = range_difference_t<T>;
 
 private:
     T p_range;
-    Size p_chunksize;
+    size_type p_chunksize;
 
 public:
-    ChunksRange() = delete;
-    ChunksRange(T const &range, RangeSize<T> chs):
+    chunks_range() = delete;
+    chunks_range(T const &range, range_size_t<T> chs):
         p_range(range), p_chunksize(chs)
     {}
-    ChunksRange(ChunksRange const &it):
+    chunks_range(chunks_range const &it):
         p_range(it.p_range), p_chunksize(it.p_chunksize)
     {}
-    ChunksRange(ChunksRange &&it):
+    chunks_range(chunks_range &&it):
         p_range(std::move(it.p_range)), p_chunksize(it.p_chunksize)
     {}
 
-    ChunksRange &operator=(ChunksRange const &v) {
+    chunks_range &operator=(chunks_range const &v) {
         p_range = v.p_range; p_chunksize = v.p_chunksize; return *this;
     }
-    ChunksRange &operator=(ChunksRange &&v) {
+    chunks_range &operator=(chunks_range &&v) {
         p_range = std::move(v.p_range);
         p_chunksize = v.p_chunksize;
         return *this;
@@ -1314,16 +1322,16 @@ public:
 
     bool empty() const { return p_range.empty(); }
 
-    bool equals_front(ChunksRange const &r) const {
+    bool equals_front(chunks_range const &r) const {
         return p_range.equals_front(r.p_range);
     }
 
     bool pop_front() { return p_range.pop_front_n(p_chunksize) > 0; }
-    Size pop_front_n(Size n) {
+    size_type pop_front_n(size_type n) {
         return p_range.pop_front_n(p_chunksize * n) / p_chunksize;
     }
 
-    Reference front() const { return p_range.take(p_chunksize); }
+    reference front() const { return p_range.take(p_chunksize); }
 };
 
 namespace detail {
@@ -1351,29 +1359,31 @@ namespace detail {
 }
 
 template<typename ...R>
-struct JoinRange: InputRange<JoinRange<R...>> {
-    using Category   = std::common_type_t<ForwardRangeTag, RangeCategory<R>...>;
-    using Value      = std::common_type_t<RangeValue<R>...>;
-    using Reference  = std::common_type_t<RangeReference<R>...>;
-    using Size       = std::common_type_t<RangeSize<R>...>;
-    using Difference = std::common_type_t<RangeDifference<R>...>;
+struct join_range: input_range<join_range<R...>> {
+    using range_category  = std::common_type_t<
+        forward_range_tag, range_category_t<R>...
+    >;
+    using value_type      = std::common_type_t<range_value_t<R>...>;
+    using reference       = std::common_type_t<range_reference_t<R>...>;
+    using size_type       = std::common_type_t<range_size_t<R>...>;
+    using difference_type = std::common_type_t<range_difference_t<R>...>;
 
 private:
     std::tuple<R...> p_ranges;
 
 public:
-    JoinRange() = delete;
-    JoinRange(R const &...ranges): p_ranges(ranges...) {}
-    JoinRange(R &&...ranges): p_ranges(std::forward<R>(ranges)...) {}
-    JoinRange(JoinRange const &v): p_ranges(v.p_ranges) {}
-    JoinRange(JoinRange &&v): p_ranges(std::move(v.p_ranges)) {}
+    join_range() = delete;
+    join_range(R const &...ranges): p_ranges(ranges...) {}
+    join_range(R &&...ranges): p_ranges(std::forward<R>(ranges)...) {}
+    join_range(join_range const &v): p_ranges(v.p_ranges) {}
+    join_range(join_range &&v): p_ranges(std::move(v.p_ranges)) {}
 
-    JoinRange &operator=(JoinRange const &v) {
+    join_range &operator=(join_range const &v) {
         p_ranges = v.p_ranges;
         return *this;
     }
 
-    JoinRange &operator=(JoinRange &&v) {
+    join_range &operator=(join_range &&v) {
         p_ranges = std::move(v.p_ranges);
         return *this;
     }
@@ -1384,7 +1394,7 @@ public:
         }, p_ranges);
     }
 
-    bool equals_front(JoinRange const &r) const {
+    bool equals_front(join_range const &r) const {
         return std::apply([&r](auto const &...r1) {
             return std::apply([&](auto const &...r2) {
                 return (... && r1.equals_front(r2));
@@ -1396,50 +1406,52 @@ public:
         return detail::join_range_pop<0, sizeof...(R)>(p_ranges);
     }
 
-    std::common_type_t<RangeReference<R>...> front() const {
+    reference front() const {
         return detail::join_range_front<0, sizeof...(R)>(p_ranges);
     }
 };
 
 namespace detail {
     template<typename ...T>
-    struct ZipValueType {
-        using Type = std::tuple<T...>;
+    struct zip_value_type {
+        using type = std::tuple<T...>;
     };
 
     template<typename T, typename U>
-    struct ZipValueType<T, U> {
-        using Type = std::pair<T, U>;
+    struct zip_value_type<T, U> {
+        using type = std::pair<T, U>;
     };
 
     template<typename ...T>
-    using ZipValue = typename detail::ZipValueType<T...>::Type;
+    using zip_value_t = typename detail::zip_value_type<T...>::type;
 }
 
 template<typename ...R>
-struct ZipRange: InputRange<ZipRange<R...>> {
-    using Category   = std::common_type_t<ForwardRangeTag, RangeCategory<R>...>;
-    using Value      = detail::ZipValue<RangeValue<R>...>;
-    using Reference  = detail::ZipValue<RangeReference<R>...>;
-    using Size       = std::common_type_t<RangeSize<R>...>;
-    using Difference = std::common_type_t<RangeDifference<R>...>;
+struct zip_range: input_range<zip_range<R...>> {
+    using range_category  = std::common_type_t<
+        forward_range_tag, range_category_t<R>...
+    >;
+    using value_type      = detail::zip_value_t<range_value_t<R>...>;
+    using reference       = detail::zip_value_t<range_reference_t<R>...>;
+    using size_type       = std::common_type_t<range_size_t<R>...>;
+    using difference_type = std::common_type_t<range_difference_t<R>...>;
 
 private:
     std::tuple<R...> p_ranges;
 
 public:
-    ZipRange() = delete;
-    ZipRange(R const &...ranges): p_ranges(ranges...) {}
-    ZipRange(R &&...ranges): p_ranges(std::forward<R>(ranges)...) {}
-    ZipRange(ZipRange const &v): p_ranges(v.p_ranges) {}
-    ZipRange(ZipRange &&v): p_ranges(std::move(v.p_ranges)) {}
+    zip_range() = delete;
+    zip_range(R const &...ranges): p_ranges(ranges...) {}
+    zip_range(R &&...ranges): p_ranges(std::forward<R>(ranges)...) {}
+    zip_range(zip_range const &v): p_ranges(v.p_ranges) {}
+    zip_range(zip_range &&v): p_ranges(std::move(v.p_ranges)) {}
 
-    ZipRange &operator=(ZipRange const &v) {
+    zip_range &operator=(zip_range const &v) {
         p_ranges = v.p_ranges;
         return *this;
     }
 
-    ZipRange &operator=(ZipRange &&v) {
+    zip_range &operator=(zip_range &&v) {
         p_ranges = std::move(v.p_ranges);
         return *this;
     }
@@ -1450,7 +1462,7 @@ public:
         }, p_ranges);
     }
 
-    bool equals_front(ZipRange const &r) const {
+    bool equals_front(zip_range const &r) const {
         return std::apply([&r](auto const &...r1) {
             return std::apply([&](auto const &...r2) {
                 return (... && r1.equals_front(r2));
@@ -1464,42 +1476,42 @@ public:
         }, p_ranges);
     }
 
-    detail::ZipValue<RangeReference<R>...> front() const {
+    reference front() const {
         return std::apply([](auto &&...args) {
-            return detail::ZipValue<RangeReference<R>...>{args.front()...};
+            return reference{args.front()...};
         }, p_ranges);
     }
 };
 
 template<typename T>
-struct AppenderRange: OutputRange<AppenderRange<T>> {
-    using Value      = typename T::value_type;
-    using Reference  = typename T::reference;
-    using Size       = typename T::size_type;
-    using Difference = typename T::difference_type;
+struct appender_range: output_range<appender_range<T>> {
+    using value_type      = typename T::value_type;
+    using reference       = typename T::reference;
+    using size_type       = typename T::size_type;
+    using difference_type = typename T::difference_type;
 
-    AppenderRange(): p_data() {}
-    AppenderRange(T const &v): p_data(v) {}
-    AppenderRange(T &&v): p_data(std::move(v)) {}
-    AppenderRange(AppenderRange const &v): p_data(v.p_data) {}
-    AppenderRange(AppenderRange &&v): p_data(std::move(v.p_data)) {}
+    appender_range(): p_data() {}
+    appender_range(T const &v): p_data(v) {}
+    appender_range(T &&v): p_data(std::move(v)) {}
+    appender_range(appender_range const &v): p_data(v.p_data) {}
+    appender_range(appender_range &&v): p_data(std::move(v.p_data)) {}
 
-    AppenderRange &operator=(AppenderRange const &v) {
+    appender_range &operator=(appender_range const &v) {
         p_data = v.p_data;
         return *this;
     }
 
-    AppenderRange &operator=(AppenderRange &&v) {
+    appender_range &operator=(appender_range &&v) {
         p_data = std::move(v.p_data);
         return *this;
     }
 
-    AppenderRange &operator=(T const &v) {
+    appender_range &operator=(T const &v) {
         p_data = v;
         return *this;
     }
 
-    AppenderRange &operator=(T &&v) {
+    appender_range &operator=(T &&v) {
         p_data = std::move(v);
         return *this;
     }
@@ -1509,8 +1521,8 @@ struct AppenderRange: OutputRange<AppenderRange<T>> {
     void reserve(typename T::size_type cap) { p_data.reserve(cap); }
     void resize(typename T::size_type len) { p_data.resize(len); }
 
-    typename T::size_type size() const { return p_data.size(); }
-    typename T::size_type capacity() const { return p_data.capacity(); }
+    size_type size() const { return p_data.size(); }
+    size_type capacity() const { return p_data.capacity(); }
 
     bool put(typename T::const_reference v) {
         p_data.push_back(v);
@@ -1528,86 +1540,86 @@ private:
 };
 
 template<typename T>
-inline AppenderRange<T> appender() {
-    return AppenderRange<T>();
+inline appender_range<T> appender() {
+    return appender_range<T>();
 }
 
 template<typename T>
-inline AppenderRange<T> appender(T &&v) {
-    return AppenderRange<T>(std::forward<T>(v));
+inline appender_range<T> appender(T &&v) {
+    return appender_range<T>(std::forward<T>(v));
 }
 
 namespace detail {
     template<typename>
-    struct IteratorRangeTagBase {
+    struct iterator_range_tag_base {
         /* fallback, the most basic range */
-        using Type = InputRangeTag;
+        using Type = input_range_tag;
     };
 
     template<>
-    struct IteratorRangeTagBase<std::output_iterator_tag> {
-        using Type = OutputRangeTag;
+    struct iterator_range_tag_base<std::output_iterator_tag> {
+        using Type = output_range_tag;
     };
 
     template<>
-    struct IteratorRangeTagBase<std::forward_iterator_tag> {
-        using Type = ForwardRangeTag;
+    struct iterator_range_tag_base<std::forward_iterator_tag> {
+        using Type = forward_range_tag;
     };
 
     template<>
-    struct IteratorRangeTagBase<std::bidirectional_iterator_tag> {
-        using Type = BidirectionalRangeTag;
+    struct iterator_range_tag_base<std::bidirectional_iterator_tag> {
+        using Type = bidirectional_range_tag;
     };
 
     template<>
-    struct IteratorRangeTagBase<std::random_access_iterator_tag> {
-        using Type = FiniteRandomAccessRangeTag;
+    struct iterator_range_tag_base<std::random_access_iterator_tag> {
+        using Type = finite_random_access_range_tag;
     };
 }
 
 template<typename T>
-using IteratorRangeTag = typename detail::IteratorRangeTagBase<T>::Type;
+using iterator_range_tag = typename detail::iterator_range_tag_base<T>::Type;
 
 template<typename T>
-struct IteratorRange: InputRange<IteratorRange<T>> {
-    using Category = std::conditional_t<
+struct iterator_range: input_range<iterator_range<T>> {
+    using range_category  = std::conditional_t<
         std::is_pointer_v<T>,
         ContiguousRangeTag,
-        IteratorRangeTag<typename std::iterator_traits<T>::iterator_category>
+        iterator_range_tag<typename std::iterator_traits<T>::iterator_category>
     >;
-    using Value      = typename std::iterator_traits<T>::value_type;
-    using Reference  = typename std::iterator_traits<T>::reference;
-    using Size       = std::make_unsigned_t<
+    using value_type      = typename std::iterator_traits<T>::value_type;
+    using reference       = typename std::iterator_traits<T>::reference;
+    using size_type       = std::make_unsigned_t<
         typename std::iterator_traits<T>::difference_type
     >;
-    using Difference = typename std::iterator_traits<T>::difference_type;
+    using difference_type = typename std::iterator_traits<T>::difference_type;
 
-    IteratorRange(T beg = T{}, T end = T{}): p_beg(beg), p_end(end) {}
+    iterator_range(T beg = T{}, T end = T{}): p_beg(beg), p_end(end) {}
 
     template<typename U, typename = std::enable_if_t<
         std::is_pointer_v<T> && std::is_pointer_v<U> &&
         std::is_convertible_v<U, T>
     >>
-    IteratorRange(IteratorRange<U> const &v): p_beg(&v[0]), p_end(&v[v.size()]) {}
+    iterator_range(iterator_range<U> const &v): p_beg(&v[0]), p_end(&v[v.size()]) {}
 
-    IteratorRange(IteratorRange const &v): p_beg(v.p_beg), p_end(v.p_end) {}
-    IteratorRange(IteratorRange &&v):
+    iterator_range(iterator_range const &v): p_beg(v.p_beg), p_end(v.p_end) {}
+    iterator_range(iterator_range &&v):
         p_beg(std::move(v.p_beg)), p_end(std::move(v.p_end))
     {}
 
-    IteratorRange &operator=(IteratorRange const &v) {
+    iterator_range &operator=(iterator_range const &v) {
         p_beg = v.p_beg;
         p_end = v.p_end;
         return *this;
     }
 
-    IteratorRange &operator=(IteratorRange &&v) {
+    iterator_range &operator=(iterator_range &&v) {
         p_beg = std::move(v.p_beg);
         p_end = std::move(v.p_end);
         return *this;
     }
 
-    /* satisfy InputRange / ForwardRange */
+    /* satisfy input_range / forward_range */
     bool empty() const { return p_beg == p_end; }
 
     bool pop_front() {
@@ -1621,10 +1633,10 @@ struct IteratorRange: InputRange<IteratorRange<T>> {
         --p_beg; return true;
     }
 
-    Size pop_front_n(Size n) {
+    size_type pop_front_n(size_type n) {
         using IC = typename std::iterator_traits<T>::iterator_category;
         if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            Size olen = Size(p_end - p_beg);
+            size_type olen = size_type(p_end - p_beg);
             p_beg += n;
             if (p_beg > p_end) {
                 p_beg = p_end;
@@ -1636,7 +1648,7 @@ struct IteratorRange: InputRange<IteratorRange<T>> {
         }
     }
 
-    Size push_front_n(Size n) {
+    size_type push_front_n(size_type n) {
         using IC = typename std::iterator_traits<T>::iterator_category;
         if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
             p_beg -= n;
@@ -1646,17 +1658,17 @@ struct IteratorRange: InputRange<IteratorRange<T>> {
         }
     }
 
-    Reference front() const { return *p_beg; }
+    reference front() const { return *p_beg; }
 
-    bool equals_front(IteratorRange const &range) const {
+    bool equals_front(iterator_range const &range) const {
         return p_beg == range.p_beg;
     }
 
-    Difference distance_front(IteratorRange const &range) const {
+    difference_type distance_front(iterator_range const &range) const {
         return range.p_beg - p_beg;
     }
 
-    /* satisfy BidirectionalRange */
+    /* satisfy bidirectional_range */
     bool pop_back() {
         if (p_end == p_beg) {
             return false;
@@ -1668,10 +1680,10 @@ struct IteratorRange: InputRange<IteratorRange<T>> {
         ++p_end; return true;
     }
 
-    Size pop_back_n(Size n) {
+    size_type pop_back_n(size_type n) {
         using IC = typename std::iterator_traits<T>::iterator_category;
         if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            Size olen = Size(p_end - p_beg);
+            size_type olen = size_type(p_end - p_beg);
             p_end -= n;
             if (p_end < p_beg) {
                 p_end = p_beg;
@@ -1683,7 +1695,7 @@ struct IteratorRange: InputRange<IteratorRange<T>> {
         }
     }
 
-    Size push_back_n(Size n) {
+    size_type push_back_n(size_type n) {
         using IC = typename std::iterator_traits<T>::iterator_category;
         if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
             p_end += n;
@@ -1693,34 +1705,34 @@ struct IteratorRange: InputRange<IteratorRange<T>> {
         }
     }
 
-    Reference back() const { return *(p_end - 1); }
+    reference back() const { return *(p_end - 1); }
 
-    bool equals_back(IteratorRange const &range) const {
+    bool equals_back(iterator_range const &range) const {
         return p_end == range.p_end;
     }
 
-    ptrdiff_t distance_back(IteratorRange const &range) const {
+    ptrdiff_t distance_back(iterator_range const &range) const {
         return range.p_end - p_end;
     }
 
     /* satisfy FiniteRandomAccessRange */
-    Size size() const { return Size(p_end - p_beg); }
+    size_type size() const { return size_type(p_end - p_beg); }
 
-    IteratorRange slice(Size start, Size end) const {
-        return IteratorRange(p_beg + start, p_beg + end);
+    iterator_range slice(size_type start, size_type end) const {
+        return iterator_range(p_beg + start, p_beg + end);
     }
 
-    Reference operator[](Size i) const { return p_beg[i]; }
+    reference operator[](size_type i) const { return p_beg[i]; }
 
-    /* satisfy OutputRange */
-    bool put(Value const &v) {
+    /* satisfy output_range */
+    bool put(value_type const &v) {
         if (empty()) {
             return false;
         }
         *(p_beg++) = v;
         return true;
     }
-    bool put(Value &&v) {
+    bool put(value_type &&v) {
         if (empty()) {
             return false;
         }
@@ -1729,15 +1741,17 @@ struct IteratorRange: InputRange<IteratorRange<T>> {
     }
 
     template<typename R>
-    std::enable_if_t<IsOutputRange<R>, Size> copy(R &&orange, Size n = -1) {
+    std::enable_if_t<is_output_range<R>, size_type> copy(
+        R &&orange, size_type n = -1
+    ) {
         if constexpr(std::is_pointer_v<T>) {
-            Size c = size();
+            size_type c = size();
             if (n < c) {
                 c = n;
             }
             return range_put_n(orange, p_beg, c);
         } else {
-            Size on = n;
+            size_type on = n;
             for (; n && !empty(); --n) {
                 if (!orange.put(front())) {
                     break;
@@ -1748,21 +1762,23 @@ struct IteratorRange: InputRange<IteratorRange<T>> {
         }
     }
 
-    Size copy(std::remove_cv_t<Value> *p, Size n = -1) {
+    size_type copy(std::remove_cv_t<value_type> *p, size_type n = -1) {
         using IC = typename std::iterator_traits<T>::iterator_category;
         if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            Size c = size();
+            size_type c = size();
             if (n < c) {
                 c = n;
             }
-            if constexpr(std::is_pointer_v<T> && std::is_pod_v<Value>) {
-                memcpy(p, p_beg, c * sizeof(Value));
+            if constexpr(std::is_pointer_v<T> && std::is_pod_v<value_type>) {
+                memcpy(p, p_beg, c * sizeof(value_type));
                 return c;
             } else {
-                return copy(IteratorRange<std::remove_cv_t<Value> *>(p, p + c), c);
+                return copy(iterator_range<
+                    std::remove_cv_t<value_type> *
+                >(p, p + c), c);
             }
         } else {
-            Size on = n;
+            size_type on = n;
             for (; n && !empty(); --n) {
                 *p++ = front();
                 pop_front();
@@ -1776,18 +1792,18 @@ private:
 
 template<typename T>
 inline auto range_put_n(
-    IteratorRange<T> &range, RangeValue<IteratorRange<T>> const *p,
-    RangeSize<IteratorRange<T>> n
+    iterator_range<T> &range, range_value_t<iterator_range<T>> const *p,
+    range_size_t<iterator_range<T>> n
 ) {
     using IC = typename std::iterator_traits<T>::iterator_category;
     if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-        using Value = RangeValue<IteratorRange<T>>;
+        using value_type = range_value_t<iterator_range<T>>;
         auto ret = range.size();
         if (n < ret) {
             ret = n;
         }
-        if constexpr(std::is_pointer_v<T> && std::is_pod_v<Value>) {
-            memcpy(&range.front(), p, ret * sizeof(Value));
+        if constexpr(std::is_pointer_v<T> && std::is_pod_v<value_type>) {
+            memcpy(&range.front(), p, ret * sizeof(value_type));
             range.pop_front_n(ret);
         } else {
             for (auto i = ret; i; --i) {
@@ -1804,13 +1820,13 @@ inline auto range_put_n(
 }
 
 template<typename T>
-IteratorRange<T> make_range(T beg, T end) {
-    return IteratorRange<T>{beg, end};
+iterator_range<T> make_range(T beg, T end) {
+    return iterator_range<T>{beg, end};
 }
 
 template<typename T>
 struct ranged_traits<std::initializer_list<T>> {
-    using range = IteratorRange<T const *>;
+    using range = iterator_range<T const *>;
 
     static range iter(std::initializer_list<T> il) {
         return range{il.begin(), il.end()};
@@ -1822,18 +1838,18 @@ struct ranged_traits<std::initializer_list<T>> {
  * template, so we also need to define that here explicitly...
  */
 template<typename T>
-IteratorRange<T const *> iter(std::initializer_list<T> init) noexcept {
-    return IteratorRange<T const *>(init.begin(), init.end());
+iterator_range<T const *> iter(std::initializer_list<T> init) noexcept {
+    return iterator_range<T const *>(init.begin(), init.end());
 }
 
 template<typename T>
-IteratorRange<T const *> citer(std::initializer_list<T> init) noexcept {
-    return IteratorRange<T const *>(init.begin(), init.end());
+iterator_range<T const *> citer(std::initializer_list<T> init) noexcept {
+    return iterator_range<T const *>(init.begin(), init.end());
 }
 
 template<typename T, size_t N>
 struct ranged_traits<T[N]> {
-    using range = IteratorRange<T *>;
+    using range = iterator_range<T *>;
 
     static range iter(T (&array)[N]) {
         return range{array, array + N};
@@ -1841,8 +1857,8 @@ struct ranged_traits<T[N]> {
 };
 
 template<typename T>
-inline IteratorRange<T *> iter(T *a, T *b) {
-    return IteratorRange<T *>(a, b);
+inline iterator_range<T *> iter(T *a, T *b) {
+    return iterator_range<T *>(a, b);
 }
 
 /* iter on standard containers */
@@ -1864,7 +1880,7 @@ namespace detail {
     struct ranged_traits_core<C, std::enable_if_t<
         detail::std_iter_test<C> && !detail::direct_iter_test<C>
     >> {
-        using range = IteratorRange<decltype(std::begin(std::declval<C &>()))>;
+        using range = iterator_range<decltype(std::begin(std::declval<C &>()))>;
 
         static range iter(C &r) {
             return range{r.begin(), r.end()};

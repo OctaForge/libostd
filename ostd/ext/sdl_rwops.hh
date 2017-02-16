@@ -21,7 +21,7 @@ namespace sdl {
 #ifdef OSTD_EXT_SDL_USE_SDL1
 using SDLRWopsOffset = int;
 #else
-using SDLRWopsOffset = Int64;
+using SDLRWopsOffset = int64_t;
 #endif
 
 inline SDL_RWops *stream_to_rwops(Stream &s) {

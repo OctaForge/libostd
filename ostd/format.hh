@@ -757,8 +757,8 @@ namespace detail {
         template<typename R, typename T>
         size_t write_val(R &writer, bool escape, T const &val) const {
             /* stuff fhat can be custom-formatted goes first */
-            if constexpr(FmtTofmtTest<T, TostrRange<R>>) {
-                TostrRange<R> sink(writer);
+            if constexpr(FmtTofmtTest<T, tostr_range<R>>) {
+                tostr_range<R> sink(writer);
                 to_format(val, sink, *this);
                 return sink.get_written();
             }

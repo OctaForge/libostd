@@ -17,8 +17,8 @@ namespace ostd {
 template<typename T, typename A = std::allocator<T>, typename R>
 inline std::vector<T, A> make_vector(R range, A const &alloc = A{}) {
     std::vector<T, A> ret{alloc};
-    using C = RangeCategory<R>;
-    if constexpr(std::is_convertible_v<C, FiniteRandomAccessRangeTag>) {
+    using C = range_category_t<R>;
+    if constexpr(std::is_convertible_v<C, finite_random_access_range_tag>) {
         /* finite random access or contiguous */
         auto h = range.half();
         ret.reserve(range.size());
@@ -32,11 +32,11 @@ inline std::vector<T, A> make_vector(R range, A const &alloc = A{}) {
     return ret;
 }
 
-template<typename R, typename A = std::allocator<RangeValue<R>>>
-inline std::vector<RangeValue<R>, A> make_vector(
+template<typename R, typename A = std::allocator<range_value_t<R>>>
+inline std::vector<range_value_t<R>, A> make_vector(
     R &&range, A const &alloc = A{}
 ) {
-    return make_vector<RangeValue<R>, A>(std::forward<R>(range), alloc);
+    return make_vector<range_value_t<R>, A>(std::forward<R>(range), alloc);
 }
 
 } /* namespace ostd */

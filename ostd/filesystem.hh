@@ -225,11 +225,11 @@ inline void swap(FileInfo &a, FileInfo &b) {
     a.swap(b);
 }
 
-struct DirectoryRange;
+struct directory_range;
 
 #ifndef OSTD_PLATFORM_WIN32
 struct DirectoryStream {
-    friend struct DirectoryRange;
+    friend struct directory_range;
 
     DirectoryStream(): p_d(), p_de(), p_path() {}
     DirectoryStream(DirectoryStream const &) = delete;
@@ -324,7 +324,7 @@ struct DirectoryStream {
         swap(p_path, s.p_path);
     }
 
-    DirectoryRange iter();
+    directory_range iter();
 
 private:
     static bool pop_front(DIR *d, struct dirent **de) {
@@ -366,7 +366,7 @@ private:
 #else /* OSTD_PLATFORM_WIN32 */
 
 struct DirectoryStream {
-    friend struct DirectoryRange;
+    friend struct directory_range;
 
     DirectoryStream(): p_handle(INVALID_HANDLE_VALUE), p_data(), p_path() {}
     DirectoryStream(DirectoryStream const &) = delete;
@@ -495,7 +495,7 @@ struct DirectoryStream {
         swap(p_path, s.p_path);
     }
 
-    DirectoryRange iter();
+    directory_range iter();
 
 private:
     bool pop_front() {
@@ -529,18 +529,18 @@ inline void swap(DirectoryStream &a, DirectoryStream &b) {
     a.swap(b);
 }
 
-struct DirectoryRange: InputRange<DirectoryRange> {
-    using Category   = InputRangeTag;
-    using Value      = FileInfo;
-    using Reference  = FileInfo;
-    using Size       = size_t;
-    using Difference = long;
+struct directory_range: input_range<directory_range> {
+    using range_category  = input_range_tag;
+    using value_type      = FileInfo;
+    using reference       = FileInfo;
+    using size_type       = size_t;
+    using difference_type = long;
 
-    DirectoryRange() = delete;
-    DirectoryRange(DirectoryStream &s): p_stream(&s) {}
-    DirectoryRange(DirectoryRange const &r): p_stream(r.p_stream) {}
+    directory_range() = delete;
+    directory_range(DirectoryStream &s): p_stream(&s) {}
+    directory_range(directory_range const &r): p_stream(r.p_stream) {}
 
-    DirectoryRange &operator=(DirectoryRange const &r) {
+    directory_range &operator=(directory_range const &r) {
         p_stream = r.p_stream;
         return *this;
     }
@@ -557,7 +557,7 @@ struct DirectoryRange: InputRange<DirectoryRange> {
         return p_stream->front();
     }
 
-    bool equals_front(DirectoryRange const &s) const {
+    bool equals_front(directory_range const &s) const {
         return p_stream == s.p_stream;
     }
 
@@ -565,8 +565,8 @@ private:
     DirectoryStream *p_stream;
 };
 
-inline DirectoryRange DirectoryStream::iter() {
-    return DirectoryRange(*this);
+inline directory_range DirectoryStream::iter() {
+    return directory_range(*this);
 }
 
 namespace detail {

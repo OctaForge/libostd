@@ -36,13 +36,13 @@ inline std::unordered_map<K, T, H, E, A> make_unordered_map(
     E const &kequal = E{}, A const &alloc = A{}
 ) {
     static_assert(
-        detail::is_2tuple_like<RangeValue<R>>,
+        detail::is_2tuple_like<range_value_t<R>>,
         "the range element must be a pair/2-tuple"
     );
 
     using MP = std::pair<K const, T>;
-    using AK = std::tuple_element_t<0, RangeValue<R>>;
-    using AV = std::tuple_element_t<1, RangeValue<R>>;
+    using AK = std::tuple_element_t<0, range_value_t<R>>;
+    using AV = std::tuple_element_t<1, range_value_t<R>>;
 
     static_assert(
         std::is_constructible_v<K const, AK> && std::is_constructible_v<T, AV>,
@@ -51,21 +51,21 @@ inline std::unordered_map<K, T, H, E, A> make_unordered_map(
 
     std::unordered_map<K, T, H, E, A> ret{bcount, hash, kequal, alloc};
 
-    using C = RangeCategory<R>;
-    if constexpr(std::is_convertible_v<C, FiniteRandomAccessRangeTag>) {
+    using C = range_category_t<R>;
+    if constexpr(std::is_convertible_v<C, finite_random_access_range_tag>) {
         /* at least try to preallocate here... */
         ret.reserve(range.size());
     }
 
     for (; !range.empty(); range.pop_front()) {
-        if constexpr(std::is_constructible_v<MP, RangeValue<R>>) {
+        if constexpr(std::is_constructible_v<MP, range_value_t<R>>) {
             ret.emplace(range.front());
         } else {
             /* store a temporary to prevent calling front() twice; however,
              * for values that can be used to construct the pair directly
              * we can just do the above
              */
-            RangeValue<R> v{range.front()};
+            range_value_t<R> v{range.front()};
             ret.emplace(std::move(std::get<0>(v)), std::move(std::get<1>(v)));
         }
     }
@@ -74,27 +74,27 @@ inline std::unordered_map<K, T, H, E, A> make_unordered_map(
 
 template<
     typename R,
-    typename H = std::hash<typename RangeValue<R>::first_type>,
-    typename E = std::equal_to<typename RangeValue<R>::first_type>,
+    typename H = std::hash<typename range_value_t<R>::first_type>,
+    typename E = std::equal_to<typename range_value_t<R>::first_type>,
     typename A = std::allocator<std::pair<
-        std::tuple_element_t<0, RangeValue<R>>,
-        std::tuple_element_t<1, RangeValue<R>>
+        std::tuple_element_t<0, range_value_t<R>>,
+        std::tuple_element_t<1, range_value_t<R>>
     >>
 >
 inline std::unordered_map<
-    std::tuple_element_t<0, RangeValue<R>>,
-    std::tuple_element_t<1, RangeValue<R>>, H, E, A
+    std::tuple_element_t<0, range_value_t<R>>,
+    std::tuple_element_t<1, range_value_t<R>>, H, E, A
 > make_unordered_map(
     R &&range, size_t bcount = 1, H const &hash = H{},
     E const &kequal = E{}, A const &alloc = A{}
 ) {
     static_assert(
-        detail::is_2tuple_like<RangeValue<R>>,
+        detail::is_2tuple_like<range_value_t<R>>,
         "the range element must be a pair/2-tuple"
     );
     return make_unordered_map<
-        std::tuple_element_t<0, RangeValue<R>>,
-        std::tuple_element_t<1, RangeValue<R>>, H, E, A
+        std::tuple_element_t<0, range_value_t<R>>,
+        std::tuple_element_t<1, range_value_t<R>>, H, E, A
     >(std::forward<R>(range), bcount, hash, kequal, alloc);
 }
 

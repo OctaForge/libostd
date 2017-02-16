@@ -23,12 +23,12 @@
 namespace ostd {
 
 template<typename T, typename TR = std::char_traits<std::remove_const_t<T>>>
-struct basic_char_range: InputRange<basic_char_range<T>> {
-    using Category   = ContiguousRangeTag;
-    using Value      = T;
-    using Reference  = T &;
-    using Size       = size_t;
-    using Difference = ptrdiff_t;
+struct basic_char_range: input_range<basic_char_range<T>> {
+    using range_category  = ContiguousRangeTag;
+    using value_type      = T;
+    using reference       = T &;
+    using size_type       = size_t;
+    using difference_type = ptrdiff_t;
 
 private:
     struct Nat {};
@@ -187,7 +187,7 @@ diffsize:
     }
 
     template<typename R>
-    std::enable_if_t<IsOutputRange<R>, size_t> copy(R &&orange, size_t n = -1) {
+    std::enable_if_t<is_output_range<R>, size_t> copy(R &&orange, size_t n = -1) {
         return range_put_n(orange, data(), ostd::min(n, size()));
     }
 
@@ -417,8 +417,8 @@ template<
 >
 inline std::basic_string<T, TR, A> make_string(R range, A const &alloc = A{}) {
     std::basic_string<T, TR, A> ret{alloc};
-    using C = RangeCategory<R>;
-    if constexpr(std::is_convertible_v<C, FiniteRandomAccessRangeTag>) {
+    using C = range_category_t<R>;
+    if constexpr(std::is_convertible_v<C, finite_random_access_range_tag>) {
         /* finite random access or contiguous */
         auto h = range.half();
         ret.reserve(range.size());
@@ -433,13 +433,13 @@ inline std::basic_string<T, TR, A> make_string(R range, A const &alloc = A{}) {
 }
 
 template<
-    typename R, typename TR = std::char_traits<std::remove_cv_t<RangeValue<R>>>,
-    typename A = std::allocator<std::remove_cv_t<RangeValue<R>>>
+    typename R, typename TR = std::char_traits<std::remove_cv_t<range_value_t<R>>>,
+    typename A = std::allocator<std::remove_cv_t<range_value_t<R>>>
 >
-inline std::basic_string<std::remove_cv_t<RangeValue<R>>, TR, A> make_string(
+inline std::basic_string<std::remove_cv_t<range_value_t<R>>, TR, A> make_string(
     R range, A const &alloc = A{}
 ) {
-    return make_string<std::remove_cv_t<RangeValue<R>>, TR, A>(
+    return make_string<std::remove_cv_t<range_value_t<R>>, TR, A>(
         std::move(range), alloc
     );
 }
@@ -531,17 +531,17 @@ bool concat(R &&sink, std::initializer_list<T> v, string_range sep = " ") {
 
 namespace detail {
     template<typename R>
-    struct TostrRange: OutputRange<TostrRange<R>> {
-        using Value      = char;
-        using Reference  = char &;
-        using Size       = size_t;
-        using Difference = ptrdiff_t;
+    struct tostr_range: output_range<tostr_range<R>> {
+        using value_type      = char;
+        using reference       = char &;
+        using size_type       = size_t;
+        using difference_type = ptrdiff_t;
 
         template<typename RR>
-        friend size_t range_put_n(TostrRange<RR> &range, char const *p, size_t n);
+        friend size_t range_put_n(tostr_range<RR> &range, char const *p, size_t n);
 
-        TostrRange() = delete;
-        TostrRange(R &out): p_out(out), p_written(0) {}
+        tostr_range() = delete;
+        tostr_range(R &out): p_out(out), p_written(0) {}
         bool put(char v) {
             bool ret = p_out.put(v);
             p_written += ret;
@@ -559,7 +559,7 @@ namespace detail {
     };
 
     template<typename R>
-    inline size_t range_put_n(TostrRange<R> &range, char const *p, size_t n) {
+    inline size_t range_put_n(tostr_range<R> &range, char const *p, size_t n) {
         size_t ret = range_put_n(range.p_out, p, n);
         range.p_written += ret;
         return ret;
@@ -603,7 +603,7 @@ struct ToString<T, std::enable_if_t<detail::IterableTest<T>>> {
         auto x = appender<std::string>();
         if (concat(x, ostd::iter(v), ", ", ToString<
             std::remove_const_t<std::remove_reference_t<
-                RangeReference<decltype(ostd::iter(v))>
+                range_reference_t<decltype(ostd::iter(v))>
             >>
         >())) {
             ret += x.get();
@@ -615,14 +615,14 @@ struct ToString<T, std::enable_if_t<detail::IterableTest<T>>> {
 
 template<typename T>
 struct ToString<T, std::enable_if_t<
-    detail::StringifyTest<T, detail::TostrRange<AppenderRange<std::string>>>
+    detail::StringifyTest<T, detail::tostr_range<appender_range<std::string>>>
 >> {
     using Argument = std::remove_cv_t<std::remove_reference_t<T>>;
     using Result = std::string;
 
     std::string operator()(T const &v) const {
         auto app = appender<std::string>();
-        detail::TostrRange<AppenderRange<std::string>> sink(app);
+        detail::tostr_range<appender_range<std::string>> sink(app);
         if (!v.to_string(sink)) {
             return std::string{};
         }
@@ -803,7 +803,7 @@ std::string to_string(std::initializer_list<T> init) {
 template<typename R>
 struct TempCString {
 private:
-    std::remove_cv_t<RangeValue<R>> *p_buf;
+    std::remove_cv_t<range_value_t<R>> *p_buf;
     bool p_allocated;
 
 public:
@@ -813,13 +813,13 @@ public:
         s.p_buf = nullptr;
         s.p_allocated = false;
     }
-    TempCString(R input, std::remove_cv_t<RangeValue<R>> *sbuf, size_t bufsize)
+    TempCString(R input, std::remove_cv_t<range_value_t<R>> *sbuf, size_t bufsize)
     : p_buf(nullptr), p_allocated(false) {
         if (input.empty()) {
             return;
         }
         if (input.size() >= bufsize) {
-            p_buf = new std::remove_cv_t<RangeValue<R>>[input.size() + 1];
+            p_buf = new std::remove_cv_t<range_value_t<R>>[input.size() + 1];
             p_allocated = true;
         } else {
             p_buf = sbuf;
@@ -838,8 +838,8 @@ public:
         return *this;
     }
 
-    operator std::remove_cv_t<RangeValue<R>> const *() const { return p_buf; }
-    std::remove_cv_t<RangeValue<R>> const *get() const { return p_buf; }
+    operator std::remove_cv_t<range_value_t<R>> const *() const { return p_buf; }
+    std::remove_cv_t<range_value_t<R>> const *get() const { return p_buf; }
 
     void swap(TempCString &s) {
         using std::swap;
@@ -855,7 +855,7 @@ inline void swap(TempCString<R> &a, TempCString<R> &b) {
 
 template<typename R>
 inline TempCString<R> to_temp_cstr(
-    R input, std::remove_cv_t<RangeValue<R>> *buf, size_t bufsize
+    R input, std::remove_cv_t<range_value_t<R>> *buf, size_t bufsize
 ) {
     return TempCString<R>(input, buf, bufsize);
 }
