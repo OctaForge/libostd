@@ -4,17 +4,17 @@
 
 using namespace ostd;
 
-struct SignalTest {
+struct signal_test {
     /* const on the class means that a const reference to the event
      * can actually emit (in that case, the reference passed to each
      * callback will always be const to make sure nothing changes)
      */
-    Signal<SignalTest const, int, string_range> on_simple = this;
-    Signal<SignalTest      , float            > on_param  = this;
+    signal<signal_test const, int, string_range> on_simple = this;
+    signal<signal_test      , float            > on_param  = this;
 
-    SignalTest(): p_param(3.14f) {
+    signal_test(): p_param(3.14f) {
         /* we can connect methods */
-        on_simple.connect(&SignalTest::simple_method);
+        on_simple.connect(&signal_test::simple_method);
         writeln("constructed signal test");
     }
 
@@ -41,7 +41,7 @@ private:
 
 int main() {
     writeln("=== program start ===");
-    SignalTest st;
+    signal_test st;
 
     int test = 42;
 
@@ -49,7 +49,7 @@ int main() {
      * this callback can access "test" easily and it will still work
      */
     auto idx = st.on_simple.connect([&](
-        SignalTest const &, int v, string_range str
+        signal_test const &, int v, string_range str
     ) {
         writefln("and lambda test: %d, %s (%d)", v, str, test);
     });
@@ -67,8 +67,8 @@ int main() {
     writeln("--- set value ---");
     st.set_param(6.28f);
 
-    /* the reference to SignalTest here is mutable */
-    st.on_param.connect([](SignalTest &self, float oldval) {
+    /* the reference to signal_test here is mutable */
+    st.on_param.connect([](signal_test &self, float oldval) {
         writeln("value changed...");
         writefln(
             "   old value: %f, new value: %f", oldval, self.get_param()

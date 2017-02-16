@@ -10,9 +10,9 @@
 
 #include <utility>
 #include <functional>
+#include <type_traits>
 
 #include "ostd/range.hh"
-#include "ostd/utility.hh"
 
 namespace ostd {
 

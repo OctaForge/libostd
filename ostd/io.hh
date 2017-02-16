@@ -17,8 +17,8 @@
 
 namespace ostd {
 
-enum class StreamMode {
-    read = 0, write, append, read_u, write_u, append_u
+enum class stream_mode {
+    READ = 0, WRITE, APPEND, READ_U, WRITE_U, APPEND_U
 };
 
 namespace detail {
@@ -27,30 +27,30 @@ namespace detail {
     };
 }
 
-struct FileStream: Stream {
-    FileStream(): p_f(), p_owned(false) {}
-    FileStream(FileStream const &) = delete;
-    FileStream(FileStream &&s): p_f(s.p_f), p_owned(s.p_owned) {
+struct file_stream: stream {
+    file_stream(): p_f(), p_owned(false) {}
+    file_stream(file_stream const &) = delete;
+    file_stream(file_stream &&s): p_f(s.p_f), p_owned(s.p_owned) {
         s.p_f = nullptr;
         s.p_owned = false;
     }
 
-    FileStream(string_range path, StreamMode mode = StreamMode::read): p_f() {
+    file_stream(string_range path, stream_mode mode = stream_mode::READ): p_f() {
         open(path, mode);
     }
 
-    FileStream(FILE *f): p_f(f), p_owned(false) {}
+    file_stream(FILE *f): p_f(f), p_owned(false) {}
 
-    ~FileStream() { close(); }
+    ~file_stream() { close(); }
 
-    FileStream &operator=(FileStream const &) = delete;
-    FileStream &operator=(FileStream &&s) {
+    file_stream &operator=(file_stream const &) = delete;
+    file_stream &operator=(file_stream &&s) {
         close();
         swap(s);
         return *this;
     }
 
-    bool open(string_range path, StreamMode mode = StreamMode::read) {
+    bool open(string_range path, stream_mode mode = stream_mode::READ) {
         if (p_f || (path.size() > FILENAME_MAX)) {
             return false;
         }
@@ -93,7 +93,7 @@ struct FileStream: Stream {
         return feof(p_f) != 0;
     }
 
-    bool seek(StreamOffset pos, StreamSeek whence = StreamSeek::set) {
+    bool seek(stream_off_t pos, stream_seek whence = stream_seek::SET) {
 #ifndef OSTD_PLATFORM_WIN32
         return fseeko(p_f, pos, int(whence)) >= 0;
 #else
@@ -101,7 +101,7 @@ struct FileStream: Stream {
 #endif
     }
 
-    StreamOffset tell() const {
+    stream_off_t tell() const {
 #ifndef OSTD_PLATFORM_WIN32
         return ftello(p_f);
 #else
@@ -127,7 +127,7 @@ struct FileStream: Stream {
         return  fputc(c, p_f) != EOF;
     }
 
-    void swap(FileStream &s) {
+    void swap(file_stream &s) {
         using std::swap;
         swap(p_f, s.p_f);
         swap(p_owned, s.p_owned);
@@ -140,38 +140,38 @@ private:
     bool p_owned;
 };
 
-inline void swap(FileStream &a, FileStream &b) {
+inline void swap(file_stream &a, file_stream &b) {
     a.swap(b);
 }
 
-static FileStream in(stdin);
-static FileStream out(stdout);
-static FileStream err(stderr);
+static file_stream in(stdin);
+static file_stream out(stdout);
+static file_stream err(stderr);
 
-/* no need to call anything from FileStream, prefer simple calls... */
+/* no need to call anything from file_stream, prefer simple calls... */
 
 namespace detail {
     /* lightweight output range for direct stdout */
-    struct StdoutRange: output_range<StdoutRange> {
+    struct stdout_range: output_range<stdout_range> {
         using value_type      = char;
         using reference       = char &;
         using size_type       = size_t;
         using difference_type = ptrdiff_t;
 
-        StdoutRange() {}
+        stdout_range() {}
         bool put(char c) {
             return putchar(c) != EOF;
         }
     };
 
-    inline size_t range_put_n(StdoutRange &, char const *p, size_t n) {
+    inline size_t range_put_n(stdout_range &, char const *p, size_t n) {
         return fwrite(p, 1, n, stdout);
     }
 }
 
 template<typename T>
 inline void write(T const &v) {
-    format(detail::StdoutRange{}, FormatSpec{'s'}, v);
+    format(detail::stdout_range{}, format_spec{'s'}, v);
 }
 
 template<typename T, typename ...A>
@@ -200,7 +200,7 @@ inline void writeln(T const &v, A const &...args) {
 
 template<typename ...A>
 inline void writef(string_range fmt, A const &...args) {
-    format(detail::StdoutRange{}, fmt, args...);
+    format(detail::stdout_range{}, fmt, args...);
 }
 
 template<typename ...A>

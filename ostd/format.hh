@@ -15,7 +15,6 @@
 
 #include "ostd/algorithm.hh"
 #include "ostd/string.hh"
-#include "ostd/utility.hh"
 
 namespace ostd {
 
@@ -132,13 +131,13 @@ namespace detail {
     }
 }
 
-struct FormatSpec {
-    FormatSpec(): p_nested_escape(false), p_fmt() {}
-    FormatSpec(string_range fmt, bool escape = false):
+struct format_spec {
+    format_spec(): p_nested_escape(false), p_fmt() {}
+    format_spec(string_range fmt, bool escape = false):
         p_nested_escape(escape), p_fmt(fmt)
     {}
 
-    FormatSpec(char spec, int width = -1, int prec = -1, int flags = 0):
+    format_spec(char spec, int width = -1, int prec = -1, int flags = 0):
         p_flags(flags),
         p_width((width >= 0) ? width : 0),
         p_precision((prec >= 0) ? prec : 0),
@@ -437,17 +436,17 @@ protected:
 template<
     typename T, typename R, typename = std::enable_if_t<
         std::is_same_v<decltype(std::declval<T const &>().to_format(
-            std::declval<R &>(), std::declval<FormatSpec const &>()
+            std::declval<R &>(), std::declval<format_spec const &>()
         )), void>
     >
 >
-inline void to_format(T const &v, R &writer, FormatSpec const &fs) {
+inline void to_format(T const &v, R &writer, format_spec const &fs) {
     v.to_format(writer, fs);
 }
 
 namespace detail {
     template<typename R, typename T>
-    inline size_t write_u(R &writer, FormatSpec const *fl, bool neg, T val) {
+    inline size_t write_u(R &writer, format_spec const *fl, bool neg, T val) {
         char buf[20];
         size_t r = 0, n = 0;
 
@@ -564,9 +563,9 @@ namespace detail {
 
     template<typename R, typename T>
     inline size_t write_range(
-        R &writer, FormatSpec const *fl, bool escape, bool expandval,
+        R &writer, format_spec const *fl, bool escape, bool expandval,
         string_range sep, T const &val,
-        std::enable_if_t<detail::IterableTest<T>, bool> = true
+        std::enable_if_t<detail::iterable_test<T>, bool> = true
     ) {
         /* XXX: maybe handle error cases? */
         auto range = ostd::iter(val);
@@ -591,21 +590,21 @@ namespace detail {
 
     template<typename R, typename T>
     inline size_t write_range(
-        R &, FormatSpec const *, bool, bool, string_range,
-        T const &, std::enable_if_t<!detail::IterableTest<T>, bool> = true
+        R &, format_spec const *, bool, bool, string_range,
+        T const &, std::enable_if_t<!detail::iterable_test<T>, bool> = true
     ) {
         throw format_error{"invalid value for ranged format"};
     }
 
     template<typename T>
     static std::true_type test_fmt_tostr(
-        decltype(ostd::to_string(std::declval<T>())) *
+        decltype(ostd::to_string<T>{}(std::declval<T>())) *
     );
     template<typename>
     static std::false_type test_fmt_tostr(...);
 
     template<typename T>
-    constexpr bool FmtTostrTest = decltype(test_fmt_tostr<T>(0))::value;
+    constexpr bool fmt_tostr_test = decltype(test_fmt_tostr<T>(0))::value;
 
     /* non-printable escapes up to 0x20 (space) */
     static constexpr char const *fmt_escapes[] = {
@@ -648,17 +647,17 @@ namespace detail {
     template<typename T, typename R>
     static std::true_type test_tofmt(decltype(to_format(
         std::declval<T const &>(), std::declval<R &>(),
-        std::declval<FormatSpec const &>()
+        std::declval<format_spec const &>()
     )) *);
 
     template<typename, typename>
     static std::false_type test_tofmt(...);
 
     template<typename T, typename R>
-    constexpr bool FmtTofmtTest = decltype(test_tofmt<T, R>(0))::value;
+    constexpr bool fmt_tofmt_test = decltype(test_tofmt<T, R>(0))::value;
 
-    struct WriteSpec: FormatSpec {
-        using FormatSpec::FormatSpec;
+    struct write_spec: format_spec {
+        using format_spec::format_spec;
 
         /* string base writer */
         template<typename R>
@@ -757,7 +756,7 @@ namespace detail {
         template<typename R, typename T>
         size_t write_val(R &writer, bool escape, T const &val) const {
             /* stuff fhat can be custom-formatted goes first */
-            if constexpr(FmtTofmtTest<T, tostr_range<R>>) {
+            if constexpr(fmt_tofmt_test<T, tostr_range<R>>) {
                 tostr_range<R> sink(writer);
                 to_format(val, sink, *this);
                 return sink.get_written();
@@ -788,7 +787,7 @@ namespace detail {
              * char pointers are handled by the string case above
              */
             if constexpr(std::is_pointer_v<T>) {
-                FormatSpec sp{
+                format_spec sp{
                     (spec() == 's') ? 'x' : spec(),
                     has_width() ? width() : -1,
                     has_precision() ? precision() : -1,
@@ -815,11 +814,11 @@ namespace detail {
                 return write_float(writer, escape, val);
             }
             /* stuff that can be to_string'd, worst reliable case, allocates */
-            if constexpr(FmtTostrTest<T>) {
+            if constexpr(fmt_tostr_test<T>) {
                 if (this->spec() != 's') {
                     throw format_error{"custom objects need the '%s' spec"};
                 }
-                return write_val(writer, false, ostd::to_string(val));
+                return write_val(writer, false, ostd::to_string<T>{}(val));
             }
             /* we ran out of options, failure */
             throw format_error{"the value cannot be formatted"};
@@ -866,7 +865,7 @@ namespace detail {
         R &writer, bool escape, string_range fmt, A const &...args
     ) {
         size_t argidx = 1, twr = 0, written = 0;
-        detail::WriteSpec spec(fmt, escape);
+        detail::write_spec spec(fmt, escape);
         while (spec.read_until_spec(writer, &twr)) {
             written += twr;
             size_t argpos = spec.index();
@@ -875,7 +874,7 @@ namespace detail {
                     argpos = argidx++;
                 }
                 /* FIXME: figure out a better way */
-                detail::WriteSpec nspec(spec.nested(), spec.nested_escape());
+                detail::write_spec nspec(spec.nested(), spec.nested_escape());
                 written += nspec.write_range(
                     writer, argpos - 1, (spec.flags() & FMT_FLAG_HASH),
                     spec.nested_sep(), args...
@@ -916,7 +915,7 @@ namespace detail {
     template<typename R>
     inline ptrdiff_t format_impl(R &writer, bool, string_range fmt) {
         size_t written = 0;
-        detail::WriteSpec spec(fmt, false);
+        detail::write_spec spec(fmt, false);
         if (spec.read_until_spec(writer, &written)) {
             throw format_error{"format spec without format arguments"};
         }
@@ -930,9 +929,9 @@ inline size_t format(R &&writer, string_range fmt, A const &...args) {
 }
 
 template<typename R, typename T>
-inline size_t format(R &&writer, FormatSpec const &fmt, T const &val) {
+inline size_t format(R &&writer, format_spec const &fmt, T const &val) {
     /* we can do this as there are no members added... but ugly, FIXME later */
-    detail::WriteSpec const &wsp = static_cast<detail::WriteSpec const &>(fmt);
+    detail::write_spec const &wsp = static_cast<detail::write_spec const &>(fmt);
     return wsp.write_arg(writer, 0, val);
 }
 

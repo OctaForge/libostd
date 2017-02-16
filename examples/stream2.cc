@@ -7,7 +7,7 @@ using namespace ostd;
 int main() {
     writeln("writing sample file...");
 
-    FileStream wtest{"test.txt", StreamMode::write};
+    file_stream wtest{"test.txt", stream_mode::WRITE};
 
     std::string smpl =
         "This is a test file for later read.\n"
@@ -20,7 +20,7 @@ int main() {
     copy(iter(smpl), wtest.iter());
     wtest.close();
 
-    FileStream test{"test.txt"};
+    file_stream test{"test.txt"};
 
     writeln("## WHOLE FILE READ ##\n");
 

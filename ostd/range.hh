@@ -17,7 +17,6 @@
 #include <initializer_list>
 
 #include "ostd/types.hh"
-#include "ostd/utility.hh"
 
 namespace ostd {
 
@@ -27,7 +26,7 @@ struct forward_range_tag: input_range_tag {};
 struct bidirectional_range_tag: forward_range_tag {};
 struct random_access_range_tag: bidirectional_range_tag {};
 struct finite_random_access_range_tag: random_access_range_tag {};
-struct ContiguousRangeTag: finite_random_access_range_tag {};
+struct contiguous_range_tag: finite_random_access_range_tag {};
 
 template<typename T>
 struct range_half;
@@ -172,7 +171,7 @@ template<typename T> constexpr bool is_infinite_random_access_range =
 namespace detail {
     template<typename T>
     constexpr bool is_contiguous_range_core =
-        std::is_convertible_v<range_category_t<T>, ContiguousRangeTag>;
+        std::is_convertible_v<range_category_t<T>, contiguous_range_tag>;
 
     template<typename T, bool = detail::is_range_test<T>>
     constexpr bool is_contiguous_range_base = false;
@@ -284,20 +283,20 @@ template<typename T>
 struct half_range;
 
 namespace detail {
-    template<typename R, bool = is_bidirectional_range<typename R::Range>>
-    struct RangeAdd;
+    template<typename R, bool = is_bidirectional_range<typename R::range>>
+    struct range_add;
 
     template<typename R>
-    struct RangeAdd<R, true> {
-        using Diff = range_difference_t<typename R::Range>;
+    struct range_add<R, true> {
+        using diff_t = range_difference_t<typename R::range>;
 
-        static Diff add_n(R &half, Diff n) {
+        static diff_t add_n(R &half, diff_t n) {
             if (n < 0) {
                 return -half.prev_n(n);
             }
             return half.next_n(n);
         }
-        static Diff sub_n(R &half, Diff n) {
+        static diff_t sub_n(R &half, diff_t n) {
             if (n < 0) {
                 return -half.next_n(n);
             }
@@ -306,16 +305,16 @@ namespace detail {
     };
 
     template<typename R>
-    struct RangeAdd<R, false> {
-        using Diff = range_difference_t<typename R::Range>;
+    struct range_add<R, false> {
+        using diff_t = range_difference_t<typename R::range>;
 
-        static Diff add_n(R &half, Diff n) {
+        static diff_t add_n(R &half, diff_t n) {
             if (n < 0) {
                 return 0;
             }
             return half.next_n(n);
         }
-        static Diff sub_n(R &half, Diff n) {
+        static diff_t sub_n(R &half, diff_t n) {
             if (n < 0) {
                 return 0;
             }
@@ -326,29 +325,29 @@ namespace detail {
 
 namespace detail {
     template<typename>
-    struct range_iteratorTag {
+    struct range_iterator_tag {
         /* better range types all become random access iterators */
-        using Type = std::random_access_iterator_tag;
+        using type = std::random_access_iterator_tag;
     };
 
     template<>
-    struct range_iteratorTag<input_range_tag> {
-        using Type = std::input_iterator_tag;
+    struct range_iterator_tag<input_range_tag> {
+        using type = std::input_iterator_tag;
     };
 
     template<>
-    struct range_iteratorTag<output_range_tag> {
-        using Type = std::output_iterator_tag;
+    struct range_iterator_tag<output_range_tag> {
+        using type = std::output_iterator_tag;
     };
 
     template<>
-    struct range_iteratorTag<forward_range_tag> {
-        using Type = std::forward_iterator_tag;
+    struct range_iterator_tag<forward_range_tag> {
+        using type = std::forward_iterator_tag;
     };
 
     template<>
-    struct range_iteratorTag<bidirectional_range_tag> {
-        using Type = std::bidirectional_iterator_tag;
+    struct range_iterator_tag<bidirectional_range_tag> {
+        using type = std::bidirectional_iterator_tag;
     };
 }
 
@@ -357,9 +356,9 @@ struct range_half {
 private:
     T p_range;
 public:
-    using Range = T;
+    using range = T;
 
-    using iterator_category = typename detail::range_iteratorTag<T>::Type;
+    using iterator_category = typename detail::range_iterator_tag<T>::type;
     using value_type        = range_value_t<T>;
     using difference_type   = range_difference_t<T>;
     using pointer           = range_value_t<T> *;
@@ -395,10 +394,10 @@ public:
     }
 
     range_difference_t<T> add_n(range_difference_t<T> n) {
-        return detail::RangeAdd<range_half<T>>::add_n(*this, n);
+        return detail::range_add<range_half<T>>::add_n(*this, n);
     }
     range_difference_t<T> sub_n(range_difference_t<T> n) {
-        return detail::RangeAdd<range_half<T>>::sub_n(*this, n);
+        return detail::range_add<range_half<T>>::sub_n(*this, n);
     }
 
     range_reference_t<T> get() const {
@@ -859,11 +858,11 @@ inline auto citer(T const &r) -> decltype(ranged_traits<T const>::iter(r)) {
 
 template<typename T>
 struct half_range: input_range<half_range<T>> {
-    using range_category  = range_category_t  <typename T::Range>;
-    using value_type      = range_value_t     <typename T::Range>;
-    using reference       = range_reference_t <typename T::Range>;
-    using size_type       = range_size_t      <typename T::Range>;
-    using difference_type = range_difference_t<typename T::Range>;
+    using range_category  = range_category_t  <typename T::range>;
+    using value_type      = range_value_t     <typename T::range>;
+    using reference       = range_reference_t <typename T::range>;
+    using size_type       = range_size_t      <typename T::range>;
+    using difference_type = range_difference_t<typename T::range>;
 
 private:
     T p_beg;
@@ -1553,38 +1552,38 @@ namespace detail {
     template<typename>
     struct iterator_range_tag_base {
         /* fallback, the most basic range */
-        using Type = input_range_tag;
+        using type = input_range_tag;
     };
 
     template<>
     struct iterator_range_tag_base<std::output_iterator_tag> {
-        using Type = output_range_tag;
+        using type = output_range_tag;
     };
 
     template<>
     struct iterator_range_tag_base<std::forward_iterator_tag> {
-        using Type = forward_range_tag;
+        using type = forward_range_tag;
     };
 
     template<>
     struct iterator_range_tag_base<std::bidirectional_iterator_tag> {
-        using Type = bidirectional_range_tag;
+        using type = bidirectional_range_tag;
     };
 
     template<>
     struct iterator_range_tag_base<std::random_access_iterator_tag> {
-        using Type = finite_random_access_range_tag;
+        using type = finite_random_access_range_tag;
     };
 }
 
 template<typename T>
-using iterator_range_tag = typename detail::iterator_range_tag_base<T>::Type;
+using iterator_range_tag = typename detail::iterator_range_tag_base<T>::type;
 
 template<typename T>
 struct iterator_range: input_range<iterator_range<T>> {
     using range_category  = std::conditional_t<
         std::is_pointer_v<T>,
-        ContiguousRangeTag,
+        contiguous_range_tag,
         iterator_range_tag<typename std::iterator_traits<T>::iterator_category>
     >;
     using value_type      = typename std::iterator_traits<T>::value_type;
@@ -1715,7 +1714,7 @@ struct iterator_range: input_range<iterator_range<T>> {
         return range.p_end - p_end;
     }
 
-    /* satisfy FiniteRandomAccessRange */
+    /* satisfy finite_random_access_range */
     size_type size() const { return size_type(p_end - p_beg); }
 
     iterator_range slice(size_type start, size_type end) const {

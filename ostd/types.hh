@@ -26,7 +26,7 @@ using ldouble = long double;
 /* used occasionally for template variables */
 
 namespace detail {
-    template<typename> struct Undefined;
+    template<typename> struct undef_t;
 }
 
 }

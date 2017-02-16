@@ -5,10 +5,10 @@
 using namespace ostd;
 
 void list_dirs(string_range path, int off = 0) {
-    DirectoryStream ds{path};
+    directory_stream ds{path};
     /* iterate all items in directory */
     for (auto v: iter(ds)) {
-        if (v.type() != FileType::directory) {
+        if (v.type() != file_type::DIRECTORY) {
             continue;
         }
         for_each(range(off), [](int) { write(' '); });

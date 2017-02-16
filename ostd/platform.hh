@@ -149,12 +149,10 @@ inline std::uint64_t endian_swap64(std::uint64_t x) noexcept {
 /* endian swap */
 
 template<typename T, size_t N = sizeof(T), bool IsNum = std::is_arithmetic_v<T>>
-struct EndianSwap;
+struct endian_swap;
 
 template<typename T>
-struct EndianSwap<T, 2, true> {
-    using Argument = T;
-    using Result = T;
+struct endian_swap<T, 2, true> {
     T operator()(T v) const {
         union { T iv; std::uint16_t sv; } u;
         u.iv = v;
@@ -164,9 +162,7 @@ struct EndianSwap<T, 2, true> {
 };
 
 template<typename T>
-struct EndianSwap<T, 4, true> {
-    using Argument = T;
-    using Result = T;
+struct endian_swap<T, 4, true> {
     T operator()(T v) const {
         union { T iv; std::uint32_t sv; } u;
         u.iv = v;
@@ -176,9 +172,7 @@ struct EndianSwap<T, 4, true> {
 };
 
 template<typename T>
-struct EndianSwap<T, 8, true> {
-    using Argument = T;
-    using Result = T;
+struct endian_swap<T, 8, true> {
     T operator()(T v) const {
         union { T iv; std::uint64_t sv; } u;
         u.iv = v;
@@ -187,51 +181,37 @@ struct EndianSwap<T, 8, true> {
     }
 };
 
-template<typename T>
-T endian_swap(T x) { return EndianSwap<T>()(x); }
-
 namespace detail {
     template<
         typename T, size_t N = sizeof(T), bool IsNum = std::is_arithmetic_v<T>
     >
-    struct EndianSame;
+    struct endian_same;
 
     template<typename T>
-    struct EndianSame<T, 2, true> {
-        using Argument = T;
-        using Result = T;
+    struct endian_same<T, 2, true> {
         T operator()(T v) const { return v; }
     };
     template<typename T>
-    struct EndianSame<T, 4, true> {
-        using Argument = T;
-        using Result = T;
+    struct endian_same<T, 4, true> {
         T operator()(T v) const { return v; }
     };
     template<typename T>
-    struct EndianSame<T, 8, true> {
-        using Argument = T;
-        using Result = T;
+    struct endian_same<T, 8, true> {
         T operator()(T v) const { return v; }
     };
 }
 
 #if OSTD_BYTE_ORDER == OSTD_ENDIAN_LIL
 template<typename T>
-struct FromLilEndian: detail::EndianSame<T> {};
+struct from_lil_endian: detail::endian_same<T> {};
 template<typename T>
-struct FromBigEndian: EndianSwap<T> {};
+struct from_big_endian: endian_swap<T> {};
 #else
 template<typename T>
-struct FromLilEndian: EndianSwap<T> {};
+struct from_lil_endian: endian_swap<T> {};
 template<typename T>
-struct FromBigEndian: detail::EndianSame<T> {};
+struct from_big_endian: detail::endian_same<T> {};
 #endif
-
-template<typename T>
-T from_lil_endian(T x) { return FromLilEndian<T>()(x); }
-template<typename T>
-T from_big_endian(T x) { return FromBigEndian<T>()(x); }
 
 }
 

@@ -13,49 +13,48 @@
 #include "ostd/types.hh"
 #include "ostd/range.hh"
 #include "ostd/string.hh"
-#include "ostd/utility.hh"
 #include "ostd/format.hh"
 
 namespace ostd {
 
 #ifndef OSTD_PLATFORM_WIN32
-using StreamOffset = off_t;
+using stream_off_t = off_t;
 #else
-using StreamOffset = __int64;
+using stream_off_t = __int64;
 #endif
 
-enum class StreamSeek {
-    cur = SEEK_CUR,
-    end = SEEK_END,
-    set = SEEK_SET
+enum class stream_seek {
+    CUR = SEEK_CUR,
+    END = SEEK_END,
+    SET = SEEK_SET
 };
 
 template<typename T = char, bool = std::is_pod_v<T>>
 struct stream_range;
 
-struct Stream {
-    using Offset = StreamOffset;
+struct stream {
+    using offset_type = stream_off_t;
 
-    virtual ~Stream() {}
+    virtual ~stream() {}
 
     virtual void close() = 0;
 
     virtual bool end() const = 0;
 
-    virtual Offset size() {
-        Offset p = tell();
-        if ((p < 0) || !seek(0, StreamSeek::end)) {
+    virtual offset_type size() {
+        offset_type p = tell();
+        if ((p < 0) || !seek(0, stream_seek::END)) {
             return -1;
         }
-        Offset e = tell();
-        return ((p == e) || seek(p, StreamSeek::set)) ? e : -1;
+        offset_type e = tell();
+        return ((p == e) || seek(p, stream_seek::SET)) ? e : -1;
     }
 
-    virtual bool seek(Offset, StreamSeek = StreamSeek::set) {
+    virtual bool seek(offset_type, stream_seek = stream_seek::SET) {
         return false;
     }
 
-    virtual Offset tell() const { return -1; }
+    virtual offset_type tell() const { return -1; }
 
     virtual bool flush() { return true; }
 
@@ -149,17 +148,17 @@ struct stream_range<T, true>: input_range<stream_range<T>> {
     using value_type      = T;
     using reference       = T;
     using size_type       = size_t;
-    using difference_type = StreamOffset;
+    using difference_type = stream_off_t;
 
     template<typename TT>
     friend size_t range_put_n(stream_range<TT> &range, TT const *p, size_t n);
 
     stream_range() = delete;
-    stream_range(Stream &s): p_stream(&s), p_size(s.size()) {}
+    stream_range(stream &s): p_stream(&s), p_size(s.size()) {}
     stream_range(stream_range const &r): p_stream(r.p_stream), p_size(r.p_size) {}
 
     bool empty() const {
-        return (p_size - p_stream->tell()) < StreamOffset(sizeof(T));
+        return (p_size - p_stream->tell()) < stream_off_t(sizeof(T));
     }
 
     bool pop_front() {
@@ -172,7 +171,7 @@ struct stream_range<T, true>: input_range<stream_range<T>> {
 
     T front() const {
         T val;
-        p_stream->seek(-p_stream->read_bytes(&val, sizeof(T)), StreamSeek::cur);
+        p_stream->seek(-p_stream->read_bytes(&val, sizeof(T)), stream_seek::CUR);
         return val;
     }
 
@@ -194,8 +193,8 @@ struct stream_range<T, true>: input_range<stream_range<T>> {
     }
 
 private:
-    Stream *p_stream;
-    StreamOffset p_size;
+    stream *p_stream;
+    stream_off_t p_size;
 };
 
 template<typename T>
@@ -204,7 +203,7 @@ inline size_t range_put_n(stream_range<T> &range, T const *p, size_t n) {
 }
 
 template<typename T>
-inline stream_range<T> Stream::iter() {
+inline stream_range<T> stream::iter() {
     return stream_range<T>(*this);
 }
 
@@ -216,11 +215,11 @@ namespace detail {
         using size_type       = size_t;
         using difference_type = ptrdiff_t;
 
-        fmt_stream_range(Stream &s): p_s(s) {}
+        fmt_stream_range(stream &s): p_s(s) {}
         bool put(char c) {
             return p_s.write_bytes(&c, 1) == 1;
         }
-        Stream &p_s;
+        stream &p_s;
     };
 
     inline size_t range_put_n(fmt_stream_range &range, char const *p, size_t n) {
@@ -229,12 +228,12 @@ namespace detail {
 }
 
 template<typename T>
-inline void Stream::write(T const &v) {
-    format(detail::fmt_stream_range{*this}, FormatSpec{'s'}, v);
+inline void stream::write(T const &v) {
+    format(detail::fmt_stream_range{*this}, format_spec{'s'}, v);
 }
 
 template<typename ...A>
-inline void Stream::writef(string_range fmt, A const &...args) {
+inline void stream::writef(string_range fmt, A const &...args) {
     format(detail::fmt_stream_range{*this}, fmt, args...);
 }
 

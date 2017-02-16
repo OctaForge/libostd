@@ -1,4 +1,4 @@
-/* Signals/slots for OctaSTD.
+/* signals/slots for OctaSTD.
  *
  * This file is part of OctaSTD. See COPYING.md for futher information.
  */
@@ -7,17 +7,16 @@
 #define OSTD_EVENT_HH
 
 #include <functional>
-
-#include "ostd/utility.hh"
+#include <utility>
 
 namespace ostd {
 
 namespace detail {
     template<typename C, typename ...A>
-    struct SignalBase {
-        SignalBase(C *cl): p_class(cl), p_funcs(nullptr), p_nfuncs(0) {}
+    struct signal_base {
+        signal_base(C *cl): p_class(cl), p_funcs(nullptr), p_nfuncs(0) {}
 
-        SignalBase(SignalBase const &ev):
+        signal_base(signal_base const &ev):
             p_class(ev.p_class), p_nfuncs(ev.p_nfuncs)
         {
             using func_t = std::function<void(C &, A...)>;
@@ -28,13 +27,13 @@ namespace detail {
             p_funcs = nbuf;
         }
 
-        SignalBase(SignalBase &&ev):
+        signal_base(signal_base &&ev):
             p_class(nullptr), p_funcs(nullptr), p_nfuncs(0)
         {
             swap(ev);
         }
 
-        SignalBase &operator=(SignalBase const &ev) {
+        signal_base &operator=(signal_base const &ev) {
             using func_t = std::function<void(C &, A...)>;
             p_class = ev.p_class;
             p_nfuncs = ev.p_nfuncs;
@@ -47,12 +46,12 @@ namespace detail {
             return *this;
         }
 
-        SignalBase &operator=(SignalBase &&ev) {
+        signal_base &operator=(signal_base &&ev) {
             swap(ev);
             return *this;
         }
 
-        ~SignalBase() { clear(); }
+        ~signal_base() { clear(); }
 
         void clear() {
             for (size_t i = 0; i < p_nfuncs; ++i) {
@@ -115,7 +114,7 @@ namespace detail {
             return ocl;
         }
 
-        void swap(SignalBase &ev) {
+        void swap(signal_base &ev) {
             using std::swap;
             swap(p_class, ev.p_class);
             swap(p_funcs, ev.p_funcs);
@@ -130,21 +129,21 @@ namespace detail {
 } /* namespace detail */
 
 template<typename C, typename ...A>
-struct Signal {
+struct signal {
 private:
-    using Base = detail::SignalBase<C, A...>;
-    Base p_base;
+    using base_t = detail::signal_base<C, A...>;
+    base_t p_base;
 public:
-    Signal(C *cl): p_base(cl) {}
-    Signal(Signal const &ev): p_base(ev.p_base) {}
-    Signal(Signal &&ev): p_base(std::move(ev.p_base)) {}
+    signal(C *cl): p_base(cl) {}
+    signal(signal const &ev): p_base(ev.p_base) {}
+    signal(signal &&ev): p_base(std::move(ev.p_base)) {}
 
-    Signal &operator=(Signal const &ev) {
+    signal &operator=(signal const &ev) {
         p_base = ev.p_base;
         return *this;
     }
 
-    Signal &operator=(Signal &&ev) {
+    signal &operator=(signal &&ev) {
         p_base = std::move(ev.p_base);
         return *this;
     }
@@ -165,25 +164,25 @@ public:
     C *get_class() const { return p_base.get_class(); }
     C *set_class(C *cl) { return p_base.set_class(cl); }
 
-    void swap(Signal &ev) { p_base.swap(ev.p_base); }
+    void swap(signal &ev) { p_base.swap(ev.p_base); }
 };
 
 template<typename C, typename ...A>
-struct Signal<C const, A...> {
+struct signal<C const, A...> {
 private:
-    using Base = detail::SignalBase<C const, A...>;
-    Base p_base;
+    using base_t = detail::signal_base<C const, A...>;
+    base_t p_base;
 public:
-    Signal(C *cl): p_base(cl) {}
-    Signal(Signal const &ev): p_base(ev.p_base) {}
-    Signal(Signal &&ev): p_base(std::move(ev.p_base)) {}
+    signal(C *cl): p_base(cl) {}
+    signal(signal const &ev): p_base(ev.p_base) {}
+    signal(signal &&ev): p_base(std::move(ev.p_base)) {}
 
-    Signal &operator=(Signal const &ev) {
+    signal &operator=(signal const &ev) {
         p_base = ev.p_base;
         return *this;
     }
 
-    Signal &operator=(Signal &&ev) {
+    signal &operator=(signal &&ev) {
         p_base = std::move(ev.p_base);
         return *this;
     }
@@ -204,11 +203,11 @@ public:
     C *get_class() const { return p_base.get_class(); }
     C *set_class(C *cl) { return p_base.set_class(cl); }
 
-    void swap(Signal &ev) { p_base.swap(ev.p_base); }
+    void swap(signal &ev) { p_base.swap(ev.p_base); }
 };
 
 template<typename C, typename ...A>
-inline void swap(Signal<C, A...> &a, Signal<C, A...> &b) {
+inline void swap(signal<C, A...> &a, signal<C, A...> &b) {
     a.swap(b);
 }
 

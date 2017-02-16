@@ -14,8 +14,8 @@
 #include <string_view>
 #include <type_traits>
 #include <functional>
+#include <utility>
 
-#include "ostd/utility.hh"
 #include "ostd/range.hh"
 #include "ostd/vector.hh"
 #include "ostd/algorithm.hh"
@@ -24,7 +24,7 @@ namespace ostd {
 
 template<typename T, typename TR = std::char_traits<std::remove_const_t<T>>>
 struct basic_char_range: input_range<basic_char_range<T>> {
-    using range_category  = ContiguousRangeTag;
+    using range_category  = contiguous_range_tag;
     using value_type      = T;
     using reference       = T &;
     using size_type       = size_t;
@@ -566,11 +566,6 @@ namespace detail {
     }
 
     template<typename T, typename R>
-    static auto test_stringify(int) -> std::integral_constant<
-        bool, std::is_same_v<decltype(std::declval<T>().stringify()), std::string>
-    >;
-
-    template<typename T, typename R>
     static std::true_type test_stringify(
         decltype(std::declval<T const &>().to_string(std::declval<R &>())) *
     );
@@ -579,7 +574,7 @@ namespace detail {
     static std::false_type test_stringify(...);
 
     template<typename T, typename R>
-    constexpr bool StringifyTest = decltype(test_stringify<T, R>(0))::value;
+    constexpr bool stringify_test = decltype(test_stringify<T, R>(0))::value;
 
     template<typename T>
     static std::true_type test_iterable(decltype(ostd::iter(std::declval<T>())) *);
@@ -587,21 +582,18 @@ namespace detail {
     static std::false_type test_iterable(...);
 
     template<typename T>
-    constexpr bool IterableTest = decltype(test_iterable<T>(0))::value;
+    constexpr bool iterable_test = decltype(test_iterable<T>(0))::value;
 }
 
 template<typename T, typename = void>
-struct ToString;
+struct to_string;
 
 template<typename T>
-struct ToString<T, std::enable_if_t<detail::IterableTest<T>>> {
-    using Argument = std::remove_cv_t<std::remove_reference_t<T>>;
-    using Result = std::string;
-
+struct to_string<T, std::enable_if_t<detail::iterable_test<T>>> {
     std::string operator()(T const &v) const {
         std::string ret("{");
         auto x = appender<std::string>();
-        if (concat(x, ostd::iter(v), ", ", ToString<
+        if (concat(x, ostd::iter(v), ", ", to_string<
             std::remove_const_t<std::remove_reference_t<
                 range_reference_t<decltype(ostd::iter(v))>
             >>
@@ -614,12 +606,9 @@ struct ToString<T, std::enable_if_t<detail::IterableTest<T>>> {
 };
 
 template<typename T>
-struct ToString<T, std::enable_if_t<
-    detail::StringifyTest<T, detail::tostr_range<appender_range<std::string>>>
+struct to_string<T, std::enable_if_t<
+    detail::stringify_test<T, detail::tostr_range<appender_range<std::string>>>
 >> {
-    using Argument = std::remove_cv_t<std::remove_reference_t<T>>;
-    using Result = std::string;
-
     std::string operator()(T const &v) const {
         auto app = appender<std::string>();
         detail::tostr_range<appender_range<std::string>> sink(app);
@@ -631,18 +620,14 @@ struct ToString<T, std::enable_if_t<
 };
 
 template<>
-struct ToString<bool> {
-    using Argument = bool;
-    using Result = std::string;
+struct to_string<bool> {
     std::string operator()(bool b) {
         return b ? "true" : "false";
     }
 };
 
 template<>
-struct ToString<char> {
-    using Argument = char;
-    using Result = std::string;
+struct to_string<char> {
     std::string operator()(char c) {
         std::string ret;
         ret += c;
@@ -652,9 +637,7 @@ struct ToString<char> {
 
 #define OSTD_TOSTR_NUM(T) \
 template<> \
-struct ToString<T> { \
-    using Argument = T; \
-    using Result = std::string; \
+struct to_string<T> { \
     std::string operator()(T v) { \
         return std::to_string(v); \
     } \
@@ -678,10 +661,8 @@ OSTD_TOSTR_NUM(ldouble)
 #undef OSTD_TOSTR_NUM
 
 template<typename T>
-struct ToString<T *> {
-    using Argument = T *;
-    using Result = std::string;
-    std::string operator()(Argument v) {
+struct to_string<T *> {
+    std::string operator()(T *v) {
         char buf[16];
         sprintf(buf, "%p", v);
         return buf;
@@ -689,59 +670,47 @@ struct ToString<T *> {
 };
 
 template<>
-struct ToString<char const *> {
-    using Argument = char const *;
-    using Result = std::string;
+struct to_string<char const *> {
     std::string operator()(char const *s) {
         return s;
     }
 };
 
 template<>
-struct ToString<char *> {
-    using Argument = char *;
-    using Result = std::string;
+struct to_string<char *> {
     std::string operator()(char *s) {
         return s;
     }
 };
 
 template<>
-struct ToString<std::string> {
-    using Argument = std::string;
-    using Result = std::string;
-    std::string operator()(Argument const &s) {
+struct to_string<std::string> {
+    std::string operator()(std::string const &s) {
         return s;
     }
 };
 
 template<>
-struct ToString<char_range> {
-    using Argument = char_range;
-    using Result = std::string;
-    std::string operator()(Argument const &s) {
+struct to_string<char_range> {
+    std::string operator()(char_range const &s) {
         return std::string{s};
     }
 };
 
 template<>
-struct ToString<string_range> {
-    using Argument = string_range;
-    using Result = std::string;
-    std::string operator()(Argument const &s) {
+struct to_string<string_range> {
+    std::string operator()(string_range const &s) {
         return std::string{s};
     }
 };
 
 template<typename T, typename U>
-struct ToString<std::pair<T, U>> {
-    using Argument = std::pair<T, U>;
-    using Result = std::string;
-    std::string operator()(Argument const &v) {
+struct to_string<std::pair<T, U>> {
+    std::string operator()(std::pair<T, U> const &v) {
         std::string ret{"{"};
-        ret += ToString<std::remove_cv_t<std::remove_reference_t<T>>>()(v.first);
+        ret += to_string<std::remove_cv_t<std::remove_reference_t<T>>>()(v.first);
         ret += ", ";
-        ret += ToString<std::remove_cv_t<std::remove_reference_t<U>>>()(v.second);
+        ret += to_string<std::remove_cv_t<std::remove_reference_t<U>>>()(v.second);
         ret += "}";
         return ret;
     }
@@ -749,71 +718,59 @@ struct ToString<std::pair<T, U>> {
 
 namespace detail {
     template<size_t I, size_t N>
-    struct TupleToString {
+    struct tuple_to_str {
         template<typename T>
         static void append(std::string &ret, T const &tup) {
             ret += ", ";
-            ret += ToString<std::remove_cv_t<std::remove_reference_t<
+            ret += to_string<std::remove_cv_t<std::remove_reference_t<
                 decltype(std::get<I>(tup))
             >>>()(std::get<I>(tup));
-            TupleToString<I + 1, N>::append(ret, tup);
+            tuple_to_str<I + 1, N>::append(ret, tup);
         }
     };
 
     template<size_t N>
-    struct TupleToString<N, N> {
+    struct tuple_to_str<N, N> {
         template<typename T>
         static void append(std::string &, T const &) {}
     };
 
     template<size_t N>
-    struct TupleToString<0, N> {
+    struct tuple_to_str<0, N> {
         template<typename T>
         static void append(std::string &ret, T const &tup) {
-            ret += ToString<std::remove_cv_t<std::remove_reference_t<
+            ret += to_string<std::remove_cv_t<std::remove_reference_t<
                 decltype(std::get<0>(tup))
             >>>()(std::get<0>(tup));
-            TupleToString<1, N>::append(ret, tup);
+            tuple_to_str<1, N>::append(ret, tup);
         }
     };
 }
 
 template<typename ...T>
-struct ToString<std::tuple<T...>> {
-    using Argument = std::tuple<T...>;
-    using Result = std::string;
-    std::string operator()(Argument const &v) {
+struct to_string<std::tuple<T...>> {
+    std::string operator()(std::tuple<T...> const &v) {
         std::string ret("{");
-        detail::TupleToString<0, sizeof...(T)>::append(ret, v);
+        detail::tuple_to_str<0, sizeof...(T)>::append(ret, v);
         ret += "}";
         return ret;
     }
 };
 
-template<typename T>
-typename ToString<T>::Result to_string(T const &v) {
-    return ToString<std::remove_cv_t<std::remove_reference_t<T>>>()(v);
-}
-
-template<typename T>
-std::string to_string(std::initializer_list<T> init) {
-    return to_string(iter(init));
-}
-
 template<typename R>
-struct TempCString {
+struct temp_c_string {
 private:
     std::remove_cv_t<range_value_t<R>> *p_buf;
     bool p_allocated;
 
 public:
-    TempCString() = delete;
-    TempCString(TempCString const &) = delete;
-    TempCString(TempCString &&s): p_buf(s.p_buf), p_allocated(s.p_allocated) {
+    temp_c_string() = delete;
+    temp_c_string(temp_c_string const &) = delete;
+    temp_c_string(temp_c_string &&s): p_buf(s.p_buf), p_allocated(s.p_allocated) {
         s.p_buf = nullptr;
         s.p_allocated = false;
     }
-    TempCString(R input, std::remove_cv_t<range_value_t<R>> *sbuf, size_t bufsize)
+    temp_c_string(R input, std::remove_cv_t<range_value_t<R>> *sbuf, size_t bufsize)
     : p_buf(nullptr), p_allocated(false) {
         if (input.empty()) {
             return;
@@ -826,14 +783,14 @@ public:
         }
         p_buf[input.copy(p_buf)] = '\0';
     }
-    ~TempCString() {
+    ~temp_c_string() {
         if (p_allocated) {
             delete[] p_buf;
         }
     }
 
-    TempCString &operator=(TempCString const &) = delete;
-    TempCString &operator=(TempCString &&s) {
+    temp_c_string &operator=(temp_c_string const &) = delete;
+    temp_c_string &operator=(temp_c_string &&s) {
         swap(s);
         return *this;
     }
@@ -841,7 +798,7 @@ public:
     operator std::remove_cv_t<range_value_t<R>> const *() const { return p_buf; }
     std::remove_cv_t<range_value_t<R>> const *get() const { return p_buf; }
 
-    void swap(TempCString &s) {
+    void swap(temp_c_string &s) {
         using std::swap;
         swap(p_buf, s.p_buf);
         swap(p_allocated, s.p_allocated);
@@ -849,15 +806,15 @@ public:
 };
 
 template<typename R>
-inline void swap(TempCString<R> &a, TempCString<R> &b) {
+inline void swap(temp_c_string<R> &a, temp_c_string<R> &b) {
     a.swap(b);
 }
 
 template<typename R>
-inline TempCString<R> to_temp_cstr(
+inline temp_c_string<R> to_temp_cstr(
     R input, std::remove_cv_t<range_value_t<R>> *buf, size_t bufsize
 ) {
-    return TempCString<R>(input, buf, bufsize);
+    return temp_c_string<R>(input, buf, bufsize);
 }
 
 } /* namespace ostd */

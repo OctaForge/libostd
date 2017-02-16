@@ -27,11 +27,11 @@
 
 namespace ostd {
 
-enum class FileType {
-    unknown, regular, fifo, character, directory, block, symlink, socket
+enum class file_type {
+    UNKNOWN, REGULAR, FIFO, CHARACTER, DIRECTORY, BLOCK, SYMLINK, SOCKET
 };
 
-struct FileInfo;
+struct file_info;
 
 #ifdef OSTD_PLATFORM_WIN32
 static constexpr char PathSeparator = '\\';
@@ -54,30 +54,30 @@ inline void path_normalize(char_range) {
     /* TODO */
 }
 
-struct FileInfo {
-    FileInfo() {}
+struct file_info {
+    file_info() {}
 
-    FileInfo(FileInfo const &i):
+    file_info(file_info const &i):
         p_slash(i.p_slash), p_dot(i.p_dot), p_type(i.p_type),
         p_path(i.p_path), p_atime(i.p_atime), p_mtime(i.p_mtime),
         p_ctime(i.p_ctime)
     {}
 
-    FileInfo(FileInfo &&i):
+    file_info(file_info &&i):
         p_slash(i.p_slash), p_dot(i.p_dot), p_type(i.p_type),
         p_path(std::move(i.p_path)), p_atime(i.p_atime), p_mtime(i.p_mtime),
         p_ctime(i.p_ctime)
     {
         i.p_slash = i.p_dot = std::string::npos;
-        i.p_type = FileType::unknown;
+        i.p_type = file_type::UNKNOWN;
         i.p_atime = i.p_ctime = i.p_mtime = 0;
     }
 
-    FileInfo(string_range path) {
+    file_info(string_range path) {
         init_from_str(path);
     }
 
-    FileInfo &operator=(FileInfo const &i) {
+    file_info &operator=(file_info const &i) {
         p_slash = i.p_slash;
         p_dot = i.p_dot;
         p_type = i.p_type;
@@ -88,7 +88,7 @@ struct FileInfo {
         return *this;
     }
 
-    FileInfo &operator=(FileInfo &&i) {
+    file_info &operator=(file_info &&i) {
         swap(i);
         return *this;
     }
@@ -114,7 +114,7 @@ struct FileInfo {
             : path().slice(p_dot, p_path.size());
     }
 
-    FileType type() const { return p_type; }
+    file_type type() const { return p_type; }
 
     void normalize() {
         path_normalize(ostd::iter(p_path));
@@ -125,7 +125,7 @@ struct FileInfo {
     time_t mtime() const { return p_mtime; }
     time_t ctime() const { return p_ctime; }
 
-    void swap(FileInfo &i) {
+    void swap(file_info &i) {
         using std::swap;
         swap(i.p_slash, p_slash);
         swap(i.p_dot, p_dot);
@@ -150,7 +150,7 @@ private:
 #endif
         {
             p_slash = p_dot = std::string::npos;
-            p_type = FileType::unknown;
+            p_type = file_type::UNKNOWN;
             p_path.clear();
             p_atime = p_mtime = p_ctime = 0;
             return;
@@ -173,17 +173,17 @@ private:
 
 #ifdef OSTD_PLATFORM_WIN32
         if (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-            p_type = FileType::directory;
+            p_type = file_type::DIRECTORY;
         } else if (attr.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-            p_type = FileType::symlink;
+            p_type = file_type::SYMLINK;
         } else if (attr.dwFileAttributes & (
             FILE_ATTRIBUTE_ARCHIVE     | FILE_ATTRIBUTE_COMPRESSED |
             FILE_ATTRIBUTE_HIDDEN      | FILE_ATTRIBUTE_NORMAL     |
             FILE_ATTRIBUTE_SPARSE_FILE | FILE_ATTRIBUTE_TEMPORARY
         )) {
-            p_type = FileType::regular;
+            p_type = file_type::REGULAR;
         } else {
-            p_type = FileType::unknown;
+            p_type = file_type::UNKNOWN;
         }
 
         p_atime = detail::filetime_to_time_t(attr.ftLastAccessTime);
@@ -191,21 +191,21 @@ private:
         p_ctime = detail::filetime_to_time_t(attr.ftCreationTime);
 #else
         if (S_ISREG(st.st_mode)) {
-            p_type = FileType::regular;
+            p_type = file_type::REGULAR;
         } else if (S_ISDIR(st.st_mode)) {
-            p_type = FileType::directory;
+            p_type = file_type::DIRECTORY;
         } else if (S_ISCHR(st.st_mode)) {
-            p_type = FileType::character;
+            p_type = file_type::CHARACTER;
         } else if (S_ISBLK(st.st_mode)) {
-            p_type = FileType::block;
+            p_type = file_type::BLOCK;
         } else if (S_ISFIFO(st.st_mode)) {
-            p_type = FileType::fifo;
+            p_type = file_type::FIFO;
         } else if (S_ISLNK(st.st_mode)) {
-            p_type = FileType::symlink;
+            p_type = file_type::SYMLINK;
         } else if (S_ISSOCK(st.st_mode)) {
-            p_type = FileType::socket;
+            p_type = file_type::SOCKET;
         } else {
-            p_type = FileType::unknown;
+            p_type = file_type::UNKNOWN;
         }
 
         p_atime = st.st_atime;
@@ -215,39 +215,39 @@ private:
     }
 
     size_t p_slash = std::string::npos, p_dot = std::string::npos;
-    FileType p_type = FileType::unknown;
+    file_type p_type = file_type::UNKNOWN;
     std::string p_path;
 
     time_t p_atime = 0, p_mtime = 0, p_ctime = 0;
 };
 
-inline void swap(FileInfo &a, FileInfo &b) {
+inline void swap(file_info &a, file_info &b) {
     a.swap(b);
 }
 
 struct directory_range;
 
 #ifndef OSTD_PLATFORM_WIN32
-struct DirectoryStream {
+struct directory_stream {
     friend struct directory_range;
 
-    DirectoryStream(): p_d(), p_de(), p_path() {}
-    DirectoryStream(DirectoryStream const &) = delete;
-    DirectoryStream(DirectoryStream &&s):
+    directory_stream(): p_d(), p_de(), p_path() {}
+    directory_stream(directory_stream const &) = delete;
+    directory_stream(directory_stream &&s):
         p_d(s.p_d), p_de(s.p_de), p_path(std::move(s.p_path))
     {
         s.p_d = nullptr;
         s.p_de = nullptr;
     }
 
-    DirectoryStream(string_range path): DirectoryStream() {
+    directory_stream(string_range path): directory_stream() {
         open(path);
     }
 
-    ~DirectoryStream() { close(); }
+    ~directory_stream() { close(); }
 
-    DirectoryStream &operator=(DirectoryStream const &) = delete;
-    DirectoryStream &operator=(DirectoryStream &&s) {
+    directory_stream &operator=(directory_stream const &) = delete;
+    directory_stream &operator=(directory_stream &&s) {
         close();
         swap(s);
         return *this;
@@ -310,14 +310,14 @@ struct DirectoryStream {
         return !p_de;
     }
 
-    FileInfo read() {
+    file_info read() {
         if (!pop_front()) {
-            return FileInfo();
+            return file_info();
         }
         return front();
     }
 
-    void swap(DirectoryStream &s) {
+    void swap(directory_stream &s) {
         using std::swap;
         swap(p_d, s.p_d);
         swap(p_de, s.p_de);
@@ -348,14 +348,14 @@ private:
         return pop_front(p_d, &p_de);
     }
 
-    FileInfo front() const {
+    file_info front() const {
         if (!p_de) {
-            return FileInfo();
+            return file_info();
         }
         std::string ap = p_path;
         ap += PathSeparator;
         ap += static_cast<char const *>(p_de->d_name);
-        return FileInfo(ap);
+        return file_info(ap);
     }
 
     DIR *p_d;
@@ -365,26 +365,26 @@ private:
 
 #else /* OSTD_PLATFORM_WIN32 */
 
-struct DirectoryStream {
+struct directory_stream {
     friend struct directory_range;
 
-    DirectoryStream(): p_handle(INVALID_HANDLE_VALUE), p_data(), p_path() {}
-    DirectoryStream(DirectoryStream const &) = delete;
-    DirectoryStream(DirectoryStream &&s):
+    directory_stream(): p_handle(INVALID_HANDLE_VALUE), p_data(), p_path() {}
+    directory_stream(directory_stream const &) = delete;
+    directory_stream(directory_stream &&s):
         p_handle(s.p_handle), p_data(s.p_data), p_path(std::move(s.p_path))
     {
         s.p_handle = INVALID_HANDLE_VALUE;
         memset(&s.p_data, 0, sizeof(s.p_data));
     }
 
-    DirectoryStream(string_range path): DirectoryStream() {
+    directory_stream(string_range path): directory_stream() {
         open(path);
     }
 
-    ~DirectoryStream() { close(); }
+    ~directory_stream() { close(); }
 
-    DirectoryStream &operator=(DirectoryStream const &) = delete;
-    DirectoryStream &operator=(DirectoryStream &&s) {
+    directory_stream &operator=(directory_stream const &) = delete;
+    directory_stream &operator=(directory_stream &&s) {
         close();
         swap(s);
         return *this;
@@ -481,14 +481,14 @@ struct DirectoryStream {
         return p_data.cFileName[0] == '\0';
     }
 
-    FileInfo read() {
+    file_info read() {
         if (!pop_front()) {
-            return FileInfo();
+            return file_info();
         }
         return front();
     }
 
-    void swap(DirectoryStream &s) {
+    void swap(directory_stream &s) {
         using std::swap;
         swap(p_handle, s.p_handle);
         swap(p_data, s.p_data);
@@ -509,14 +509,14 @@ private:
         return true;
     }
 
-    FileInfo front() const {
+    file_info front() const {
         if (empty()) {
-            return FileInfo();
+            return file_info();
         }
         std::string ap = p_path;
         ap += PathSeparator;
         ap += static_cast<char const *>(p_data.cFileName);
-        return FileInfo(ap);
+        return file_info(ap);
     }
 
     HANDLE p_handle;
@@ -525,19 +525,19 @@ private:
 };
 #endif /* OSTD_PLATFORM_WIN32 */
 
-inline void swap(DirectoryStream &a, DirectoryStream &b) {
+inline void swap(directory_stream &a, directory_stream &b) {
     a.swap(b);
 }
 
 struct directory_range: input_range<directory_range> {
     using range_category  = input_range_tag;
-    using value_type      = FileInfo;
-    using reference       = FileInfo;
+    using value_type      = file_info;
+    using reference       = file_info;
     using size_type       = size_t;
     using difference_type = long;
 
     directory_range() = delete;
-    directory_range(DirectoryStream &s): p_stream(&s) {}
+    directory_range(directory_stream &s): p_stream(&s) {}
     directory_range(directory_range const &r): p_stream(r.p_stream) {}
 
     directory_range &operator=(directory_range const &r) {
@@ -553,7 +553,7 @@ struct directory_range: input_range<directory_range> {
         return p_stream->pop_front();
     }
 
-    FileInfo front() const {
+    file_info front() const {
         return p_stream->front();
     }
 
@@ -562,26 +562,26 @@ struct directory_range: input_range<directory_range> {
     }
 
 private:
-    DirectoryStream *p_stream;
+    directory_stream *p_stream;
 };
 
-inline directory_range DirectoryStream::iter() {
+inline directory_range directory_stream::iter() {
     return directory_range(*this);
 }
 
 namespace detail {
     template<size_t I>
-    struct PathJoin {
+    struct path_join {
         template<typename T, typename ...A>
         static void join(std::string &s, T const &a, A const &...b) {
             s += a;
             s += PathSeparator;
-            PathJoin<I - 1>::join(s, b...);
+            path_join<I - 1>::join(s, b...);
         }
     };
 
     template<>
-    struct PathJoin<1> {
+    struct path_join<1> {
         template<typename T>
         static void join(std::string &s, T const &a) {
             s += a;
@@ -590,11 +590,11 @@ namespace detail {
 }
 
 template<typename ...A>
-inline FileInfo path_join(A const &...args) {
+inline file_info path_join(A const &...args) {
     std::string path;
-    detail::PathJoin<sizeof...(A)>::join(path, args...);
+    detail::path_join<sizeof...(A)>::join(path, args...);
     path_normalize(ostd::iter(path));
-    return FileInfo(path);
+    return file_info(path);
 }
 
 inline bool directory_change(string_range path) {
