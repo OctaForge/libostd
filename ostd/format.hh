@@ -32,7 +32,7 @@ struct format_error: std::runtime_error {
 };
 
 namespace detail {
-    inline int parse_fmt_flags(ConstCharRange &fmt, int ret) {
+    inline int parse_fmt_flags(string_range &fmt, int ret) {
         while (!fmt.empty()) {
             switch (fmt.front()) {
                 case '-': ret |= FMT_FLAG_DASH; fmt.pop_front(); break;
@@ -47,7 +47,7 @@ namespace detail {
         return ret;
     }
 
-    inline size_t read_digits(ConstCharRange &fmt, char *buf) {
+    inline size_t read_digits(string_range &fmt, char *buf) {
         size_t ret = 0;
         for (; !fmt.empty() && isdigit(fmt.front()); ++ret) {
             *buf++ = fmt.front();
@@ -134,7 +134,7 @@ namespace detail {
 
 struct FormatSpec {
     FormatSpec(): p_nested_escape(false), p_fmt() {}
-    FormatSpec(ConstCharRange fmt, bool escape = false):
+    FormatSpec(string_range fmt, bool escape = false):
         p_nested_escape(escape), p_fmt(fmt)
     {}
 
@@ -192,12 +192,12 @@ struct FormatSpec {
         return r;
     }
 
-    ConstCharRange rest() const {
+    string_range rest() const {
         return p_fmt;
     }
 
     template<typename R>
-    size_t build_spec(R &&out, ConstCharRange spec) const {
+    size_t build_spec(R &&out, string_range spec) const {
         size_t ret = out.put('%');
         if (p_flags & FMT_FLAG_DASH ) {
             ret += out.put('-');
@@ -244,15 +244,15 @@ struct FormatSpec {
 
     byte index() const { return p_index; }
 
-    ConstCharRange nested() const { return p_nested; }
-    ConstCharRange nested_sep() const { return p_nested_sep; }
+    string_range nested() const { return p_nested; }
+    string_range nested_sep() const { return p_nested_sep; }
 
     bool is_nested() const { return p_is_nested; }
     bool nested_escape() const { return p_nested_escape; }
 
 protected:
-    ConstCharRange p_nested;
-    ConstCharRange p_nested_sep;
+    string_range p_nested;
+    string_range p_nested_sep;
 
     int p_flags = 0;
 
@@ -291,21 +291,21 @@ protected:
         int sflags = p_flags;
         p_nested_escape = !(sflags & FMT_FLAG_DASH);
         p_fmt.pop_front();
-        ConstCharRange begin_inner(p_fmt);
+        string_range begin_inner(p_fmt);
         if (!read_until_dummy()) {
             p_is_nested = false;
             return false;
         }
         /* skip to the last spec in case multiple specs are present */
-        ConstCharRange curfmt(p_fmt);
+        string_range curfmt(p_fmt);
         while (read_until_dummy()) {
             curfmt = p_fmt;
         }
         p_fmt = curfmt;
         p_flags = sflags;
         /* find delimiter or ending */
-        ConstCharRange begin_delim(p_fmt);
-        ConstCharRange p = find(begin_delim, '%');
+        string_range begin_delim(p_fmt);
+        string_range p = find(begin_delim, '%');
         for (; !p.empty(); p = find(p, '%')) {
             p.pop_front();
             /* escape, skip */
@@ -428,7 +428,7 @@ protected:
         return (sp >= 65) && (detail::fmt_specs[sp - 65] != 0);
     }
 
-    ConstCharRange p_fmt;
+    string_range p_fmt;
     char p_buf[32];
 };
 
@@ -502,14 +502,14 @@ namespace detail {
 
     template<typename R, typename ...A>
     static size_t format_impl(
-        R &writer, bool escape, ConstCharRange fmt, A const &...args
+        R &writer, bool escape, string_range fmt, A const &...args
     );
 
     template<size_t I>
     struct FmtTupleUnpacker {
         template<typename R, typename T, typename ...A>
         static inline size_t unpack(
-            R &writer, bool esc, ConstCharRange fmt,
+            R &writer, bool esc, string_range fmt,
             T const &item, A const &...args
         ) {
             return FmtTupleUnpacker<I - 1>::unpack(
@@ -522,7 +522,7 @@ namespace detail {
     struct FmtTupleUnpacker<0> {
         template<typename R, typename T, typename ...A>
         static inline size_t unpack(
-            R &writer, bool esc, ConstCharRange fmt,
+            R &writer, bool esc, string_range fmt,
             T const &, A const &...args
         ) {
             return format_impl(writer, esc, fmt, args...);
@@ -543,7 +543,7 @@ namespace detail {
 
     template<typename R, typename T>
     inline size_t format_ritem(
-        R &writer, bool esc, bool, ConstCharRange fmt,
+        R &writer, bool esc, bool, string_range fmt,
         T const &item, std::enable_if_t<!is_tuple_like<T>, bool> = true
     ) {
         return format_impl(writer, esc, fmt, item);
@@ -551,7 +551,7 @@ namespace detail {
 
     template<typename R, typename T>
     inline size_t format_ritem(
-        R &writer, bool esc, bool expandval, ConstCharRange fmt,
+        R &writer, bool esc, bool expandval, string_range fmt,
         T const &item, std::enable_if_t<is_tuple_like<T>, bool> = true
     ) {
         if (expandval) {
@@ -565,7 +565,7 @@ namespace detail {
     template<typename R, typename T>
     inline size_t write_range(
         R &writer, FormatSpec const *fl, bool escape, bool expandval,
-        ConstCharRange sep, T const &val,
+        string_range sep, T const &val,
         std::enable_if_t<detail::IterableTest<T>, bool> = true
     ) {
         /* XXX: maybe handle error cases? */
@@ -591,7 +591,7 @@ namespace detail {
 
     template<typename R, typename T>
     inline size_t write_range(
-        R &, FormatSpec const *, bool, bool, ConstCharRange,
+        R &, FormatSpec const *, bool, bool, string_range,
         T const &, std::enable_if_t<!detail::IterableTest<T>, bool> = true
     ) {
         throw format_error{"invalid value for ranged format"};
@@ -629,7 +629,7 @@ namespace detail {
         return nullptr;
     }
 
-    inline std::string escape_fmt_str(ConstCharRange val) {
+    inline std::string escape_fmt_str(string_range val) {
         std::string ret;
         ret.push_back('"');
         while (!val.empty()) {
@@ -662,7 +662,7 @@ namespace detail {
 
         /* string base writer */
         template<typename R>
-        size_t write_str(R &writer, bool escape, ConstCharRange val) const {
+        size_t write_str(R &writer, bool escape, string_range val) const {
             if (escape) {
                 return write_str(writer, false, escape_fmt_str(val));
             }
@@ -688,7 +688,7 @@ namespace detail {
                     size_t elen = strlen(esc);
                     memcpy(buf + 1, esc, elen);
                     buf[elen + 1] = '\'';
-                    return write_val(writer, false, ostd::ConstCharRange{
+                    return write_val(writer, false, ostd::string_range{
                         buf, buf + elen + 2
                     });
                 }
@@ -763,7 +763,7 @@ namespace detail {
                 return sink.get_written();
             }
             /* second best, we can convert to string slice */
-            if constexpr(std::is_constructible_v<ConstCharRange, T const &>) {
+            if constexpr(std::is_constructible_v<string_range, T const &>) {
                 if (this->spec() != 's') {
                     throw format_error{"strings need the '%s' spec"};
                 }
@@ -844,7 +844,7 @@ namespace detail {
         /* range writer */
         template<typename R, typename T, typename ...A>
         size_t write_range(
-            R &writer, size_t idx, bool expandval, ConstCharRange sep,
+            R &writer, size_t idx, bool expandval, string_range sep,
             T const &val, A const &...args
         ) const {
             if (idx) {
@@ -863,7 +863,7 @@ namespace detail {
 
     template<typename R, typename ...A>
     inline size_t format_impl(
-        R &writer, bool escape, ConstCharRange fmt, A const &...args
+        R &writer, bool escape, string_range fmt, A const &...args
     ) {
         size_t argidx = 1, twr = 0, written = 0;
         detail::WriteSpec spec(fmt, escape);
@@ -914,7 +914,7 @@ namespace detail {
     }
 
     template<typename R>
-    inline ptrdiff_t format_impl(R &writer, bool, ConstCharRange fmt) {
+    inline ptrdiff_t format_impl(R &writer, bool, string_range fmt) {
         size_t written = 0;
         detail::WriteSpec spec(fmt, false);
         if (spec.read_until_spec(writer, &written)) {
@@ -925,7 +925,7 @@ namespace detail {
 } /* namespace detail */
 
 template<typename R, typename ...A>
-inline size_t format(R &&writer, ConstCharRange fmt, A const &...args) {
+inline size_t format(R &&writer, string_range fmt, A const &...args) {
     return detail::format_impl(writer, false, fmt, args...);
 }
 

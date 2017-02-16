@@ -4,7 +4,7 @@
 
 using namespace ostd;
 
-void list_dirs(ConstCharRange path, int off = 0) {
+void list_dirs(string_range path, int off = 0) {
     DirectoryStream ds{path};
     /* iterate all items in directory */
     for (auto v: iter(ds)) {

@@ -100,10 +100,10 @@ struct Stream {
     }
 
     template<typename ...A>
-    void writef(ConstCharRange fmt, A const &...args);
+    void writef(string_range fmt, A const &...args);
 
     template<typename ...A>
-    void writefln(ConstCharRange fmt, A const &...args) {
+    void writefln(string_range fmt, A const &...args) {
         writef(fmt, args...);
         if (!putchar('\n')) {
             throw format_error{"stream EOF"};
@@ -234,7 +234,7 @@ inline void Stream::write(T const &v) {
 }
 
 template<typename ...A>
-inline void Stream::writef(ConstCharRange fmt, A const &...args) {
+inline void Stream::writef(string_range fmt, A const &...args) {
     format(detail::FmtStreamRange{*this}, fmt, args...);
 }
 

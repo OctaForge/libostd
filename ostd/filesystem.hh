@@ -50,7 +50,7 @@ namespace detail {
 }
 #endif
 
-inline void path_normalize(CharRange) {
+inline void path_normalize(char_range) {
     /* TODO */
 }
 
@@ -73,7 +73,7 @@ struct FileInfo {
         i.p_atime = i.p_ctime = i.p_mtime = 0;
     }
 
-    FileInfo(ConstCharRange path) {
+    FileInfo(string_range path) {
         init_from_str(path);
     }
 
@@ -93,24 +93,24 @@ struct FileInfo {
         return *this;
     }
 
-    ConstCharRange path() const { return ostd::iter(p_path); }
+    string_range path() const { return ostd::iter(p_path); }
 
-    ConstCharRange filename() const {
+    string_range filename() const {
         return path().slice(
             (p_slash == std::string::npos) ? 0 : (p_slash + 1), p_path.size()
         );
     }
 
-    ConstCharRange stem() const {
+    string_range stem() const {
         return path().slice(
             (p_slash == std::string::npos) ? 0 : (p_slash + 1),
             (p_dot == std::string::npos) ? p_path.size() : p_dot
         );
     }
 
-    ConstCharRange extension() const {
+    string_range extension() const {
         return (p_dot == std::string::npos)
-            ? ConstCharRange()
+            ? string_range()
             : path().slice(p_dot, p_path.size());
     }
 
@@ -137,7 +137,7 @@ struct FileInfo {
     }
 
 private:
-    void init_from_str(ConstCharRange path) {
+    void init_from_str(string_range path) {
         /* TODO: implement a version that will follow symbolic links */
         p_path = path;
 #ifdef OSTD_PLATFORM_WIN32
@@ -155,9 +155,9 @@ private:
             p_atime = p_mtime = p_ctime = 0;
             return;
         }
-        ConstCharRange r = p_path;
+        string_range r = p_path;
 
-        ConstCharRange found = find_last(r, PathSeparator);
+        string_range found = find_last(r, PathSeparator);
         if (found.empty()) {
             p_slash = std::string::npos;
         } else {
@@ -240,7 +240,7 @@ struct DirectoryStream {
         s.p_de = nullptr;
     }
 
-    DirectoryStream(ConstCharRange path): DirectoryStream() {
+    DirectoryStream(string_range path): DirectoryStream() {
         open(path);
     }
 
@@ -253,7 +253,7 @@ struct DirectoryStream {
         return *this;
     }
 
-    bool open(ConstCharRange path) {
+    bool open(string_range path) {
         if (p_d || (path.size() > FILENAME_MAX)) {
             return false;
         }
@@ -377,7 +377,7 @@ struct DirectoryStream {
         memset(&s.p_data, 0, sizeof(s.p_data));
     }
 
-    DirectoryStream(ConstCharRange path): DirectoryStream() {
+    DirectoryStream(string_range path): DirectoryStream() {
         open(path);
     }
 
@@ -390,7 +390,7 @@ struct DirectoryStream {
         return *this;
     }
 
-    bool open(ConstCharRange path) {
+    bool open(string_range path) {
         if (p_handle != INVALID_HANDLE_VALUE) {
             return false;
         }
@@ -597,7 +597,7 @@ inline FileInfo path_join(A const &...args) {
     return FileInfo(path);
 }
 
-inline bool directory_change(ConstCharRange path) {
+inline bool directory_change(string_range path) {
     char buf[1024];
     if (path.size() >= 1024) {
         return false;

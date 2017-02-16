@@ -21,7 +21,7 @@
 
 namespace ostd {
 
-inline std::optional<std::string> env_get(ConstCharRange name) {
+inline std::optional<std::string> env_get(string_range name) {
     char buf[256];
     auto tbuf = to_temp_cstr(name, buf, sizeof(buf));
 #ifndef OSTD_PLATFORM_WIN32
@@ -48,7 +48,7 @@ inline std::optional<std::string> env_get(ConstCharRange name) {
 }
 
 inline bool env_set(
-    ConstCharRange name, ConstCharRange value, bool update = true
+    string_range name, string_range value, bool update = true
 ) {
     char sbuf[2048];
     char *buf = sbuf;
@@ -74,7 +74,7 @@ inline bool env_set(
     return ret;
 }
 
-inline bool env_unset(ConstCharRange name) {
+inline bool env_unset(string_range name) {
     char buf[256];
     if (name.size() < sizeof(buf)) {
         memcpy(buf, name.data(), name.size());

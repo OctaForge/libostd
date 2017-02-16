@@ -35,7 +35,7 @@ struct FileStream: Stream {
         s.p_owned = false;
     }
 
-    FileStream(ConstCharRange path, StreamMode mode = StreamMode::read): p_f() {
+    FileStream(string_range path, StreamMode mode = StreamMode::read): p_f() {
         open(path, mode);
     }
 
@@ -50,7 +50,7 @@ struct FileStream: Stream {
         return *this;
     }
 
-    bool open(ConstCharRange path, StreamMode mode = StreamMode::read) {
+    bool open(string_range path, StreamMode mode = StreamMode::read) {
         if (p_f || (path.size() > FILENAME_MAX)) {
             return false;
         }
@@ -199,12 +199,12 @@ inline void writeln(T const &v, A const &...args) {
 }
 
 template<typename ...A>
-inline void writef(ConstCharRange fmt, A const &...args) {
+inline void writef(string_range fmt, A const &...args) {
     format(detail::StdoutRange{}, fmt, args...);
 }
 
 template<typename ...A>
-inline void writefln(ConstCharRange fmt, A const &...args) {
+inline void writefln(string_range fmt, A const &...args) {
     writef(fmt, args...);
     if (putchar('\n') == EOF) {
         throw format_error{"stream EOF"};

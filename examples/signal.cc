@@ -9,8 +9,8 @@ struct SignalTest {
      * can actually emit (in that case, the reference passed to each
      * callback will always be const to make sure nothing changes)
      */
-    Signal<SignalTest const, int, ConstCharRange> on_simple = this;
-    Signal<SignalTest      , float              > on_param  = this;
+    Signal<SignalTest const, int, string_range> on_simple = this;
+    Signal<SignalTest      , float            > on_param  = this;
 
     SignalTest(): p_param(3.14f) {
         /* we can connect methods */
@@ -31,7 +31,7 @@ struct SignalTest {
         on_simple.emit(150, "hello world");
     }
 
-    void simple_method(int v, ConstCharRange str) const {
+    void simple_method(int v, string_range str) const {
         writefln("simple method handler: %d, %s", v, str);
     }
 
@@ -49,7 +49,7 @@ int main() {
      * this callback can access "test" easily and it will still work
      */
     auto idx = st.on_simple.connect([&](
-        SignalTest const &, int v, ConstCharRange str
+        SignalTest const &, int v, string_range str
     ) {
         writefln("and lambda test: %d, %s (%d)", v, str, test);
     });

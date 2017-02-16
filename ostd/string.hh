@@ -23,7 +23,7 @@
 namespace ostd {
 
 template<typename T, typename TR = std::char_traits<std::remove_const_t<T>>>
-struct CharRangeBase: InputRange<CharRangeBase<T>> {
+struct basic_char_range: InputRange<basic_char_range<T>> {
     using Category   = ContiguousRangeTag;
     using Value      = T;
     using Reference  = T &;
@@ -34,47 +34,47 @@ private:
     struct Nat {};
 
 public:
-    CharRangeBase(): p_beg(nullptr), p_end(nullptr) {};
-    CharRangeBase(T *beg, T *end): p_beg(beg), p_end(end) {}
+    basic_char_range(): p_beg(nullptr), p_end(nullptr) {};
+    basic_char_range(T *beg, T *end): p_beg(beg), p_end(end) {}
 
     template<typename U>
-    CharRangeBase(
+    basic_char_range(
         U beg, std::enable_if_t<
             std::is_convertible_v<U, T *> && !std::is_array_v<U>, Nat
         > = Nat()
     ): p_beg(beg), p_end(static_cast<T *>(beg) + (beg ? TR::length(beg) : 0)) {}
 
-    CharRangeBase(std::nullptr_t): p_beg(nullptr), p_end(nullptr) {}
+    basic_char_range(std::nullptr_t): p_beg(nullptr), p_end(nullptr) {}
 
     template<typename U, size_t N>
-    CharRangeBase(U (&beg)[N], std::enable_if_t<
+    basic_char_range(U (&beg)[N], std::enable_if_t<
         std::is_convertible_v<U *, T *>, Nat
     > = Nat()):
         p_beg(beg), p_end(beg + N - (beg[N - 1] == '\0'))
     {}
 
     template<typename STR, typename A>
-    CharRangeBase(std::basic_string<std::remove_const_t<T>, STR, A> const &s):
+    basic_char_range(std::basic_string<std::remove_const_t<T>, STR, A> const &s):
         p_beg(s.data()), p_end(s.data() + s.size())
     {}
 
     template<typename U, typename = std::enable_if_t<
         std::is_convertible_v<U *, T *>
     >>
-    CharRangeBase(CharRangeBase<U> const &v):
+    basic_char_range(basic_char_range<U> const &v):
         p_beg(&v[0]), p_end(&v[v.size()])
     {}
 
-    CharRangeBase &operator=(CharRangeBase const &v) {
+    basic_char_range &operator=(basic_char_range const &v) {
         p_beg = v.p_beg; p_end = v.p_end; return *this;
     }
 
     template<typename STR, typename A>
-    CharRangeBase &operator=(std::basic_string<T, STR, A> const &s) {
+    basic_char_range &operator=(std::basic_string<T, STR, A> const &s) {
         p_beg = s.data(); p_end = s.data() + s.size(); return *this;
     }
 
-    CharRangeBase &operator=(T *s) {
+    basic_char_range &operator=(T *s) {
         p_beg = s; p_end = s + (s ? TR::length(s) : 0); return *this;
     }
 
@@ -103,11 +103,11 @@ public:
 
     T &front() const { return *p_beg; }
 
-    bool equals_front(CharRangeBase const &range) const {
+    bool equals_front(basic_char_range const &range) const {
         return p_beg == range.p_beg;
     }
 
-    ptrdiff_t distance_front(CharRangeBase const &range) const {
+    ptrdiff_t distance_front(basic_char_range const &range) const {
         return range.p_beg - p_beg;
     }
 
@@ -134,18 +134,18 @@ public:
 
     T &back() const { return *(p_end - 1); }
 
-    bool equals_back(CharRangeBase const &range) const {
+    bool equals_back(basic_char_range const &range) const {
         return p_end == range.p_end;
     }
 
-    ptrdiff_t distance_back(CharRangeBase const &range) const {
+    ptrdiff_t distance_back(basic_char_range const &range) const {
         return range.p_end - p_end;
     }
 
     size_t size() const { return p_end - p_beg; }
 
-    CharRangeBase slice(size_t start, size_t end) const {
-        return CharRangeBase(p_beg + start, p_beg + end);
+    basic_char_range slice(size_t start, size_t end) const {
+        return basic_char_range(p_beg + start, p_beg + end);
     }
 
     T &operator[](size_t i) const { return p_beg[i]; }
@@ -162,7 +162,7 @@ public:
     T const *data() const { return p_beg; }
 
     /* non-range */
-    int compare(CharRangeBase<T const> s) const {
+    int compare(basic_char_range<T const> s) const {
         size_t s1 = size(), s2 = s.size();
         int ret;
         if (!s1 || !s2) {
@@ -175,7 +175,7 @@ diffsize:
         return (s1 < s2) ? -1 : ((s1 > s2) ? 1 : 0);
     }
 
-    int case_compare(CharRangeBase<T const> s) const {
+    int case_compare(basic_char_range<T const> s) const {
         size_t s1 = size(), s2 = s.size();
         for (size_t i = 0, ms = ostd::min(s1, s2); i < ms; ++i) {
             int d = toupper(p_beg[i]) - toupper(s[i]);
@@ -207,41 +207,186 @@ private:
 };
 
 template<typename T, typename TR>
-inline size_t range_put_n(CharRangeBase<T, TR> &range, T const *p, size_t n) {
+inline size_t range_put_n(basic_char_range<T, TR> &range, T const *p, size_t n) {
     size_t an = ostd::min(n, range.size());
     TR::copy(range.data(), p, an);
     range.pop_front_n(an);
     return an;
 }
 
-using CharRange = CharRangeBase<char>;
-using ConstCharRange = CharRangeBase<char const>;
+using char_range = basic_char_range<char>;
+using string_range = basic_char_range<char const>;
 
-inline bool operator==(ConstCharRange lhs, ConstCharRange rhs) {
+/* comparisons between ranges */
+
+template<typename T, typename TR>
+inline bool operator==(
+    basic_char_range<T, TR> lhs, basic_char_range<T, TR> rhs
+) {
     return !lhs.compare(rhs);
 }
 
-inline bool operator!=(ConstCharRange lhs, ConstCharRange rhs) {
+template<typename T, typename TR>
+inline bool operator!=(
+    basic_char_range<T, TR> lhs, basic_char_range<T, TR> rhs
+) {
     return lhs.compare(rhs);
 }
 
-inline bool operator<(ConstCharRange lhs, ConstCharRange rhs) {
+template<typename T, typename TR>
+inline bool operator<(
+    basic_char_range<T, TR> lhs, basic_char_range<T, TR> rhs
+) {
     return lhs.compare(rhs) < 0;
 }
 
-inline bool operator>(ConstCharRange lhs, ConstCharRange rhs) {
+template<typename T, typename TR>
+inline bool operator>(
+    basic_char_range<T, TR> lhs, basic_char_range<T, TR> rhs
+) {
     return lhs.compare(rhs) > 0;
 }
 
-inline bool operator<=(ConstCharRange lhs, ConstCharRange rhs) {
+template<typename T, typename TR>
+inline bool operator<=(
+    basic_char_range<T, TR> lhs, basic_char_range<T, TR> rhs
+) {
     return lhs.compare(rhs) <= 0;
 }
 
-inline bool operator>=(ConstCharRange lhs, ConstCharRange rhs) {
+template<typename T, typename TR>
+inline bool operator>=(
+    basic_char_range<T, TR> lhs, basic_char_range<T, TR> rhs
+) {
     return lhs.compare(rhs) >= 0;
 }
 
-inline bool starts_with(ConstCharRange a, ConstCharRange b) {
+/* comparisons between mutable ranges and char arrays */
+
+template<typename T, typename TR>
+inline bool operator==(basic_char_range<T, TR> lhs, T const *rhs) {
+    return !lhs.compare(rhs);
+}
+
+template<typename T, typename TR>
+inline bool operator!=(basic_char_range<T, TR> lhs, T const *rhs) {
+    return lhs.compare(rhs);
+}
+
+template<typename T, typename TR>
+inline bool operator<(basic_char_range<T, TR> lhs, T const *rhs) {
+    return lhs.compare(rhs) < 0;
+}
+
+template<typename T, typename TR>
+inline bool operator>(basic_char_range<T, TR> lhs, T const *rhs) {
+    return lhs.compare(rhs) > 0;
+}
+
+template<typename T, typename TR>
+inline bool operator<=(basic_char_range<T, TR> lhs, T const *rhs) {
+    return lhs.compare(rhs) <= 0;
+}
+
+template<typename T, typename TR>
+inline bool operator>=(basic_char_range<T, TR> lhs, T const *rhs) {
+    return lhs.compare(rhs) >= 0;
+}
+
+template<typename T, typename TR>
+inline bool operator==(T const *lhs, basic_char_range<T, TR> rhs) {
+    return !rhs.compare(lhs);
+}
+
+template<typename T, typename TR>
+inline bool operator!=(T const *lhs, basic_char_range<T, TR> rhs) {
+    return rhs.compare(lhs);
+}
+
+template<typename T, typename TR>
+inline bool operator<(T const *lhs, basic_char_range<T, TR> rhs) {
+    return rhs.compare(lhs) > 0;
+}
+
+template<typename T, typename TR>
+inline bool operator>(T const *lhs, basic_char_range<T, TR> rhs) {
+    return rhs.compare(lhs) < 0;
+}
+
+template<typename T, typename TR>
+inline bool operator<=(T const *lhs, basic_char_range<T, TR> rhs) {
+    return rhs.compare(lhs) >= 0;
+}
+
+template<typename T, typename TR>
+inline bool operator>=(T const *lhs, basic_char_range<T, TR> rhs) {
+    return rhs.compare(lhs) <= 0;
+}
+
+/* comparisons between immutable ranges and char arrays */
+
+template<typename T, typename TR>
+inline bool operator==(basic_char_range<T const, TR> lhs, T const *rhs) {
+    return !lhs.compare(rhs);
+}
+
+template<typename T, typename TR>
+inline bool operator!=(basic_char_range<T const, TR> lhs, T const *rhs) {
+    return lhs.compare(rhs);
+}
+
+template<typename T, typename TR>
+inline bool operator<(basic_char_range<T const, TR> lhs, T const *rhs) {
+    return lhs.compare(rhs) < 0;
+}
+
+template<typename T, typename TR>
+inline bool operator>(basic_char_range<T const, TR> lhs, T const *rhs) {
+    return lhs.compare(rhs) > 0;
+}
+
+template<typename T, typename TR>
+inline bool operator<=(basic_char_range<T const, TR> lhs, T const *rhs) {
+    return lhs.compare(rhs) <= 0;
+}
+
+template<typename T, typename TR>
+inline bool operator>=(basic_char_range<T const, TR> lhs, T const *rhs) {
+    return lhs.compare(rhs) >= 0;
+}
+
+template<typename T, typename TR>
+inline bool operator==(T const *lhs, basic_char_range<T const, TR> rhs) {
+    return !rhs.compare(lhs);
+}
+
+template<typename T, typename TR>
+inline bool operator!=(T const *lhs, basic_char_range<T const, TR> rhs) {
+    return rhs.compare(lhs);
+}
+
+template<typename T, typename TR>
+inline bool operator<(T const *lhs, basic_char_range<T const, TR> rhs) {
+    return rhs.compare(lhs) > 0;
+}
+
+template<typename T, typename TR>
+inline bool operator>(T const *lhs, basic_char_range<T const, TR> rhs) {
+    return rhs.compare(lhs) < 0;
+}
+
+template<typename T, typename TR>
+inline bool operator<=(T const *lhs, basic_char_range<T const, TR> rhs) {
+    return rhs.compare(lhs) >= 0;
+}
+
+template<typename T, typename TR>
+inline bool operator>=(T const *lhs, basic_char_range<T const, TR> rhs) {
+    return rhs.compare(lhs) <= 0;
+}
+
+inline bool starts_with(string_range a, string_range b
+) {
     if (a.size() < b.size()) {
         return false;
     }
@@ -250,7 +395,7 @@ inline bool starts_with(ConstCharRange a, ConstCharRange b) {
 
 template<typename T, typename TR, typename A>
 struct ranged_traits<std::basic_string<T, TR, A>> {
-    using range = CharRangeBase<T>;
+    using range = basic_char_range<T, TR>;
 
     static range iter(std::basic_string<T, TR, A> &v) {
         return range{v.data(), v.data() + v.size()};
@@ -259,7 +404,7 @@ struct ranged_traits<std::basic_string<T, TR, A>> {
 
 template<typename T, typename TR, typename A>
 struct ranged_traits<std::basic_string<T, TR, A> const> {
-    using range = CharRangeBase<T const>;
+    using range = basic_char_range<T const, TR>;
 
     static range iter(std::basic_string<T, TR, A> const &v) {
         return range{v.data(), v.data() + v.size()};
@@ -303,15 +448,15 @@ inline std::basic_string<std::remove_cv_t<RangeValue<R>>, TR, A> make_string(
 
 inline namespace literals {
 inline namespace string_literals {
-    inline ConstCharRange operator "" _sr(char const *str, size_t len) {
-        return ConstCharRange(str, str + len);
+    inline string_range operator "" _sr(char const *str, size_t len) {
+        return string_range(str, str + len);
     }
 }
 }
 
 namespace detail {
     template<
-        typename T, bool = std::is_convertible_v<T, ConstCharRange>,
+        typename T, bool = std::is_convertible_v<T, string_range>,
         bool = std::is_convertible_v<T, char>
     >
     struct ConcatPut;
@@ -319,7 +464,7 @@ namespace detail {
     template<typename T, bool B>
     struct ConcatPut<T, true, B> {
         template<typename R>
-        static bool put(R &sink, ConstCharRange v) {
+        static bool put(R &sink, string_range v) {
             return v.size() && (range_put_n(sink, &v[0], v.size()) == v.size());
         }
     };
@@ -334,7 +479,7 @@ namespace detail {
 }
 
 template<typename R, typename T, typename F>
-bool concat(R &&sink, T const &v, ConstCharRange sep, F func) {
+bool concat(R &&sink, T const &v, string_range sep, F func) {
     auto range = ostd::iter(v);
     if (range.empty()) {
         return true;
@@ -355,13 +500,13 @@ bool concat(R &&sink, T const &v, ConstCharRange sep, F func) {
 }
 
 template<typename R, typename T>
-bool concat(R &&sink, T const &v, ConstCharRange sep = " ") {
+bool concat(R &&sink, T const &v, string_range sep = " ") {
     auto range = ostd::iter(v);
     if (range.empty()) {
         return true;
     }
     for (;;) {
-        ConstCharRange ret = range.front();
+        string_range ret = range.front();
         if (!ret.size() || (range_put_n(sink, &ret[0], ret.size()) != ret.size())) {
             return false;
         }
@@ -375,12 +520,12 @@ bool concat(R &&sink, T const &v, ConstCharRange sep = " ") {
 }
 
 template<typename R, typename T, typename F>
-bool concat(R &&sink, std::initializer_list<T> v, ConstCharRange sep, F func) {
+bool concat(R &&sink, std::initializer_list<T> v, string_range sep, F func) {
     return concat(sink, ostd::iter(v), sep, func);
 }
 
 template<typename R, typename T>
-bool concat(R &&sink, std::initializer_list<T> v, ConstCharRange sep = " ") {
+bool concat(R &&sink, std::initializer_list<T> v, string_range sep = " ") {
     return concat(sink, ostd::iter(v), sep);
 }
 
@@ -402,7 +547,7 @@ namespace detail {
             p_written += ret;
             return ret;
         }
-        size_t put_string(ConstCharRange r) {
+        size_t put_string(string_range r) {
             size_t ret = range_put_n(p_out, r.data(), r.size());
             p_written += ret;
             return ret;
@@ -571,8 +716,8 @@ struct ToString<std::string> {
 };
 
 template<>
-struct ToString<CharRange> {
-    using Argument = CharRange;
+struct ToString<char_range> {
+    using Argument = char_range;
     using Result = std::string;
     std::string operator()(Argument const &s) {
         return std::string{s};
@@ -580,8 +725,8 @@ struct ToString<CharRange> {
 };
 
 template<>
-struct ToString<ConstCharRange> {
-    using Argument = ConstCharRange;
+struct ToString<string_range> {
+    using Argument = string_range;
     using Result = std::string;
     std::string operator()(Argument const &s) {
         return std::string{s};
@@ -719,17 +864,10 @@ inline TempCString<R> to_temp_cstr(
 
 namespace std {
 
-template<>
-struct hash<ostd::CharRange> {
-    size_t operator()(ostd::CharRange const &v) const {
-        return hash<std::string_view>{}(v);
-    }
-};
-
-template<>
-struct hash<ostd::ConstCharRange> {
-    size_t operator()(ostd::ConstCharRange const &v) const {
-        return hash<std::string_view>{}(v);
+template<typename T, typename TR>
+struct hash<ostd::basic_char_range<T, TR>> {
+    size_t operator()(ostd::basic_char_range<T, TR> const &v) const {
+        return hash<std::basic_string_view<std::remove_const_t<T>, TR>>{}(v);
     }
 };
 
