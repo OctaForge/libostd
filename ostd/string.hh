@@ -31,37 +31,34 @@ struct basic_char_range: input_range<basic_char_range<T>> {
     using difference_type = ptrdiff_t;
 
 private:
-    struct Nat {};
+    struct nat {};
 
 public:
     basic_char_range(): p_beg(nullptr), p_end(nullptr) {};
     basic_char_range(T *beg, T *end): p_beg(beg), p_end(end) {}
-
-    template<typename U>
-    basic_char_range(
-        U beg, std::enable_if_t<
-            std::is_convertible_v<U, T *> && !std::is_array_v<U>, Nat
-        > = Nat()
-    ): p_beg(beg), p_end(static_cast<T *>(beg) + (beg ? TR::length(beg) : 0)) {}
-
     basic_char_range(std::nullptr_t): p_beg(nullptr), p_end(nullptr) {}
 
-    template<typename U, size_t N>
-    basic_char_range(U (&beg)[N], std::enable_if_t<
-        std::is_convertible_v<U *, T *>, Nat
-    > = Nat()):
-        p_beg(beg), p_end(beg + N - (beg[N - 1] == '\0'))
-    {}
+    template<typename U>
+    basic_char_range(U &&beg, std::enable_if_t<
+        std::is_convertible_v<U, T *>, nat
+    > = nat{}): p_beg(beg) {
+        if constexpr(std::is_array_v<std::remove_reference_t<U>>) {
+            size_t N = std::extent_v<std::remove_reference_t<U>>;
+            p_end = beg + N - (beg[N - 1] == '\0');
+        } else {
+            p_end = beg + (beg ? TR::length(beg) : 0);
+        }
+    }
 
     template<typename STR, typename A>
     basic_char_range(std::basic_string<std::remove_const_t<T>, STR, A> const &s):
         p_beg(s.data()), p_end(s.data() + s.size())
     {}
 
-    template<typename U, typename = std::enable_if_t<
+    template<typename U, typename TTR, typename = std::enable_if_t<
         std::is_convertible_v<U *, T *>
     >>
-    basic_char_range(basic_char_range<U> const &v):
+    basic_char_range(basic_char_range<U, TTR> const &v):
         p_beg(&v[0]), p_end(&v[v.size()])
     {}
 
