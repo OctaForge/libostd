@@ -165,7 +165,7 @@ public:
         if (!s1 || !s2) {
             goto diffsize;
         }
-        if ((ret = TR::compare(data(), s.data(), ostd::min(s1, s2)))) {
+        if ((ret = TR::compare(data(), s.data(), std::min(s1, s2)))) {
             return ret;
         }
 diffsize:
@@ -174,7 +174,7 @@ diffsize:
 
     int case_compare(basic_char_range<T const> s) const {
         size_t s1 = size(), s2 = s.size();
-        for (size_t i = 0, ms = ostd::min(s1, s2); i < ms; ++i) {
+        for (size_t i = 0, ms = std::min(s1, s2); i < ms; ++i) {
             int d = toupper(p_beg[i]) - toupper(s[i]);
             if (d) {
                 return d;
@@ -185,11 +185,11 @@ diffsize:
 
     template<typename R>
     std::enable_if_t<is_output_range<R>, size_t> copy(R &&orange, size_t n = -1) {
-        return range_put_n(orange, data(), ostd::min(n, size()));
+        return range_put_n(orange, data(), std::min(n, size()));
     }
 
     size_t copy(std::remove_cv_t<T> *p, size_t n = -1) {
-        size_t c = ostd::min(n, size());
+        size_t c = std::min(n, size());
         TR::copy(p, data(), c);
         return c;
     }
@@ -205,7 +205,7 @@ private:
 
 template<typename T, typename TR>
 inline size_t range_put_n(basic_char_range<T, TR> &range, T const *p, size_t n) {
-    size_t an = ostd::min(n, range.size());
+    size_t an = std::min(n, range.size());
     TR::copy(range.data(), p, an);
     range.pop_front_n(an);
     return an;

@@ -11,6 +11,7 @@
 #include <utility>
 #include <functional>
 #include <type_traits>
+#include <algorithm>
 
 #include "ostd/range.hh"
 
@@ -180,29 +181,11 @@ inline auto sort() {
 
 /* min/max(_element) */
 
-template<typename T>
-inline T const &min(T const &a, T const &b) {
-    return (a < b) ? a : b;
-}
-template<typename T, typename C>
-inline T const &min_cmp(T const &a, T const &b, C compare) {
-    return compare(a, b) ? a : b;
-}
-
-template<typename T>
-inline T const &max(T const &a, T const &b) {
-    return (a < b) ? b : a;
-}
-template<typename T, typename C>
-inline T const &max_cmp(T const &a, T const &b, C compare) {
-    return compare(a, b) ? b : a;
-}
-
 template<typename R>
 inline R min_element(R range) {
     R r = range;
     for (; !range.empty(); range.pop_front()) {
-        if (ostd::min(r.front(), range.front()) == range.front()) {
+        if (std::min(r.front(), range.front()) == range.front()) {
             r = range;
         }
     }
@@ -212,7 +195,7 @@ template<typename R, typename C>
 inline R min_element_cmp(R range, C compare) {
     R r = range;
     for (; !range.empty(); range.pop_front()) {
-        if (ostd::min_cmp(r.front(), range.front(), compare) == range.front()) {
+        if (std::min(r.front(), range.front(), compare) == range.front()) {
             r = range;
         }
     }
@@ -236,7 +219,7 @@ template<typename R>
 inline R max_element(R range) {
     R r = range;
     for (; !range.empty(); range.pop_front()) {
-        if (ostd::max(r.front(), range.front()) == range.front()) {
+        if (std::max(r.front(), range.front()) == range.front()) {
             r = range;
         }
     }
@@ -246,7 +229,7 @@ template<typename R, typename C>
 inline R max_element_cmp(R range, C compare) {
     R r = range;
     for (; !range.empty(); range.pop_front()) {
-        if (ostd::max_cmp(r.front(), range.front(), compare) == range.front()) {
+        if (std::max(r.front(), range.front(), compare) == range.front()) {
             r = range;
         }
     }
@@ -264,37 +247,6 @@ inline auto max_element_cmp(C &&compare) {
             std::forward<decltype(obj)>(obj), std::forward<C>(compare)
         );
     };
-}
-
-template<typename T>
-inline T min(std::initializer_list<T> il) {
-    return ostd::min_element(ostd::iter(il)).front();
-}
-template<typename T, typename C>
-inline T min_cmp(std::initializer_list<T> il, C compare) {
-    return ostd::min_element_cmp(ostd::iter(il), compare).front();
-}
-
-template<typename T>
-inline T max(std::initializer_list<T> il) {
-    return ostd::max_element(ostd::iter(il)).front();
-}
-
-template<typename T, typename C>
-inline T max_cmp(std::initializer_list<T> il, C compare) {
-    return ostd::max_element_cmp(ostd::iter(il), compare).front();
-}
-
-/* clamp */
-
-template<typename T, typename U>
-inline T clamp(T const &v, U const &lo, U const &hi) {
-    return ostd::max(T(lo), ostd::min(v, T(hi)));
-}
-
-template<typename T, typename U, typename C>
-inline T clamp(T const &v, U const &lo, U const &hi, C compare) {
-    return ostd::max_cmp(T(lo), ostd::min_cmp(v, T(hi), compare), compare);
 }
 
 /* lexicographical compare */
