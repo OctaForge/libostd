@@ -1729,6 +1729,10 @@ struct iterator_range: input_range<iterator_range<T>> {
 
     reference operator[](size_type i) const { return p_beg[i]; }
 
+    /* statisfy contiguous_range */
+    value_type *data() { return p_beg; }
+    value_type const *data() const { return p_beg; }
+
     /* satisfy output_range */
     bool put(value_type const &v) {
         if (empty()) {

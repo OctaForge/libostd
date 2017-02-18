@@ -776,7 +776,9 @@ inline auto foldr_f(T &&init, F &&func) {
 
 template<typename T, typename F, typename R>
 struct map_range: input_range<map_range<T, F, R>> {
-    using range_category  = range_category_t<T>;
+    using range_category  = std::common_type_t<
+        range_category_t<T>, finite_random_access_range_tag
+    >;
     using value_type      = R;
     using reference       = R;
     using size_type       = range_size_t<T>;
