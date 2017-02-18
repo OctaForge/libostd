@@ -28,36 +28,59 @@ struct random_access_range_tag: bidirectional_range_tag {};
 struct finite_random_access_range_tag: random_access_range_tag {};
 struct contiguous_range_tag: finite_random_access_range_tag {};
 
-template<typename T>
-struct range_half;
+namespace detail {
+    template<typename R>
+    struct range_category_test {
+        template<typename RR>
+        static char test(typename RR::range_category *);
+        template<typename>
+        static int test(...);
+        static constexpr bool value = (sizeof(test<R>(0)) == sizeof(char));
+    };
 
-#define OSTD_RANGE_TRAIT(Name, Member) \
-namespace detail { \
-    template<typename T> \
-    struct range_##Name##_test { \
-        template<typename U> \
-        static char test(std::remove_reference_t<typename U::Member> *); \
-        template<typename U> \
-        static int test(...); \
-        static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char)); \
-    }; \
-    template<typename T, bool = range_##Name##_test<T>::value> \
-    struct range_##Name##_base {}; \
-    template<typename T> \
-    struct range_##Name##_base<T, true> { \
-        using type = typename T::Member; \
-    }; \
-} \
-template<typename T> \
-using range_##Name##_t = typename detail::range_##Name##_base<T>::type;
+    template<typename R>
+    constexpr bool test_range_category = range_category_test<R>::value;
 
-OSTD_RANGE_TRAIT(category, range_category)
-OSTD_RANGE_TRAIT(size, size_type)
-OSTD_RANGE_TRAIT(value, value_type)
-OSTD_RANGE_TRAIT(reference, reference)
-OSTD_RANGE_TRAIT(difference, difference_type)
+    template<typename R, bool>
+    struct range_traits_base {};
 
-#undef OSTD_RANGE_TRAIT
+    template<typename R>
+    struct range_traits_base<R, true> {
+        using range_category  = typename R::range_category;
+        using size_type       = typename R::size_type;
+        using value_type      = typename R::value_type;
+        using reference       = typename R::reference;
+        using difference_type = typename R::difference_type;
+    };
+
+    template<typename R, bool>
+    struct range_traits_impl {};
+
+    template<typename R>
+    struct range_traits_impl<R, true>: range_traits_base<
+        R,
+        std::is_convertible_v<typename R::range_category, input_range_tag> ||
+        std::is_convertible_v<typename R::range_category, output_range_tag>
+    > {};
+}
+
+template<typename R>
+struct range_traits: detail::range_traits_impl<R, detail::test_range_category<R>> {};
+
+template<typename R>
+using range_category_t = typename range_traits<R>::range_category;
+
+template<typename R>
+using range_size_t = typename range_traits<R>::size_type;
+
+template<typename R>
+using range_value_t = typename range_traits<R>::value_type;
+
+template<typename R>
+using range_reference_t = typename range_traits<R>::reference;
+
+template<typename R>
+using range_difference_t = typename range_traits<R>::difference_type;
 
 namespace detail {
     template<typename U>
