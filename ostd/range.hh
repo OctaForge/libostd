@@ -751,26 +751,6 @@ inline auto chunks(T n) {
     return [n](auto &&obj) { return obj.chunks(n); };
 }
 
-namespace detail {
-    template<typename T, typename ...R, size_t ...I>
-    inline auto join_proxy(
-        T &&obj, std::tuple<R &&...> &&tup, std::index_sequence<I...>
-    ) {
-        return obj.join(std::forward<R>(
-            std::get<I>(std::forward<std::tuple<R &&...>>(tup))
-        )...);
-    }
-
-    template<typename T, typename ...R, size_t ...I>
-    inline auto zip_proxy(
-        T &&obj, std::tuple<R &&...> &&tup, std::index_sequence<I...>
-    ) {
-        return obj.zip(std::forward<R>(
-            std::get<I>(std::forward<std::tuple<R &&...>>(tup))
-        )...);
-    }
-}
-
 template<typename R>
 inline auto join(R &&range) {
     return [range = std::forward<R>(range)](auto &&obj) mutable {
@@ -785,11 +765,9 @@ inline auto join(R1 &&r1, R &&...rr) {
             std::forward<R1>(r1), std::forward<R>(rr)...
         )
     ] (auto &&obj) mutable {
-        return detail::join_proxy(
-            std::forward<decltype(obj)>(obj),
-            std::forward<decltype(ranges)>(ranges),
-            std::make_index_sequence<sizeof...(R) + 1>()
-        );
+        return std::apply([&obj](auto &&...args) mutable {
+            return obj.join(std::forward<decltype(args)>(args)...);
+        }, std::move(ranges));
     };
 }
 
@@ -807,11 +785,9 @@ inline auto zip(R1 &&r1, R &&...rr) {
             std::forward<R1>(r1), std::forward<R>(rr)...
         )
     ] (auto &&obj) mutable {
-        return detail::zip_proxy(
-            std::forward<decltype(obj)>(obj),
-            std::forward<decltype(ranges)>(ranges),
-            std::make_index_sequence<sizeof...(R) + 1>()
-        );
+        return std::apply([&obj](auto &&...args) mutable {
+            return obj.zip(std::forward<decltype(args)>(args)...);
+        }, std::move(ranges));
     };
 }
 
@@ -825,21 +801,42 @@ namespace detail {
     template<typename C>
     constexpr bool direct_iter_test = decltype(test_direct_iter<C>(0))::value;
 
-    template<typename C, typename = void>
-    struct ranged_traits_core {};
+    template<typename C>
+    static std::true_type test_std_iter(
+        decltype(std::begin(std::declval<C &>())) *,
+        decltype(std::end(std::declval<C &>())) *
+    );
+
+    template<typename>
+    static std::false_type test_std_iter(...);
 
     template<typename C>
-    struct ranged_traits_core<C, std::enable_if_t<detail::direct_iter_test<C>>> {
+    constexpr bool std_iter_test = decltype(test_std_iter<C>(0, 0))::value;
+
+    /* direct iter and std iter; the case for std iter is
+     * specialized after iterator_range is actually defined
+     */
+    template<typename C, bool, bool>
+    struct ranged_traits_core {};
+
+    /* direct iter is available, regardless of std iter being available */
+    template<typename C, bool B>
+    struct ranged_traits_core<C, true, B> {
         using range = decltype(std::declval<C &>().iter());
 
         static range iter(C &r) {
             return r.iter();
         }
     };
+
+    template<typename C>
+    struct ranged_traits_impl: ranged_traits_core<
+        C, direct_iter_test<C>, std_iter_test<C>
+    > {};
 }
 
 template<typename C>
-struct ranged_traits: detail::ranged_traits_core<C> {};
+struct ranged_traits: detail::ranged_traits_impl<C> {};
 
 template<typename T>
 inline auto iter(T &r) -> decltype(ranged_traits<T>::iter(r)) {
@@ -1394,8 +1391,8 @@ public:
     }
 
     bool equals_front(join_range const &r) const {
-        return std::apply([&r](auto const &...r1) {
-            return std::apply([&](auto const &...r2) {
+        return std::apply([&r](auto const &...r1) mutable {
+            return std::apply([&](auto const &...r2) mutable {
                 return (... && r1.equals_front(r2));
             }, r);
         }, p_ranges);
@@ -1462,8 +1459,8 @@ public:
     }
 
     bool equals_front(zip_range const &r) const {
-        return std::apply([&r](auto const &...r1) {
-            return std::apply([&](auto const &...r2) {
+        return std::apply([&r](auto const &...r1) mutable {
+            return std::apply([&](auto const &...r2) mutable {
                 return (... && r1.equals_front(r2));
             }, r);
         }, p_ranges);
@@ -1863,22 +1860,9 @@ inline iterator_range<T *> iter(T *a, T *b) {
 /* iter on standard containers */
 
 namespace detail {
+    /* std iter is available, but at the same time direct iter is not */
     template<typename C>
-    static std::true_type test_std_iter(
-        decltype(std::begin(std::declval<C &>())) *,
-        decltype(std::end(std::declval<C &>())) *
-    );
-
-    template<typename>
-    static std::false_type test_std_iter(...);
-
-    template<typename C>
-    constexpr bool std_iter_test = decltype(test_std_iter<C>(0, 0))::value;
-
-    template<typename C>
-    struct ranged_traits_core<C, std::enable_if_t<
-        detail::std_iter_test<C> && !detail::direct_iter_test<C>
-    >> {
+    struct ranged_traits_core<C, false, true> {
         using range = iterator_range<decltype(std::begin(std::declval<C &>()))>;
 
         static range iter(C &r) {
