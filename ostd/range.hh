@@ -82,20 +82,6 @@ using range_reference_t = typename range_traits<R>::reference;
 template<typename R>
 using range_difference_t = typename range_traits<R>::difference_type;
 
-namespace detail {
-    template<typename U>
-    static char is_range_test_f(
-        typename U::range_category *, typename U::size_type *,
-        typename U::difference_type *, typename U::value_type *,
-        std::remove_reference_t<typename U::reference> *
-    );
-    template<typename U>
-    static int is_range_test_f(...);
-
-    template<typename T> constexpr bool is_range_test =
-        (sizeof(is_range_test_f<T>(0, 0, 0, 0, 0)) == sizeof(char));
-}
-
 // is input range
 
 namespace detail {
@@ -103,7 +89,7 @@ namespace detail {
     constexpr bool is_input_range_core =
         std::is_convertible_v<range_category_t<T>, input_range_tag>;
 
-    template<typename T, bool = detail::is_range_test<T>>
+    template<typename T, bool = detail::test_range_category<T>>
     constexpr bool is_input_range_base = false;
 
     template<typename T>
@@ -120,7 +106,7 @@ namespace detail {
     constexpr bool is_forward_range_core =
         std::is_convertible_v<range_category_t<T>, forward_range_tag>;
 
-    template<typename T, bool = detail::is_range_test<T>>
+    template<typename T, bool = detail::test_range_category<T>>
     constexpr bool is_forward_range_base = false;
 
     template<typename T>
@@ -137,7 +123,7 @@ namespace detail {
     constexpr bool is_bidirectional_range_core =
         std::is_convertible_v<range_category_t<T>, bidirectional_range_tag>;
 
-    template<typename T, bool = detail::is_range_test<T>>
+    template<typename T, bool = detail::test_range_category<T>>
     constexpr bool is_bidirectional_range_base = false;
 
     template<typename T>
@@ -155,7 +141,7 @@ namespace detail {
     constexpr bool is_random_access_range_core =
         std::is_convertible_v<range_category_t<T>, random_access_range_tag>;
 
-    template<typename T, bool = detail::is_range_test<T>>
+    template<typename T, bool = detail::test_range_category<T>>
     constexpr bool is_random_access_range_base = false;
 
     template<typename T>
@@ -173,7 +159,7 @@ namespace detail {
     constexpr bool is_finite_random_access_range_core =
         std::is_convertible_v<range_category_t<T>, finite_random_access_range_tag>;
 
-    template<typename T, bool = detail::is_range_test<T>>
+    template<typename T, bool = detail::test_range_category<T>>
     constexpr bool is_finite_random_access_range_base = false;
 
     template<typename T>
@@ -196,7 +182,7 @@ namespace detail {
     constexpr bool is_contiguous_range_core =
         std::is_convertible_v<range_category_t<T>, contiguous_range_tag>;
 
-    template<typename T, bool = detail::is_range_test<T>>
+    template<typename T, bool = detail::test_range_category<T>>
     constexpr bool is_contiguous_range_base = false;
 
     template<typename T>
@@ -210,28 +196,28 @@ template<typename T> constexpr bool is_contiguous_range =
 // is output range
 
 namespace detail {
-    template<typename T, typename P>
-    struct output_range_test {
-        template<typename U, bool (U::*)(P)>
-        struct test_t {};
-        template<typename U>
-        static char test(test_t<U, &U::put> *);
-        template<typename U>
-        static int test(...);
-        static constexpr bool value = (sizeof(test<T>(0)) == sizeof(char));
-    };
+    template<typename R, typename T>
+    static std::true_type test_outrange(typename std::is_same<
+        decltype(std::declval<R &>().put(std::declval<T>())), bool
+    >::type *);
+
+    template<typename, typename>
+    static std::false_type test_outrange(...);
+
+    template<typename R, typename T>
+    constexpr bool output_range_test = decltype(test_outrange<R, T>())::value;
 
     template<typename T>
     constexpr bool is_output_range_core =
         std::is_convertible_v<range_category_t<T>, output_range_tag> || (
             is_input_range<T> && (
-                detail::output_range_test<T, range_value_t<T> const &>::value ||
-                detail::output_range_test<T, range_value_t<T>      &&>::value ||
-                detail::output_range_test<T, range_value_t<T>        >::value
+                output_range_test<T, range_value_t<T> const &> ||
+                output_range_test<T, range_value_t<T>      &&> ||
+                output_range_test<T, range_value_t<T>        >
             )
         );
 
-    template<typename T, bool = detail::is_range_test<T>>
+    template<typename T, bool = detail::test_range_category<T>>
     constexpr bool is_output_range_base = false;
 
     template<typename T>
