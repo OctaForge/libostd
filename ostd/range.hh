@@ -738,6 +738,70 @@ inline range_size_t<R> range_put_n(
     return (on - n);
 }
 
+template<typename T>
+struct noop_output_range: output_range<noop_output_range<T>> {
+    using value_type      = T;
+    using reference       = T &;
+    using size_type       = size_t;
+    using difference_type = ptrdiff_t;
+
+    bool put(T const &) { return true; }
+};
+
+template<typename R>
+struct counting_output_range: output_range<counting_output_range<R>> {
+    using value_type      = range_value_t<R>;
+    using reference       = range_reference_t<R>;
+    using size_type       = range_size_t<R>;
+    using difference_type = range_difference_t<R>;
+
+    template<typename RR>
+    friend range_size_t<counting_output_range<RR>> range_put_n(
+        counting_output_range<RR> &range,
+        range_value_t<counting_output_range<RR>> *p,
+        range_size_t<counting_output_range<RR>> n
+    );
+
+private:
+    R p_range;
+    size_type p_written = 0;
+
+public:
+    counting_output_range() = delete;
+    counting_output_range(R const &range): p_range(range) {}
+
+    bool put(value_type const &v) {
+        bool ret = p_range.put(v);
+        p_written += ret;
+        return ret;
+    }
+    bool put(value_type &&v) {
+        bool ret = p_range.put(std::move(v));
+        p_written += ret;
+        return ret;
+    }
+
+    size_type get_written() const {
+        return p_written;
+    }
+};
+
+template<typename R>
+inline range_size_t<counting_output_range<R>> range_put_n(
+    counting_output_range<R> &range,
+    range_value_t<counting_output_range<R>> *p,
+    range_size_t<counting_output_range<R>> n
+) {
+    auto ret = range_put_n(range.p_range, p, n);
+    range.p_written += ret;
+    return ret;
+}
+
+template<typename R>
+inline counting_output_range<R> range_counter(R const &range) {
+    return counting_output_range<R>{range};
+}
+
 inline auto reverse() {
     return [](auto &&obj) { return obj.reverse(); };
 }
@@ -1543,6 +1607,16 @@ struct appender_range: output_range<appender_range<T>> {
 private:
     T p_data;
 };
+
+template<typename T>
+inline appender_range<T> appender() {
+    return appender_range<T>();
+}
+
+template<typename T>
+inline appender_range<T> appender(T &&v) {
+    return appender_range<T>(std::forward<T>(v));
+}
 
 namespace detail {
     template<typename>
