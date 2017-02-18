@@ -589,7 +589,7 @@ template<typename T>
 struct to_string<T, std::enable_if_t<detail::iterable_test<T>>> {
     std::string operator()(T const &v) const {
         std::string ret("{");
-        auto x = appender<std::string>();
+        auto x = appender_range<std::string>{};
         if (concat(x, ostd::iter(v), ", ", to_string<
             std::remove_const_t<std::remove_reference_t<
                 range_reference_t<decltype(ostd::iter(v))>
@@ -607,7 +607,7 @@ struct to_string<T, std::enable_if_t<
     detail::stringify_test<T, detail::tostr_range<appender_range<std::string>>>
 >> {
     std::string operator()(T const &v) const {
-        auto app = appender<std::string>();
+        auto app = appender_range<std::string>{};
         detail::tostr_range<appender_range<std::string>> sink(app);
         if (!v.to_string(sink)) {
             return std::string{};

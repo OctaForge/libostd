@@ -79,7 +79,7 @@ int main() {
     writefln("%i", Bar{});
 
     /* format into string */
-    auto s = appender<std::string>();
+    auto s = appender_range<std::string>{};
     format(s, "hello %s", "world");
     writeln(s.get());
 }

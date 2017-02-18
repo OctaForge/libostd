@@ -1544,16 +1544,6 @@ private:
     T p_data;
 };
 
-template<typename T>
-inline appender_range<T> appender() {
-    return appender_range<T>();
-}
-
-template<typename T>
-inline appender_range<T> appender(T &&v) {
-    return appender_range<T>(std::forward<T>(v));
-}
-
 namespace detail {
     template<typename>
     struct iterator_range_tag_base {
