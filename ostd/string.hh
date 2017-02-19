@@ -148,6 +148,9 @@ public:
     T &operator[](size_t i) const { return p_beg[i]; }
 
     void put(T v) {
+        if (p_beg == p_end) {
+            throw std::out_of_range{"put into an empty range"};
+        }
         *(p_beg++) = v;
     }
 

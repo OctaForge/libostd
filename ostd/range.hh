@@ -1731,9 +1731,20 @@ struct iterator_range: input_range<iterator_range<T>> {
 
     /* satisfy output_range */
     void put(value_type const &v) {
+        /* rely on iterators to do their own checks */
+        if constexpr(std::is_pointer_v<T>) {
+            if (p_beg == p_end) {
+                throw std::out_of_range{"put into an empty range"};
+            }
+        }
         *(p_beg++) = v;
     }
     void put(value_type &&v) {
+        if constexpr(std::is_pointer_v<T>) {
+            if (p_beg == p_end) {
+                throw std::out_of_range{"put into an empty range"};
+            }
+        }
         *(p_beg++) = std::move(v);
     }
 
