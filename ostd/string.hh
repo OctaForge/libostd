@@ -77,26 +77,26 @@ public:
 
     bool empty() const { return p_beg == p_end; }
 
-    bool pop_front() {
-        if (p_beg == p_end) {
-            return false;
-        }
+    void pop_front() {
         ++p_beg;
-        return true;
+        if (p_beg > p_end) {
+            throw std::out_of_range{"pop_front on empty range"};
+        }
     }
-    bool push_front() { --p_beg; return true; }
+    void push_front() {
+        --p_beg;
+    }
 
-    size_t pop_front_n(size_t n) {
-        size_t olen = p_end - p_beg;
+    void pop_front_n(size_t n) {
         p_beg += n;
         if (p_beg > p_end) {
-            p_beg = p_end;
-            return olen;
+            throw std::out_of_range{"pop_front_n of too many elements"};
         }
-        return n;
     }
 
-    size_t push_front_n(size_t n) { p_beg -= n; return true; }
+    void push_front_n(size_t n) {
+        p_beg -= n;
+    }
 
     T &front() const { return *p_beg; }
 
@@ -108,26 +108,26 @@ public:
         return range.p_beg - p_beg;
     }
 
-    bool pop_back() {
+    void pop_back() {
         if (p_end == p_beg) {
-            return false;
+            return;
         }
         --p_end;
-        return true;
     }
-    bool push_back() { ++p_end; return true; }
+    void push_back() {
+        ++p_end;
+    }
 
-    size_t pop_back_n(size_t n) {
-        size_t olen = p_end - p_beg;
+    void pop_back_n(size_t n) {
         p_end -= n;
         if (p_end < p_beg) {
-            p_end = p_beg;
-            return olen;
+            throw std::out_of_range{"pop_back_n of too many elements"};
         }
-        return n;
     }
 
-    size_t push_back_n(size_t n) { p_end += n; return true; }
+    void push_back_n(size_t n) {
+        p_end += n;
+    }
 
     T &back() const { return *(p_end - 1); }
 
@@ -147,12 +147,8 @@ public:
 
     T &operator[](size_t i) const { return p_beg[i]; }
 
-    bool put(T v) {
-        if (empty()) {
-            return false;
-        }
+    void put(T v) {
         *(p_beg++) = v;
-        return true;
     }
 
     T *data() { return p_beg; }
@@ -183,17 +179,6 @@ diffsize:
         return (s1 < s2) ? -1 : ((s1 > s2) ? 1 : 0);
     }
 
-    template<typename R>
-    std::enable_if_t<is_output_range<R>, size_t> copy(R &&orange, size_t n = -1) {
-        return range_put_n(orange, data(), std::min(n, size()));
-    }
-
-    size_t copy(std::remove_cv_t<T> *p, size_t n = -1) {
-        size_t c = std::min(n, size());
-        TR::copy(p, data(), c);
-        return c;
-    }
-
     /* that way we can assign, append etc to std::string */
     operator std::basic_string_view<std::remove_cv_t<T>>() const {
         return std::basic_string_view<std::remove_cv_t<T>>{data(), size()};
@@ -202,14 +187,6 @@ diffsize:
 private:
     T *p_beg, *p_end;
 };
-
-template<typename T, typename TR>
-inline size_t range_put_n(basic_char_range<T, TR> &range, T const *p, size_t n) {
-    size_t an = std::min(n, range.size());
-    TR::copy(range.data(), p, an);
-    range.pop_front_n(an);
-    return an;
-}
 
 using char_range = basic_char_range<char>;
 using string_range = basic_char_range<char const>;
@@ -461,68 +438,64 @@ namespace detail {
     template<typename T, bool B>
     struct ConcatPut<T, true, B> {
         template<typename R>
-        static bool put(R &sink, string_range v) {
-            return v.size() && (range_put_n(sink, &v[0], v.size()) == v.size());
+        static void put(R &sink, string_range v) {
+            sink = ostd::copy(v, sink);
         }
     };
 
     template<typename T>
     struct ConcatPut<T, false, true> {
         template<typename R>
-        static bool put(R &sink, char v) {
-            return sink.put(v);
+        static void put(R &sink, char v) {
+            sink.put(v);
         }
     };
 }
 
 template<typename R, typename T, typename F>
-bool concat(R &&sink, T const &v, string_range sep, F func) {
+R &&concat(R &&sink, T const &v, string_range sep, F func) {
     auto range = ostd::iter(v);
     if (range.empty()) {
-        return true;
+        return std::forward<R>(sink);
     }
     for (;;) {
-        if (!detail::ConcatPut<
+        detail::ConcatPut<
             decltype(func(range.front()))
-        >::put(sink, func(range.front()))) {
-            return false;
-        }
+        >::put(sink, func(range.front()));
         range.pop_front();
         if (range.empty()) {
             break;
         }
-        range_put_n(sink, &sep[0], sep.size());
+        sink = ostd::copy(sep, sink);
     }
-    return true;
+    return std::forward<R>(sink);
 }
 
 template<typename R, typename T>
-bool concat(R &&sink, T const &v, string_range sep = " ") {
+R &&concat(R &&sink, T const &v, string_range sep = " ") {
     auto range = ostd::iter(v);
     if (range.empty()) {
-        return true;
+        return std::forward<R>(sink);
     }
     for (;;) {
         string_range ret = range.front();
-        if (!ret.size() || (range_put_n(sink, &ret[0], ret.size()) != ret.size())) {
-            return false;
-        }
+        sink = ostd::copy(ret, sink);
         range.pop_front();
         if (range.empty()) {
             break;
         }
-        range_put_n(sink, &sep[0], sep.size());
+        sink = ostd::copy(sep, sink);
     }
-    return true;
+    return std::forward<R>(sink);
 }
 
 template<typename R, typename T, typename F>
-bool concat(R &&sink, std::initializer_list<T> v, string_range sep, F func) {
+R &&concat(R &&sink, std::initializer_list<T> v, string_range sep, F func) {
     return concat(sink, ostd::iter(v), sep, func);
 }
 
 template<typename R, typename T>
-bool concat(R &&sink, std::initializer_list<T> v, string_range sep = " ") {
+R &&concat(R &&sink, std::initializer_list<T> v, string_range sep = " ") {
     return concat(sink, ostd::iter(v), sep);
 }
 
@@ -534,33 +507,17 @@ namespace detail {
         using size_type       = size_t;
         using difference_type = ptrdiff_t;
 
-        template<typename RR>
-        friend size_t range_put_n(tostr_range<RR> &range, char const *p, size_t n);
-
         tostr_range() = delete;
-        tostr_range(R &out): p_out(out), p_written(0) {}
-        bool put(char v) {
-            bool ret = p_out.put(v);
-            p_written += ret;
-            return ret;
+        tostr_range(R &out): p_out(out) {}
+        void put(char v) {
+            p_out.put(v);
         }
-        size_t put_string(string_range r) {
-            size_t ret = range_put_n(p_out, r.data(), r.size());
-            p_written += ret;
-            return ret;
+        void put_string(string_range r) {
+            p_out = ostd::copy(r, p_out);
         }
-        size_t get_written() const { return p_written; }
     private:
         R &p_out;
-        size_t p_written;
     };
-
-    template<typename R>
-    inline size_t range_put_n(tostr_range<R> &range, char const *p, size_t n) {
-        size_t ret = range_put_n(range.p_out, p, n);
-        range.p_written += ret;
-        return ret;
-    }
 
     template<typename T, typename R>
     static std::true_type test_stringify(
@@ -590,13 +547,12 @@ struct to_string<T, std::enable_if_t<detail::iterable_test<T>>> {
     std::string operator()(T const &v) const {
         std::string ret("{");
         auto x = appender_range<std::string>{};
-        if (concat(x, ostd::iter(v), ", ", to_string<
+        concat(x, ostd::iter(v), ", ", to_string<
             std::remove_const_t<std::remove_reference_t<
                 range_reference_t<decltype(ostd::iter(v))>
             >>
-        >())) {
-            ret += x.get();
-        }
+        >());
+        ret += x.get();
         ret += "}";
         return ret;
     }
@@ -778,7 +734,8 @@ public:
         } else {
             p_buf = sbuf;
         }
-        p_buf[input.copy(p_buf)] = '\0';
+        char_range bufr{p_buf, p_buf + input.size()};
+        ostd::copy(input, bufr).put('\0');
     }
     ~temp_c_string() {
         if (p_allocated) {

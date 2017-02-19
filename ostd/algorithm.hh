@@ -778,24 +778,24 @@ public:
         return p_range.distance_back(r.p_range);
     }
 
-    bool pop_front() { return p_range.pop_front(); }
-    bool pop_back() { return p_range.pop_back(); }
+    void pop_front() { p_range.pop_front(); }
+    void pop_back() { p_range.pop_back(); }
 
-    bool push_front() { return p_range.pop_front(); }
-    bool push_back() { return p_range.push_back(); }
+    void push_front() { p_range.pop_front(); }
+    void push_back() { p_range.push_back(); }
 
-    range_size_t<T> pop_front_n(range_size_t<T> n) {
+    void pop_front_n(range_size_t<T> n) {
         p_range.pop_front_n(n);
     }
-    range_size_t<T> pop_back_n(range_size_t<T> n) {
+    void pop_back_n(range_size_t<T> n) {
         p_range.pop_back_n(n);
     }
 
-    range_size_t<T> push_front_n(range_size_t<T> n) {
-        return p_range.push_front_n(n);
+    void push_front_n(range_size_t<T> n) {
+        p_range.push_front_n(n);
     }
-    range_size_t<T> push_back_n(range_size_t<T> n) {
-        return p_range.push_back_n(n);
+    void push_back_n(range_size_t<T> n) {
+        p_range.push_back_n(n);
     }
 
     R front() const { return p_func(p_range.front()); }
@@ -887,10 +887,9 @@ public:
         return p_range.equals_front(r.p_range);
     }
 
-    bool pop_front() {
-        bool ret = p_range.pop_front();
+    void pop_front() {
+        p_range.pop_front();
         advance_valid();
-        return ret;
     }
 
     range_reference_t<T> front() const { return p_range.front(); }

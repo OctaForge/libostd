@@ -549,8 +549,8 @@ struct directory_range: input_range<directory_range> {
         return p_stream->empty();
     }
 
-    bool pop_front() {
-        return p_stream->pop_front();
+    void pop_front() {
+        p_stream->pop_front();
     }
 
     file_info front() const {

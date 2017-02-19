@@ -9,6 +9,8 @@
 #include <stdio.h>
 
 #include <vector>
+#include <stdexcept>
+#include <system_error>
 
 #include "ostd/platform.hh"
 #include "ostd/string.hh"
@@ -26,6 +28,11 @@ namespace detail {
         "rb", "wb", "ab", "rb+", "wb+", "ab+"
     };
 }
+
+/* TODO: inherit from system_error and come up with the proper infra for it */
+struct io_error: std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
 
 struct file_stream: stream {
     file_stream(): p_f(), p_owned(false) {}
@@ -93,38 +100,59 @@ struct file_stream: stream {
         return feof(p_f) != 0;
     }
 
-    bool seek(stream_off_t pos, stream_seek whence = stream_seek::SET) {
+    void seek(stream_off_t pos, stream_seek whence = stream_seek::SET) {
 #ifndef OSTD_PLATFORM_WIN32
-        return fseeko(p_f, pos, int(whence)) >= 0;
+        if (fseeko(p_f, pos, int(whence)))
 #else
-        return _fseeki64(p_f, pos, int(whence)) >= 0;
+        if (_fseeki64(p_f, pos, int(whence)))
 #endif
+        {
+            throw io_error{"file_stream seek error"};
+        }
     }
 
     stream_off_t tell() const {
 #ifndef OSTD_PLATFORM_WIN32
-        return ftello(p_f);
+        auto ret = ftello(p_f);
 #else
-        return _ftelli64(p_f);
+        auto ret = _ftelli64(p_f);
 #endif
+        if (ret < 0) {
+            throw io_error{"file_stream tell error"};
+        }
+        return ret;
     }
 
-    bool flush() { return !fflush(p_f); }
-
-    size_t read_bytes(void *buf, size_t count) {
-        return fread(buf, 1, count, p_f);
+    void flush() {
+        if (fflush(p_f)) {
+            throw io_error{"file_stream flush error"};
+        }
     }
 
-    size_t write_bytes(void const *buf, size_t count) {
-        return fwrite(buf, 1, count, p_f);
+    void read_bytes(void *buf, size_t count) {
+        if (fread(buf, 1, count, p_f) != count) {
+            throw io_error{"file_stream read error"};
+        }
+    }
+
+    void write_bytes(void const *buf, size_t count) {
+        if (fwrite(buf, 1, count, p_f) != count) {
+            throw io_error{"file_stream write error"};
+        }
     }
 
     int getchar() {
-        return fgetc(p_f);
+        int ret = fgetc(p_f);
+        if (ret == EOF) {
+            throw io_error{"file_stream EOF"};
+        }
+        return ret;
     }
 
-    bool putchar(int c) {
-        return  fputc(c, p_f) != EOF;
+    void putchar(int c) {
+        if (fputc(c, p_f) == EOF) {
+            throw io_error{"file_stream EOF"};
+        }
     }
 
     void swap(file_stream &s) {
@@ -159,14 +187,12 @@ namespace detail {
         using difference_type = ptrdiff_t;
 
         stdout_range() {}
-        bool put(char c) {
-            return putchar(c) != EOF;
+        void put(char c) {
+            if (putchar(c) == EOF) {
+                throw io_error{"stdout EOF"};
+            }
         }
     };
-
-    inline size_t range_put_n(stdout_range &, char const *p, size_t n) {
-        return fwrite(p, 1, n, stdout);
-    }
 }
 
 template<typename T>
@@ -184,8 +210,7 @@ template<typename T>
 inline void writeln(T const &v) {
     write(v);
     if (putchar('\n') == EOF) {
-        /* consistency with format module */
-        throw format_error{"stream EOF"};
+        throw io_error{"stdout EOF"};
     }
 }
 
@@ -194,7 +219,7 @@ inline void writeln(T const &v, A const &...args) {
     write(v);
     write(args...);
     if (putchar('\n') == EOF) {
-        throw format_error{"stream EOF"};
+        throw io_error{"stdout EOF"};
     }
 }
 
@@ -207,7 +232,7 @@ template<typename ...A>
 inline void writefln(string_range fmt, A const &...args) {
     writef(fmt, args...);
     if (putchar('\n') == EOF) {
-        throw format_error{"stream EOF"};
+        throw io_error{"stdout EOF"};
     }
 }
 
