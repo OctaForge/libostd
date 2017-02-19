@@ -7,6 +7,7 @@
 #include <ostd/io.hh>
 
 using namespace ostd;
+using namespace ostd::string_literals;
 
 struct Foo {
 };
@@ -16,10 +17,10 @@ template<typename R>
 void to_format(Foo const &, R &writer, format_spec const &fs) {
     switch (fs.spec()) {
         case 'i':
-            writer.put_string("Foo1");
+            range_put_all(writer, "Foo1"_sr);
             break;
         default:
-            writer.put_string("Foo2");
+            range_put_all(writer, "Foo2"_sr);
             break;
     }
 }
@@ -30,10 +31,10 @@ struct Bar {
     void to_format(R &writer, format_spec const &fs) const {
         switch (fs.spec()) {
             case 'i':
-                writer.put_string("Bar1");
+                range_put_all(writer, "Bar1"_sr);
                 break;
             default:
-                writer.put_string("Bar2");
+                range_put_all(writer, "Bar2"_sr);
                 break;
         }
     }

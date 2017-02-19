@@ -439,7 +439,7 @@ namespace detail {
     struct ConcatPut<T, true, B> {
         template<typename R>
         static void put(R &sink, string_range v) {
-            sink = ostd::copy(v, sink);
+            range_put_all(sink, v);
         }
     };
 
@@ -466,7 +466,7 @@ R &&concat(R &&sink, T const &v, string_range sep, F func) {
         if (range.empty()) {
             break;
         }
-        sink = ostd::copy(sep, sink);
+        range_put_all(sink, sep);
     }
     return std::forward<R>(sink);
 }
@@ -479,12 +479,12 @@ R &&concat(R &&sink, T const &v, string_range sep = " ") {
     }
     for (;;) {
         string_range ret = range.front();
-        sink = ostd::copy(ret, sink);
+        range_put_all(sink, ret);
         range.pop_front();
         if (range.empty()) {
             break;
         }
-        sink = ostd::copy(sep, sink);
+        range_put_all(sink, sep);
     }
     return std::forward<R>(sink);
 }
@@ -500,25 +500,6 @@ R &&concat(R &&sink, std::initializer_list<T> v, string_range sep = " ") {
 }
 
 namespace detail {
-    template<typename R>
-    struct tostr_range: output_range<tostr_range<R>> {
-        using value_type      = char;
-        using reference       = char &;
-        using size_type       = size_t;
-        using difference_type = ptrdiff_t;
-
-        tostr_range() = delete;
-        tostr_range(R &out): p_out(out) {}
-        void put(char v) {
-            p_out.put(v);
-        }
-        void put_string(string_range r) {
-            p_out = ostd::copy(r, p_out);
-        }
-    private:
-        R &p_out;
-    };
-
     template<typename T, typename R>
     static std::true_type test_stringify(
         decltype(std::declval<T const &>().to_string(std::declval<R &>())) *
@@ -560,12 +541,11 @@ struct to_string<T, std::enable_if_t<detail::iterable_test<T>>> {
 
 template<typename T>
 struct to_string<T, std::enable_if_t<
-    detail::stringify_test<T, detail::tostr_range<appender_range<std::string>>>
+    detail::stringify_test<T, appender_range<std::string>>
 >> {
     std::string operator()(T const &v) const {
-        auto app = appender_range<std::string>{};
-        detail::tostr_range<appender_range<std::string>> sink(app);
-        if (!v.to_string(sink)) {
+        auto app = appender<std::string>();
+        if (!v.to_string(app)) {
             return std::string{};
         }
         return std::move(app.get());
@@ -735,7 +715,8 @@ public:
             p_buf = sbuf;
         }
         char_range bufr{p_buf, p_buf + input.size()};
-        ostd::copy(input, bufr).put('\0');
+        range_put_all(bufr, input);
+        bufr.put('\0');
     }
     ~temp_c_string() {
         if (p_allocated) {

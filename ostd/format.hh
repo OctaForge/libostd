@@ -196,8 +196,8 @@ struct format_spec {
         if (p_flags & FMT_FLAG_HASH ) {
             out.put('#');
         }
-        out = ostd::copy(string_range{"*.*"}, out);
-        out = ostd::copy(spec, out);
+        range_put_all(out, string_range{"*.*"});
+        range_put_all(out, spec);
         return std::forward<R>(out);
     }
 
@@ -467,7 +467,7 @@ namespace detail {
         if (sign) {
             writer.put(neg ? '-' : *((" \0+") + lsgn * 2));
         }
-        writer = ostd::copy(string_range{pfx, pfx + pfxlen}, writer);
+        range_put_all(writer, string_range{pfx, pfx + pfxlen});
         if (zero) {
             fl->write_spaces(writer, n + pfxlen + sign, true, '0');
         }
@@ -556,7 +556,7 @@ namespace detail {
         range.pop_front();
         /* write the rest (if any) */
         for (; !range.empty(); range.pop_front()) {
-            writer = ostd::copy(sep, writer);
+            range_put_all(writer, sep);
             format_ritem(
                 writer, escape, expandval, fl->rest(), range.front()
             );
@@ -646,7 +646,7 @@ namespace detail {
                 n = this->precision();
             }
             this->write_spaces(writer, n, true);
-            writer = ostd::copy(val.slice(0, n), writer);
+            range_put_all(writer, val.slice(0, n));
             this->write_spaces(writer, n, false);
         }
 
@@ -718,19 +718,18 @@ namespace detail {
                     /* see above */
                     throw format_error{"invalid float format"};
                 }
-                writer = ostd::copy(string_range{dbuf, dbuf + ret}, writer);
+                range_put_all(writer, string_range{dbuf, dbuf + ret});
                 delete[] dbuf;
             } else {
-                writer = ostd::copy(string_range{rbuf, rbuf + ret}, writer);
+                range_put_all(writer, string_range{rbuf, rbuf + ret});
             }
         }
 
         template<typename R, typename T>
         void write_val(R &writer, bool escape, T const &val) const {
             /* stuff fhat can be custom-formatted goes first */
-            if constexpr(fmt_tofmt_test<T, tostr_range<R>>) {
-                tostr_range<R> sink(writer);
-                to_format(val, sink, *this);
+            if constexpr(fmt_tofmt_test<T, noop_output_range<char>>) {
+                to_format(val, writer, *this);
                 return;
             }
             /* second best, we can convert to string slice */

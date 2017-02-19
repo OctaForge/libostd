@@ -574,9 +574,7 @@ inline auto slice_until(R &&range) {
 
 template<typename R1, typename R2>
 inline R2 copy(R1 irange, R2 orange) {
-    for (; !irange.empty(); irange.pop_front()) {
-        orange.put(irange.front());
-    }
+    range_put_all(orange, irange);
     return orange;
 }
 

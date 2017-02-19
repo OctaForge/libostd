@@ -694,6 +694,13 @@ struct output_range {
     using range_category = output_range_tag;
 };
 
+template<typename OR, typename IR>
+inline void range_put_all(OR &orange, IR range) {
+    for (; !range.empty(); range.pop_front()) {
+        orange.put(range.front());
+    }
+}
+
 template<typename T>
 struct noop_output_range: output_range<noop_output_range<T>> {
     using value_type      = T;
