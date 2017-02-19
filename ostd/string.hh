@@ -431,30 +431,7 @@ inline namespace string_literals {
 }
 }
 
-namespace detail {
-    template<
-        typename T, bool = std::is_convertible_v<T, string_range>,
-        bool = std::is_convertible_v<T, char>
-    >
-    struct ConcatPut;
-
-    template<typename T, bool B>
-    struct ConcatPut<T, true, B> {
-        template<typename R>
-        static void put(R &sink, string_range v) {
-            range_put_all(sink, v);
-        }
-    };
-
-    template<typename T>
-    struct ConcatPut<T, false, true> {
-        template<typename R>
-        static void put(R &sink, char v) {
-            sink.put(v);
-        }
-    };
-}
-
+/* TODO: redesign this */
 template<typename R, typename T, typename F>
 R &&concat(R &&sink, T const &v, string_range sep, F func) {
     auto range = ostd::iter(v);
@@ -462,9 +439,17 @@ R &&concat(R &&sink, T const &v, string_range sep, F func) {
         return std::forward<R>(sink);
     }
     for (;;) {
-        detail::ConcatPut<
-            decltype(func(range.front()))
-        >::put(sink, func(range.front()));
+        using VT = decltype(func(range.front()));
+        static_assert(
+            std::is_convertible_v<VT, string_range> ||
+            std::is_convertible_v<VT, char>,
+            "range value must be convertible to string range or char"
+        );
+        if constexpr(std::is_convertible_v<VT, string_range>) {
+            range_put_all(sink, string_range{func(range.front())});
+        } else {
+            sink.put(func(range.front()));
+        }
         range.pop_front();
         if (range.empty()) {
             break;

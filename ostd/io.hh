@@ -193,6 +193,22 @@ namespace detail {
             }
         }
     };
+
+    template<typename R>
+    inline void range_put_all(stdout_range &r, R range) {
+        if constexpr(
+            is_contiguous_range<R> &&
+            std::is_same_v<std::remove_const_t<range_value_t<R>>, char>
+        ) {
+            if (fwrite(range.data(), 1, range.size(), stdout) != range.size()) {
+                throw io_error{"stdout write error"};
+            }
+        } else {
+            for (; !range.empty(); range.pop_front()) {
+                r.put(range.front());
+            }
+        }
+    }
 }
 
 template<typename T>
