@@ -869,6 +869,16 @@ inline auto citer(T const &r) -> decltype(ranged_traits<T const>::iter(r)) {
     return ranged_traits<T const>::iter(r);
 }
 
+namespace detail {
+    template<typename T>
+    static std::true_type test_iterable(decltype(ostd::iter(std::declval<T>())) *);
+    template<typename>
+    static std::false_type test_iterable(...);
+
+    template<typename T>
+    constexpr bool iterable_test = decltype(test_iterable<T>(0))::value;
+}
+
 template<typename T>
 struct half_range: input_range<half_range<T>> {
     using range_category  = range_category_t  <typename T::range>;
