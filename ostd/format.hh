@@ -679,6 +679,30 @@ private:
             write_str(writer, escape, val);
             return;
         }
+        /* tuples */
+        if constexpr(detail::is_tuple_like<T>) {
+            if (spec() != 's') {
+                throw format_error{"ranges need the '%s' spec"};
+            }
+            writer.put('<');
+            write_tuple_val<0, std::tuple_size<T>::value>(
+                writer, !(flags() & FMT_FLAG_DASH), ", ", val
+            );
+            writer.put('>');
+            return;
+        }
+        /* ranges */
+        if constexpr(detail::iterable_test<T>) {
+            if (spec() != 's') {
+                throw format_error{"tuples need the '%s' spec"};
+            }
+            writer.put('{');
+            write_range_val(
+                writer, !(flags() & FMT_FLAG_DASH), false, "%s", ", ", val
+            );
+            writer.put('}');
+            return;
+        }
         /* bools, check if printing as string, otherwise convert to int */
         if constexpr(std::is_same_v<T, bool>) {
             if (spec() == 's') {
@@ -745,26 +769,28 @@ private:
 
     template<typename R, typename T>
     inline void write_range_item(
-        R &writer, bool expandval, string_range fmt, T const &item
+        R &writer, bool escape, bool expandval, string_range fmt, T const &item
     ) const {
         if constexpr(detail::is_tuple_like<T>) {
             if (expandval) {
-                std::apply([&writer, esc = p_nested_escape, &fmt](
+                std::apply([&writer, escape, &fmt](
                     auto const &...args
                 ) mutable {
-                    format_spec sp{fmt, esc};
+                    format_spec sp{fmt, escape};
                     sp.write_fmt(writer, args...);
                 }, item);
                 return;
             }
         }
-        format_spec sp{fmt, p_nested_escape};
+        format_spec sp{fmt, escape};
         sp.write_fmt(writer, item);
     }
 
     template<typename R, typename T>
     void write_range_val(
-        R &writer, bool expandval, string_range sep, T const &val
+        R &writer, bool escape, bool expandval, string_range ifmt,
+        string_range sep,
+        T const &val
     ) const {
         if constexpr(detail::iterable_test<T>) {
             auto range = ostd::iter(val);
@@ -772,7 +798,7 @@ private:
                 return;
             }
             for (;;) {
-                write_range_item(writer, expandval, rest(), range.front());
+                write_range_item(writer, escape, expandval, ifmt, range.front());
                 range.pop_front();
                 if (range.empty()) {
                     break;
@@ -781,6 +807,18 @@ private:
             }
         } else {
             throw format_error{"invalid value for ranged format"};
+        }
+    }
+
+    template<size_t I, size_t N, typename R, typename T>
+    void write_tuple_val(
+        R &writer, bool escape, string_range sep, T const &tup
+    ) const {
+        format_spec sp{"%s", escape};
+        sp.write_fmt(writer, std::get<I>(tup));
+        if constexpr(I < (N - 1)) {
+            range_put_all(writer, sep);
+            write_tuple_val<I + 1, N>(writer, escape, sep, tup);
         }
     }
 
@@ -797,7 +835,7 @@ private:
                 write_range(writer, idx - 1, expandval, sep, args...);
             }
         } else {
-            write_range_val(writer, expandval, sep, val);
+            write_range_val(writer, nested_escape(), expandval, rest(), sep, val);
         }
     }
 
