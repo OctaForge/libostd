@@ -43,6 +43,7 @@ struct Bar {
 int main() {
     std::vector<int> x = { 5, 10, 15, 20 };
     writefln("[%(%s|%)]", x);
+    writefln("%s", x);
 
     int y[] = { 2, 4, 8, 16, 32 };
     writefln("{ %(%s, %) }", y);
@@ -62,6 +63,12 @@ int main() {
      * # flag expands the element into multiple values
      */
     writefln("{ %-#(%s: %d, %) }", m);
+    /* without expansion */
+    writefln("{ %(%s, %) }", m);
+
+    /* tuple formatting */
+    std::tuple<std::string, int, float> tup{"hello world", 1337, 3.14f};
+    writefln("the tuple contains %<%s, %d, %f%>.", tup);
 
     /* tuple format test */
     std::tuple<int, float, char const *> xt[] = {

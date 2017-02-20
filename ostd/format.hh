@@ -276,6 +276,7 @@ struct format_spec {
     string_range nested() const { return p_nested; }
     string_range nested_sep() const { return p_nested_sep; }
 
+    bool is_tuple() const { return p_is_tuple; }
     bool is_nested() const { return p_is_nested; }
     bool nested_escape() const { return p_nested_escape; }
 
@@ -310,6 +311,7 @@ private:
 
     byte p_index = 0;
 
+    bool p_is_tuple = false;
     bool p_is_nested = false;
     bool p_nested_escape = false;
 
@@ -328,7 +330,7 @@ private:
         return false;
     }
 
-    bool read_spec_range() {
+    bool read_spec_range(bool tuple = false) {
         int sflags = p_flags;
         p_nested_escape = !(sflags & FMT_FLAG_DASH);
         p_fmt.pop_front();
@@ -347,6 +349,7 @@ private:
         /* find delimiter or ending */
         string_range begin_delim(p_fmt);
         string_range p = find(begin_delim, '%');
+        char need = tuple ? '>' : ')';
         for (; !p.empty(); p = find(p, '%')) {
             p.pop_front();
             /* escape, skip */
@@ -355,20 +358,26 @@ private:
                 continue;
             }
             /* found end, in that case delimiter is after spec */
-            if (p.front() == ')') {
-                p_nested = begin_inner.slice(
-                    0, &begin_delim[0] - &begin_inner[0]
-                );
-                p_nested_sep = begin_delim.slice(
-                    0, &p[0] - &begin_delim[0] - 1
-                );
+            if (p.front() == need) {
+                p_is_tuple = tuple;
+                if (tuple) {
+                    p_nested = begin_inner.slice(0, &p[0] - &begin_inner[0] - 1);
+                    p_nested_sep = nullptr;
+                } else {
+                    p_nested = begin_inner.slice(
+                        0, &begin_delim[0] - &begin_inner[0]
+                    );
+                    p_nested_sep = begin_delim.slice(
+                        0, &p[0] - &begin_delim[0] - 1
+                    );
+                }
                 p.pop_front();
                 p_fmt = p;
                 p_is_nested = true;
                 return true;
             }
             /* found actual delimiter start... */
-            if (p.front() == '|') {
+            if ((p.front() == '|') && !tuple) {
                 p_nested = begin_inner.slice(0, &p[0] - &begin_inner[0] - 1);
                 p.pop_front();
                 p_nested_sep = p;
@@ -427,9 +436,12 @@ private:
             }
         }
 
-        /* range/array formatting */
-        if ((p_fmt.front() == '(') && (havepos || !(ndig - skipd))) {
-            return read_spec_range();
+        /* range/array/tuple formatting */
+        if (
+            ((p_fmt.front() == '(') || (p_fmt.front() == '<')) &&
+            (havepos || !(ndig - skipd))
+        ) {
+            return read_spec_range(p_fmt.front() == '<');
         }
 
         /* parse width */
@@ -810,18 +822,6 @@ private:
         }
     }
 
-    template<size_t I, size_t N, typename R, typename T>
-    void write_tuple_val(
-        R &writer, bool escape, string_range sep, T const &tup
-    ) const {
-        format_spec sp{"%s", escape};
-        sp.write_fmt(writer, std::get<I>(tup));
-        if constexpr(I < (N - 1)) {
-            range_put_all(writer, sep);
-            write_tuple_val<I + 1, N>(writer, escape, sep, tup);
-        }
-    }
-
     /* range writer */
     template<typename R, typename T, typename ...A>
     void write_range(
@@ -839,6 +839,39 @@ private:
         }
     }
 
+    template<size_t I, size_t N, typename R, typename T>
+    void write_tuple_val(
+        R &writer, bool escape, string_range sep, T const &tup
+    ) const {
+        format_spec sp{"%s", escape};
+        sp.write_fmt(writer, std::get<I>(tup));
+        if constexpr(I < (N - 1)) {
+            range_put_all(writer, sep);
+            write_tuple_val<I + 1, N>(writer, escape, sep, tup);
+        }
+    }
+
+    template<typename R, typename T, typename ...A>
+    void write_tuple(
+        R &writer, size_t idx, T const &val, A const &...args
+    ) {
+        if (idx) {
+            if constexpr(!sizeof...(A)) {
+                throw format_error{"not enough format arguments"};
+            } else {
+                write_tuple(writer, idx - 1, args...);
+            }
+        } else {
+            if constexpr(detail::is_tuple_like<T>) {
+                std::apply([this, &writer, &val](auto const &...vals) mutable {
+                    this->write_fmt(writer, vals...);
+                }, val);
+            } else {
+                throw format_error{"invalid value for tuple format"};
+            }
+        }
+    }
+
     template<typename R, typename ...A>
     void write_fmt(R &writer, A const &...args) {
         size_t argidx = 1;
@@ -850,10 +883,14 @@ private:
                 }
                 /* FIXME: figure out a better way */
                 format_spec nspec(nested(), nested_escape());
-                nspec.write_range(
-                    writer, argpos - 1, (flags() & FMT_FLAG_HASH),
-                    nested_sep(), args...
-                );
+                if (is_tuple()) {
+                    nspec.write_tuple(writer, argpos - 1, args...);
+                } else {
+                    nspec.write_range(
+                        writer, argpos - 1, (flags() & FMT_FLAG_HASH),
+                        nested_sep(), args...
+                    );
+                }
                 continue;
             }
             if (!argpos) {
