@@ -204,7 +204,7 @@ namespace detail {
 
 template<typename T>
 inline void stream::write(T const &v) {
-    format(detail::fmt_stream_range{this}, format_spec{'s'}, v);
+    format_spec{'s'}.format_value(detail::fmt_stream_range{this}, v);
 }
 
 template<typename ...A>

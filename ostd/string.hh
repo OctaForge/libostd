@@ -702,7 +702,7 @@ public:
         } else {
             p_buf = sbuf;
         }
-        char_range bufr{p_buf, p_buf + input.size()};
+        char_range bufr{p_buf, p_buf + input.size() + 1};
         range_put_all(bufr, input);
         bufr.put('\0');
     }

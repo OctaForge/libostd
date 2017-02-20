@@ -213,7 +213,7 @@ namespace detail {
 
 template<typename T>
 inline void write(T const &v) {
-    format(detail::stdout_range{}, format_spec{'s'}, v);
+    format_spec{'s'}.format_value(detail::stdout_range{}, v);
 }
 
 template<typename T, typename ...A>

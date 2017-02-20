@@ -18,7 +18,7 @@
 
 namespace ostd {
 
-enum FormatFlags {
+enum format_flags {
     FMT_FLAG_DASH  = 1 << 0,
     FMT_FLAG_ZERO  = 1 << 1,
     FMT_FLAG_SPACE = 1 << 2,
@@ -30,6 +30,20 @@ struct format_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
+struct format_spec;
+
+template<
+    typename T, typename R, typename = std::enable_if_t<std::is_same_v<
+        decltype(std::declval<T const &>().to_format(
+            std::declval<R &>(), std::declval<format_spec const &>()
+        )), void
+    >>
+>
+inline void to_format(T const &v, R &writer, format_spec const &fs) {
+    v.to_format(writer, fs);
+}
+
+/* implementation helpers */
 namespace detail {
     inline int parse_fmt_flags(string_range &fmt, int ret) {
         while (!fmt.empty()) {
@@ -112,9 +126,31 @@ namespace detail {
         { "0b", "0", "", "0x" }
     };
 
+    /* non-printable escapes up to 0x20 (space) */
+    static constexpr char const *fmt_escapes[] = {
+        "\\0"  , "\\x01", "\\x02", "\\x03", "\\x04", "\\x05",
+        "\\x06", "\\a"  , "\\b"  , "\\t"  , "\\n"  , "\\v"  ,
+        "\\f"  , "\\r"  , "\\x0E", "\\x0F", "\\x10", "\\x11",
+        "\\x12", "\\x13", "\\x14", "\\x15", "\\x16", "\\x17",
+        "\\x18", "\\x19", "\\x1A", "\\x1B", "\\x1C", "\\x1D",
+        "\\x1E", "\\x1F",
+        /* we want to escape double quotes... */
+        nullptr, nullptr, "\\\"", nullptr, nullptr, nullptr,
+        nullptr, "\\\'"
+    };
+
+    inline char const *escape_fmt_char(char v, char quote) {
+        if ((v >= 0 && v < 0x20) || (v == quote)) {
+            return fmt_escapes[size_t(v)];
+        } else if (v == 0x7F) {
+            return "\\x7F";
+        }
+        return nullptr;
+    }
+
     /* retrieve width/precision */
     template<typename T, typename ...A>
-    int get_arg_param(size_t idx, T const &val, A const &...args) {
+    inline int get_arg_param(size_t idx, T const &val, A const &...args) {
         if (idx) {
             if constexpr(!sizeof...(A)) {
                 throw format_error{"not enough format args"};
@@ -125,10 +161,53 @@ namespace detail {
             if constexpr(!std::is_integral_v<T>) {
                 throw format_error{"invalid argument for width/precision"};
             } else {
+                if constexpr(std::is_signed_v<T>) {
+                    if (val < 0) {
+                        throw format_error{
+                            "width/precision cannot be negative"
+                        };
+                    }
+                }
                 return int(val);
             }
         }
     }
+
+    /* fallback test for whether a value can be converted to string */
+    template<typename T>
+    static std::true_type test_fmt_tostr(
+        decltype(ostd::to_string<T>{}(std::declval<T>())) *
+    );
+    template<typename>
+    static std::false_type test_fmt_tostr(...);
+
+    template<typename T>
+    constexpr bool fmt_tostr_test = decltype(test_fmt_tostr<T>(0))::value;
+
+    /* ugly ass check for whether a type is tuple-like, like tuple itself,
+     * pair, array, possibly other types added later or overridden...
+     */
+    template<typename T>
+    std::true_type tuple_like_test(typename std::tuple_size<T>::type *);
+
+    template<typename>
+    std::false_type tuple_like_test(...);
+
+    template<typename T>
+    constexpr bool is_tuple_like = decltype(tuple_like_test<T>(0))::value;
+
+    /* test whether to_format works */
+    template<typename T, typename R>
+    static std::true_type test_tofmt(decltype(to_format(
+        std::declval<T const &>(), std::declval<R &>(),
+        std::declval<format_spec const &>()
+    )) *);
+
+    template<typename, typename>
+    static std::false_type test_tofmt(...);
+
+    template<typename T, typename R>
+    constexpr bool fmt_tofmt_test = decltype(test_tofmt<T, R>(0))::value;
 }
 
 struct format_spec {
@@ -137,12 +216,8 @@ struct format_spec {
         p_nested_escape(escape), p_fmt(fmt)
     {}
 
-    format_spec(char spec, int width = -1, int prec = -1, int flags = 0):
+    format_spec(char spec, int flags = 0):
         p_flags(flags),
-        p_width((width >= 0) ? width : 0),
-        p_precision((prec >= 0) ? prec : 0),
-        p_has_width(width >= 0),
-        p_has_precision(prec >= 0),
         p_spec(spec)
     {}
 
@@ -166,39 +241,8 @@ struct format_spec {
         return false;
     }
 
-    template<typename R>
-    void write_spaces(R &writer, size_t n, bool left, char c = ' ') const {
-        if (left == bool(p_flags & FMT_FLAG_DASH)) {
-            return;
-        }
-        for (int w = p_width - int(n); --w >= 0; writer.put(c));
-    }
-
     string_range rest() const {
         return p_fmt;
-    }
-
-    template<typename R>
-    R &&build_spec(R &&out, string_range spec) const {
-        out.put('%');
-        if (p_flags & FMT_FLAG_DASH ) {
-            out.put('-');
-        }
-        if (p_flags & FMT_FLAG_ZERO ) {
-            out.put('0');
-        }
-        if (p_flags & FMT_FLAG_SPACE) {
-            out.put(' ');
-        }
-        if (p_flags & FMT_FLAG_PLUS ) {
-            out.put('+');
-        }
-        if (p_flags & FMT_FLAG_HASH ) {
-            out.put('#');
-        }
-        range_put_all(out, string_range{"*.*"});
-        range_put_all(out, spec);
-        return std::forward<R>(out);
     }
 
     int width() const { return p_width; }
@@ -213,11 +257,25 @@ struct format_spec {
     template<typename ...A>
     void set_width(size_t idx, A const &...args) {
         p_width = detail::get_arg_param(idx, args...);
+        p_has_width = p_arg_width = true;
+    }
+
+    void set_width(int v) {
+        p_width = v;
+        p_has_width = true;
+        p_arg_width = false;
     }
 
     template<typename ...A>
     void set_precision(size_t idx, A const &...args) {
         p_precision = detail::get_arg_param(idx, args...);
+        p_has_precision = p_arg_precision = true;
+    }
+
+    void set_precision(int v) {
+        p_precision = v;
+        p_has_precision = true;
+        p_arg_precision = false;
     }
 
     int flags() const { return p_flags; }
@@ -232,7 +290,19 @@ struct format_spec {
     bool is_nested() const { return p_is_nested; }
     bool nested_escape() const { return p_nested_escape; }
 
-protected:
+    template<typename R, typename ...A>
+    inline R &&format(R &&writer, A const &...args) {
+        write_fmt(writer, args...);
+        return std::forward<R>(writer);
+    }
+
+    template<typename R, typename T>
+    inline R &&format_value(R &&writer, T const &val) {
+        write_arg(writer, 0, val);
+        return std::forward<R>(writer);
+    }
+
+private:
     string_range p_nested;
     string_range p_nested_sep;
 
@@ -297,8 +367,12 @@ protected:
             }
             /* found end, in that case delimiter is after spec */
             if (p.front() == ')') {
-                p_nested = begin_inner.slice(0, &begin_delim[0] - &begin_inner[0]);
-                p_nested_sep = begin_delim.slice(0, &p[0] - &begin_delim[0] - 1);
+                p_nested = begin_inner.slice(
+                    0, &begin_delim[0] - &begin_inner[0]
+                );
+                p_nested_sep = begin_delim.slice(
+                    0, &p[0] - &begin_delim[0] - 1
+                );
                 p.pop_front();
                 p_fmt = p;
                 p_is_nested = true;
@@ -312,7 +386,9 @@ protected:
                 for (p = find(p, '%'); !p.empty(); p = find(p, '%')) {
                     p.pop_front();
                     if (p.front() == ')') {
-                        p_nested_sep = p_nested_sep.slice(0, &p[0] - &p_nested_sep[0] - 1);
+                        p_nested_sep = p_nested_sep.slice(
+                            0, &p[0] - &p_nested_sep[0] - 1
+                        );
                         p.pop_front();
                         p_fmt = p;
                         p_is_nested = true;
@@ -410,32 +486,104 @@ protected:
         return (sp >= 65) && (detail::fmt_specs[sp - 65] != 0);
     }
 
-    string_range p_fmt;
-    char p_buf[32];
-};
+    template<typename R>
+    void write_spaces(R &writer, size_t n, bool left, char c = ' ') const {
+        if (left == bool(p_flags & FMT_FLAG_DASH)) {
+            return;
+        }
+        for (int w = p_width - int(n); --w >= 0; writer.put(c));
+    }
 
-/* for custom container formatting */
+    template<typename R>
+    void build_spec(R &out, string_range spec) const {
+        out.put('%');
+        if (p_flags & FMT_FLAG_DASH ) {
+            out.put('-');
+        }
+        if (p_flags & FMT_FLAG_ZERO ) {
+            out.put('0');
+        }
+        if (p_flags & FMT_FLAG_SPACE) {
+            out.put(' ');
+        }
+        if (p_flags & FMT_FLAG_PLUS ) {
+            out.put('+');
+        }
+        if (p_flags & FMT_FLAG_HASH ) {
+            out.put('#');
+        }
+        range_put_all(out, string_range{"*.*"});
+        range_put_all(out, spec);
+    }
 
-template<
-    typename T, typename R, typename = std::enable_if_t<
-        std::is_same_v<decltype(std::declval<T const &>().to_format(
-            std::declval<R &>(), std::declval<format_spec const &>()
-        )), void>
-    >
->
-inline void to_format(T const &v, R &writer, format_spec const &fs) {
-    v.to_format(writer, fs);
-}
+    /* string base writer */
+    template<typename R>
+    void write_str(R &writer, bool escape, string_range val) const {
+        size_t n = val.size();
+        if (has_precision()) {
+            n = std::min(n, size_t(precision()));
+        }
+        write_spaces(writer, n, true);
+        if (escape) {
+            writer.put('"');
+            for (size_t i = 0; i < n; ++i) {
+                if (val.empty()) {
+                    break;
+                }
+                char c = val.front();
+                char const *esc = detail::escape_fmt_char(c, '"');
+                if (esc) {
+                    range_put_all(writer, string_range{esc});
+                } else {
+                    writer.put(c);
+                }
+                val.pop_front();
+            }
+            writer.put('"');
+        } else {
+            range_put_all(writer, val.slice(0, n));
+        }
+        write_spaces(writer, n, false);
+    }
 
-namespace detail {
+    /* char values */
+    template<typename R>
+    void write_char(R &writer, bool escape, char val) const {
+        if (escape) {
+            char const *esc = detail::escape_fmt_char(val, '\'');
+            if (esc) {
+                char buf[6];
+                buf[0] = '\'';
+                size_t elen = strlen(esc);
+                memcpy(buf + 1, esc, elen);
+                buf[elen + 1] = '\'';
+                write_val(writer, false, ostd::string_range{
+                    buf, buf + elen + 2
+                });
+                return;
+            }
+        }
+        write_spaces(writer, 1 + escape * 2, true);
+        if (escape) {
+            writer.put('\'');
+            writer.put(val);
+            writer.put('\'');
+        } else {
+            writer.put(val);
+        }
+        write_spaces(writer, 1 + escape * 2, false);
+    }
+
     template<typename R, typename T>
-    inline void write_u(R &writer, format_spec const *fl, bool neg, T val) {
+    void write_int(R &writer, bool ptr, bool neg, T val) const {
         char buf[20];
         size_t n = 0;
 
-        char spec = fl->spec();
-        if (spec == 's') spec = 'd';
-        byte specn = detail::fmt_specs[spec - 65];
+        char isp = spec();
+        if (isp == 's') {
+            isp = (ptr ? 'x' : 'd');
+        }
+        byte specn = detail::fmt_specs[isp - 65];
         if (specn <= 2 || specn > 7) {
             throw format_error{"cannot format integers with the given spec"};
         }
@@ -445,469 +593,293 @@ namespace detail {
             buf[n++] = '0';
         }
         for (; val; val /= base) {
-            buf[n++] = detail::fmt_digits[spec >= 'a'][val % base];
+            buf[n++] = detail::fmt_digits[isp >= 'a'][val % base];
         }
 
-        int flags = fl->flags();
-        bool lsgn = flags & FMT_FLAG_PLUS;
-        bool lsp  = flags & FMT_FLAG_SPACE;
-        bool zero = flags & FMT_FLAG_ZERO;
+        int fl = flags();
+        bool lsgn = fl & FMT_FLAG_PLUS;
+        bool lsp  = fl & FMT_FLAG_SPACE;
+        bool zero = fl & FMT_FLAG_ZERO;
         bool sign = neg + lsgn + lsp;
 
         char const *pfx = nullptr;
         size_t pfxlen = 0;
-        if (flags & FMT_FLAG_HASH && spec != 'd') {
-            pfx = detail::fmt_intpfx[spec >= 'a'][specn - 3];
+        if (((fl & FMT_FLAG_HASH) || ptr) && isp != 'd') {
+            pfx = detail::fmt_intpfx[isp >= 'a'][specn - 3];
             pfxlen = !!pfx[1] + 1;
         }
 
         if (!zero) {
-            fl->write_spaces(writer, n + pfxlen + sign, true, ' ');
+            write_spaces(writer, n + pfxlen + sign, true, ' ');
         }
         if (sign) {
             writer.put(neg ? '-' : *((" \0+") + lsgn * 2));
         }
         range_put_all(writer, string_range{pfx, pfx + pfxlen});
         if (zero) {
-            fl->write_spaces(writer, n + pfxlen + sign, true, '0');
+            write_spaces(writer, n + pfxlen + sign, true, '0');
         }
 
         for (int i = int(n - 1); i >= 0; --i) {
             writer.put(buf[i]);
         }
-        fl->write_spaces(writer, n + sign + pfxlen, false);
+        write_spaces(writer, n + sign + pfxlen, false);
     }
 
-    template<typename R, typename ...A>
-    static void format_impl(
-        R &writer, bool escape, string_range fmt, A const &...args
-    );
+    /* floating point */
+    template<typename R, typename T, bool Long = std::is_same_v<T, ldouble>>
+    void write_float(R &writer, T val) const {
+        char buf[16], rbuf[128];
+        char fmtspec[Long + 1];
 
-    template<size_t I>
-    struct FmtTupleUnpacker {
-        template<typename R, typename T, typename ...A>
-        static inline void unpack(
-            R &writer, bool esc, string_range fmt,
-            T const &item, A const &...args
-        ) {
-            FmtTupleUnpacker<I - 1>::unpack(
-                writer, esc, fmt, item, std::get<I - 1>(item), args...
-            );
+        fmtspec[Long] = spec();
+        byte specn = detail::fmt_specs[spec() - 65];
+        if (specn != 1 && specn != 7) {
+            throw format_error{"cannot format floats with the given spec"};
         }
-    };
-
-    template<>
-    struct FmtTupleUnpacker<0> {
-        template<typename R, typename T, typename ...A>
-        static inline void unpack(
-            R &writer, bool esc, string_range fmt,
-            T const &, A const &...args
-        ) {
-            format_impl(writer, esc, fmt, args...);
+        if (specn == 7) {
+            fmtspec[Long] = 'g';
         }
-    };
-
-    /* ugly ass check for whether a type is tuple-like, like tuple itself,
-     * pair, array, possibly other types added later or overridden...
-     */
-    template<typename T>
-    std::true_type tuple_like_test(typename std::tuple_size<T>::type *);
-
-    template<typename>
-    std::false_type tuple_like_test(...);
-
-    template<typename T>
-    constexpr bool is_tuple_like = decltype(tuple_like_test<T>(0))::value;
-
-    template<typename R, typename T>
-    inline void format_ritem(
-        R &writer, bool esc, bool, string_range fmt,
-        T const &item, std::enable_if_t<!is_tuple_like<T>, bool> = true
-    ) {
-        format_impl(writer, esc, fmt, item);
-    }
-
-    template<typename R, typename T>
-    inline void format_ritem(
-        R &writer, bool esc, bool expandval, string_range fmt,
-        T const &item, std::enable_if_t<is_tuple_like<T>, bool> = true
-    ) {
-        if (expandval) {
-            FmtTupleUnpacker<std::tuple_size<T>::value>::unpack(
-                writer, esc, fmt, item
-            );
-        } else {
-            format_impl(writer, esc, fmt, item);
-        }
-    }
-
-    template<typename R, typename T>
-    inline void write_range(
-        R &writer, format_spec const *fl, bool escape, bool expandval,
-        string_range sep, T const &val,
-        std::enable_if_t<detail::iterable_test<T>, bool> = true
-    ) {
-        auto range = ostd::iter(val);
-        if (range.empty()) {
-            return;
-        }
-        /* test first item */
-        format_ritem(writer, escape, expandval, fl->rest(), range.front());
-        range.pop_front();
-        /* write the rest (if any) */
-        for (; !range.empty(); range.pop_front()) {
-            range_put_all(writer, sep);
-            format_ritem(
-                writer, escape, expandval, fl->rest(), range.front()
-            );
-        }
-    }
-
-    template<typename R, typename T>
-    inline void write_range(
-        R &, format_spec const *, bool, bool, string_range,
-        T const &, std::enable_if_t<!detail::iterable_test<T>, bool> = true
-    ) {
-        throw format_error{"invalid value for ranged format"};
-    }
-
-    template<typename T>
-    static std::true_type test_fmt_tostr(
-        decltype(ostd::to_string<T>{}(std::declval<T>())) *
-    );
-    template<typename>
-    static std::false_type test_fmt_tostr(...);
-
-    template<typename T>
-    constexpr bool fmt_tostr_test = decltype(test_fmt_tostr<T>(0))::value;
-
-    /* non-printable escapes up to 0x20 (space) */
-    static constexpr char const *fmt_escapes[] = {
-        "\\0"  , "\\x01", "\\x02", "\\x03", "\\x04", "\\x05",
-        "\\x06", "\\a"  , "\\b"  , "\\t"  , "\\n"  , "\\v"  ,
-        "\\f"  , "\\r"  , "\\x0E", "\\x0F", "\\x10", "\\x11",
-        "\\x12", "\\x13", "\\x14", "\\x15", "\\x16", "\\x17",
-        "\\x18", "\\x19", "\\x1A", "\\x1B", "\\x1C", "\\x1D",
-        "\\x1E", "\\x1F",
-        /* we want to escape double quotes... */
-        nullptr, nullptr, "\\\"", nullptr, nullptr, nullptr,
-        nullptr, "\\\'"
-    };
-
-    inline char const *escape_fmt_char(char v, char quote) {
-        if ((v >= 0 && v < 0x20) || (v == quote)) {
-            return fmt_escapes[size_t(v)];
-        } else if (v == 0x7F) {
-            return "\\x7F";
-        }
-        return nullptr;
-    }
-
-    inline std::string escape_fmt_str(string_range val) {
-        std::string ret;
-        ret.push_back('"');
-        while (!val.empty()) {
-            char const *esc = escape_fmt_char(val.front(), '"');
-            if (esc) {
-                ret.append(esc);
-            } else {
-                ret.push_back(val.front());
-            }
-            val.pop_front();
-        }
-        ret.push_back('"');
-        return ret;
-    }
-
-    template<typename T, typename R>
-    static std::true_type test_tofmt(decltype(to_format(
-        std::declval<T const &>(), std::declval<R &>(),
-        std::declval<format_spec const &>()
-    )) *);
-
-    template<typename, typename>
-    static std::false_type test_tofmt(...);
-
-    template<typename T, typename R>
-    constexpr bool fmt_tofmt_test = decltype(test_tofmt<T, R>(0))::value;
-
-    struct write_spec: format_spec {
-        using format_spec::format_spec;
-
-        /* string base writer */
-        template<typename R>
-        void write_str(R &writer, bool escape, string_range val) const {
-            if (escape) {
-                write_str(writer, false, escape_fmt_str(val));
-                return;
-            }
-            size_t n = val.size();
-            if (this->precision()) {
-                n = this->precision();
-            }
-            this->write_spaces(writer, n, true);
-            range_put_all(writer, val.slice(0, n));
-            this->write_spaces(writer, n, false);
+        if (Long) {
+            fmtspec[0] = 'L';
         }
 
-        /* char values */
-        template<typename R>
-        void write_char(R &writer, bool escape, char val) const {
-            if (escape) {
-                char const *esc = escape_fmt_char(val, '\'');
-                if (esc) {
-                    char buf[6];
-                    buf[0] = '\'';
-                    size_t elen = strlen(esc);
-                    memcpy(buf + 1, esc, elen);
-                    buf[elen + 1] = '\'';
-                    write_val(writer, false, ostd::string_range{
-                        buf, buf + elen + 2
-                    });
-                    return;
-                }
-            }
-            this->write_spaces(writer, 1 + escape * 2, true);
-            if (escape) {
-                writer.put('\'');
-                writer.put(val);
-                writer.put('\'');
-            } else {
-                writer.put(val);
-            }
-            this->write_spaces(writer, 1 + escape * 2, false);
+        auto bufr = iter(buf);
+        build_spec(bufr, fmtspec);
+        bufr.put('\0');
+        int ret = snprintf(
+            rbuf, sizeof(rbuf), buf, width(),
+            has_precision() ? precision() : 6, val
+        );
+        if (ret < 0) {
+            /* typically unreachable, build_spec creates valid format */
+            throw format_error{"invalid float format"};
         }
 
-        /* floating point */
-        template<typename R, typename T, bool Long = std::is_same_v<T, ldouble>>
-        void write_float(R &writer, bool, T val) const {
-            char buf[16], rbuf[128];
-            char fmtspec[Long + 1];
-
-            fmtspec[Long] = this->spec();
-            byte specn = detail::fmt_specs[this->spec() - 65];
-            if (specn != 1 && specn != 7) {
-                throw format_error{"cannot format floats with the given spec"};
-            }
-            if (specn == 7) {
-                fmtspec[Long] = 'g';
-            }
-            if (Long) {
-                fmtspec[0] = 'L';
-            }
-
-            this->build_spec(iter(buf), fmtspec).put('\0');
-            int ret = snprintf(
-                rbuf, sizeof(rbuf), buf, this->width(),
-                this->has_precision() ? this->precision() : 6, val
+        char *dbuf = nullptr;
+        if (size_t(ret) >= sizeof(rbuf)) {
+            /* this should typically never happen */
+            dbuf = new char[ret + 1];
+            ret = snprintf(
+                dbuf, ret + 1, buf, width(),
+                has_precision() ? precision() : 6, val
             );
             if (ret < 0) {
-                /* typically unreachable, build_spec creates valid format */
+                /* see above */
                 throw format_error{"invalid float format"};
             }
+            range_put_all(writer, string_range{dbuf, dbuf + ret});
+            delete[] dbuf;
+        } else {
+            range_put_all(writer, string_range{rbuf, rbuf + ret});
+        }
+    }
 
-            char *dbuf = nullptr;
-            if (size_t(ret) >= sizeof(rbuf)) {
-                /* this should typically never happen */
-                dbuf = new char[ret + 1];
-                ret = snprintf(
-                    dbuf, ret + 1, buf, this->width(),
-                    this->has_precision() ? this->precision() : 6, val
+    template<typename R, typename T>
+    void write_val(R &writer, bool escape, T const &val) const {
+        /* stuff fhat can be custom-formatted goes first */
+        if constexpr(detail::fmt_tofmt_test<T, noop_output_range<char>>) {
+            to_format(val, writer, *this);
+            return;
+        }
+        /* second best, we can convert to string slice */
+        if constexpr(std::is_constructible_v<string_range, T const &>) {
+            if (spec() != 's') {
+                throw format_error{"strings need the '%s' spec"};
+            }
+            write_str(writer, escape, val);
+            return;
+        }
+        /* bools, check if printing as string, otherwise convert to int */
+        if constexpr(std::is_same_v<T, bool>) {
+            if (spec() == 's') {
+                write_val(writer, ("false\0true") + (6 * val));
+            } else {
+                write_val(writer, int(val));
+            }
+            return;
+        }
+        /* character values */
+        if constexpr(std::is_same_v<T, char>) {
+            if (spec() != 's' && spec() != 'c') {
+                throw format_error{"cannot format chars with the given spec"};
+            }
+            write_char(writer, escape, val);
+            return;
+        }
+        /* pointers, write as pointer with %s and otherwise as unsigned...
+         * char pointers are handled by the string case above
+         */
+        if constexpr(std::is_pointer_v<T>) {
+            write_int(writer, (spec() == 's'), false, size_t(val));
+            return;
+        }
+        /* integers */
+        if constexpr(std::is_integral_v<T>) {
+            if constexpr(std::is_signed_v<T>) {
+                /* signed integers */
+                using UT = std::make_unsigned_t<T>;
+                write_int(
+                    writer, false, val < 0,
+                    (val < 0) ? static_cast<UT>(-val) : static_cast<UT>(val)
                 );
-                if (ret < 0) {
-                    /* see above */
-                    throw format_error{"invalid float format"};
-                }
-                range_put_all(writer, string_range{dbuf, dbuf + ret});
-                delete[] dbuf;
             } else {
-                range_put_all(writer, string_range{rbuf, rbuf + ret});
+                /* unsigned integers */
+                write_int(writer, false, false, val);
             }
+            return;
         }
-
-        template<typename R, typename T>
-        void write_val(R &writer, bool escape, T const &val) const {
-            /* stuff fhat can be custom-formatted goes first */
-            if constexpr(fmt_tofmt_test<T, noop_output_range<char>>) {
-                to_format(val, writer, *this);
-                return;
-            }
-            /* second best, we can convert to string slice */
-            if constexpr(std::is_constructible_v<string_range, T const &>) {
-                if (this->spec() != 's') {
-                    throw format_error{"strings need the '%s' spec"};
-                }
-                write_str(writer, escape, val);
-                return;
-            }
-            /* bools, check if printing as string, otherwise convert to int */
-            if constexpr(std::is_same_v<T, bool>) {
-                if (this->spec() == 's') {
-                    write_val(writer, ("false\0true") + (6 * val));
-                } else {
-                    write_val(writer, int(val));
-                }
-                return;
-            }
-            /* character values */
-            if constexpr(std::is_same_v<T, char>) {
-                if (this->spec() != 's' && this->spec() != 'c') {
-                    throw format_error{"cannot format chars with the given spec"};
-                }
-                write_char(writer, escape, val);
-                return;
-            }
-            /* pointers, write as pointer with %s and otherwise as unsigned...
-             * char pointers are handled by the string case above
-             */
-            if constexpr(std::is_pointer_v<T>) {
-                format_spec sp{
-                    (spec() == 's') ? 'x' : spec(),
-                    has_width() ? width() : -1,
-                    has_precision() ? precision() : -1,
-                    (spec() == 's') ? (flags() | FMT_FLAG_HASH) : flags()
-                };
-                detail::write_u(writer, &sp, false, size_t(val));
-                return;
-            }
-            /* integers */
-            if constexpr(std::is_integral_v<T>) {
-                if constexpr(std::is_signed_v<T>) {
-                    /* signed integers */
-                    using UT = std::make_unsigned_t<T>;
-                    detail::write_u(
-                        writer, this, val < 0,
-                        (val < 0) ? static_cast<UT>(-val) : static_cast<UT>(val)
-                    );
-                } else {
-                    /* unsigned integers */
-                    detail::write_u(writer, this, false, val);
-                }
-                return;
-            }
-            /* floats */
-            if constexpr(std::is_floating_point_v<T>) {
-                write_float(writer, escape, val);
-                return;
-            }
-            /* stuff that can be to_string'd, worst reliable case, allocates */
-            if constexpr(fmt_tostr_test<T>) {
-                if (this->spec() != 's') {
-                    throw format_error{"custom objects need the '%s' spec"};
-                }
-                write_val(writer, false, ostd::to_string<T>{}(val));
-                return;
-            }
-            /* we ran out of options, failure */
-            throw format_error{"the value cannot be formatted"};
+        /* floats */
+        if constexpr(std::is_floating_point_v<T>) {
+            write_float(writer, val);
+            return;
         }
+        /* stuff that can be to_string'd, worst reliable case, allocates */
+        if constexpr(detail::fmt_tostr_test<T>) {
+            if (spec() != 's') {
+                throw format_error{"custom objects need the '%s' spec"};
+            }
+            write_val(writer, false, ostd::to_string<T>{}(val));
+            return;
+        }
+        /* we ran out of options, failure */
+        throw format_error{"the value cannot be formatted"};
+    }
 
-        /* actual writer */
-        template<typename R, typename T, typename ...A>
-        void write_arg(
-            R &writer, size_t idx, T const &val, A const &...args
-        ) const {
-            if (idx) {
-                if constexpr(!sizeof...(A)) {
-                    throw format_error{"not enough format arguments"};
-                } else {
-                    write_arg(writer, idx - 1, args...);
-                }
+    /* actual writer */
+    template<typename R, typename T, typename ...A>
+    void write_arg(
+        R &writer, size_t idx, T const &val, A const &...args
+    ) const {
+        if (idx) {
+            if constexpr(!sizeof...(A)) {
+                throw format_error{"not enough format arguments"};
             } else {
-                write_val(writer, this->p_nested_escape, val);
+                write_arg(writer, idx - 1, args...);
             }
+        } else {
+            write_val(writer, p_nested_escape, val);
         }
+    }
 
-        /* range writer */
-        template<typename R, typename T, typename ...A>
-        void write_range(
-            R &writer, size_t idx, bool expandval, string_range sep,
-            T const &val, A const &...args
-        ) const {
-            if (idx) {
-                if constexpr(!sizeof...(A)) {
-                    throw format_error{"not enough format arguments"};
-                } else {
-                    write_range(writer, idx - 1, expandval, sep, args...);
-                }
-            } else {
-                detail::write_range(
-                    writer, this, this->p_nested_escape, expandval, sep, val
-                );
+    template<typename R, typename T>
+    inline void write_range_item(
+        R &writer, bool expandval, string_range fmt, T const &item
+    ) const {
+        if constexpr(detail::is_tuple_like<T>) {
+            if (expandval) {
+                std::apply([&writer, esc = p_nested_escape, &fmt](
+                    auto const &...args
+                ) mutable {
+                    format_spec sp{fmt, esc};
+                    sp.write_fmt(writer, args...);
+                }, item);
+                return;
             }
         }
-    };
+        format_spec sp{fmt, p_nested_escape};
+        sp.write_fmt(writer, item);
+    }
+
+    template<typename R, typename T>
+    void write_range_val(
+        R &writer, bool expandval, string_range sep, T const &val
+    ) const {
+        if constexpr(detail::iterable_test<T>) {
+            auto range = ostd::iter(val);
+            if (range.empty()) {
+                return;
+            }
+            for (;;) {
+                write_range_item(writer, expandval, rest(), range.front());
+                range.pop_front();
+                if (range.empty()) {
+                    break;
+                }
+                range_put_all(writer, sep);
+            }
+        } else {
+            throw format_error{"invalid value for ranged format"};
+        }
+    }
+
+    /* range writer */
+    template<typename R, typename T, typename ...A>
+    void write_range(
+        R &writer, size_t idx, bool expandval, string_range sep,
+        T const &val, A const &...args
+    ) const {
+        if (idx) {
+            if constexpr(!sizeof...(A)) {
+                throw format_error{"not enough format arguments"};
+            } else {
+                write_range(writer, idx - 1, expandval, sep, args...);
+            }
+        } else {
+            write_range_val(writer, expandval, sep, val);
+        }
+    }
 
     template<typename R, typename ...A>
-    inline void format_impl(
-        R &writer, bool escape, string_range fmt, A const &...args
-    ) {
+    void write_fmt(R &writer, A const &...args) {
         size_t argidx = 1;
-        detail::write_spec spec(fmt, escape);
-        while (spec.read_until_spec(writer)) {
-            size_t argpos = spec.index();
-            if (spec.is_nested()) {
+        while (read_until_spec(writer)) {
+            size_t argpos = index();
+            if (is_nested()) {
                 if (!argpos) {
                     argpos = argidx++;
                 }
                 /* FIXME: figure out a better way */
-                detail::write_spec nspec(spec.nested(), spec.nested_escape());
+                format_spec nspec(nested(), nested_escape());
                 nspec.write_range(
-                    writer, argpos - 1, (spec.flags() & FMT_FLAG_HASH),
-                    spec.nested_sep(), args...
+                    writer, argpos - 1, (flags() & FMT_FLAG_HASH),
+                    nested_sep(), args...
                 );
                 continue;
             }
             if (!argpos) {
                 argpos = argidx++;
-                if (spec.arg_width()) {
-                    spec.set_width(argpos - 1, args...);
+                if (arg_width()) {
+                    set_width(argpos - 1, args...);
                     argpos = argidx++;
                 }
-                if (spec.arg_precision()) {
-                    spec.set_precision(argpos - 1, args...);
+                if (arg_precision()) {
+                    set_precision(argpos - 1, args...);
                     argpos = argidx++;
                 }
             } else {
-                bool argprec = spec.arg_precision();
+                bool argprec = arg_precision();
                 if (argprec) {
                     if (argpos <= 1) {
                         throw format_error{"argument precision not given"};
                     }
-                    spec.set_precision(argpos - 2, args...);
+                    set_precision(argpos - 2, args...);
                 }
-                if (spec.arg_width()) {
+                if (arg_width()) {
                     if (argpos <= (size_t(argprec) + 1)) {
                         throw format_error{"argument width not given"};
                     }
-                    spec.set_width(argpos - 2 - argprec, args...);
+                    set_width(argpos - 2 - argprec, args...);
                 }
             }
-            spec.write_arg(writer, argpos - 1, args...);
+            write_arg(writer, argpos - 1, args...);
         }
     }
 
-    template<typename R>
-    inline void format_impl(R &writer, bool, string_range fmt) {
-        detail::write_spec spec(fmt, false);
-        if (spec.read_until_spec(writer)) {
+    template<typename R, typename ...A>
+    void write_fmt(R &writer) {
+        if (read_until_spec(writer)) {
             throw format_error{"format spec without format arguments"};
         }
     }
-} /* namespace detail */
+
+    string_range p_fmt;
+    char p_buf[32];
+};
 
 template<typename R, typename ...A>
 inline R &&format(R &&writer, string_range fmt, A const &...args) {
-    detail::format_impl(writer, false, fmt, args...);
-    return std::forward<R>(writer);
-}
-
-template<typename R, typename T>
-inline R &&format(R &&writer, format_spec const &fmt, T const &val) {
-    /* we can do this as there are no members added... but ugly, FIXME later */
-    detail::write_spec const &wsp = static_cast<detail::write_spec const &>(fmt);
-    wsp.write_arg(writer, 0, val);
-    return std::forward<R>(writer);
+    return format_spec{fmt}.format(std::forward<R>(writer), args...);
 }
 
 } /* namespace ostd */
