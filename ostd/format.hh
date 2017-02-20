@@ -173,17 +173,6 @@ namespace detail {
         }
     }
 
-    /* fallback test for whether a value can be converted to string */
-    template<typename T>
-    static std::true_type test_fmt_tostr(
-        decltype(ostd::to_string<T>{}(std::declval<T>())) *
-    );
-    template<typename>
-    static std::false_type test_fmt_tostr(...);
-
-    template<typename T>
-    constexpr bool fmt_tostr_test = decltype(test_fmt_tostr<T>(0))::value;
-
     /* ugly ass check for whether a type is tuple-like, like tuple itself,
      * pair, array, possibly other types added later or overridden...
      */
@@ -732,14 +721,6 @@ private:
         /* floats */
         if constexpr(std::is_floating_point_v<T>) {
             write_float(writer, val);
-            return;
-        }
-        /* stuff that can be to_string'd, worst reliable case, allocates */
-        if constexpr(detail::fmt_tostr_test<T>) {
-            if (spec() != 's') {
-                throw format_error{"custom objects need the '%s' spec"};
-            }
-            write_val(writer, false, ostd::to_string<T>{}(val));
             return;
         }
         /* we ran out of options, failure */
