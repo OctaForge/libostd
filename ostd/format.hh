@@ -590,11 +590,21 @@ private:
         }
 
         int base = detail::fmt_bases[specn];
-        if (!val) {
+        bool zval = !val;
+        if (zval) {
             buf[n++] = '0';
         }
         for (; val; val /= base) {
             buf[n++] = detail::fmt_digits[isp >= 'a'][val % base];
+        }
+        size_t tn = n;
+        if (has_precision()) {
+            int prec = precision();
+            if (size_t(prec) > tn) {
+                tn = size_t(prec);
+            } else if (!prec && zval) {
+                tn = 0;
+            }
         }
 
         int fl = flags();
@@ -611,20 +621,24 @@ private:
         }
 
         if (!zero) {
-            write_spaces(writer, n + pfxlen + sign, true, ' ');
+            write_spaces(writer, tn + pfxlen + sign, true, ' ');
         }
         if (sign) {
             writer.put(neg ? '-' : *((" \0+") + lsgn * 2));
         }
         range_put_all(writer, string_range{pfx, pfx + pfxlen});
         if (zero) {
-            write_spaces(writer, n + pfxlen + sign, true, '0');
+            write_spaces(writer, tn + pfxlen + sign, true, '0');
         }
-
-        for (int i = int(n - 1); i >= 0; --i) {
-            writer.put(buf[i]);
+        if (tn) {
+            for (size_t i = 0; i < (tn - n); ++i) {
+                writer.put('0');
+            }
+            for (size_t i = 0; i < n; ++i) {
+                writer.put(buf[n - i - 1]);
+            }
         }
-        write_spaces(writer, n + sign + pfxlen, false);
+        write_spaces(writer, tn + sign + pfxlen, false);
     }
 
     /* floating point */
