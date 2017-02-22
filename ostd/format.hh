@@ -110,22 +110,6 @@ namespace detail {
         0, 0, 0, 2, 8, 10, 16, 0
     };
 
-    static constexpr char fmt_digits[2][16] = {
-        {
-            '0', '1', '2', '3', '4', '5', '6', '7',
-            '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
-        },
-        {
-            '0', '1', '2', '3', '4', '5', '6', '7',
-            '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-        }
-    };
-
-    static constexpr char const *fmt_intpfx[2][4] = {
-        { "0B", "0", "", "0X" },
-        { "0b", "0", "", "0x" }
-    };
-
     /* non-printable escapes up to 0x20 (space) */
     static constexpr char const *fmt_escapes[] = {
         "\\0"  , "\\x01", "\\x02", "\\x03", "\\x04", "\\x05",
@@ -481,10 +465,7 @@ private:
     fmtchar:
         p_spec = p_fmt.front();
         p_fmt.pop_front();
-        /* make sure we're testing on a signed byte - our mapping only
-         * tests values up to 127 */
-        sbyte sp = p_spec;
-        return (sp >= 65) && (detail::fmt_specs[sp - 65] != 0);
+        return ((p_spec | 32) >= 'a') && ((p_spec | 32) <= 'z');
     }
 
     template<typename R>
@@ -588,6 +569,8 @@ private:
         if (specn <= 2 || specn > 7) {
             throw format_error{"cannot format integers with the given spec"};
         }
+        /* 32 for lowercase variants, 0 for uppercase */
+        int cmask = ((isp >= 'a') << 5);
 
         int base = detail::fmt_bases[specn];
         bool zval = !val;
@@ -595,7 +578,8 @@ private:
             buf[n++] = '0';
         }
         for (; val; val /= base) {
-            buf[n++] = detail::fmt_digits[isp >= 'a'][val % base];
+            T vb = val % base;
+            buf[n++] = (vb + "70"[vb < 10]) | cmask;
         }
         size_t tn = n;
         if (has_precision()) {
@@ -613,22 +597,23 @@ private:
         bool zero = fl & FMT_FLAG_ZERO;
         bool sign = neg + lsgn + lsp;
 
-        char const *pfx = nullptr;
-        size_t pfxlen = 0;
-        if (((fl & FMT_FLAG_HASH) || ptr) && isp != 'd') {
-            pfx = detail::fmt_intpfx[isp >= 'a'][specn - 3];
-            pfxlen = !!pfx[1] + 1;
+        char pfx = '\0';
+        if (((fl & FMT_FLAG_HASH) || ptr) && ((specn == 3) || (specn == 6))) {
+            pfx = ("XB"[(specn == 3)]) | cmask;
         }
 
         if (!zero) {
-            write_spaces(writer, tn + pfxlen + sign, true, ' ');
+            write_spaces(writer, tn + (!!pfx * 2) + sign, true, ' ');
         }
         if (sign) {
             writer.put(neg ? '-' : *((" \0+") + lsgn * 2));
         }
-        range_put_all(writer, string_range{pfx, pfx + pfxlen});
+        if (pfx) {
+            writer.put('0');
+            writer.put(pfx);
+        }
         if (zero) {
-            write_spaces(writer, tn + pfxlen + sign, true, '0');
+            write_spaces(writer, tn + (!!pfx * 2) + sign, true, '0');
         }
         if (tn) {
             for (size_t i = 0; i < (tn - n); ++i) {
@@ -638,7 +623,7 @@ private:
                 writer.put(buf[n - i - 1]);
             }
         }
-        write_spaces(writer, tn + sign + pfxlen, false);
+        write_spaces(writer, tn + sign + (!!pfx * 2), false);
     }
 
     /* floating point */
