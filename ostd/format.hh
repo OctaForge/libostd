@@ -26,7 +26,8 @@ enum format_flags {
     FMT_FLAG_ZERO  = 1 << 1,
     FMT_FLAG_SPACE = 1 << 2,
     FMT_FLAG_PLUS  = 1 << 3,
-    FMT_FLAG_HASH  = 1 << 4
+    FMT_FLAG_HASH  = 1 << 4,
+    FMT_FLAG_AT    = 1 << 5
 };
 
 struct format_error: std::runtime_error {
@@ -54,6 +55,7 @@ namespace detail {
                 case '-': ret |= FMT_FLAG_DASH; fmt.pop_front(); break;
                 case '+': ret |= FMT_FLAG_PLUS; fmt.pop_front(); break;
                 case '#': ret |= FMT_FLAG_HASH; fmt.pop_front(); break;
+                case '@': ret |= FMT_FLAG_AT;   fmt.pop_front(); break;
                 case '0': ret |= FMT_FLAG_ZERO; fmt.pop_front(); break;
                 case ' ': ret |= FMT_FLAG_SPACE; fmt.pop_front(); break;
                 default: goto retflags;
@@ -187,10 +189,8 @@ namespace detail {
 }
 
 struct format_spec {
-    format_spec(): p_nested_escape(false), p_fmt() {}
-    format_spec(string_range fmt, bool escape = false):
-        p_nested_escape(escape), p_fmt(fmt)
-    {}
+    format_spec(): p_fmt() {}
+    format_spec(string_range fmt): p_fmt(fmt) {}
 
     format_spec(char spec, int flags = 0):
         p_flags(flags),
@@ -265,7 +265,6 @@ struct format_spec {
 
     bool is_tuple() const { return p_is_tuple; }
     bool is_nested() const { return p_is_nested; }
-    bool nested_escape() const { return p_nested_escape; }
 
     template<typename R, typename ...A>
     inline R &&format(R &&writer, A const &...args) {
@@ -284,6 +283,8 @@ private:
     string_range p_nested_sep;
 
     int p_flags = 0;
+    /* internal, for initial set of flags */
+    int p_gflags = 0;
 
     int p_width = 0;
     int p_precision = 0;
@@ -300,7 +301,6 @@ private:
 
     bool p_is_tuple = false;
     bool p_is_nested = false;
-    bool p_nested_escape = false;
 
     bool read_until_dummy() {
         while (!p_fmt.empty()) {
@@ -319,12 +319,6 @@ private:
 
     bool read_spec_range(bool tuple = false) {
         int sflags = p_flags;
-        /* printing ranges or tuples toggles escaping mode by default,
-         * but as the dash flag also toggles, it means no change
-         */
-        if (!(sflags & FMT_FLAG_DASH)) {
-            p_nested_escape = !p_nested_escape;
-        }
         p_fmt.pop_front();
         string_range begin_inner(p_fmt);
         if (!read_until_dummy()) {
@@ -337,6 +331,7 @@ private:
             curfmt = p_fmt;
         }
         p_fmt = curfmt;
+        /* restore in case the inner spec read changed them */
         p_flags = sflags;
         /* find delimiter or ending */
         string_range begin_delim(p_fmt);
@@ -409,10 +404,10 @@ private:
         }
 
         /* parse flags */
-        p_flags = 0;
+        p_flags = p_gflags;
         size_t skipd = 0;
         if (havepos || !ndig) {
-            p_flags = detail::parse_fmt_flags(p_fmt, 0);
+            p_flags |= detail::parse_fmt_flags(p_fmt, 0);
         } else {
             for (size_t i = 0; i < ndig; ++i) {
                 if (p_buf[i] != '0') {
@@ -421,10 +416,10 @@ private:
                 ++skipd;
             }
             if (skipd) {
-                p_flags = FMT_FLAG_ZERO;
+                p_flags |= FMT_FLAG_ZERO;
             }
             if (skipd == ndig) {
-                p_flags = detail::parse_fmt_flags(p_fmt, p_flags);
+                p_flags |= detail::parse_fmt_flags(p_fmt, p_flags);
             }
         }
 
@@ -491,9 +486,6 @@ private:
         if (has_precision()) {
             n = std::min(n, size_t(precision()));
         }
-        if (p_flags & FMT_FLAG_DASH) {
-            escape = !escape;
-        }
         write_spaces(writer, n, true);
         if (escape) {
             writer.put('"');
@@ -520,9 +512,6 @@ private:
     /* char values */
     template<typename R>
     void write_char(R &writer, bool escape, char val) const {
-        if (p_flags & FMT_FLAG_DASH) {
-            escape = !escape;
-        }
         if (escape) {
             char const *esc = detail::escape_fmt_char(val, '\'');
             if (esc) {
@@ -689,7 +678,7 @@ private:
             }
             writer.put('<');
             write_tuple_val<0, std::tuple_size<T>::value>(
-                writer, !(flags() & FMT_FLAG_DASH), ", ", val
+                writer, escape, ", ", val
             );
             writer.put('>');
             return;
@@ -700,9 +689,7 @@ private:
                 throw format_error{"tuples need the '%s' spec"};
             }
             writer.put('{');
-            write_range_val(
-                writer, !(flags() & FMT_FLAG_DASH), false, "%s", ", ", val
-            );
+            write_range_val(writer, escape, false, "%s", ", ", val);
             writer.put('}');
             return;
         }
@@ -766,7 +753,7 @@ private:
                 write_arg(writer, idx - 1, args...);
             }
         } else {
-            write_val(writer, p_nested_escape, val);
+            write_val(writer, p_flags & FMT_FLAG_AT, val);
         }
     }
 
@@ -779,13 +766,19 @@ private:
                 std::apply([&writer, escape, &fmt](
                     auto const &...args
                 ) mutable {
-                    format_spec sp{fmt, escape};
+                    format_spec sp{fmt};
+                    if (escape) {
+                        sp.p_gflags |= FMT_FLAG_AT;
+                    }
                     sp.write_fmt(writer, args...);
                 }, item);
                 return;
             }
         }
-        format_spec sp{fmt, escape};
+        format_spec sp{fmt};
+        if (escape) {
+            sp.p_gflags |= FMT_FLAG_AT;
+        }
         sp.write_fmt(writer, item);
     }
 
@@ -826,7 +819,9 @@ private:
                 write_range(writer, idx - 1, expandval, sep, args...);
             }
         } else {
-            write_range_val(writer, nested_escape(), expandval, rest(), sep, val);
+            write_range_val(
+                writer, p_gflags & FMT_FLAG_AT, expandval, rest(), sep, val
+            );
         }
     }
 
@@ -834,8 +829,8 @@ private:
     void write_tuple_val(
         R &writer, bool escape, string_range sep, T const &tup
     ) const {
-        format_spec sp{"%s", escape};
-        sp.write_fmt(writer, std::get<I>(tup));
+        format_spec sp{'s', escape ? FMT_FLAG_AT : 0};
+        sp.write_arg(writer, 0, std::get<I>(tup));
         if constexpr(I < (N - 1)) {
             range_put_all(writer, sep);
             write_tuple_val<I + 1, N>(writer, escape, sep, tup);
@@ -872,8 +867,8 @@ private:
                 if (!argpos) {
                     argpos = argidx++;
                 }
-                /* FIXME: figure out a better way */
-                format_spec nspec(nested(), nested_escape());
+                format_spec nspec(nested());
+                nspec.p_gflags |= (p_flags & FMT_FLAG_AT);
                 if (is_tuple()) {
                     nspec.write_tuple(writer, argpos - 1, args...);
                 } else {
