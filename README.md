@@ -1,12 +1,17 @@
 # octastd
 
+**Work in progress, not ready for production use.**
+
 OctaSTD is an extension of the C++17 standard library which mainly provides
 ranges (to replace iterators) but also various other utilities like proper
 streams, string formatting, concurrency utilities and others. It's meant
 to replace the more poorly designed parts of the C++ standard library to
 make the language easier and more convenient to use.
 
-Documentation for OctaSTD can be found at https://wiki.octaforge.org/docs/octastd.
+It is not feature complete right now, as most things are still being worked on.
+
+Documentation (currently outdated and incomplete) for OctaSTD can be found at
+https://wiki.octaforge.org/docs/octastd.
 
 ## Supported compilers
 
@@ -32,7 +37,7 @@ Sadly, it's not possible to properly integrate `std::string` and `std::hash`
 with OctaSTD ranges without utilizing `std::string_view`. Also, C++17 provides
 library features that OctaSTD would have to implement otherwise, which would
 lead to potentially incompatible APIs. C++17 also provides some nice language
-features (such as `if constexpr` and fold epxressions) which allow a lot of
+features (such as `if constexpr` and fold expressions) which allow a lot of
 code to be written in a cleaner way. However, it is made sure that no features
 beyond the minimum supported compiler are necessary to use the library.
 
