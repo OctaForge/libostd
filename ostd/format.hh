@@ -182,12 +182,24 @@ namespace detail {
 }
 
 struct format_spec {
-    format_spec(): p_fmt() {}
-    format_spec(string_range fmt): p_fmt(fmt) {}
+    format_spec(string_range fmt = nullptr):
+        p_fmt(fmt), p_loc()
+    {}
+
+    format_spec(string_range fmt, std::locale const &loc):
+        p_fmt(fmt), p_loc(loc)
+    {}
+
+    format_spec(std::locale const &loc):
+        p_fmt(), p_loc(loc)
+    {}
 
     format_spec(char spec, int flags = 0):
-        p_flags(flags),
-        p_spec(spec)
+        p_flags(flags), p_spec(spec), p_loc()
+    {}
+
+    format_spec(char spec, std::locale const &loc, int flags = 0):
+        p_flags(flags), p_spec(spec), p_loc(loc)
     {}
 
     template<typename R>
@@ -212,6 +224,16 @@ struct format_spec {
 
     string_range rest() const {
         return p_fmt;
+    }
+
+    std::locale imbue(std::locale const &loc) {
+        std::locale ret{p_loc};
+        p_loc = loc;
+        return ret;
+    }
+
+    std::locale getloc() const {
+        return p_loc;
     }
 
     int width() const { return p_width; }
@@ -611,6 +633,7 @@ private:
 
         /* null streambuf because it's only used to read flags etc */
         std::ios st{nullptr};
+        st.imbue(p_loc);
 
         st.width(width());
         st.precision(has_precision() ? precision() : 6);
@@ -682,8 +705,8 @@ private:
                 throw format_error{"tuples need the '%s' spec"};
             }
             writer.put('{');
-            write_range_val(writer, [&writer, escape](auto const &rval) {
-                format_spec sp{'s', escape ? FMT_FLAG_AT : 0};
+            write_range_val(writer, [&writer, escape, this](auto const &rval) {
+                format_spec sp{'s', p_loc, escape ? FMT_FLAG_AT : 0};
                 sp.write_arg(writer, 0, rval);
             }, ", ", val);
             writer.put('}');
@@ -759,10 +782,10 @@ private:
     ) const {
         if constexpr(detail::is_tuple_like<T>) {
             if (expandval) {
-                std::apply([&writer, escape, &fmt](
+                std::apply([&writer, escape, &fmt, this](
                     auto const &...args
                 ) mutable {
-                    format_spec sp{fmt};
+                    format_spec sp{fmt, p_loc};
                     if (escape) {
                         sp.p_gflags |= FMT_FLAG_AT;
                     }
@@ -771,7 +794,7 @@ private:
                 return;
             }
         }
-        format_spec sp{fmt};
+        format_spec sp{fmt, p_loc};
         if (escape) {
             sp.p_gflags |= FMT_FLAG_AT;
         }
@@ -828,7 +851,7 @@ private:
     void write_tuple_val(
         R &writer, bool escape, string_range sep, T const &tup
     ) const {
-        format_spec sp{'s', escape ? FMT_FLAG_AT : 0};
+        format_spec sp{'s', p_loc, escape ? FMT_FLAG_AT : 0};
         sp.write_arg(writer, 0, std::get<I>(tup));
         if constexpr(I < (N - 1)) {
             range_put_all(writer, sep);
@@ -866,7 +889,7 @@ private:
                 if (!argpos) {
                     argpos = argidx++;
                 }
-                format_spec nspec(nested());
+                format_spec nspec(nested(), p_loc);
                 nspec.p_gflags |= (p_flags & FMT_FLAG_AT);
                 if (is_tuple()) {
                     nspec.write_tuple(writer, argpos - 1, args...);
@@ -941,6 +964,7 @@ private:
     };
 
     string_range p_fmt;
+    std::locale p_loc;
     char p_buf[32];
 };
 
