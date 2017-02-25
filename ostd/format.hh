@@ -9,9 +9,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <cmath>
 
 #include <utility>
 #include <stdexcept>
+#include <locale>
+#include <ios>
 
 #include "ostd/algorithm.hh"
 #include "ostd/string.hh"
@@ -476,28 +479,6 @@ private:
         for (int w = p_width - int(n); --w >= 0; writer.put(c));
     }
 
-    template<typename R>
-    void build_spec(R &out, string_range spec) const {
-        out.put('%');
-        if (p_flags & FMT_FLAG_DASH ) {
-            out.put('-');
-        }
-        if (p_flags & FMT_FLAG_ZERO ) {
-            out.put('0');
-        }
-        if (p_flags & FMT_FLAG_SPACE) {
-            out.put(' ');
-        }
-        if (p_flags & FMT_FLAG_PLUS ) {
-            out.put('+');
-        }
-        if (p_flags & FMT_FLAG_HASH ) {
-            out.put('#');
-        }
-        range_put_all(out, string_range{"*.*"});
-        range_put_all(out, spec);
-    }
-
     /* string base writer */
     template<typename R>
     void write_str(R &writer, bool escape, string_range val) const {
@@ -627,52 +608,52 @@ private:
     }
 
     /* floating point */
-    template<typename R, typename T, bool Long = std::is_same_v<T, ldouble>>
+    template<typename R, typename T>
     void write_float(R &writer, T val) const {
-        char buf[16], rbuf[128];
-        char fmtspec[Long + 1];
-
-        fmtspec[Long] = spec();
-        byte specn = detail::fmt_specs[spec() - 65];
+        char isp = spec();
+        byte specn = detail::fmt_specs[isp - 65];
         if (specn != 1 && specn != 7) {
             throw format_error{"cannot format floats with the given spec"};
         }
-        if (specn == 7) {
-            fmtspec[Long] = 'g';
-        }
-        if (Long) {
-            fmtspec[0] = 'L';
-        }
 
-        auto bufr = iter(buf);
-        build_spec(bufr, fmtspec);
-        bufr.put('\0');
-        int ret = snprintf(
-            rbuf, sizeof(rbuf), buf, width(),
-            has_precision() ? precision() : 6, val
+        /* null streambuf because it's only used to read flags etc */
+        std::ios st{nullptr};
+
+        st.width(width());
+        st.precision(has_precision() ? precision() : 6);
+
+        typename std::ios_base::fmtflags fl = 0;
+        if (!(isp & 32)) {
+            fl |= std::ios_base::uppercase;
+        }
+        /* equivalent of printf 'g' or 'G' by default */
+        if ((isp | 32) == 'f') {
+            fl |= std::ios_base::fixed;
+        } else if ((isp | 32) == 'e') {
+            fl |= std::ios_base::scientific;
+        } else if ((isp | 32) == 'a') {
+            fl |= std::ios_base::fixed | std::ios_base::scientific;
+        }
+        if (p_flags & FMT_FLAG_DASH) {
+            fl |= std::ios_base::right;
+        }
+        if (p_flags & FMT_FLAG_PLUS) {
+            fl |= std::ios_base::showpos;
+        } else if ((p_flags & FMT_FLAG_SPACE) && !signbit(val)) {
+            /* only if no sign is shown... num_put does not
+             * support this so we have to do it on our own
+             */
+            writer.put(' ');
+        }
+        if (p_flags & FMT_FLAG_HASH) {
+            fl |= std::ios_base::showpoint;
+        }
+        st.flags(fl);
+
+        fmt_num_put<R> nump;
+        nump.put(
+            fmt_out<R>{&writer}, st, (p_flags & FMT_FLAG_ZERO) ? '0' : ' ', val
         );
-        if (ret < 0) {
-            /* typically unreachable, build_spec creates valid format */
-            throw format_error{"invalid float format"};
-        }
-
-        char *dbuf = nullptr;
-        if (size_t(ret) >= sizeof(rbuf)) {
-            /* this should typically never happen */
-            dbuf = new char[ret + 1];
-            ret = snprintf(
-                dbuf, ret + 1, buf, width(),
-                has_precision() ? precision() : 6, val
-            );
-            if (ret < 0) {
-                /* see above */
-                throw format_error{"invalid float format"};
-            }
-            range_put_all(writer, string_range{dbuf, dbuf + ret});
-            delete[] dbuf;
-        } else {
-            range_put_all(writer, string_range{rbuf, rbuf + ret});
-        }
     }
 
     template<typename R, typename T>
@@ -927,6 +908,32 @@ private:
             throw format_error{"format spec without format arguments"};
         }
     }
+
+    template<typename R>
+    struct fmt_out {
+        using iterator_category = std::output_iterator_tag;
+        using value_type = char;
+        using pointer = char *;
+        using reference = char &;
+        using difference_type = typename std::char_traits<char>::off_type;
+
+        fmt_out &operator=(char c) {
+            p_out->put(c);
+            return *this;
+        }
+
+        fmt_out &operator*() { return *this; }
+        fmt_out &operator++() { return *this; }
+        fmt_out &operator++(int) { return *this; }
+
+        R *p_out;
+    };
+
+    template<typename R>
+    struct fmt_num_put final: std::num_put<char, fmt_out<R>> {
+        fmt_num_put(size_t refs = 0): std::num_put<char, fmt_out<R>>(refs) {}
+        ~fmt_num_put() {}
+    };
 
     string_range p_fmt;
     char p_buf[32];
