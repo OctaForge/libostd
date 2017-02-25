@@ -75,7 +75,7 @@ int main() {
      * items are escaped automatically (strings and chars)
      */
     writefln("{ %#(%s: %d, %) }", m);
-    /* the - flag overrides escaping, so you get { baz: 15, bar: 10, foo: 5} */
+    /* the - flag toggles escaping, so you get { baz: 15, bar: 10, foo: 5} */
     writefln("{ %-#(%s: %d, %) }", m);
     /* no expansion of the items, print entire tuple with default format,
      * gets you something like { <"baz", 15>, <"bar", 10>, <"foo", 5> }
@@ -83,12 +83,21 @@ int main() {
      */
     writefln("{ %(%s, %) }", m);
 
+    /* as the - flag toggles escaping on strings and chars, when auto-escape
+     * is turned on for some reason, you can toggle it for specific items,
+     * and you can even manually force escaping on things
+     */
+    writefln("not escaped: %s, escaped: %-s", "foo", "bar");
+
     /* you can expand tuples similarly to ranges, with %<CONTENTS%> where
      * CONTENTS is a regular format string like if the tuple was formatted
-     * separately with each item of the tuple passed as a separate argument
+     * separately with each item of the tuple passed as a separate argument,
+     * keep in mind that this auto-escapes strings/chars just like ranges
      */
-    std::tuple<std::string, int, float> tup{"hello world", 1337, 3.14f};
-    writefln("the tuple contains %<%s, %d, %f%>.", tup);
+    std::tuple<std::string, int, float, std::string> tup{
+        "hello world", 1337, 3.14f, "test"
+    };
+    writefln("the tuple contains %<%s, %d, %f, %-s%>.", tup);
 
     /* formatting a range of tuples, with each tuple expanded
      * with a nested tuple expansion inside a range expansion

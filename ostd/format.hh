@@ -319,7 +319,12 @@ private:
 
     bool read_spec_range(bool tuple = false) {
         int sflags = p_flags;
-        p_nested_escape = !(sflags & FMT_FLAG_DASH);
+        /* printing ranges or tuples toggles escaping mode by default,
+         * but as the dash flag also toggles, it means no change
+         */
+        if (!(sflags & FMT_FLAG_DASH)) {
+            p_nested_escape = !p_nested_escape;
+        }
         p_fmt.pop_front();
         string_range begin_inner(p_fmt);
         if (!read_until_dummy()) {
@@ -486,6 +491,9 @@ private:
         if (has_precision()) {
             n = std::min(n, size_t(precision()));
         }
+        if (p_flags & FMT_FLAG_DASH) {
+            escape = !escape;
+        }
         write_spaces(writer, n, true);
         if (escape) {
             writer.put('"');
@@ -512,6 +520,9 @@ private:
     /* char values */
     template<typename R>
     void write_char(R &writer, bool escape, char val) const {
+        if (p_flags & FMT_FLAG_DASH) {
+            escape = !escape;
+        }
         if (escape) {
             char const *esc = detail::escape_fmt_char(val, '\'');
             if (esc) {
