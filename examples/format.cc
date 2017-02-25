@@ -12,29 +12,17 @@ using namespace ostd::string_literals;
 struct Foo {
 };
 
-/* implementing formatting for custom objects - external function */
-template<typename R>
-void to_format(Foo const &, R &writer, format_spec const &fs) {
-    switch (fs.spec()) {
-        case 'i':
-            range_put_all(writer, "Foo1"_sr);
-            break;
-        default:
-            range_put_all(writer, "Foo2"_sr);
-            break;
-    }
-}
-
-struct Bar {
-    /* implementing formatting for custom objects - method */
+/* implementing formatting for custom objects */
+template<>
+struct format_traits<Foo> {
     template<typename R>
-    void to_format(R &writer, format_spec const &fs) const {
+    static void to_format(Foo const &, R &writer, format_spec const &fs) {
         switch (fs.spec()) {
             case 'i':
-                range_put_all(writer, "Bar1"_sr);
+                range_put_all(writer, "Foo1"_sr);
                 break;
             default:
-                range_put_all(writer, "Bar2"_sr);
+                range_put_all(writer, "Foo2"_sr);
                 break;
         }
     }
@@ -115,10 +103,6 @@ int main() {
      */
     writefln("%s", Foo{});
     writefln("%i", Foo{});
-
-    /* again, but using a method for formatting */
-    writefln("%s", Bar{});
-    writefln("%i", Bar{});
 
     /* formatting into a string sink (can be any output range, but
      * appender makes sure the capacity is unlimited so it's safe)

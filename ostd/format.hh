@@ -36,16 +36,9 @@ struct format_error: std::runtime_error {
 
 struct format_spec;
 
-template<
-    typename T, typename R, typename = std::enable_if_t<std::is_same_v<
-        decltype(std::declval<T const &>().to_format(
-            std::declval<R &>(), std::declval<format_spec const &>()
-        )), void
-    >>
->
-inline void to_format(T const &v, R &writer, format_spec const &fs) {
-    v.to_format(writer, fs);
-}
+/* empty by default, SFINAE friendly */
+template<typename>
+struct format_traits {};
 
 /* implementation helpers */
 namespace detail {
@@ -174,9 +167,9 @@ namespace detail {
     template<typename T>
     constexpr bool is_tuple_like = decltype(tuple_like_test<T>(0))::value;
 
-    /* test whether to_format works */
+    /* test if format traits are available for the type */
     template<typename T, typename R>
-    static std::true_type test_tofmt(decltype(to_format(
+    static std::true_type test_tofmt(decltype(format_traits<T>::to_format(
         std::declval<T const &>(), std::declval<R &>(),
         std::declval<format_spec const &>()
     )) *);
@@ -660,7 +653,7 @@ private:
     void write_val(R &writer, bool escape, T const &val) const {
         /* stuff fhat can be custom-formatted goes first */
         if constexpr(detail::fmt_tofmt_test<T, noop_output_range<char>>) {
-            to_format(val, writer, *this);
+            format_traits<T>::to_format(val, writer, *this);
             return;
         }
         /* second best, we can convert to string slice */
