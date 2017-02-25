@@ -42,12 +42,25 @@ struct Bar {
 
 int main() {
     std::vector<int> x = { 5, 10, 15, 20 };
+    /* prints [5|10|15|20] (using | as delimiter and %s for each item),
+     * the syntax for ranges is %(CONTENTS%) where CONTENTS is a sequence
+     * up until and including the last format mark followed by delimiter,
+     * so for example "%s, " has "%s" for formatting and ", " for delimiter
+     * and "%d: %s, " has "%d: %s" for format and ", " for delimiter; if you
+     * need to specify a complicated manual delimiter, you can use the
+     * "FORMAT%|DELIMITER" syntax, where %(%s, %) equals %(%s%|, %)
+     */
     writefln("[%(%s|%)]", x);
+    /* prints a range with default format {item, item, item, ...} */
     writefln("%s", x);
 
     int y[] = { 2, 4, 8, 16, 32 };
+    /* prints { 2, 4, 8, 16, 32 } using ", " as delimiter and %s for items */
     writefln("{ %(%s, %) }", y);
 
+    /* nested range printing - prints each item of the main
+     * range with [ %(%s, %) ] and ",\n" as a delimiter
+     */
     writefln("[\n%([ %(%s, %) ]%|,\n%)\n]", map(range(10), [](int v) {
         return range(v + 1);
     }));
@@ -57,20 +70,29 @@ int main() {
         { "bar", 10 },
         { "baz", 15 }
     };
-    /* strings and chars are automatically escaped */
-    writefln("{ %#(%s: %d, %) }", m);
-    /* can override escaping with the - flag,
-     * # flag expands the element into multiple values
+    /* prints something like { "baz": 15, "bar": 10, "foo": 5 }, note that
+     * the tuple is expanded into two formats (using the # flag) and the
+     * items are escaped automatically (strings and chars)
      */
+    writefln("{ %#(%s: %d, %) }", m);
+    /* the - flag overrides escaping, so you get { baz: 15, bar: 10, foo: 5} */
     writefln("{ %-#(%s: %d, %) }", m);
-    /* without expansion */
+    /* no expansion of the items, print entire tuple with default format,
+     * gets you something like { <"baz", 15>, <"bar", 10>, <"foo", 5> }
+     * because the default tuple format is <item, item, item, ...>
+     */
     writefln("{ %(%s, %) }", m);
 
-    /* tuple formatting */
+    /* you can expand tuples similarly to ranges, with %<CONTENTS%> where
+     * CONTENTS is a regular format string like if the tuple was formatted
+     * separately with each item of the tuple passed as a separate argument
+     */
     std::tuple<std::string, int, float> tup{"hello world", 1337, 3.14f};
     writefln("the tuple contains %<%s, %d, %f%>.", tup);
 
-    /* tuple format test */
+    /* formatting a range of tuples, with each tuple expanded
+     * with a nested tuple expansion inside a range expansion
+     */
     std::tuple<int, float, char const *> xt[] = {
         std::make_tuple(5, 3.14f, "foo"),
         std::make_tuple(3, 1.23f, "bar"),
@@ -78,15 +100,19 @@ int main() {
     };
     writefln("[ %#(<%d|%f|%s>%|, %) ]", xt);
 
-    /* custom format */
+    /* formatting custom objects, the information about the format mark
+     * is passed into the to_format function and the object can read it
+     */
     writefln("%s", Foo{});
     writefln("%i", Foo{});
 
-    /* custom format via method */
+    /* again, but using a method for formatting */
     writefln("%s", Bar{});
     writefln("%i", Bar{});
 
-    /* format into string */
+    /* formatting into a string sink (can be any output range, but
+     * appender makes sure the capacity is unlimited so it's safe)
+     */
     auto s = appender_range<std::string>{};
     format(s, "hello %s", "world");
     writeln(s.get());
