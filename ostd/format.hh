@@ -683,7 +683,8 @@ private:
             }
             writer.put('{');
             write_range_val(writer, [&writer, escape](auto const &rval) {
-                format_spec{'s', escape}.write_arg(writer, 0, rval);
+                format_spec sp{'s', escape ? FMT_FLAG_AT : 0};
+                sp.write_arg(writer, 0, rval);
             }, ", ", val);
             writer.put('}');
             return;
