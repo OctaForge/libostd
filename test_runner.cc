@@ -1,24 +1,24 @@
 #include <ostd/platform.hh>
 #include <ostd/io.hh>
 #include <ostd/string.hh>
-#include <ostd/map.hh>
+#include <ostd/unordered_map.hh>
 #include <ostd/filesystem.hh>
 #include <ostd/environ.hh>
 
 using namespace ostd;
 
 #ifndef OSTD_PLATFORM_WIN32
-constexpr auto ColorRed = "\033[91m";
-constexpr auto ColorGreen = "\033[92m";
-constexpr auto ColorBlue = "\033[94m";
-constexpr auto ColorBold = "\033[1m";
-constexpr auto ColorEnd = "\033[0m";
+constexpr auto COLOR_RED = "\033[91m";
+constexpr auto COLOR_GREEN = "\033[92m";
+constexpr auto COLOR_BLUE = "\033[94m";
+constexpr auto COLOR_BOLD = "\033[1m";
+constexpr auto COLOR_END = "\033[0m";
 #else
-constexpr auto ColorRed = "";
-constexpr auto ColorGreen = "";
-constexpr auto ColorBlue = "";
-constexpr auto ColorBold = "";
-constexpr auto ColorEnd = "";
+constexpr auto COLOR_RED = "";
+constexpr auto COLOR_GREEN = "";
+constexpr auto COLOR_BLUE = "";
+constexpr auto COLOR_BOLD = "";
+constexpr auto COLOR_END = "";
 #endif
 
 int main() {
@@ -35,35 +35,35 @@ int main() {
     /* do not change past this point */
 
     int nsuccess = 0, nfailed = 0;
-    ConstCharRange modname = nullptr;
+    string_range modname = nullptr;
 
-    auto print_result = [&](ConstCharRange fmsg = nullptr) {
+    auto print_result = [&](string_range fmsg = nullptr) {
         write(modname, "...\t");
         if (!fmsg.empty()) {
-            writeln(ColorRed, ColorBold, '(', fmsg, ')', ColorEnd);
+            writeln(COLOR_RED, COLOR_BOLD, '(', fmsg, ')', COLOR_END);
             ++nfailed;
         } else {
-            writeln(ColorGreen, ColorBold, "(success)", ColorEnd);
+            writeln(COLOR_GREEN, COLOR_BOLD, "(success)", COLOR_END);
             ++nsuccess;
         }
     };
 
-    DirectoryStream ds(testdir);
+    directory_stream ds{testdir};
     for (auto v: iter(ds)) {
-        if ((v.type() != FileType::regular) || (v.extension() != srcext))
+        if ((v.type() != file_type::REGULAR) || (v.extension() != srcext))
             continue;
 
         modname = v.stem();
 
-        String exepath = testdir;
-        exepath += PathSeparator;
+        std::string exepath = testdir;
+        exepath += PATH_SEPARATOR;
         exepath += modname;
 #ifdef OSTD_PLATFORM_WIN32
         exepath += ".exe";
 #endif
 
-        auto cxxcmd = appender<String>();
-        format(cxxcmd, "%s %s%s%s -o %s %s", compiler, testdir, PathSeparator,
+        auto cxxcmd = appender<std::string>();
+        format(cxxcmd, "%s %s%s%s -o %s %s", compiler, testdir, PATH_SEPARATOR,
                v.filename(), exepath, cxxflags);
         if (!userflags.empty()) {
             cxxcmd.get() += ' ';
@@ -85,7 +85,7 @@ int main() {
         print_result();
     }
 
-    writeln("\n", ColorBlue, ColorBold, "testing done:", ColorEnd);
-    writeln(ColorGreen, "SUCCESS: ", nsuccess, ColorEnd);
-    writeln(ColorRed, "FAILURE: ", nfailed, ColorEnd);
+    writeln("\n", COLOR_BLUE, COLOR_BOLD, "testing done:", COLOR_END);
+    writeln(COLOR_GREEN, "SUCCESS: ", nsuccess, COLOR_END);
+    writeln(COLOR_RED, "FAILURE: ", nfailed, COLOR_END);
 }

@@ -34,9 +34,9 @@ enum class file_type {
 struct file_info;
 
 #ifdef OSTD_PLATFORM_WIN32
-static constexpr char PathSeparator = '\\';
+static constexpr char PATH_SEPARATOR = '\\';
 #else
-static constexpr char PathSeparator = '/';
+static constexpr char PATH_SEPARATOR = '/';
 #endif
 
 #ifdef OSTD_PLATFORM_WIN32
@@ -157,7 +157,7 @@ private:
         }
         string_range r = p_path;
 
-        string_range found = find_last(r, PathSeparator);
+        string_range found = find_last(r, PATH_SEPARATOR);
         if (found.empty()) {
             p_slash = std::string::npos;
         } else {
@@ -353,7 +353,7 @@ private:
             return file_info();
         }
         std::string ap = p_path;
-        ap += PathSeparator;
+        ap += PATH_SEPARATOR;
         ap += static_cast<char const *>(p_de->d_name);
         return file_info(ap);
     }
@@ -514,7 +514,7 @@ private:
             return file_info();
         }
         std::string ap = p_path;
-        ap += PathSeparator;
+        ap += PATH_SEPARATOR;
         ap += static_cast<char const *>(p_data.cFileName);
         return file_info(ap);
     }
@@ -575,7 +575,7 @@ namespace detail {
         template<typename T, typename ...A>
         static void join(std::string &s, T const &a, A const &...b) {
             s += a;
-            s += PathSeparator;
+            s += PATH_SEPARATOR;
             path_join<I - 1>::join(s, b...);
         }
     };
