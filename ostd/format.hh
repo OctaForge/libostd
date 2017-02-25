@@ -682,7 +682,9 @@ private:
                 throw format_error{"tuples need the '%s' spec"};
             }
             writer.put('{');
-            write_range_val(writer, escape, false, "%s", ", ", val);
+            write_range_val(writer, [&writer, escape](auto const &rval) {
+                format_spec{'s', escape}.write_arg(writer, 0, rval);
+            }, ", ", val);
             writer.put('}');
             return;
         }
@@ -775,11 +777,9 @@ private:
         sp.write_fmt(writer, item);
     }
 
-    template<typename R, typename T>
+    template<typename R, typename F, typename T>
     void write_range_val(
-        R &writer, bool escape, bool expandval, string_range ifmt,
-        string_range sep,
-        T const &val
+        R &writer, F &&func, string_range sep, T const &val
     ) const {
         if constexpr(detail::iterable_test<T>) {
             auto range = ostd::iter(val);
@@ -787,7 +787,7 @@ private:
                 return;
             }
             for (;;) {
-                write_range_item(writer, escape, expandval, ifmt, range.front());
+                func(range.front());
                 range.pop_front();
                 if (range.empty()) {
                     break;
@@ -812,9 +812,14 @@ private:
                 write_range(writer, idx - 1, expandval, sep, args...);
             }
         } else {
-            write_range_val(
-                writer, p_gflags & FMT_FLAG_AT, expandval, rest(), sep, val
-            );
+            write_range_val(writer, [
+                this, &writer, escape = p_gflags & FMT_FLAG_AT, expandval,
+                fmt = rest()
+            ](auto const &rval) {
+                this->write_range_item(
+                    writer, escape, expandval, fmt, rval
+                );
+            }, sep, val);
         }
     }
 
