@@ -113,14 +113,14 @@ int main() {
     writeln(s.get());
 
     /* locale specific formatting */
-    ostd::writefln(
+    writefln(
         "C locale: \"%d\", \"%f\", \"%X\"",
         123456789, 12345.6789123, 0x123456789ABCDEF
     );
     std::setlocale(LC_ALL, "");
-    ostd::out.imbue(std::locale{std::setlocale(LC_NUMERIC, nullptr)});
-    ostd::writefln(
-        "%s locale: \"%d\", \"%f\", \"%X\"", ostd::out.getloc().name(),
+    out.imbue(std::locale{std::setlocale(LC_NUMERIC, nullptr)});
+    writefln(
+        "%s locale: \"%d\", \"%f\", \"%X\"", out.getloc().name(),
         123456789, 12345.6789123, 0x123456789ABCDEF
     );
 }
