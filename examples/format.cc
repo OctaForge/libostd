@@ -1,4 +1,5 @@
 #include <tuple>
+#include <clocale>
 
 #include <ostd/algorithm.hh>
 #include <ostd/vector.hh>
@@ -110,4 +111,16 @@ int main() {
     auto s = appender_range<std::string>{};
     format(s, "hello %s", "world");
     writeln(s.get());
+
+    /* locale specific formatting */
+    ostd::writefln(
+        "C locale: \"%d\", \"%f\", \"%X\"",
+        123456789, 12345.6789123, 0x123456789ABCDEF
+    );
+    std::setlocale(LC_ALL, "");
+    ostd::out.imbue(std::locale{std::setlocale(LC_NUMERIC, nullptr)});
+    ostd::writefln(
+        "%s locale: \"%d\", \"%f\", \"%X\"", ostd::out.getloc().name(),
+        123456789, 12345.6789123, 0x123456789ABCDEF
+    );
 }
