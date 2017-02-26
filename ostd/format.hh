@@ -554,8 +554,8 @@ private:
 
     template<typename R, typename T>
     void write_int(R &writer, bool ptr, bool neg, T val) const {
-        /* binary representation is the biggest */
-        char buf[sizeof(T) * CHAR_BIT + 1];
+        /* binary representation is the biggest, assume grouping */
+        char buf[sizeof(T) * CHAR_BIT * 2];
         size_t n = 0;
 
         char isp = spec();
