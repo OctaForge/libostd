@@ -554,7 +554,8 @@ private:
 
     template<typename R, typename T>
     void write_int(R &writer, bool ptr, bool neg, T val) const {
-        char buf[20];
+        /* binary representation is the biggest */
+        char buf[sizeof(T) * CHAR_BIT + 1];
         size_t n = 0;
 
         char isp = spec();
@@ -573,7 +574,25 @@ private:
         if (zval) {
             buf[n++] = '0';
         }
+
+        auto const &fac = std::use_facet<std::numpunct<char>>(p_loc);
+        auto const &grp = fac.grouping();
+        char tsep = fac.thousands_sep();
+        auto grpp = reinterpret_cast<unsigned char const *>(grp.data());
+        unsigned char grpn = *grpp;
         for (; val; val /= base) {
+            if (*grpp) {
+                if (!grpn) {
+                    buf[n++] = tsep;
+                    if (*(grpp + 1)) {
+                        ++grpp;
+                    }
+                    grpn = *grpp;
+                }
+                if (grpn) {
+                    --grpn;
+                }
+            }
             T vb = val % base;
             buf[n++] = (vb + "70"[vb < 10]) | cmask;
         }
