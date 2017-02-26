@@ -8,6 +8,7 @@
 
 #include <sys/types.h>
 #include <type_traits>
+#include <locale>
 
 #include "ostd/platform.hh"
 #include "ostd/types.hh"
@@ -132,6 +133,19 @@ struct stream {
         get(r);
         return r;
     }
+
+    std::locale imbue(std::locale const &loc) {
+        std::locale ret{p_loc};
+        p_loc = loc;
+        return ret;
+    }
+
+    std::locale getloc() const {
+        return p_loc;
+    }
+
+private:
+    std::locale p_loc;
 };
 
 template<typename T>
@@ -204,12 +218,13 @@ namespace detail {
 
 template<typename T>
 inline void stream::write(T const &v) {
-    format_spec{'s'}.format_value(detail::fmt_stream_range{this}, v);
+    format_spec{'s', p_loc}.format_value(detail::fmt_stream_range{this}, v);
 }
 
 template<typename ...A>
 inline void stream::writef(string_range fmt, A const &...args) {
-    format(detail::fmt_stream_range{this}, fmt, args...);
+    format_spec sp{fmt, p_loc};
+    sp.format(detail::fmt_stream_range{this}, args...);
 }
 
 }
