@@ -581,7 +581,7 @@ private:
         auto grpp = reinterpret_cast<unsigned char const *>(grp.data());
         unsigned char grpn = *grpp;
         for (; val; val /= base) {
-            if (*grpp) {
+            if (!ptr && *grpp) {
                 if (!grpn) {
                     buf[n++] = tsep;
                     if (*(grpp + 1)) {
