@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <type_traits>
 #include <locale>
+#include <optional>
 
 #include "ostd/platform.hh"
 #include "ostd/types.hh"
@@ -157,42 +158,47 @@ struct stream_range<T, true>: input_range<stream_range<T>> {
     using difference_type = stream_off_t;
 
     stream_range() = delete;
-    stream_range(stream &s): p_stream(&s), p_size(s.size()) {}
-    stream_range(stream_range const &r): p_stream(r.p_stream), p_size(r.p_size) {}
+    stream_range(stream &s): p_stream(&s) {}
+    stream_range(stream_range const &r): p_stream(r.p_stream) {}
 
     bool empty() const {
-        try {
-            auto pos = p_stream->tell();
-            return (p_size - pos) < stream_off_t(sizeof(T));
-        } catch (...) {
-            return true;
+        if (!p_item.has_value()) {
+            try {
+                p_item = p_stream->get<T>();
+            } catch (...) {
+                return true;
+            }
         }
+        return false;
     }
 
     void pop_front() {
-        T val;
-        p_stream->read_bytes(&val, sizeof(T));
+        if (p_item.has_value()) {
+            p_item = std::nullopt;
+        } else {
+            p_stream->get<T>();
+        }
     }
 
     T front() const {
-        T val;
-        p_stream->read_bytes(&val, sizeof(T));
-        p_stream->seek(-sizeof(T), stream_seek::CUR);
-        return val;
+        if (p_item.has_value()) {
+            return p_item.value();
+        } else {
+            return (p_item = p_stream->get<T>()).value();
+        }
     }
 
     bool equals_front(stream_range const &s) const {
-        return p_stream->tell() == s.p_stream->tell();
+        return p_stream == s.p_stream;
     }
 
     void put(T val) {
-        p_stream->write_bytes(&val, sizeof(T));
-        p_size += sizeof(T);
+        p_stream->put(val);
     }
 
 private:
     stream *p_stream;
-    stream_off_t p_size;
+    mutable std::optional<T> p_item;
 };
 
 template<typename T>
