@@ -159,7 +159,9 @@ struct stream_range<T, true>: input_range<stream_range<T>> {
 
     stream_range() = delete;
     stream_range(stream &s): p_stream(&s) {}
-    stream_range(stream_range const &r): p_stream(r.p_stream) {}
+    stream_range(stream_range const &r):
+        p_stream(r.p_stream), p_item(r.p_item)
+    {}
 
     bool empty() const {
         if (!p_item.has_value()) {
