@@ -208,31 +208,15 @@ inline stream_range<T> stream::iter() {
     return stream_range<T>(*this);
 }
 
-namespace detail {
-    /* lightweight output range for write/writef on streams */
-    struct fmt_stream_range: output_range<fmt_stream_range> {
-        using value_type      = char;
-        using reference       = char &;
-        using size_type       = size_t;
-        using difference_type = ptrdiff_t;
-
-        fmt_stream_range(stream *s): p_s(s) {}
-        void put(char c) {
-            p_s->write_bytes(&c, 1);
-        }
-        stream *p_s;
-    };
-}
-
 template<typename T>
 inline void stream::write(T const &v) {
-    format_spec{'s', p_loc}.format_value(detail::fmt_stream_range{this}, v);
+    format_spec{'s', p_loc}.format_value(iter(), v);
 }
 
 template<typename ...A>
 inline void stream::writef(string_range fmt, A const &...args) {
     format_spec sp{fmt, p_loc};
-    sp.format(detail::fmt_stream_range{this}, args...);
+    sp.format(iter(), args...);
 }
 
 }
