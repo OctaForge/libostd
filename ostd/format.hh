@@ -992,6 +992,13 @@ inline R &&format(R &&writer, string_range fmt, A const &...args) {
     return format_spec{fmt}.format(std::forward<R>(writer), args...);
 }
 
+template<typename R, typename ...A>
+inline R &&format(
+    R &&writer, std::locale const &loc, string_range fmt, A const &...args
+) {
+    return format_spec{fmt, loc}.format(std::forward<R>(writer), args...);
+}
+
 } /* namespace ostd */
 
 #endif
