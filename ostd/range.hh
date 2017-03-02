@@ -855,13 +855,10 @@ template<typename C>
 struct ranged_traits: detail::ranged_traits_impl<C> {};
 
 template<typename T>
-inline auto iter(T &r) -> decltype(ranged_traits<T>::iter(r)) {
-    return ranged_traits<T>::iter(r);
-}
-
-template<typename T>
-inline auto iter(T const &r) -> decltype(ranged_traits<T const>::iter(r)) {
-    return ranged_traits<T const>::iter(r);
+inline auto iter(T &&r) ->
+    decltype(ranged_traits<std::remove_reference_t<T>>::iter(r))
+{
+    return ranged_traits<std::remove_reference_t<T>>::iter(r);
 }
 
 template<typename T>
