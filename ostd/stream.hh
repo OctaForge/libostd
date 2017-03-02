@@ -110,24 +110,11 @@ struct stream {
         }
     }
 
-    template<typename T>
-    void write(T const &v);
+    template<typename ...A>
+    void write(A const &...args);
 
-    template<typename T, typename ...A>
-    void write(T const &v, A const &...args) {
-        write(v);
-        write(args...);
-    }
-
-    template<typename T>
-    void writeln(T const &v) {
-        write(v);
-        put_char('\n');
-    }
-
-    template<typename T, typename ...A>
-    void writeln(T const &v, A const &...args) {
-        write(v);
+    template<typename ...A>
+    void writeln(A const &...args) {
         write(args...);
         put_char('\n');
     }
@@ -319,19 +306,19 @@ private:
 };
 
 template<typename T, typename TC>
-stream_line_range<T, TC> stream::iter_lines(bool keep_nl) {
+inline stream_line_range<T, TC> stream::iter_lines(bool keep_nl) {
     return stream_line_range<T, TC>{*this, keep_nl};
 }
 
-template<typename T>
-inline void stream::write(T const &v) {
-    format_spec{'s', p_loc}.format_value(iter(), v);
+template<typename ...A>
+inline void stream::write(A const &...args) {
+    format_spec sp{'s', p_loc};
+    (sp.format_value(iter(), args), ...);
 }
 
 template<typename ...A>
 inline void stream::writef(string_range fmt, A const &...args) {
-    format_spec sp{fmt, p_loc};
-    sp.format(iter(), args...);
+    format_spec{fmt, p_loc}.format(iter(), args...);
 }
 
 }
