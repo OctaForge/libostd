@@ -7,6 +7,7 @@
 #define OSTD_IO_HH
 
 #include <stdio.h>
+#include <cerrno>
 
 #include <vector>
 #include <stdexcept>
@@ -28,11 +29,6 @@ namespace detail {
         "rb", "wb", "ab", "rb+", "wb+", "ab+"
     };
 }
-
-/* TODO: inherit from system_error and come up with the proper infra for it */
-struct io_error: std::runtime_error {
-    using std::runtime_error::runtime_error;
-};
 
 struct file_stream: stream {
     file_stream(): p_f(), p_owned(false) {}
@@ -107,7 +103,7 @@ struct file_stream: stream {
         if (_fseeki64(p_f, pos, int(whence)))
 #endif
         {
-            throw io_error{"file_stream seek error"};
+            throw stream_error{errno, std::generic_category()};
         }
     }
 
@@ -118,40 +114,40 @@ struct file_stream: stream {
         auto ret = _ftelli64(p_f);
 #endif
         if (ret < 0) {
-            throw io_error{"file_stream tell error"};
+            throw stream_error{errno, std::generic_category()};
         }
         return ret;
     }
 
     void flush() {
         if (fflush(p_f)) {
-            throw io_error{"file_stream flush error"};
+            throw stream_error{EIO, std::generic_category()};
         }
     }
 
     void read_bytes(void *buf, size_t count) {
         if (fread(buf, 1, count, p_f) != count) {
-            throw io_error{"file_stream read error"};
+            throw stream_error{EIO, std::generic_category()};
         }
     }
 
     void write_bytes(void const *buf, size_t count) {
         if (fwrite(buf, 1, count, p_f) != count) {
-            throw io_error{"file_stream write error"};
+            throw stream_error{EIO, std::generic_category()};
         }
     }
 
-    int getchar() {
+    int get_char() {
         int ret = fgetc(p_f);
         if (ret == EOF) {
-            throw io_error{"file_stream EOF"};
+            throw stream_error{EIO, std::generic_category()};
         }
         return ret;
     }
 
-    void putchar(int c) {
+    void put_char(int c) {
         if (fputc(c, p_f) == EOF) {
-            throw io_error{"file_stream EOF"};
+            throw stream_error{EIO, std::generic_category()};
         }
     }
 
@@ -189,7 +185,7 @@ namespace detail {
         stdout_range() {}
         void put(char c) {
             if (putchar(c) == EOF) {
-                throw io_error{"stdout EOF"};
+                throw stream_error{EIO, std::generic_category()};
             }
         }
     };
@@ -201,7 +197,7 @@ namespace detail {
             std::is_same_v<std::remove_const_t<range_value_t<R>>, char>
         ) {
             if (fwrite(range.data(), 1, range.size(), stdout) != range.size()) {
-                throw io_error{"stdout write error"};
+                throw stream_error{EIO, std::generic_category()};
             }
         } else {
             for (; !range.empty(); range.pop_front()) {
@@ -226,7 +222,7 @@ template<typename T>
 inline void writeln(T const &v) {
     write(v);
     if (putchar('\n') == EOF) {
-        throw io_error{"stdout EOF"};
+        throw stream_error{EIO, std::generic_category()};
     }
 }
 
@@ -235,7 +231,7 @@ inline void writeln(T const &v, A const &...args) {
     write(v);
     write(args...);
     if (putchar('\n') == EOF) {
-        throw io_error{"stdout EOF"};
+        throw stream_error{EIO, std::generic_category()};
     }
 }
 
@@ -249,7 +245,7 @@ template<typename ...A>
 inline void writefln(string_range fmt, A const &...args) {
     writef(fmt, args...);
     if (putchar('\n') == EOF) {
-        throw io_error{"stdout EOF"};
+        throw stream_error{EIO, std::generic_category()};
     }
 }
 

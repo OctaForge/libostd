@@ -1,5 +1,6 @@
 #include <ostd/algorithm.hh>
 #include <ostd/string.hh>
+#include <ostd/vector.hh>
 #include <ostd/io.hh>
 
 using namespace ostd;
@@ -33,6 +34,40 @@ int main() {
 
     auto ts2 = make_string(test.iter().take(25));
     writefln("-- str beg --\n%s\n-- str end --", ts2);
+
+    test.seek(0);
+
+    writeln("\n## BY LINE READ ##\n");
+
+    for (auto const &line: test.iter_lines()) {
+        writeln("got line: ", line);
+    }
+
+    test.close();
+
+    writeln("\n## FILE SORT ##\n");
+
+    wtest.open("test.txt", stream_mode::WRITE);
+
+    smpl = "foo\n"
+        "bar\n"
+        "baz\n"
+        "test\n"
+        "this\n"
+        "will\n"
+        "be\n"
+        "in\n"
+        "order\n";
+
+    copy(iter(smpl), wtest.iter());
+    wtest.close();
+
+    test.open("test.txt");
+
+    auto x = make_vector<std::string>(test.iter_lines());
+    writeln("before sort: ", x);
+    sort(iter(x));
+    writeln("after sort: ", x);
 
     return 0;
 }

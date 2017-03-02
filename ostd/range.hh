@@ -1528,6 +1528,7 @@ struct appender_range: output_range<appender_range<T>> {
     }
 
     void clear() { p_data.clear(); }
+    bool empty() const { return p_data.empty(); }
 
     void reserve(typename T::size_type cap) { p_data.reserve(cap); }
     void resize(typename T::size_type len) { p_data.resize(len); }

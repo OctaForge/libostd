@@ -34,6 +34,13 @@ enum class stream_seek {
 template<typename T = char, bool = std::is_pod_v<T>>
 struct stream_range;
 
+struct stream_error: std::system_error {
+    using std::system_error::system_error;
+};
+
+template<typename T = char, typename TC = std::basic_string<T>>
+struct stream_line_range;
+
 struct stream {
     using offset_type = stream_off_t;
 
@@ -63,15 +70,44 @@ struct stream {
     virtual void read_bytes(void *, size_t) {}
     virtual void write_bytes(void const *, size_t) {}
 
-    virtual int getchar() {
+    virtual int get_char() {
         byte c;
         read_bytes(&c, 1);
         return c;
     }
 
-    virtual void putchar(int c) {
+    virtual void put_char(int c) {
         byte wc = byte(c);
         write_bytes(&wc, 1);
+    }
+
+    template<typename T = char, typename R>
+    void get_line(R &&writer, bool keep_nl = false) {
+        bool cr = false;
+        /* read one char, if it fails to read at all just propagate errors */
+        T c = get<T>();
+        bool gotc = false;
+        do {
+            if (cr) {
+                writer.put('\r');
+                cr = false;
+            }
+            if (c == '\r') {
+                cr = true;
+                continue;
+            }
+            writer.put(c);
+            gotc = safe_get<T>(c);
+        } while (gotc && (c != '\n'));
+        if (cr && (!gotc || keep_nl)) {
+            /* we had carriage return and either reached EOF
+             * or were told to keep separator, write the CR
+             */
+            writer.put('\r');
+        }
+        if (gotc && keep_nl) {
+            writer.put('\n');
+        }
     }
 
     template<typename T>
@@ -86,14 +122,14 @@ struct stream {
     template<typename T>
     void writeln(T const &v) {
         write(v);
-        putchar('\n');
+        put_char('\n');
     }
 
     template<typename T, typename ...A>
     void writeln(T const &v, A const &...args) {
         write(v);
         write(args...);
-        putchar('\n');
+        put_char('\n');
     }
 
     template<typename ...A>
@@ -102,11 +138,14 @@ struct stream {
     template<typename ...A>
     void writefln(string_range fmt, A const &...args) {
         writef(fmt, args...);
-        putchar('\n');
+        put_char('\n');
     }
 
     template<typename T = char>
     stream_range<T> iter();
+
+    template<typename T = char, typename TC = std::basic_string<T>>
+    stream_line_range<T, TC> iter_lines(bool keep_nl = false);
 
     template<typename T>
     void put(T const *v, size_t count) {
@@ -146,6 +185,17 @@ struct stream {
     }
 
 private:
+    /* helper for get_line, so we don't catch errors from output range put */
+    template<typename T>
+    bool safe_get(T &c) {
+        try {
+            c = get<T>();
+            return true;
+        } catch (stream_error const &) {
+            return false;
+        }
+    }
+
     std::locale p_loc;
 };
 
@@ -167,7 +217,7 @@ struct stream_range<T, true>: input_range<stream_range<T>> {
         if (!p_item.has_value()) {
             try {
                 p_item = p_stream->get<T>();
-            } catch (...) {
+            } catch (stream_error const &) {
                 return true;
             }
         }
@@ -205,7 +255,72 @@ private:
 
 template<typename T>
 inline stream_range<T> stream::iter() {
-    return stream_range<T>(*this);
+    return stream_range<T>{*this};
+}
+
+template<typename T, typename TC>
+struct stream_line_range: input_range<stream_line_range<T, TC>> {
+    using range_category  = input_range_tag;
+    using value_type      = TC;
+    using reference       = TC &;
+    using size_type       = size_t;
+    using difference_type = stream_off_t;
+
+    stream_line_range() = delete;
+    stream_line_range(stream &s, bool keep_nl = false):
+        p_stream(&s), p_has_item(false), p_keep_nl(keep_nl)
+    {}
+    stream_line_range(stream_line_range const &r):
+        p_stream(r.p_stream), p_item(r.p_item),
+        p_has_item(r.p_has_item), p_keep_nl(r.p_keep_nl)
+    {}
+
+    bool empty() const {
+        if (!p_has_item) {
+            try {
+                p_item.clear();
+                p_stream->get_line(p_item, p_keep_nl);
+                p_has_item = true;
+            } catch (stream_error const &) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void pop_front() {
+        if (p_has_item) {
+            p_item.clear();
+            p_has_item = false;
+        } else {
+            p_stream->get_line(noop_output_range<T>{});
+        }
+    }
+
+    reference front() const {
+        if (p_has_item) {
+            return p_item.get();
+        } else {
+            p_stream->get_line(p_item, p_keep_nl);
+            p_has_item = true;
+            return p_item.get();
+        }
+    }
+
+    bool equals_front(stream_line_range const &s) const {
+        return p_stream == s.p_stream;
+    }
+
+private:
+    stream *p_stream;
+    mutable appender_range<TC> p_item;
+    mutable bool p_has_item;
+    bool p_keep_nl;
+};
+
+template<typename T, typename TC>
+stream_line_range<T, TC> stream::iter_lines(bool keep_nl) {
+    return stream_line_range<T, TC>{*this, keep_nl};
 }
 
 template<typename T>
