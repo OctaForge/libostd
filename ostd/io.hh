@@ -207,28 +207,14 @@ namespace detail {
     }
 }
 
-template<typename T>
-inline void write(T const &v) {
-    format_spec{'s', out.getloc()}.format_value(detail::stdout_range{}, v);
+template<typename ...A>
+inline void write(A const &...args) {
+    format_spec sp{'s', out.getloc()};
+    (sp.format_value(detail::stdout_range{}, args), ...);
 }
 
-template<typename T, typename ...A>
-inline void write(T const &v, A const &...args) {
-    write(v);
-    write(args...);
-}
-
-template<typename T>
-inline void writeln(T const &v) {
-    write(v);
-    if (putchar('\n') == EOF) {
-        throw stream_error{EIO, std::generic_category()};
-    }
-}
-
-template<typename T, typename ...A>
-inline void writeln(T const &v, A const &...args) {
-    write(v);
+template<typename ...A>
+inline void writeln(A const &...args) {
     write(args...);
     if (putchar('\n') == EOF) {
         throw stream_error{EIO, std::generic_category()};
