@@ -168,9 +168,9 @@ inline void swap(file_stream &a, file_stream &b) {
     a.swap(b);
 }
 
-static file_stream in(stdin);
-static file_stream out(stdout);
-static file_stream err(stderr);
+static file_stream cin{stdin};
+static file_stream cout{stdout};
+static file_stream cerr{stderr};
 
 /* no need to call anything from file_stream, prefer simple calls... */
 
@@ -209,7 +209,7 @@ namespace detail {
 
 template<typename ...A>
 inline void write(A const &...args) {
-    format_spec sp{'s', out.getloc()};
+    format_spec sp{'s', cout.getloc()};
     (sp.format_value(detail::stdout_range{}, args), ...);
 }
 
@@ -223,7 +223,7 @@ inline void writeln(A const &...args) {
 
 template<typename ...A>
 inline void writef(string_range fmt, A const &...args) {
-    format_spec sp{fmt, out.getloc()};
+    format_spec sp{fmt, cout.getloc()};
     sp.format(detail::stdout_range{}, args...);
 }
 
