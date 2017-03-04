@@ -734,9 +734,9 @@ private:
         /* bools, check if printing as string, otherwise convert to int */
         if constexpr(std::is_same_v<T, bool>) {
             if (spec() == 's') {
-                write_val(writer, ("false\0true") + (6 * val));
+                write_val(writer, escape, ("false\0true") + (6 * val));
             } else {
-                write_val(writer, int(val));
+                write_val(writer, escape, int(val));
             }
             return;
         }
