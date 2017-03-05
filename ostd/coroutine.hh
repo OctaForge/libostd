@@ -256,7 +256,7 @@ struct coroutine<R(A...)>: detail::coro_base<R, A...> {
     }
 private:
     R call(A ...args) {
-        if constexpr(sizeof...(A)) {
+        if constexpr(sizeof...(A) != 0) {
             this->p_args = std::forward_as_tuple(std::forward<A>(args)...);
         }
         this->p_ctx.call();
@@ -267,7 +267,7 @@ private:
 
     template<size_t ...I>
     R call_helper(std::index_sequence<I...>) {
-        if constexpr(sizeof...(A)) {
+        if constexpr(sizeof...(A) != 0) {
             return p_func(*this, std::forward<A>(std::get<I>(this->p_args))...);
         } else {
             return p_func(*this);
