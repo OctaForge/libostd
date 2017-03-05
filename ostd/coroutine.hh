@@ -81,8 +81,7 @@ struct coroutine_context {
         if (p_finished) {
             throw coroutine_error{"dead coroutine"};
         }
-        auto t = detail::ostd_jump_fcontext(p_coro, this);
-        p_coro = t.ctx;
+        p_coro = detail::ostd_jump_fcontext(p_coro, this).ctx;
         if (p_except) {
             std::rethrow_exception(std::move(p_except));
         }
@@ -137,6 +136,37 @@ template<typename T>
 struct coroutine;
 
 namespace detail {
+    template<typename ...A>
+    struct coro_types {
+        using yield_type = std::tuple<A &&...>;
+    };
+
+    template<typename A>
+    struct coro_types<A> {
+        using yield_type = A &&;
+    };
+
+    template<typename A, typename B>
+    struct coro_types<A, B> {
+        using yield_type = std::pair<A &&, B &&>;
+    };
+
+    template<typename ...A>
+    using coro_args = typename coro_types<A...>::yield_type;
+
+    template<typename ...A, size_t ...I>
+    inline coro_args<A...> yield_ret(
+        std::tuple<A...> &args, std::index_sequence<I...>
+    ) {
+        if constexpr(sizeof...(A) == 1) {
+            return std::move(std::get<0>(args));
+        } else if constexpr(sizeof...(A) == 2) {
+            return std::make_pair(std::forward<A>(std::get<I>(args))...);
+        } else {
+            return std::move(args);
+        }
+    }
+
     /* we need this because yield is specialized based on result */
     template<typename R, typename ...A>
     struct coro_base {
@@ -144,19 +174,13 @@ namespace detail {
             p_ctx(ss, callp, this)
         {}
 
-        std::tuple<A &&...> yield(R &&ret) {
+        coro_args<A...> yield(R &&ret) {
             p_result = std::forward<R>(ret);
             p_ctx.yield_jump();
-            return std::move(p_args);
+            return yield_ret(p_args, std::make_index_sequence<sizeof...(A)>{});
         }
 
     protected:
-        R call(A ...args) {
-            p_args = std::forward_as_tuple(std::forward<A>(args)...);
-            p_ctx.call();
-            return std::forward<R>(p_result);
-        }
-
         std::tuple<A...> p_args;
         R p_result;
         coroutine_context p_ctx;
@@ -168,17 +192,12 @@ namespace detail {
             p_ctx(ss, callp, this)
         {}
 
-        std::tuple<A &&...> yield() {
+        coro_args<A...> yield() {
             p_ctx.yield_jump();
-            return std::move(p_args);
+            return yield_ret(p_args, std::make_index_sequence<sizeof...(A)>{});
         }
 
     protected:
-        void call(A ...args) {
-            p_args = std::forward_as_tuple(std::forward<A>(args)...);
-            p_ctx.call();
-        }
-
         std::tuple<A...> p_args;
         coroutine_context p_ctx;
     };
@@ -205,6 +224,14 @@ struct coroutine<R(A...)>: detail::coro_base<R, A...> {
         return this->call(std::forward<A>(args)...);
     }
 private:
+    R call(A ...args) {
+        this->p_args = std::forward_as_tuple(std::forward<A>(args)...);
+        this->p_ctx.call();
+        if constexpr(!std::is_same_v<R, void>) {
+            return std::forward<R>(this->p_result);
+        }
+    }
+
     template<size_t ...I>
     R call_helper(std::index_sequence<I...>) {
         return p_func(*this, std::forward<A>(std::get<I>(this->p_args))...);
