@@ -167,7 +167,7 @@ namespace detail {
         }
     }
 
-    /* we need this because yield is specialized based on result */
+    /* default case, yield returns args and takes a value */
     template<typename R, typename ...A>
     struct coro_base {
         coro_base(void (*callp)(void *), size_t ss):
@@ -186,6 +186,24 @@ namespace detail {
         coroutine_context p_ctx;
     };
 
+    /* yield takes a value but doesn't return any args */
+    template<typename R>
+    struct coro_base<R> {
+        coro_base(void (*callp)(void *), size_t ss):
+            p_ctx(ss, callp, this)
+        {}
+
+        void yield(R &&ret) {
+            p_result = std::forward<R>(ret);
+            p_ctx.yield_jump();
+        }
+
+    protected:
+        R p_result;
+        coroutine_context p_ctx;
+    };
+
+    /* yield doesn't take a value and returns args */
     template<typename ...A>
     struct coro_base<void, A...> {
         coro_base(void (*callp)(void *), size_t ss):
@@ -199,6 +217,21 @@ namespace detail {
 
     protected:
         std::tuple<A...> p_args;
+        coroutine_context p_ctx;
+    };
+
+    /* yield doesn't take a value or return any args */
+    template<>
+    struct coro_base<void> {
+        coro_base(void (*callp)(void *), size_t ss):
+            p_ctx(ss, callp, this)
+        {}
+
+        void yield() {
+            p_ctx.yield_jump();
+        }
+
+    protected:
         coroutine_context p_ctx;
     };
 } /* namespace detail */
@@ -223,7 +256,9 @@ struct coroutine<R(A...)>: detail::coro_base<R, A...> {
     }
 private:
     R call(A ...args) {
-        this->p_args = std::forward_as_tuple(std::forward<A>(args)...);
+        if constexpr(sizeof...(A)) {
+            this->p_args = std::forward_as_tuple(std::forward<A>(args)...);
+        }
         this->p_ctx.call();
         if constexpr(!std::is_same_v<R, void>) {
             return std::forward<R>(this->p_result);
@@ -232,7 +267,11 @@ private:
 
     template<size_t ...I>
     R call_helper(std::index_sequence<I...>) {
-        return p_func(*this, std::forward<A>(std::get<I>(this->p_args))...);
+        if constexpr(sizeof...(A)) {
+            return p_func(*this, std::forward<A>(std::get<I>(this->p_args))...);
+        } else {
+            return p_func(*this);
+        }
     }
 
     static void context_call(void *data) {
