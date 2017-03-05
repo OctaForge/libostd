@@ -14,9 +14,11 @@
 #include <utility>
 #include <tuple>
 #include <type_traits>
+#include <optional>
 
 #include "ostd/types.hh"
 #include "ostd/platform.hh"
+#include "ostd/range.hh"
 
 /* from boost.context */
 #ifdef OSTD_PLATFORM_WIN32
@@ -101,7 +103,7 @@ struct coroutine_context {
     }
 
     void yield_jump() {
-        p_coro = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
+        p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
     }
 
     bool is_done() const {
@@ -353,6 +355,47 @@ private:
     }
 
     std::function<R(coroutine<R(A...)> &, A...)> p_func;
+};
+
+template<typename T>
+struct generator: input_range<generator<T>> {
+    using range_category  = input_range_tag;
+    using value_type      = T;
+    using reference       = T &;
+    using size_type       = size_t;
+    using difference_type = stream_off_t;
+
+    generator() = default;
+
+    template<typename F>
+    generator(F &&func, size_t ss = COROUTINE_DEFAULT_STACK_SIZE):
+        p_ptr(new coroutine<T()>{std::forward<F>(func), ss})
+    {
+        p_item = (*p_ptr)();
+    }
+
+    bool empty() const {
+        return !p_item;
+    }
+
+    void pop_front() {
+        if (!*p_ptr) {
+            p_item = (*p_ptr)();
+        } else {
+            p_item = std::nullopt;
+        }
+    }
+
+    reference front() const {
+        return p_item.value();
+    }
+
+    bool equals_front(generator const &g) {
+        return p_ptr == g.p_ptr;
+    }
+private:
+    std::shared_ptr<coroutine<T()>> p_ptr;
+    mutable std::optional<T> p_item;
 };
 
 } /* namespace ostd */
