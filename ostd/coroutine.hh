@@ -205,10 +205,8 @@ namespace detail {
 
 template<typename R, typename ...A>
 struct coroutine<R(A...)>: detail::coro_base<R, A...> {
-    coroutine(
-        std::function<R(coroutine<R(A...)> &, A...)> func,
-        size_t ss = COROUTINE_DEFAULT_STACK_SIZE
-    ):
+    template<typename F>
+    coroutine(F func, size_t ss = COROUTINE_DEFAULT_STACK_SIZE):
         detail::coro_base<R, A...>(&context_call, ss), p_func(std::move(func))
     {}
 
