@@ -181,6 +181,19 @@ namespace detail {
         }
 
     protected:
+        template<typename F, typename C, size_t ...I>
+        void call_helper(F &func, C &coro, std::index_sequence<I...>) {
+            p_result = std::forward<R>(
+                func(coro, std::forward<A>(std::get<I>(p_args))...)
+            );
+        }
+
+        R call(A ...args) {
+            p_args = std::forward_as_tuple(std::forward<A>(args)...);
+            p_ctx.call();
+            return std::forward<R>(this->p_result);
+        }
+
         std::tuple<A...> p_args;
         R p_result;
         coroutine_context p_ctx;
@@ -199,6 +212,16 @@ namespace detail {
         }
 
     protected:
+        template<typename F, typename C, size_t ...I>
+        void call_helper(F &func, C &coro, std::index_sequence<I...>) {
+            p_result = std::forward<R>(func(coro));
+        }
+
+        R call() {
+            p_ctx.call();
+            return std::forward<R>(this->p_result);
+        }
+
         R p_result;
         coroutine_context p_ctx;
     };
@@ -216,6 +239,16 @@ namespace detail {
         }
 
     protected:
+        template<typename F, typename C, size_t ...I>
+        void call_helper(F &func, C &coro, std::index_sequence<I...>) {
+            func(coro, std::forward<A>(std::get<I>(p_args))...);
+        }
+
+        void call(A ...args) {
+            p_args = std::forward_as_tuple(std::forward<A>(args)...);
+            p_ctx.call();
+        }
+
         std::tuple<A...> p_args;
         coroutine_context p_ctx;
     };
@@ -232,6 +265,15 @@ namespace detail {
         }
 
     protected:
+        template<typename F, typename C, size_t ...I>
+        void call_helper(F &func, C &coro, std::index_sequence<I...>) {
+            func(coro);
+        }
+
+        void call() {
+            p_ctx.call();
+        }
+
         coroutine_context p_ctx;
     };
 } /* namespace detail */
@@ -255,33 +297,9 @@ struct coroutine<R(A...)>: detail::coro_base<R, A...> {
         return this->call(std::forward<A>(args)...);
     }
 private:
-    R call(A ...args) {
-        if constexpr(sizeof...(A) != 0) {
-            this->p_args = std::forward_as_tuple(std::forward<A>(args)...);
-        }
-        this->p_ctx.call();
-        if constexpr(!std::is_same_v<R, void>) {
-            return std::forward<R>(this->p_result);
-        }
-    }
-
-    template<size_t ...I>
-    R call_helper(std::index_sequence<I...>) {
-        if constexpr(sizeof...(A) != 0) {
-            return p_func(*this, std::forward<A>(std::get<I>(this->p_args))...);
-        } else {
-            return p_func(*this);
-        }
-    }
-
     static void context_call(void *data) {
-        using indices = std::index_sequence_for<A...>;
         coroutine &self = *(static_cast<coroutine *>(data));
-        if constexpr(std::is_same_v<R, void>) {
-            self.call_helper(indices{});
-        } else {
-            self.p_result = self.call_helper(indices{});
-        }
+        self.call_helper(self.p_func, self, std::index_sequence_for<A...>{});
     }
 
     std::function<R(coroutine<R(A...)> &, A...)> p_func;
