@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <utility>
 #include <tuple>
+#include <type_traits>
 
 #include "ostd/types.hh"
 #include "ostd/platform.hh"
@@ -136,19 +137,68 @@ template<typename T>
 struct coroutine;
 
 namespace detail {
+    /* like reference_wrapper but for any value */
+    template<typename T>
+    struct arg_wrapper {
+        arg_wrapper() = default;
+        arg_wrapper(T arg): p_arg(std::move(arg)) {}
+
+        void operator=(T arg) {
+            p_arg = std::move(arg);
+        }
+        operator T &&() {
+            return std::move(p_arg);
+        }
+
+    private:
+        T p_arg = T{};
+    };
+
+    template<typename T>
+    struct arg_wrapper<T &&> {
+        arg_wrapper() = default;
+        arg_wrapper(T &&arg): p_arg(&arg) {}
+
+        void operator=(T &&arg) {
+            p_arg = &arg;
+        }
+        operator T &&() {
+            return *p_arg;
+        }
+
+    private:
+        T *p_arg = nullptr;
+    };
+
+    template<typename T>
+    struct arg_wrapper<T &> {
+        arg_wrapper() = default;
+        arg_wrapper(T &arg): p_arg(&arg) {}
+
+        void operator=(T &arg) {
+            p_arg = &arg;
+        }
+        operator T &() {
+            return *p_arg;
+        }
+
+    private:
+        T *p_arg = nullptr;
+    };
+
     template<typename ...A>
     struct coro_types {
-        using yield_type = std::tuple<A &&...>;
+        using yield_type = std::tuple<A...>;
     };
 
     template<typename A>
     struct coro_types<A> {
-        using yield_type = A &&;
+        using yield_type = A;
     };
 
     template<typename A, typename B>
     struct coro_types<A, B> {
-        using yield_type = std::pair<A &&, B &&>;
+        using yield_type = std::pair<A, B>;
     };
 
     template<typename ...A>
@@ -156,10 +206,10 @@ namespace detail {
 
     template<typename ...A, size_t ...I>
     inline coro_args<A...> yield_ret(
-        std::tuple<A...> &args, std::index_sequence<I...>
+        std::tuple<arg_wrapper<A>...> &args, std::index_sequence<I...>
     ) {
         if constexpr(sizeof...(A) == 1) {
-            return std::move(std::get<0>(args));
+            return std::forward<A...>(std::get<0>(args));
         } else if constexpr(sizeof...(A) == 2) {
             return std::make_pair(std::forward<A>(std::get<I>(args))...);
         } else {
@@ -189,13 +239,13 @@ namespace detail {
         }
 
         R call(A ...args) {
-            p_args = std::forward_as_tuple(std::forward<A>(args)...);
+            p_args = std::make_tuple(arg_wrapper<A>(std::forward<A>(args))...);
             p_ctx.call();
-            return std::forward<R>(this->p_result);
+            return std::forward<R>(p_result);
         }
 
-        std::tuple<A...> p_args;
-        R p_result;
+        std::tuple<arg_wrapper<A>...> p_args;
+        arg_wrapper<R> p_result;
         coroutine_context p_ctx;
     };
 
@@ -222,7 +272,7 @@ namespace detail {
             return std::forward<R>(this->p_result);
         }
 
-        R p_result;
+        arg_wrapper<R> p_result;
         coroutine_context p_ctx;
     };
 
@@ -245,11 +295,11 @@ namespace detail {
         }
 
         void call(A ...args) {
-            p_args = std::forward_as_tuple(std::forward<A>(args)...);
+            p_args = std::make_tuple(arg_wrapper<A>(std::forward<A>(args))...);
             p_ctx.call();
         }
 
-        std::tuple<A...> p_args;
+        std::tuple<arg_wrapper<A>...> p_args;
         coroutine_context p_ctx;
     };
 
