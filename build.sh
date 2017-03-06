@@ -4,7 +4,8 @@
 set -e
 
 # example sources
-EXAMPLES="format listdir range range_pipe signal stream1 stream2"
+EXAMPLES="format listdir range range_pipe signal"
+EXAMPLES="${EXAMPLES} stream1 stream2 coroutine1 coroutine2"
 
 # assembly sources
 ASM_SOURCES="jump_all_gas make_all_gas ontop_all_gas"
