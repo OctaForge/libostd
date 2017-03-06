@@ -342,7 +342,7 @@ struct coroutine<R(A...)>: detail::coro_base<R, A...> {
     }
 
     operator bool() const {
-        return this->p_ctx.is_done();
+        return !this->p_ctx.is_done();
     }
 
     R operator()(A ...args) {
@@ -371,7 +371,7 @@ struct generator: input_range<generator<T>> {
     generator(F &&func, size_t ss = COROUTINE_DEFAULT_STACK_SIZE):
         p_ptr(new coroutine<T()>{std::forward<F>(func), ss})
     {
-        p_item = (*p_ptr)();
+        pop_front();
     }
 
     bool empty() const {
@@ -379,7 +379,7 @@ struct generator: input_range<generator<T>> {
     }
 
     void pop_front() {
-        if (!*p_ptr) {
+        if (*p_ptr) {
             p_item = (*p_ptr)();
         } else {
             p_item = std::nullopt;
