@@ -4,7 +4,7 @@
 using namespace ostd;
 
 int main() {
-    generator<int> g = [](auto yield) {
+    coroutine<int()> g = [](auto yield) {
         yield(5);
         yield(10);
         yield(15);
@@ -13,8 +13,8 @@ int main() {
     };
 
     writeln("generator test");
-    for (int i: g) {
-        writeln("generated: ", i);
+    for (int i: g.iter()) {
+        writefln("generated: %s", i);
     }
 }
 

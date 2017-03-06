@@ -181,6 +181,9 @@ inline void swap(coroutine_context &a, coroutine_context &b) {
 template<typename T>
 struct coroutine;
 
+template<typename T>
+struct coroutine_range;
+
 namespace detail {
     /* like reference_wrapper but for any value */
     template<typename T>
@@ -345,6 +348,8 @@ namespace detail {
     /* yield takes a value but doesn't return any args */
     template<typename R>
     struct coro_base<R> {
+        coroutine_range<R> iter();
+
     protected:
         coro_base(void (*callp)(void *), size_t ss):
             p_ctx(ss, callp, this)
@@ -554,29 +559,27 @@ inline void swap(coroutine<R(A...)> &a, coroutine<R(A...)> &b) {
 }
 
 template<typename T>
-struct generator: input_range<generator<T>> {
+struct coroutine_range: input_range<coroutine_range<T>> {
     using range_category  = input_range_tag;
     using value_type      = T;
     using reference       = T &;
     using size_type       = size_t;
     using difference_type = stream_off_t;
 
-    generator() = default;
-
-    template<typename F>
-    generator(F &&func, size_t ss = COROUTINE_DEFAULT_STACK_SIZE):
-        p_ptr(new coroutine<T()>{std::forward<F>(func), ss})
-    {
+    coroutine_range() = delete;
+    coroutine_range(coroutine<T()> &c): p_coro(&c) {
         pop_front();
     }
+    coroutine_range(coroutine_range const &r):
+        p_coro(r.p_coro), p_item(r.p_item) {}
 
     bool empty() const {
         return !p_item;
     }
 
     void pop_front() {
-        if (*p_ptr) {
-            p_item = (*p_ptr)();
+        if (*p_coro) {
+            p_item = (*p_coro)();
         } else {
             p_item = std::nullopt;
         }
@@ -586,13 +589,20 @@ struct generator: input_range<generator<T>> {
         return p_item.value();
     }
 
-    bool equals_front(generator const &g) {
-        return p_ptr == g.p_ptr;
+    bool equals_front(coroutine_range const &g) {
+        return p_coro == g.p_coro;
     }
 private:
-    std::shared_ptr<coroutine<T()>> p_ptr;
+    coroutine<T()> *p_coro;
     mutable std::optional<T> p_item;
 };
+
+namespace detail {
+    template<typename R>
+    coroutine_range<R> coro_base<R>::iter() {
+        return coroutine_range<R>{static_cast<coroutine<R()> &>(*this)};
+    }
+}
 
 } /* namespace ostd */
 
