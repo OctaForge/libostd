@@ -5,192 +5,286 @@ using namespace ostd;
 
 struct foo {
     foo() {
-        writeln("***foo ctor***");
+        writeln("<constructing foo>");
     }
     ~foo() {
-        writeln("***foo dtor***");
+        writeln("<destroying foo>");
     }
 };
 
 int main() {
-    writeln("MAIN START");
+    writeln("starting main...");
     for (int steps: range(1, 10)) {
         if (steps != 1) {
             /* separate the results */
             writeln();
         }
-        writefln("** SCOPE START %d **", steps);
-        coroutine<int(int)> f = [](auto &coro, int x) {
+        writefln("    main loop: step %s", steps);
+        writeln("    coroutine creation");
+        coroutine<int(int)> f = [](auto yield, int x) {
+            writefln("        coroutine call, first arg: %s", x);
             foo test;
-            writeln("got: ", x);
             for (int i: range(x)) {
-                writeln("loop: ", i);
-                writeln("yield: ", coro.yield(i * 10));
+                writefln("        loop inside coroutine %s", i + 1);
+                writefln("        yielding %s...", i * 10);
+                auto yr = yield(i * 10);
+                writefln("        yielded: %s", yr);
             }
-            writeln("return");
+            writeln("        return from coroutine (returning 1234)...");
             return 1234;
         };
-        writeln("CALL");
+        writeln("    coroutine call loop");
         int val = 5;
         for (int i: range(steps)) {
-            writeln("COROUTINE RETURNED: ", f(val));
-            writefln("OUT %d (dead: %s)", i, !f);
+            writeln("    calling into coroutine...");
+            auto v = f(val);
+            writefln("    called into coroutine which yielded: %s", v);
+            writefln("    call loop iteration %s done", i + 1);
+            writefln("    coroutine dead: %s", !f);
             val += 5;
         }
-        writefln("** SCOPE END %d **", steps);
+        writefln("    main loop iteration %s done", steps);
     }
-    writeln("MAIN END");
+    writeln("... main has ended");
 }
 
 /*
-MAIN START
-** SCOPE START 1 **
-CALL
-***foo ctor***
-got: 5
-loop: 0
-COROUTINE RETURNED: 0
-OUT 0 (dead: false)
-** SCOPE END 1 **
-***foo dtor***
+starting main...
+    main loop: step 1
+    coroutine creation
+    coroutine call loop
+    calling into coroutine...
+        coroutine call, first arg: 5
+<constructing foo>
+        loop inside coroutine 1
+        yielding 0...
+    called into coroutine which yielded: 0
+    call loop iteration 1 done
+    coroutine dead: false
+    main loop iteration 1 done
+<destroying foo>
 
-** SCOPE START 2 **
-CALL
-***foo ctor***
-got: 5
-loop: 0
-COROUTINE RETURNED: 0
-OUT 0 (dead: false)
-yield: 10
-loop: 1
-COROUTINE RETURNED: 10
-OUT 1 (dead: false)
-** SCOPE END 2 **
-***foo dtor***
+    main loop: step 2
+    coroutine creation
+    coroutine call loop
+    calling into coroutine...
+        coroutine call, first arg: 5
+<constructing foo>
+        loop inside coroutine 1
+        yielding 0...
+    called into coroutine which yielded: 0
+    call loop iteration 1 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 10
+        loop inside coroutine 2
+        yielding 10...
+    called into coroutine which yielded: 10
+    call loop iteration 2 done
+    coroutine dead: false
+    main loop iteration 2 done
+<destroying foo>
 
-** SCOPE START 3 **
-CALL
-***foo ctor***
-got: 5
-loop: 0
-COROUTINE RETURNED: 0
-OUT 0 (dead: false)
-yield: 10
-loop: 1
-COROUTINE RETURNED: 10
-OUT 1 (dead: false)
-yield: 15
-loop: 2
-COROUTINE RETURNED: 20
-OUT 2 (dead: false)
-** SCOPE END 3 **
-***foo dtor***
+    main loop: step 3
+    coroutine creation
+    coroutine call loop
+    calling into coroutine...
+        coroutine call, first arg: 5
+<constructing foo>
+        loop inside coroutine 1
+        yielding 0...
+    called into coroutine which yielded: 0
+    call loop iteration 1 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 10
+        loop inside coroutine 2
+        yielding 10...
+    called into coroutine which yielded: 10
+    call loop iteration 2 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 15
+        loop inside coroutine 3
+        yielding 20...
+    called into coroutine which yielded: 20
+    call loop iteration 3 done
+    coroutine dead: false
+    main loop iteration 3 done
+<destroying foo>
 
-** SCOPE START 4 **
-CALL
-***foo ctor***
-got: 5
-loop: 0
-COROUTINE RETURNED: 0
-OUT 0 (dead: false)
-yield: 10
-loop: 1
-COROUTINE RETURNED: 10
-OUT 1 (dead: false)
-yield: 15
-loop: 2
-COROUTINE RETURNED: 20
-OUT 2 (dead: false)
-yield: 20
-loop: 3
-COROUTINE RETURNED: 30
-OUT 3 (dead: false)
-** SCOPE END 4 **
-***foo dtor***
+    main loop: step 4
+    coroutine creation
+    coroutine call loop
+    calling into coroutine...
+        coroutine call, first arg: 5
+<constructing foo>
+        loop inside coroutine 1
+        yielding 0...
+    called into coroutine which yielded: 0
+    call loop iteration 1 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 10
+        loop inside coroutine 2
+        yielding 10...
+    called into coroutine which yielded: 10
+    call loop iteration 2 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 15
+        loop inside coroutine 3
+        yielding 20...
+    called into coroutine which yielded: 20
+    call loop iteration 3 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 20
+        loop inside coroutine 4
+        yielding 30...
+    called into coroutine which yielded: 30
+    call loop iteration 4 done
+    coroutine dead: false
+    main loop iteration 4 done
+<destroying foo>
 
-** SCOPE START 5 **
-CALL
-***foo ctor***
-got: 5
-loop: 0
-COROUTINE RETURNED: 0
-OUT 0 (dead: false)
-yield: 10
-loop: 1
-COROUTINE RETURNED: 10
-OUT 1 (dead: false)
-yield: 15
-loop: 2
-COROUTINE RETURNED: 20
-OUT 2 (dead: false)
-yield: 20
-loop: 3
-COROUTINE RETURNED: 30
-OUT 3 (dead: false)
-yield: 25
-loop: 4
-COROUTINE RETURNED: 40
-OUT 4 (dead: false)
-** SCOPE END 5 **
-***foo dtor***
+    main loop: step 5
+    coroutine creation
+    coroutine call loop
+    calling into coroutine...
+        coroutine call, first arg: 5
+<constructing foo>
+        loop inside coroutine 1
+        yielding 0...
+    called into coroutine which yielded: 0
+    call loop iteration 1 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 10
+        loop inside coroutine 2
+        yielding 10...
+    called into coroutine which yielded: 10
+    call loop iteration 2 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 15
+        loop inside coroutine 3
+        yielding 20...
+    called into coroutine which yielded: 20
+    call loop iteration 3 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 20
+        loop inside coroutine 4
+        yielding 30...
+    called into coroutine which yielded: 30
+    call loop iteration 4 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 25
+        loop inside coroutine 5
+        yielding 40...
+    called into coroutine which yielded: 40
+    call loop iteration 5 done
+    coroutine dead: false
+    main loop iteration 5 done
+<destroying foo>
 
-** SCOPE START 6 **
-CALL
-***foo ctor***
-got: 5
-loop: 0
-COROUTINE RETURNED: 0
-OUT 0 (dead: false)
-yield: 10
-loop: 1
-COROUTINE RETURNED: 10
-OUT 1 (dead: false)
-yield: 15
-loop: 2
-COROUTINE RETURNED: 20
-OUT 2 (dead: false)
-yield: 20
-loop: 3
-COROUTINE RETURNED: 30
-OUT 3 (dead: false)
-yield: 25
-loop: 4
-COROUTINE RETURNED: 40
-OUT 4 (dead: false)
-yield: 30
-return
-***foo dtor***
-COROUTINE RETURNED: 1234
-OUT 5 (dead: true)
-** SCOPE END 6 **
+    main loop: step 6
+    coroutine creation
+    coroutine call loop
+    calling into coroutine...
+        coroutine call, first arg: 5
+<constructing foo>
+        loop inside coroutine 1
+        yielding 0...
+    called into coroutine which yielded: 0
+    call loop iteration 1 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 10
+        loop inside coroutine 2
+        yielding 10...
+    called into coroutine which yielded: 10
+    call loop iteration 2 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 15
+        loop inside coroutine 3
+        yielding 20...
+    called into coroutine which yielded: 20
+    call loop iteration 3 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 20
+        loop inside coroutine 4
+        yielding 30...
+    called into coroutine which yielded: 30
+    call loop iteration 4 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 25
+        loop inside coroutine 5
+        yielding 40...
+    called into coroutine which yielded: 40
+    call loop iteration 5 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 30
+        return from coroutine (returning 1234)...
+<destroying foo>
+    called into coroutine which yielded: 1234
+    call loop iteration 6 done
+    coroutine dead: true
+    main loop iteration 6 done
 
-** SCOPE START 7 **
-CALL
-***foo ctor***
-got: 5
-loop: 0
-COROUTINE RETURNED: 0
-OUT 0 (dead: false)
-yield: 10
-loop: 1
-COROUTINE RETURNED: 10
-OUT 1 (dead: false)
-yield: 15
-loop: 2
-COROUTINE RETURNED: 20
-OUT 2 (dead: false)
-yield: 20
-loop: 3
-COROUTINE RETURNED: 30
-OUT 3 (dead: false)
-yield: 25
-loop: 4
-COROUTINE RETURNED: 40
-OUT 4 (dead: false)
-yield: 30
-return
-***foo dtor***
-COROUTINE RETURNED: 1234
-OUT 5 (dead: true)
+    main loop: step 7
+    coroutine creation
+    coroutine call loop
+    calling into coroutine...
+        coroutine call, first arg: 5
+<constructing foo>
+        loop inside coroutine 1
+        yielding 0...
+    called into coroutine which yielded: 0
+    call loop iteration 1 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 10
+        loop inside coroutine 2
+        yielding 10...
+    called into coroutine which yielded: 10
+    call loop iteration 2 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 15
+        loop inside coroutine 3
+        yielding 20...
+    called into coroutine which yielded: 20
+    call loop iteration 3 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 20
+        loop inside coroutine 4
+        yielding 30...
+    called into coroutine which yielded: 30
+    call loop iteration 4 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 25
+        loop inside coroutine 5
+        yielding 40...
+    called into coroutine which yielded: 40
+    call loop iteration 5 done
+    coroutine dead: false
+    calling into coroutine...
+        yielded: 30
+        return from coroutine (returning 1234)...
+<destroying foo>
+    called into coroutine which yielded: 1234
+    call loop iteration 6 done
+    coroutine dead: true
+    calling into coroutine...
 terminating with uncaught exception of type ostd::coroutine_error: dead coroutine
+zsh: abort      ./coro
 */

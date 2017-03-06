@@ -4,11 +4,11 @@
 using namespace ostd;
 
 int main() {
-    generator<int> g = [](auto &coro) {
-        coro.yield(5);
-        coro.yield(10);
-        coro.yield(15);
-        coro.yield(20);
+    generator<int> g = [](auto yield) {
+        yield(5);
+        yield(10);
+        yield(15);
+        yield(20);
         return 25;
     };
 
