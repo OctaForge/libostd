@@ -83,28 +83,20 @@ struct coroutine_context {
     coroutine_context(coroutine_context const &) = delete;
     coroutine_context(coroutine_context &&c):
         p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
-        p_except(std::move(c.p_except)), p_callp(c.p_callp), p_data(c.p_data),
-        p_finished(c.p_finished)
+        p_except(std::move(c.p_except)), p_callp(c.p_callp), p_data(c.p_data)
     {
         c.p_coro = c.p_orig = nullptr;
         c.p_data = nullptr;
         c.p_callp = nullptr;
-        /* make sure it's not unwound */
-        c.p_finished = true;
     }
 
     coroutine_context &operator=(coroutine_context const &) = delete;
     coroutine_context &operator=(coroutine_context &&c) {
         swap(c);
-        /* make sure it's not unwound */
-        c.p_finished = true;
         return *this;
     }
 
     void call() {
-        if (p_finished) {
-            throw coroutine_error{"dead coroutine"};
-        }
         coro_jump();
         if (p_except) {
             std::rethrow_exception(std::move(p_except));
@@ -112,9 +104,6 @@ struct coroutine_context {
     }
 
     void unwind() {
-        if (p_finished) {
-            return;
-        }
         detail::ostd_ontop_fcontext(
             std::exchange(p_coro, nullptr), nullptr,
             [](detail::transfer_t t) -> detail::transfer_t {
@@ -131,10 +120,6 @@ struct coroutine_context {
         p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
     }
 
-    bool is_done() const {
-        return p_finished;
-    }
-
     void set_data(void *data) {
         p_data = data;
     }
@@ -146,7 +131,6 @@ struct coroutine_context {
         std::swap(p_except, other.p_except);
         std::swap(p_callp, other.p_callp);
         std::swap(p_data, other.p_data);
-        std::swap(p_finished, other.p_finished);
     }
 
 private:
@@ -160,7 +144,6 @@ private:
         } catch (...) {
             self.p_except = std::current_exception();
         }
-        self.p_finished = true;
         self.yield_jump();
     }
 
@@ -171,7 +154,6 @@ private:
     std::exception_ptr p_except;
     void (*p_callp)(void *);
     void *p_data;
-    bool p_finished = false;
 };
 
 inline void swap(coroutine_context &a, coroutine_context &b) {
@@ -518,25 +500,40 @@ public:
     {}
 
     coroutine(coroutine const &) = delete;
-    coroutine(coroutine &&) = default;
+    coroutine(coroutine &&c):
+        detail::coro_base<R, A...>(std::move(c)), p_func(std::move(c.p_func))
+    {
+        c.p_func = nullptr;
+    }
 
     coroutine &operator=(coroutine const &) = delete;
-    coroutine &operator=(coroutine &&) = default;
+    coroutine &operator=(coroutine &&c) {
+        base_t::operator=(std::move(c));
+        p_func = std::move(c.p_func);
+        c.p_func = nullptr;
+    }
 
     ~coroutine() {
+        /* we have to check both because of potential moves */
+        if (!p_func) {
+            return;
+        }
         this->p_ctx.unwind();
     }
 
     operator bool() const {
-        return !this->p_ctx.is_done();
+        return bool(p_func);
     }
 
     R resume(A ...args) {
+        if (!p_func) {
+            throw coroutine_error{"dead coroutine"};
+        }
         return this->call(std::forward<A>(args)...);
     }
 
     R operator()(A ...args) {
-        return this->call(std::forward<A>(args)...);
+        return resume(std::forward<A>(args)...);
     }
 
     void swap(coroutine &other) {
@@ -548,6 +545,7 @@ private:
     static void context_call(void *data) {
         coroutine &self = *(static_cast<coroutine *>(data));
         self.call_helper(self.p_func, std::index_sequence_for<A...>{});
+        self.p_func = nullptr;
     }
 
     std::function<R(yield_type, A...)> p_func;
