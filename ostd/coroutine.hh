@@ -71,93 +71,82 @@ namespace detail {
         fcontext_t ctx;
         forced_unwind(fcontext_t c): ctx(c) {}
     };
-}
 
-struct coroutine_context {
-    coroutine_context(size_t ss, void (*callp)(void *), void *data):
-        p_stack(new byte[ss]), p_callp(callp), p_data(data)
-    {
-        p_coro = detail::ostd_make_fcontext(p_stack.get() + ss, ss, context_call);
-    }
-
-    coroutine_context(coroutine_context const &) = delete;
-    coroutine_context(coroutine_context &&c):
-        p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
-        p_except(std::move(c.p_except)), p_callp(c.p_callp), p_data(c.p_data)
-    {
-        c.p_coro = c.p_orig = nullptr;
-        c.p_data = nullptr;
-        c.p_callp = nullptr;
-    }
-
-    coroutine_context &operator=(coroutine_context const &) = delete;
-    coroutine_context &operator=(coroutine_context &&c) {
-        swap(c);
-        return *this;
-    }
-
-    void call() {
-        coro_jump();
-        if (p_except) {
-            std::rethrow_exception(std::move(p_except));
+    struct coroutine_context {
+        coroutine_context(size_t ss, void (*callp)(void *)):
+            p_stack(new byte[ss]), p_callp(callp)
+        {
+            p_coro = ostd_make_fcontext(p_stack.get() + ss, ss, context_call);
         }
-    }
 
-    void unwind() {
-        detail::ostd_ontop_fcontext(
-            std::exchange(p_coro, nullptr), nullptr,
-            [](detail::transfer_t t) -> detail::transfer_t {
-                throw detail::forced_unwind{t.ctx};
+        coroutine_context(coroutine_context const &) = delete;
+        coroutine_context(coroutine_context &&c):
+            p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
+            p_except(std::move(c.p_except)), p_callp(c.p_callp)
+        {
+            c.p_coro = c.p_orig = nullptr;
+            c.p_callp = nullptr;
+        }
+
+        coroutine_context &operator=(coroutine_context const &) = delete;
+        coroutine_context &operator=(coroutine_context &&c) {
+            swap(c);
+            return *this;
+        }
+
+        void call() {
+            coro_jump();
+            if (p_except) {
+                std::rethrow_exception(std::move(p_except));
             }
-        );
-    }
-
-    void coro_jump() {
-        p_coro = detail::ostd_jump_fcontext(p_coro, this).ctx;
-    }
-
-    void yield_jump() {
-        p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
-    }
-
-    void set_data(void *data) {
-        p_data = data;
-    }
-
-    void swap(coroutine_context &other) noexcept {
-        std::swap(p_stack, other.p_stack);
-        std::swap(p_coro, other.p_coro);
-        std::swap(p_orig, other.p_orig);
-        std::swap(p_except, other.p_except);
-        std::swap(p_callp, other.p_callp);
-        std::swap(p_data, other.p_data);
-    }
-
-private:
-    static void context_call(detail::transfer_t t) {
-        auto &self = *(static_cast<coroutine_context *>(t.data));
-        self.p_orig = t.ctx;
-        try {
-            self.p_callp(self.p_data);
-        } catch (detail::forced_unwind v) {
-            self.p_orig = v.ctx;
-        } catch (...) {
-            self.p_except = std::current_exception();
         }
-        self.yield_jump();
-    }
 
-    /* TODO: new'ing the stack is sub-optimal */
-    std::unique_ptr<byte[]> p_stack;
-    detail::fcontext_t p_coro;
-    detail::fcontext_t p_orig;
-    std::exception_ptr p_except;
-    void (*p_callp)(void *);
-    void *p_data;
-};
+        void unwind() {
+            ostd_ontop_fcontext(
+                std::exchange(p_coro, nullptr), nullptr,
+                [](transfer_t t) -> transfer_t {
+                    throw forced_unwind{t.ctx};
+                }
+            );
+        }
 
-inline void swap(coroutine_context &a, coroutine_context &b) {
-    a.swap(b);
+        void coro_jump() {
+            p_coro = ostd_jump_fcontext(p_coro, this).ctx;
+        }
+
+        void yield_jump() {
+            p_orig = ostd_jump_fcontext(p_orig, nullptr).ctx;
+        }
+
+        void swap(coroutine_context &other) noexcept {
+            std::swap(p_stack, other.p_stack);
+            std::swap(p_coro, other.p_coro);
+            std::swap(p_orig, other.p_orig);
+            std::swap(p_except, other.p_except);
+            std::swap(p_callp, other.p_callp);
+        }
+
+    private:
+        static void context_call(transfer_t t) {
+            auto &self = *(static_cast<coroutine_context *>(t.data));
+            self.p_orig = t.ctx;
+            try {
+                self.p_callp(t.data);
+            } catch (forced_unwind v) {
+                self.p_orig = v.ctx;
+            } catch (...) {
+                self.p_except = std::current_exception();
+            }
+            self.yield_jump();
+        }
+
+        /* TODO: new'ing the stack is sub-optimal */
+        std::unique_ptr<byte[]> p_stack;
+        fcontext_t p_coro;
+        fcontext_t p_orig;
+        std::exception_ptr p_except;
+        void (*p_callp)(void *);
+    };
 }
 
 template<typename T>
@@ -266,35 +255,24 @@ namespace detail {
 
     /* default case, yield returns args and takes a value */
     template<typename R, typename ...A>
-    struct coro_base {
+    struct coro_base: detail::coroutine_context {
     protected:
         coro_base(void (*callp)(void *), size_t ss):
-            p_ctx(ss, callp, this)
+            detail::coroutine_context(ss, callp)
         {}
 
         coro_base(coro_base const &) = delete;
-        coro_base(coro_base &&c):
-            p_args(std::move(c.p_args)), p_result(std::move(c.p_result)),
-            p_ctx(std::move(c.p_ctx))
-        {
-            p_ctx.set_data(this);
-        }
+        coro_base(coro_base &&c) = default;
 
         coro_base &operator=(coro_base const &) = delete;
-        coro_base &operator=(coro_base &&c) {
-            std::swap(p_args, c.p_args);
-            std::swap(p_result, c.p_result);
-            std::swap(p_ctx, c.p_ctx);
-            p_ctx.set_data(this);
-            return *this;
-        }
+        coro_base &operator=(coro_base &&c) = default;
 
         struct yielder {
             yielder(coro_base<R, A...> &coro): p_coro(coro) {}
 
             coro_args<A...> operator()(R &&ret) {
                 p_coro.p_result = std::forward<R>(ret);
-                p_coro.p_ctx.yield_jump();
+                p_coro.yield_jump();
                 return yield_ret(
                     p_coro.p_args, std::make_index_sequence<sizeof...(A)>{}
                 );
@@ -312,53 +290,42 @@ namespace detail {
 
         R call(A ...args) {
             p_args = std::make_tuple(arg_wrapper<A>(std::forward<A>(args))...);
-            p_ctx.call();
+            detail::coroutine_context::call();
             return std::forward<R>(p_result);
         }
 
         void swap(coro_base &other) {
             std::swap(p_args, other.p_args);
             std::swap(p_result, other.p_result);
-            std::swap(p_ctx, other.p_ctx);
+            detail::coroutine_context::swap(other);
         }
 
         std::tuple<arg_wrapper<A>...> p_args;
         arg_wrapper<R> p_result;
-        coroutine_context p_ctx;
     };
 
     /* yield takes a value but doesn't return any args */
     template<typename R>
-    struct coro_base<R> {
+    struct coro_base<R>: detail::coroutine_context {
         coroutine_range<R> iter();
 
     protected:
         coro_base(void (*callp)(void *), size_t ss):
-            p_ctx(ss, callp, this)
+            detail::coroutine_context(ss, callp)
         {}
 
         coro_base(coro_base const &) = delete;
-        coro_base(coro_base &&c):
-            p_result(std::move(c.p_result)),
-            p_ctx(std::move(c.p_ctx))
-        {
-            p_ctx.set_data(this);
-        }
+        coro_base(coro_base &&c) = default;
 
         coro_base &operator=(coro_base const &) = delete;
-        coro_base &operator=(coro_base &&c) {
-            std::swap(p_result, c.p_result);
-            std::swap(p_ctx, c.p_ctx);
-            p_ctx.set_data(this);
-            return *this;
-        }
+        coro_base &operator=(coro_base &&c) = default;
 
         struct yielder {
             yielder(coro_base<R> &coro): p_coro(coro) {}
 
             void operator()(R &&ret) {
                 p_coro.p_result = std::forward<R>(ret);
-                p_coro.p_ctx.yield_jump();
+                p_coro.yield_jump();
             }
         private:
             coro_base<R> &p_coro;
@@ -370,48 +337,37 @@ namespace detail {
         }
 
         R call() {
-            p_ctx.call();
+            detail::coroutine_context::call();
             return std::forward<R>(this->p_result);
         }
 
         void swap(coro_base &other) {
             std::swap(p_result, other.p_result);
-            std::swap(p_ctx, other.p_ctx);
+            detail::coroutine_context::swap(other);
         }
 
         arg_wrapper<R> p_result;
-        coroutine_context p_ctx;
     };
 
     /* yield doesn't take a value and returns args */
     template<typename ...A>
-    struct coro_base<void, A...> {
+    struct coro_base<void, A...>: detail::coroutine_context {
     protected:
         coro_base(void (*callp)(void *), size_t ss):
-            p_ctx(ss, callp, this)
+            detail::coroutine_context(ss, callp)
         {}
 
         coro_base(coro_base const &) = delete;
-        coro_base(coro_base &&c):
-            p_args(std::move(c.p_args)),
-            p_ctx(std::move(c.p_ctx))
-        {
-            p_ctx.set_data(this);
-        }
+        coro_base(coro_base &&c) = default;
 
         coro_base &operator=(coro_base const &) = delete;
-        coro_base &operator=(coro_base &&c) {
-            std::swap(p_args, c.p_args);
-            std::swap(p_ctx, c.p_ctx);
-            p_ctx.set_data(this);
-            return *this;
-        }
+        coro_base &operator=(coro_base &&c) = default;
 
         struct yielder {
             yielder(coro_base<void, A...> &coro): p_coro(coro) {}
 
             coro_args<A...> operator()() {
-                p_coro.p_ctx.yield_jump();
+                p_coro.yield_jump();
                 return yield_ret(
                     p_coro.p_args, std::make_index_sequence<sizeof...(A)>{}
                 );
@@ -427,43 +383,36 @@ namespace detail {
 
         void call(A ...args) {
             p_args = std::make_tuple(arg_wrapper<A>(std::forward<A>(args))...);
-            p_ctx.call();
+            detail::coroutine_context::call();
         }
 
         void swap(coro_base &other) {
             std::swap(p_args, other.p_args);
-            std::swap(p_ctx, other.p_ctx);
+            detail::coroutine_context::swap(other);
         }
 
         std::tuple<arg_wrapper<A>...> p_args;
-        coroutine_context p_ctx;
     };
 
     /* yield doesn't take a value or return any args */
     template<>
-    struct coro_base<void> {
+    struct coro_base<void>: detail::coroutine_context {
     protected:
         coro_base(void (*callp)(void *), size_t ss):
-            p_ctx(ss, callp, this)
+            detail::coroutine_context(ss, callp)
         {}
 
         coro_base(coro_base const &) = delete;
-        coro_base(coro_base &&c): p_ctx(std::move(c.p_ctx)) {
-            p_ctx.set_data(this);
-        }
+        coro_base(coro_base &&c) = default;
 
         coro_base &operator=(coro_base const &) = delete;
-        coro_base &operator=(coro_base &&c) {
-            std::swap(p_ctx, c.p_ctx);
-            p_ctx.set_data(this);
-            return *this;
-        }
+        coro_base &operator=(coro_base &&c) = default;
 
         struct yielder {
             yielder(coro_base<void> &coro): p_coro(coro) {}
 
             void operator()() {
-                p_coro.p_ctx.yield_jump();
+                p_coro.yield_jump();
             }
         private:
             coro_base<void> &p_coro;
@@ -475,14 +424,12 @@ namespace detail {
         }
 
         void call() {
-            p_ctx.call();
+            detail::coroutine_context::call();
         }
 
         void swap(coro_base &other) {
-            std::swap(p_ctx, other.p_ctx);
+            detail::coroutine_context::swap(other);
         }
-
-        coroutine_context p_ctx;
     };
 } /* namespace detail */
 
@@ -518,7 +465,7 @@ public:
         if (!p_func) {
             return;
         }
-        this->p_ctx.unwind();
+        this->unwind();
     }
 
     operator bool() const {
