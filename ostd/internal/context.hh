@@ -180,6 +180,17 @@ inline size_t context_stack_get_def_size() {
     return r;
 }
 
+#if defined(MAP_ANON) || defined(MAP_ANONYMOUS)
+constexpr bool CONTEXT_USE_MMAP = true;
+#  ifdef MAP_ANON
+constexpr auto CONTEXT_MAP_ANON = MAP_ANON;
+#  else
+constexpr auto CONTEXT_MAP_ANON = MAP_ANONYMOUS;
+#  endif
+#else
+constexpr bool CONTEXT_USE_MMAP = false;
+#endif
+
 #else /* OSTD_PLATFORM_POSIX */
 #  error "Unsupported platform"
 #endif
@@ -204,16 +215,19 @@ inline context_stack_t context_stack_alloc(size_t ss) {
     DWORD oo;
     VirtualProtect(p, pgs, PAGE_READWRITE | PAGE_GUARD, &oo);
 #elif defined(OSTD_PLATFORM_POSIX)
-    void *p = mmap(
-        0, asize, PROT_READ | PROT_WRITE,
-#  ifdef MAP_ANON
-        MAP_PRIVATE | MAP_ANON,
-#  else
-        MAP_PRIVATE | MAP_ANONYMOUS,
-#  endif
-        -1, 0
-    );
-    if (p == MAP_FAILED) {
+    void *p = nullptr;
+    if constexpr(CONTEXT_USE_MMAP) {
+        void *mp = mmap(
+            0, asize, PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | CONTEXT_MAP_ANON, -1, 0
+        );
+        if (mp != MAP_FAILED) {
+            p = mp;
+        }
+    } else {
+        p = std::malloc(asize);
+    }
+    if (!p) {
         throw std::bad_alloc{};
     }
     mprotect(p, pgs, PROT_NONE);
@@ -231,7 +245,11 @@ inline void context_stack_free(context_stack_t &st) {
 #if defined(OSTD_PLATFORM_WIN32)
     VirtualFree(p, 0, MEM_RELEASE);
 #elif defined(OSTD_PLATFORM_POSIX)
-    munmap(p, st.size);
+    if constexpr(CONTEXT_USE_MMAP) {
+        munmap(p, st.size);
+    } else {
+        std::free(p);
+    }
 #endif
 
     st.ptr = nullptr;
