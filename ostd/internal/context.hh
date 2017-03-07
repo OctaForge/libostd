@@ -23,12 +23,19 @@
 #  include <signal.h>
 #endif
 
+#ifdef OSTD_USE_VALGRIND
+#  include <valgrind/valgrind.h>
+#endif
+
 namespace ostd {
 namespace detail {
 
 struct context_stack_t {
     void *ptr;
     size_t size;
+#ifdef OSTD_USE_VALGRIND
+    int valgrind_id;
+#endif
 };
 
 /* from boost.fcontext */
@@ -233,13 +240,23 @@ inline context_stack_t context_stack_alloc(size_t ss) {
     mprotect(p, pgs, PROT_NONE);
 #endif
 
-    return { static_cast<byte *>(p) + ss, ss };
+    context_stack_t ret{static_cast<byte *>(p) + ss, ss};
+
+#ifdef OSTD_USE_VALGRIND
+    ret.valgrind_id = VALGRIND_STACK_REGISTER(ret.ptr, p);
+#endif
+
+    return ret;
 }
 
 inline void context_stack_free(context_stack_t &st) {
     if (!st.ptr) {
         return;
     }
+
+#ifdef OSTD_USE_VALGRIND
+    VALGRIND_STACK_DEREGISTER(st.valgrind_id);
+#endif
 
     auto p = static_cast<byte *>(st.ptr) - st.size;
 #if defined(OSTD_PLATFORM_WIN32)
