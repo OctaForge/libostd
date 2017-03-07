@@ -9,10 +9,19 @@
 #include <cstdlib>
 #include <memory>
 #include <exception>
+#include <algorithm>
 
 #include "ostd/types.hh"
 #include "ostd/platform.hh"
 #include "ostd/internal/win32.hh"
+
+#ifdef OSTD_PLATFORM_POSIX
+#  include <unistd.h>
+#  include <sys/mman.h>
+#  include <sys/resource.h>
+#  include <sys/time.h>
+#  include <signal.h>
+#endif
 
 namespace ostd {
 namespace detail {
@@ -122,20 +131,109 @@ protected:
 
 /* stack allocator */
 
+#if defined(OSTD_PLATFORM_WIN32)
+
+inline size_t context_get_page_size() {
+    SYSTEM_INFO i;
+    GetSystemInfo(&i);
+    return size_t(si.dwPageSize);
+}
+
+inline size_t context_stack_get_min_size() {
+    /* no func on windows, sane default */
+    return sizeof(void *) * 1024;
+}
+
+inline size_t context_stack_get_max_size() {
+    return 1024 * 1024 * 1024;
+}
+
+inline size_t context_stack_get_def_size() {
+    return sizeof(void *) * context_stack_get_min_size();
+}
+
+#elif defined(OSTD_PLATFORM_POSIX)
+
+inline size_t context_get_page_size() {
+    return size_t(sysconf(_SC_PAGESIZE));
+}
+
+inline size_t context_stack_get_min_size() {
+    return SIGSTKSZ;
+}
+
+inline size_t context_stack_get_max_size() {
+    rlimit l;
+    getrlimit(RLIMIT_STACK, &l);
+    return size_t(l.rlim_max);
+}
+
+inline size_t context_stack_get_def_size() {
+    rlimit l;
+    size_t r = sizeof(void *) * SIGSTKSZ;
+
+    getrlimit(RLIMIT_STACK, &l);
+    if ((l.rlim_max != RLIM_INFINITY) && (l.rlim_max < r)) {
+        return size_t(l.rlim_max);
+    }
+
+    return r;
+}
+
+#else /* OSTD_PLATFORM_POSIX */
+#  error "Unsupported platform"
+#endif
+
 inline context_stack_t context_stack_alloc(size_t ss) {
-    auto p = static_cast<byte *>(std::malloc(ss));
+    if (!ss) {
+        ss = context_stack_get_def_size();
+    } else {
+        ss = std::clamp(
+            ss, context_stack_get_min_size(), context_stack_get_max_size()
+        );
+    }
+    size_t pgs = context_get_page_size();
+    size_t npg = std::max(ss / pgs, size_t(2));
+    size_t asize = npg * pgs;
+
+#if defined(OSTD_PLATFORM_WIN32)
+    void *p = VirtualAlloc(0, asize, MEM_COMMIT, PAGE_READWRITE);
     if (!p) {
+        throw std::bad_alloc{}
+    }
+    DWORD oo;
+    VirtualProtect(p, pgs, PAGE_READWRITE | PAGE_GUARD, &oo);
+#elif defined(OSTD_PLATFORM_POSIX)
+    void *p = mmap(
+        0, asize, PROT_READ | PROT_WRITE,
+#  ifdef MAP_ANON
+        MAP_PRIVATE | MAP_ANON,
+#  else
+        MAP_PRIVATE | MAP_ANONYMOUS,
+#  endif
+        -1, 0
+    );
+    if (p == MAP_FAILED) {
         throw std::bad_alloc{};
     }
-    return { p + ss, ss };
+    mprotect(p, pgs, PROT_NONE);
+#endif
+
+    return { static_cast<byte *>(p) + ss, ss };
 }
 
 inline void context_stack_free(context_stack_t &st) {
     if (!st.ptr) {
         return;
     }
+
     auto p = static_cast<byte *>(st.ptr) - st.size;
-    std::free(p);
+#if defined(OSTD_PLATFORM_WIN32)
+    VirtualFree(p, 0, MEM_RELEASE);
+#elif defined(OSTD_PLATFORM_POSIX)
+    munmap(p, st.size);
+#endif
+
     st.ptr = nullptr;
 }
 

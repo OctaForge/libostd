@@ -6,10 +6,6 @@
 #ifndef OSTD_COROUTINE_HH
 #define OSTD_COROUTINE_HH
 
-#include <signal.h>
-
-#include <memory>
-#include <exception>
 #include <stdexcept>
 #include <utility>
 #include <tuple>
@@ -22,8 +18,6 @@
 #include "ostd/internal/context.hh"
 
 namespace ostd {
-
-constexpr size_t COROUTINE_DEFAULT_STACK_SIZE = SIGSTKSZ;
 
 struct coroutine_error: std::runtime_error {
     using std::runtime_error::runtime_error;
@@ -290,9 +284,9 @@ public:
     /* we have no way to assign a function anyway... */
     coroutine() = delete;
 
+    /* 0 means default size decided by the stack allocator */
     template<typename F>
-    coroutine(F func, size_t ss = COROUTINE_DEFAULT_STACK_SIZE):
-        base_t(), p_func(std::move(func))
+    coroutine(F func, size_t ss = 0): base_t(), p_func(std::move(func))
     {
         /* that way there is no context creation/stack allocation */
         if (!p_func) {
