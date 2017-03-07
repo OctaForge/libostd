@@ -134,8 +134,8 @@ protected:
 #if defined(OSTD_PLATFORM_WIN32)
 
 inline size_t context_get_page_size() {
-    SYSTEM_INFO i;
-    GetSystemInfo(&i);
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
     return size_t(si.dwPageSize);
 }
 
