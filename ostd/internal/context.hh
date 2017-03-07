@@ -6,6 +6,7 @@
 #ifndef OSTD_INTERNAL_CONTEXT_HH
 #define OSTD_INTERNAL_CONTEXT_HH
 
+#include <cstdlib>
 #include <memory>
 #include <exception>
 
@@ -15,6 +16,11 @@
 
 namespace ostd {
 namespace detail {
+
+struct context_stack_t {
+    void *ptr;
+    size_t size;
+};
 
 /* from boost.fcontext */
 using fcontext_t = void *;
@@ -39,6 +45,9 @@ transfer_t OSTD_CDECL ostd_ontop_fcontext(
     fcontext_t const to, void *vp, transfer_t (*fn)(transfer_t)
 );
 
+context_stack_t context_stack_alloc(size_t ss);
+void context_stack_free(context_stack_t &st);
+
 struct coroutine_context {
 protected:
     struct forced_unwind {
@@ -48,12 +57,17 @@ protected:
 
     coroutine_context() {}
 
+    ~coroutine_context() {
+        context_stack_free(p_stack);
+    }
+
     coroutine_context(coroutine_context const &) = delete;
     coroutine_context(coroutine_context &&c):
         p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
         p_except(std::move(c.p_except))
     {
         c.p_coro = c.p_orig = nullptr;
+        c.p_stack = { nullptr, 0 };
     }
 
     coroutine_context &operator=(coroutine_context const &) = delete;
@@ -95,16 +109,35 @@ protected:
     }
 
     void make_context(size_t ss, void (*callp)(transfer_t)) {
-        p_stack = std::unique_ptr<byte[]>{new byte[ss]};
-        p_coro = ostd_make_fcontext(p_stack.get() + ss, ss, callp);
+        p_stack = context_stack_alloc(ss);
+        p_coro = ostd_make_fcontext(p_stack.ptr, p_stack.size, callp);
     }
 
     /* TODO: new'ing the stack is sub-optimal */
-    std::unique_ptr<byte[]> p_stack;
+    context_stack_t p_stack = { nullptr, 0 };
     fcontext_t p_coro;
     fcontext_t p_orig;
     std::exception_ptr p_except;
 };
+
+/* stack allocator */
+
+inline context_stack_t context_stack_alloc(size_t ss) {
+    auto p = static_cast<byte *>(std::malloc(ss));
+    if (!p) {
+        throw std::bad_alloc{};
+    }
+    return { p + ss, ss };
+}
+
+inline void context_stack_free(context_stack_t &st) {
+    if (!st.ptr) {
+        return;
+    }
+    auto p = static_cast<byte *>(st.ptr) - st.size;
+    std::free(p);
+    st.ptr = nullptr;
+}
 
 }
 }
