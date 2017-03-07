@@ -20,21 +20,6 @@
 #include "ostd/platform.hh"
 #include "ostd/range.hh"
 
-/* from boost.context */
-#ifdef OSTD_PLATFORM_WIN32
-#  if (defined(i386) || defined(__i386__) || defined(__i386) || \
-       defined(__i486__) || defined(__i586__) || defined(__i686__) || \
-       defined(__X86__) || defined(_X86_) || defined(__THW_INTEL__) || \
-       defined(__I86__) || defined(__INTEL__) || defined(__IA32__) || \
-       defined(_M_IX86) || defined(_I86_))
-#    define OSTD_CONTEXT_CDECL __cdecl
-#  endif
-#endif
-
-#ifndef OSTD_CONTEXT_CDECL
-#define OSTD_CONTEXT_CDECL
-#endif
-
 namespace ostd {
 
 constexpr size_t COROUTINE_DEFAULT_STACK_SIZE = SIGSTKSZ;
@@ -59,27 +44,27 @@ namespace detail {
     };
 
     extern "C" OSTD_EXPORT
-    transfer_t OSTD_CONTEXT_CDECL ostd_jump_fcontext(
+    transfer_t OSTD_CDECL ostd_jump_fcontext(
         fcontext_t const to, void *vp
     );
 
     extern "C" OSTD_EXPORT
-    fcontext_t OSTD_CONTEXT_CDECL ostd_make_fcontext(
+    fcontext_t OSTD_CDECL ostd_make_fcontext(
         void *sp, size_t size, void (*fn)(transfer_t)
     );
 
     extern "C" OSTD_EXPORT
-    transfer_t OSTD_CONTEXT_CDECL ostd_ontop_fcontext(
+    transfer_t OSTD_CDECL ostd_ontop_fcontext(
         fcontext_t const to, void *vp, transfer_t (*fn)(transfer_t)
     );
 
-    struct forced_unwind {
-        fcontext_t ctx;
-        forced_unwind(fcontext_t c): ctx(c) {}
-    };
-
     struct coroutine_context {
     protected:
+        struct forced_unwind {
+            fcontext_t ctx;
+            forced_unwind(fcontext_t c): ctx(c) {}
+        };
+
         coroutine_context() {}
 
         coroutine_context(coroutine_context const &) = delete;
@@ -121,10 +106,11 @@ namespace detail {
         }
 
         void swap(coroutine_context &other) noexcept {
-            std::swap(p_stack, other.p_stack);
-            std::swap(p_coro, other.p_coro);
-            std::swap(p_orig, other.p_orig);
-            std::swap(p_except, other.p_except);
+            using std::swap;
+            swap(p_stack, other.p_stack);
+            swap(p_coro, other.p_coro);
+            swap(p_orig, other.p_orig);
+            swap(p_except, other.p_except);
         }
 
         void make_context(size_t ss, void (*callp)(transfer_t)) {
@@ -153,7 +139,8 @@ namespace detail {
         }
 
         void swap(arg_wrapper &other) {
-            std::swap(p_arg, other.p_arg);
+            using std::swap;
+            swap(p_arg, other.p_arg);
         }
 
     private:
@@ -173,7 +160,8 @@ namespace detail {
         }
 
         void swap(arg_wrapper &other) {
-            std::swap(p_arg, other.p_arg);
+            using std::swap;
+            swap(p_arg, other.p_arg);
         }
 
     private:
@@ -193,7 +181,8 @@ namespace detail {
         }
 
         void swap(arg_wrapper &other) {
-            std::swap(p_arg, other.p_arg);
+            using std::swap;
+            swap(p_arg, other.p_arg);
         }
 
     private:
@@ -240,14 +229,6 @@ namespace detail {
     template<typename R, typename ...A>
     struct coro_base: coroutine_context {
     protected:
-        coro_base() {}
-
-        coro_base(coro_base const &) = delete;
-        coro_base(coro_base &&c) = default;
-
-        coro_base &operator=(coro_base const &) = delete;
-        coro_base &operator=(coro_base &&c) = default;
-
         struct yielder {
             yielder(coro_base<R, A...> &coro): p_coro(coro) {}
 
@@ -276,8 +257,9 @@ namespace detail {
         }
 
         void swap(coro_base &other) {
-            std::swap(p_args, other.p_args);
-            std::swap(p_result, other.p_result);
+            using std::swap;
+            swap(p_args, other.p_args);
+            swap(p_result, other.p_result);
             coroutine_context::swap(other);
         }
 
@@ -291,14 +273,6 @@ namespace detail {
         coroutine_range<R> iter();
 
     protected:
-        coro_base() {}
-
-        coro_base(coro_base const &) = delete;
-        coro_base(coro_base &&c) = default;
-
-        coro_base &operator=(coro_base const &) = delete;
-        coro_base &operator=(coro_base &&c) = default;
-
         struct yielder {
             yielder(coro_base<R> &coro): p_coro(coro) {}
 
@@ -321,7 +295,8 @@ namespace detail {
         }
 
         void swap(coro_base &other) {
-            std::swap(p_result, other.p_result);
+            using std::swap;
+            swap(p_result, other.p_result);
             coroutine_context::swap(other);
         }
 
@@ -332,14 +307,6 @@ namespace detail {
     template<typename ...A>
     struct coro_base<void, A...>: coroutine_context {
     protected:
-        coro_base() {}
-
-        coro_base(coro_base const &) = delete;
-        coro_base(coro_base &&c) = default;
-
-        coro_base &operator=(coro_base const &) = delete;
-        coro_base &operator=(coro_base &&c) = default;
-
         struct yielder {
             yielder(coro_base<void, A...> &coro): p_coro(coro) {}
 
@@ -364,7 +331,8 @@ namespace detail {
         }
 
         void swap(coro_base &other) {
-            std::swap(p_args, other.p_args);
+            using std::swap;
+            swap(p_args, other.p_args);
             coroutine_context::swap(other);
         }
 
@@ -375,14 +343,6 @@ namespace detail {
     template<>
     struct coro_base<void>: coroutine_context {
     protected:
-        coro_base() {}
-
-        coro_base(coro_base const &) = delete;
-        coro_base(coro_base &&c) = default;
-
-        coro_base &operator=(coro_base const &) = delete;
-        coro_base &operator=(coro_base &&c) = default;
-
         struct yielder {
             yielder(coro_base<void> &coro): p_coro(coro) {}
 
@@ -416,10 +376,14 @@ private:
 public:
     using yield_type = typename detail::coro_base<R, A...>::yielder;
 
+    /* we have no way to assign a function anyway... */
+    coroutine() = delete;
+
     template<typename F>
     coroutine(F func, size_t ss = COROUTINE_DEFAULT_STACK_SIZE):
-        p_func(std::move(func))
+        base_t(), p_func(std::move(func))
     {
+        /* that way there is no context creation/stack allocation */
         if (!p_func) {
             return;
         }
@@ -441,14 +405,14 @@ public:
     }
 
     ~coroutine() {
-        /* we have to check both because of potential moves */
         if (!p_func) {
+            /* the stack has already unwound by a normal return */
             return;
         }
         this->unwind();
     }
 
-    operator bool() const {
+    explicit operator bool() const {
         return bool(p_func);
     }
 
@@ -469,17 +433,24 @@ public:
     }
 
 private:
+    /* the main entry point of the coroutine */
     static void context_call(detail::transfer_t t) {
         auto &self = *(static_cast<coroutine *>(t.data));
         self.p_orig = t.ctx;
         try {
             self.call_helper(self.p_func, std::index_sequence_for<A...>{});
-        } catch (detail::forced_unwind v) {
+        } catch (detail::coroutine_context::forced_unwind v) {
+            /* forced_unwind is unique */
             self.p_orig = v.ctx;
         } catch (...) {
+            /* some other exception, will be rethrown later */
             self.p_except = std::current_exception();
         }
+        /* the func has fully finished here, so mark dead, stack
+         * will be freed by the coroutine's destructor later
+         */
         self.p_func = nullptr;
+        /* perform a last switch back to original context */
         self.yield_jump();
     }
 
@@ -522,7 +493,7 @@ struct coroutine_range: input_range<coroutine_range<T>> {
         return p_item.value();
     }
 
-    bool equals_front(coroutine_range const &g) {
+    bool equals_front(coroutine_range const &g) const {
         return p_coro == g.p_coro;
     }
 private:

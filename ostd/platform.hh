@@ -99,6 +99,12 @@
 #  endif
 #endif
 
+#if defined(OSTD_PLATFORM_WIN32) && !defined(OSTD_PLATFORM_WIN64)
+#  define OSTD_CDECL __cdecl
+#else
+#  define OSTD_CDECL
+#endif
+
 namespace ostd {
 
 #if defined(OSTD_TOOLCHAIN_GNU)
