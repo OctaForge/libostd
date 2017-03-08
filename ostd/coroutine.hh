@@ -310,7 +310,7 @@ public:
     }
 
     ~coroutine() {
-        if (!p_func) {
+        if (this->p_state == detail::coroutine_context::state::TERM) {
             /* the stack has already unwound by a normal return */
             return;
         }
@@ -318,11 +318,11 @@ public:
     }
 
     explicit operator bool() const {
-        return bool(p_func);
+        return (this->p_state != detail::coroutine_context::state::TERM);
     }
 
     R resume(A ...args) {
-        if (!p_func) {
+        if (this->p_state == detail::coroutine_context::state::TERM) {
             throw coroutine_error{"dead coroutine"};
         }
         return this->call(std::forward<A>(args)...);
@@ -342,6 +342,10 @@ private:
     static void context_call(detail::transfer_t t) {
         auto &self = *(static_cast<coroutine *>(t.data));
         self.p_orig = t.ctx;
+        if (self.p_state == detail::coroutine_context::state::INIT) {
+            /* we never got to execute properly */
+            goto release;
+        }
         try {
             self.call_helper(self.p_func, std::index_sequence_for<A...>{});
         } catch (detail::coroutine_context::forced_unwind v) {
@@ -351,12 +355,10 @@ private:
             /* some other exception, will be rethrown later */
             self.p_except = std::current_exception();
         }
-        /* the func has fully finished here, so mark dead, stack
-         * will be freed by the coroutine's destructor later
-         */
-        self.p_func = nullptr;
-        /* perform a last switch back to original context */
-        self.yield_jump();
+        /* switch back, release stack */
+release:
+        self.p_state = detail::coroutine_context::state::TERM;
+        self.finish();
     }
 
     std::function<R(yield_type, A...)> p_func;
