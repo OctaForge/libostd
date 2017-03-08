@@ -8,8 +8,15 @@ EXAMPLES="format listdir range range_pipe signal"
 EXAMPLES="${EXAMPLES} stream1 stream2 coroutine1 coroutine2"
 
 # assembly sources
+ASM_SOURCE_DIR="src/asm"
 ASM_SOURCES="jump_all_gas make_all_gas ontop_all_gas"
-ASM_LIB="context.a"
+
+# c++ sources
+CXX_SOURCE_DIR="src"
+CXX_SOURCES="context_stack"
+
+# output lib
+OSTD_LIB="libostd.a"
 
 # compiler
 if [ -z "$CXX" ]; then
@@ -83,22 +90,25 @@ clean() {
         rm -f "examples/${ex}" "examples/${ex}.o"
     done
     for as in ${ASM_SOURCES}; do
-        rm -f "${as}.o"
+        rm -f "${ASM_SOURCE_DIR}/${as}.o"
     done
-    rm -f "$ASM_LIB"
+    for cs in ${CXX_SOURCES}; do
+        rm -f "${CXX_SOURCE_DIR}/${cs}.o"
+    done
+    rm -f "$OSTD_LIB"
     rm -f test_runner.o test_runner
 }
 
 # call_cxx input output
 call_cxx() {
     echo "CXX: $1"
-    eval "${CXX} ${OSTD_CPPFLAGS} ${OSTD_CXXFLAGS} -c -o ${2} ${1}"
+    eval "${CXX} ${OSTD_CPPFLAGS} ${OSTD_CXXFLAGS} -c -o \"${2}\" \"${1}\""
 }
 
 # call_as input output
 call_as() {
-    echo "AS: src/asm/${1}"
-    eval "${CPP} -x assembler-with-cpp \"src/asm/${1}\" | ${AS} -o \"${2}\""
+    echo "AS: $1"
+    eval "${CPP} -x assembler-with-cpp \"${1}\" | ${AS} -o \"${2}\""
 }
 
 # call_ld output file1 file2 ...
@@ -116,22 +126,22 @@ call_ldlib() {
 # build_example name
 build_example() {
     call_cxx "examples/${1}.cc" "examples/${1}.o"
-    call_ld "examples/${1}" "examples/${1}.o" "$ASM_LIB"
-    rm "examples/${1}.o"
+    call_ld "examples/${1}" "examples/${1}.o" "$OSTD_LIB"
+    rm -f "examples/${1}.o"
 }
 
 # build test runner
 build_test_runner() {
     call_cxx test_runner.cc test_runner.o
-    call_ld test_runner test_runner.o
-    rm test_runner.o
+    call_ld test_runner test_runner.o "$OSTD_LIB"
+    rm -f test_runner.o
 }
 
-# add_ext str ext
-add_ext() {
+# add_sfx_pfx str sfx pfx
+add_sfx_pfx() {
     RET=""
     for it in $1; do
-        RET="$RET ${it}${2}"
+        RET="$RET ${3}${it}${2}"
     done
     echo $RET
 }
@@ -142,18 +152,25 @@ if [ "$1" = "clean" ]; then
     exit 0
 fi
 
+# build assembly
+echo "Building the library..."
+for as in $ASM_SOURCES; do
+    call_as "${ASM_SOURCE_DIR}/${as}.S" "${ASM_SOURCE_DIR}/${as}.o" &
+done
+for cs in $CXX_SOURCES; do
+    call_cxx "${CXX_SOURCE_DIR}/${cs}.cc" "${CXX_SOURCE_DIR}/${cs}.o" &
+done
+wait
+call_ldlib "$OSTD_LIB" \
+    $(add_sfx_pfx "$ASM_SOURCES" ".o" "$ASM_SOURCE_DIR/") \
+    $(add_sfx_pfx "$CXX_SOURCES" ".o" "$CXX_SOURCE_DIR/")
+
+rm -f $(add_sfx_pfx "$ASM_SOURCES" ".o" "$ASM_SOURCE_DIR/")
+rm -f $(add_sfx_pfx "$CXX_SOURCES" ".o" "$CXX_SOURCE_DIR/")
+
 # build test runner
 echo "Building test runner..."
 build_test_runner &
-
-# build assembly
-echo "Running assembler..."
-for as in $ASM_SOURCES; do
-    call_as "${as}.S" "${as}.o" &
-done
-wait
-call_ldlib "$ASM_LIB" $(add_ext "$ASM_SOURCES" ".o")
-rm $(add_ext "$ASM_SOURCES" ".o")
 
 # build examples
 echo "Building examples..."
