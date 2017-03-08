@@ -285,7 +285,7 @@ public:
     coroutine() = delete;
 
     /* 0 means default size decided by the stack allocator */
-    template<typename F, typename SA = stack_allocator>
+    template<typename F, typename SA = default_stack>
     coroutine(F func, SA sa = SA{0}):
         base_t(), p_func(std::move(func))
     {

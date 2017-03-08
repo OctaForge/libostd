@@ -28,15 +28,16 @@
 #endif
 
 namespace ostd {
-namespace detail {
 
-struct context_stack_t {
+struct stack_context {
     void *ptr;
     size_t size;
 #ifdef OSTD_USE_VALGRIND
     int valgrind_id;
 #endif
 };
+
+namespace detail {
 
 /* from boost.fcontext */
 using fcontext_t = void *;
@@ -61,8 +62,8 @@ transfer_t OSTD_CDECL ostd_ontop_fcontext(
     fcontext_t const to, void *vp, transfer_t (*fn)(transfer_t)
 );
 
-context_stack_t context_stack_alloc(size_t ss);
-void context_stack_free(context_stack_t &st);
+stack_context context_stack_alloc(size_t ss);
+void context_stack_free(stack_context &st);
 
 struct coroutine_context {
 protected:
@@ -164,7 +165,7 @@ protected:
     }
 
     /* TODO: new'ing the stack is sub-optimal */
-    context_stack_t p_stack = { nullptr, 0 };
+    stack_context p_stack = { nullptr, 0 };
     fcontext_t p_coro;
     fcontext_t p_orig;
     std::exception_ptr p_except;
@@ -238,7 +239,8 @@ constexpr bool CONTEXT_USE_MMAP = false;
 #  error "Unsupported platform"
 #endif
 
-inline context_stack_t context_stack_alloc(size_t ss) {
+template<bool Protected>
+inline stack_context context_stack_alloc(size_t ss) {
     if (!ss) {
         ss = context_stack_get_def_size();
     } else {
@@ -247,7 +249,7 @@ inline context_stack_t context_stack_alloc(size_t ss) {
         );
     }
     size_t pgs = context_get_page_size();
-    size_t npg = std::max(ss / pgs, size_t(2));
+    size_t npg = std::max(ss / pgs, size_t(size_t(Protected) + 1));
     size_t asize = npg * pgs;
 
 #if defined(OSTD_PLATFORM_WIN32)
@@ -256,7 +258,9 @@ inline context_stack_t context_stack_alloc(size_t ss) {
         throw std::bad_alloc{}
     }
     DWORD oo;
-    VirtualProtect(p, pgs, PAGE_READWRITE | PAGE_GUARD, &oo);
+    if constexpr(Protected) {
+        VirtualProtect(p, pgs, PAGE_READWRITE | PAGE_GUARD, &oo);
+    }
 #elif defined(OSTD_PLATFORM_POSIX)
     void *p = nullptr;
     if constexpr(CONTEXT_USE_MMAP) {
@@ -273,10 +277,12 @@ inline context_stack_t context_stack_alloc(size_t ss) {
     if (!p) {
         throw std::bad_alloc{};
     }
-    mprotect(p, pgs, PROT_NONE);
+    if constexpr(Protected) {
+        mprotect(p, pgs, PROT_NONE);
+    }
 #endif
 
-    context_stack_t ret{static_cast<byte *>(p) + ss, ss};
+    stack_context ret{static_cast<byte *>(p) + ss, ss};
 
 #ifdef OSTD_USE_VALGRIND
     ret.valgrind_id = VALGRIND_STACK_REGISTER(ret.ptr, p);
@@ -285,7 +291,7 @@ inline context_stack_t context_stack_alloc(size_t ss) {
     return ret;
 }
 
-inline void context_stack_free(context_stack_t &st) {
+inline void context_stack_free(stack_context &st) {
     if (!st.ptr) {
         return;
     }
@@ -310,20 +316,37 @@ inline void context_stack_free(context_stack_t &st) {
 
 } /* namespace detail */
 
-struct stack_allocator {
-    stack_allocator(size_t ss = 0): p_size(ss) {}
+struct protected_fixedsize_stack {
+    protected_fixedsize_stack(size_t ss = 0): p_size(ss) {}
 
-    detail::context_stack_t allocate() {
-        return detail::context_stack_alloc(p_size);
+    stack_context allocate() {
+        return detail::context_stack_alloc<true>(p_size);
     }
 
-    void deallocate(detail::context_stack_t &st) {
+    void deallocate(stack_context &st) {
         detail::context_stack_free(st);
     }
 
 private:
     size_t p_size;
 };
+
+struct fixedsize_stack {
+    fixedsize_stack(size_t ss = 0): p_size(ss) {}
+
+    stack_context allocate() {
+        return detail::context_stack_alloc<false>(p_size);
+    }
+
+    void deallocate(stack_context &st) {
+        detail::context_stack_free(st);
+    }
+
+private:
+    size_t p_size;
+};
+
+using default_stack = fixedsize_stack;
 
 }
 
