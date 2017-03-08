@@ -46,23 +46,6 @@
 
 namespace ostd {
 
-namespace detail {
-
-#ifdef OSTD_PLATFORM_POSIX
-#  if defined(MAP_ANON) || defined(MAP_ANONYMOUS)
-    constexpr bool CONTEXT_USE_MMAP = true;
-#    ifdef MAP_ANON
-    constexpr auto CONTEXT_MAP_ANON = MAP_ANON;
-#    else
-constexpr auto CONTEXT_MAP_ANON = MAP_ANONYMOUS;
-#    endif
-#  else
-constexpr bool CONTEXT_USE_MMAP = false;
-#  endif
-#endif
-
-} /* namespace detail */
-
 struct stack_context {
 #ifdef OSTD_USE_SEGMENTED_STACKS
     using segments_context = void *[OSTD_CONTEXT_SEGMENTS];
@@ -154,6 +137,69 @@ struct stack_traits {
     }
 };
 
+namespace detail {
+#ifdef OSTD_PLATFORM_POSIX
+#  if defined(MAP_ANON) || defined(MAP_ANONYMOUS)
+    constexpr bool CONTEXT_USE_MMAP = true;
+#    ifdef MAP_ANON
+    constexpr auto CONTEXT_MAP_ANON = MAP_ANON;
+#    else
+constexpr auto CONTEXT_MAP_ANON = MAP_ANONYMOUS;
+#    endif
+#  else
+constexpr bool CONTEXT_USE_MMAP = false;
+#  endif
+#endif
+
+    inline void *stack_alloc(size_t sz) {
+#if defined(OSTD_PLATFORM_WIN32)
+        void *p = VirtualAlloc(0, sz, MEM_COMMIT, PAGE_READWRITE);
+        if (!p) {
+            throw std::bad_alloc{}
+        }
+        return p;
+#elif defined(OSTD_PLATFORM_POSIX)
+        if constexpr(CONTEXT_USE_MMAP) {
+            void *p = mmap(
+                0, sz, PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | CONTEXT_MAP_ANON, -1, 0
+            );
+            if (p == MAP_FAILED) {
+                throw std::bad_alloc{};
+            }
+            return p;
+        }
+        void *p = std::malloc(sz);
+        if (!p) {
+            throw std::bad_alloc{};
+        }
+        return p;
+#endif
+    }
+
+    inline void stack_free(void *p, size_t sz) {
+#if defined(OSTD_PLATFORM_WIN32)
+        (void)sz;
+        VirtualFree(p, 0, MEM_RELEASE);
+#elif defined(OSTD_PLATFORM_POSIX)
+        if constexpr(CONTEXT_USE_MMAP) {
+            munmap(p, sz);
+        } else {
+            std::free(p);
+        }
+#endif
+    }
+
+    inline void stack_protect(void *p, size_t sz) {
+#if defined(OSTD_PLATFORM_WIN32)
+        DWORD oo;
+        VirtualProtect(p, sz, PAGE_READWRITE | PAGE_GUARD, &oo);
+#elif defined(OSTD_PLATFORM_POSIX)
+        mprotect(p, sz, PROT_NONE);
+#endif
+    }
+}
+
 template<typename TR, bool Protected>
 struct basic_fixedsize_stack {
     using traits_type = TR;
@@ -170,42 +216,16 @@ struct basic_fixedsize_stack {
         size_t npg = std::max(ss / pgs, size_t(size_t(Protected) + 1));
         size_t asize = npg * pgs;
 
-#if defined(OSTD_PLATFORM_WIN32)
-        void *p = VirtualAlloc(0, asize, MEM_COMMIT, PAGE_READWRITE);
-        if (!p) {
-            throw std::bad_alloc{}
-        }
-        DWORD oo;
+        void *p = detail::stack_alloc(asize);
         if constexpr(Protected) {
-            VirtualProtect(p, pgs, PAGE_READWRITE | PAGE_GUARD, &oo);
+            /* a single guard page */
+            detail::stack_protect(p, pgs);
         }
-#elif defined(OSTD_PLATFORM_POSIX)
-        void *p = nullptr;
-        if constexpr(detail::CONTEXT_USE_MMAP) {
-            void *mp = mmap(
-                0, asize, PROT_READ | PROT_WRITE,
-                MAP_PRIVATE | detail::CONTEXT_MAP_ANON, -1, 0
-            );
-            if (mp != MAP_FAILED) {
-                p = mp;
-            }
-        } else {
-            p = std::malloc(asize);
-        }
-        if (!p) {
-            throw std::bad_alloc{};
-        }
-        if constexpr(Protected) {
-            mprotect(p, pgs, PROT_NONE);
-        }
-#endif
 
         stack_context ret{static_cast<byte *>(p) + ss, ss};
-
 #ifdef OSTD_USE_VALGRIND
         ret.valgrind_id = VALGRIND_STACK_REGISTER(ret.ptr, p);
 #endif
-
         return ret;
     }
 
@@ -213,22 +233,10 @@ struct basic_fixedsize_stack {
         if (!st.ptr) {
             return;
         }
-
 #ifdef OSTD_USE_VALGRIND
         VALGRIND_STACK_DEREGISTER(st.valgrind_id);
 #endif
-
-        auto p = static_cast<byte *>(st.ptr) - st.size;
-#if defined(OSTD_PLATFORM_WIN32)
-        VirtualFree(p, 0, MEM_RELEASE);
-#elif defined(OSTD_PLATFORM_POSIX)
-        if constexpr(detail::CONTEXT_USE_MMAP) {
-            munmap(p, st.size);
-        } else {
-            std::free(p);
-        }
-#endif
-
+        detail::stack_free(static_cast<byte *>(st.ptr) - st.size, st.size);
         st.ptr = nullptr;
     }
 
