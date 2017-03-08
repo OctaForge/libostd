@@ -80,11 +80,13 @@ protected:
     coroutine_context(coroutine_context const &) = delete;
     coroutine_context(coroutine_context &&c):
         p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
-        p_except(std::move(c.p_except)), p_state(std::move(c.p_state))
+        p_except(std::move(c.p_except)), p_state(std::move(c.p_state)),
+        p_sa(c.p_sa)
     {
         c.p_coro = c.p_orig = nullptr;
         c.p_stack = { nullptr, 0 };
         c.p_state = state::TERM;
+        c.p_sa = nullptr;
     }
 
     coroutine_context &operator=(coroutine_context const &) = delete;
@@ -118,10 +120,12 @@ protected:
         );
     }
 
+    template<typename SA>
     void finish() {
         ostd_ontop_fcontext(p_orig, this, [](transfer_t t) -> transfer_t {
             auto &self = *(static_cast<coroutine_context *>(t.data));
-            context_stack_free(self.p_stack);
+            auto &sa = *(static_cast<SA *>(self.p_sa));
+            sa.deallocate(self.p_stack);
             return { nullptr, nullptr };
         });
     }
@@ -143,9 +147,20 @@ protected:
         swap(p_except, other.p_except);
     }
 
-    void make_context(size_t ss, void (*callp)(transfer_t)) {
-        p_stack = context_stack_alloc(ss);
-        p_coro = ostd_make_fcontext(p_stack.ptr, p_stack.size, callp);
+    template<typename SA>
+    void make_context(SA sa, void (*callp)(transfer_t)) {
+        p_stack = sa.allocate();
+
+        constexpr size_t salign = alignof(SA);
+        constexpr size_t sasize = sizeof(SA);
+        void *sp = static_cast<byte *>(p_stack.ptr) - sasize - salign;
+        size_t space = sasize + salign;
+        sp = std::align(salign, sasize, sp, space);
+        size_t asize = p_stack.size -
+            (static_cast<byte *>(p_stack.ptr) - static_cast<byte *>(sp));
+
+        p_coro = ostd_make_fcontext(sp, asize, callp);
+        p_sa = new (sp) SA(sa);
     }
 
     /* TODO: new'ing the stack is sub-optimal */
@@ -154,6 +169,7 @@ protected:
     fcontext_t p_orig;
     std::exception_ptr p_except;
     state p_state = state::INIT;
+    void *p_sa;
 };
 
 /* stack allocator */
@@ -292,7 +308,23 @@ inline void context_stack_free(context_stack_t &st) {
     st.ptr = nullptr;
 }
 
-}
+} /* namespace detail */
+
+struct stack_allocator {
+    stack_allocator(size_t ss = 0): p_size(ss) {}
+
+    detail::context_stack_t allocate() {
+        return detail::context_stack_alloc(p_size);
+    }
+
+    void deallocate(detail::context_stack_t &st) {
+        detail::context_stack_free(st);
+    }
+
+private:
+    size_t p_size;
+};
+
 }
 
 #endif

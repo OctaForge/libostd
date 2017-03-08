@@ -285,14 +285,15 @@ public:
     coroutine() = delete;
 
     /* 0 means default size decided by the stack allocator */
-    template<typename F>
-    coroutine(F func, size_t ss = 0): base_t(), p_func(std::move(func))
+    template<typename F, typename SA = stack_allocator>
+    coroutine(F func, SA sa = SA{0}):
+        base_t(), p_func(std::move(func))
     {
         /* that way there is no context creation/stack allocation */
         if (!p_func) {
             return;
         }
-        this->make_context(ss, &context_call);
+        this->make_context(sa, &context_call<SA>);
     }
 
     coroutine(coroutine const &) = delete;
@@ -339,6 +340,7 @@ public:
 
 private:
     /* the main entry point of the coroutine */
+    template<typename SA>
     static void context_call(detail::transfer_t t) {
         auto &self = *(static_cast<coroutine *>(t.data));
         self.p_orig = t.ctx;
@@ -358,7 +360,7 @@ private:
         /* switch back, release stack */
 release:
         self.p_state = detail::coroutine_context::state::TERM;
-        self.finish();
+        self.template finish<SA>();
     }
 
     std::function<R(yield_type, A...)> p_func;
