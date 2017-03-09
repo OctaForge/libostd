@@ -6,10 +6,16 @@
 #ifndef OSTD_STREAM_HH
 #define OSTD_STREAM_HH
 
-#include <sys/types.h>
+#include <cstdlib>
 #include <type_traits>
 #include <locale>
 #include <optional>
+#include <stdexcept>
+#include <system_error>
+
+#ifndef OSTD_PLATFORM_WIN32
+#include <sys/types.h>
+#endif
 
 #include "ostd/platform.hh"
 #include "ostd/types.hh"
