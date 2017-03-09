@@ -17,56 +17,58 @@ CXX_SOURCES="context_stack"
 
 # output lib
 OSTD_LIB="libostd"
-OSTD_DYNLIB=""
 
 # default opts
-BUILD_EXAMPLES="true"
-BUILD_TESTSUITE="true"
-BUILD_LIB="mixed"
+BUILD_EXAMPLES="yes"
+BUILD_TESTSUITE="yes"
+BUILD_STATIC="yes"
+BUILD_SHARED="no"
 BUILD_CFG="debug"
-VERBOSE="false"
-CLEAN="false"
+VERBOSE="no"
+CLEAN="no"
 
 print_help() {
-    echo "$1 [options]"
-    echo "Available options:"
-    echo "  [no-]examples   - (do not) build examples (default: build)"
-    echo "  [no-]test-suite - (do not) build test suite (default: build)"
-    echo "  static-lib      - static libostd"
-    echo "  shared-lib      - shared libostd"
-    echo "  mixed-lib       - static + shared libostd (default)"
-    echo "  release         - release build (strip, no -g)"
-    echo "  debug           - debug build (default, no strip, -g)"
-    echo "  verbose         - print entire commands"
-    echo "  clean           - remove temporary files and exit"
-    echo "  help            - print this"
+cat << EOF
+$1 [options]
+Available options:
+  [no-]examples   - (do not) build examples (default: yes)
+  [no-]test-suite - (do not) build test suite (default: yes)
+  [no-]static-lib - (do not) build static libostd (default: yes)
+  [no-]shared-lib - (do not) build shared libostd (default: no)
+  release         - release build (strip, no -g)
+  debug           - debug build (default, no strip, -g)
+  verbose         - print entire commands
+  clean           - remove generated files and exit
+  help            - print this and exit
+EOF
 }
 
 for arg in "$@"; do
     case "$arg" in
-       examples) BUILD_EXAMPLES="true" ;;
-       no-examples) BUILD_EXAMPLES="false" ;;
-       test-suite) BUILD_TESTSUITE="true" ;;
-       no-test-suite) BUILD_TESTSUITE="false" ;;
-       static-lib) BUILD_LIB="static" ;;
-       shared-lib) BUILD_LIB="shared" ;;
-       mixed-lib) BUILD_LIB="mixed" ;;
+       examples) BUILD_EXAMPLES="yes" ;;
+       no-examples) BUILD_EXAMPLES="no" ;;
+       test-suite) BUILD_TESTSUITE="yes" ;;
+       no-test-suite) BUILD_TESTSUITE="no" ;;
+       static-lib) BUILD_STATIC="yes" ;;
+       no-static-lib) BUILD_STATIC="no" ;;
+       shared-lib) BUILD_SHARED="yes" ;;
+       no-shared-lib) BUILD_SHARED="no" ;;
        release) BUILD_CFG="release" ;;
        debug) BUILD_CFG="debug" ;;
-       verbose) VERBOSE="true" ;;
-       clean) CLEAN="true" ;;
+       verbose) VERBOSE="yes" ;;
+       clean) CLEAN="yes" ;;
        help) print_help "$0"; exit 0 ;;
        *) ;;
     esac
     shift
 done
 
-if [ "$BUILD_LIB" = "shared" ]; then
-    OSTD_LIB="${OSTD_LIB}.so"
-    OSTD_DYNLIB=""
-else
-    OSTD_LIB="${OSTD_LIB}.a"
-    OSTD_DYNLIB="${OSTD_LIB}.so"
+OSTD_STATIC_LIB="${OSTD_LIB}.a"
+OSTD_SHARED_LIB="${OSTD_LIB}.so"
+OSTD_DEFAULT_LIB="$OSTD_SHARED_LIB"
+
+if [ "$BUILD_STATIC" = "yes" ]; then
+    OSTD_DEFAULT_LIB="$OSTD_STATIC_LIB"
 fi
 
 # compiler
@@ -95,7 +97,7 @@ if [ -z "$STRIP" ]; then
 fi
 
 # cross builds
-if [ -z "$CROSS" ]; then
+if [ ! -z "$CROSS" ]; then
     CXX="${CROSS}${CXX}"
     CPP="${CROSS}${CPP}"
     AS="${CROSS}${AS}"
@@ -114,11 +116,6 @@ OSTD_CXXFLAGS="${OSTD_CXXFLAGS} -O2"
 
 # warnings
 OSTD_CXXFLAGS="${OSTD_CXXFLAGS} -Wall -Wextra -Wshadow -Wold-style-cast"
-
-# -fPIC for shared libs
-if [ "$BUILD_LIB" = "shared" ]; then
-    OSTD_CXXFLAGS="${OSTD_CXXFLAGS} -fPIC"
-fi
 
 # -g for debug builds
 if [ "$BUILD_CFG" = "debug" ]; then
@@ -150,8 +147,8 @@ fi
 OSTD_ASFLAGS=""
 
 # custom assembler flags
-if [ ! -z "$LDFLAGS" ]; then
-    OSTD_LDFLAGS="${OSTD_LDFLAGS} ${LDFLAGS}"
+if [ ! -z "$ASFLAGS" ]; then
+    OSTD_ASFLAGS="${OSTD_ASFLAGS} ${ASFLAGS}"
 fi
 
 #
@@ -159,15 +156,15 @@ fi
 #
 
 evalv() {
-    if [ "$VERBOSE" = "true" ]; then
-        echo "$@"
+    if [ "$VERBOSE" = "yes" ]; then
+        echo "$*"
     fi
-    eval "$@"
+    eval "$*"
 }
 
 echoq() {
-    if [ "$VERBOSE" = "false" ]; then
-        echo "$@"
+    if [ "$VERBOSE" = "no" ]; then
+        echo "$*"
     fi
 }
 
@@ -179,37 +176,33 @@ clean() {
     done
     for as in ${ASM_SOURCES}; do
         evalv "rm -f \"${ASM_SOURCE_DIR}/${as}.o\""
-        evalv "rm -f \"${ASM_SOURCE_DIR}/${as}_dyn.o\""
     done
     for cs in ${CXX_SOURCES}; do
         evalv "rm -f \"${CXX_SOURCE_DIR}/${cs}.o\""
         evalv "rm -f \"${CXX_SOURCE_DIR}/${cs}_dyn.o\""
     done
-    evalv "rm -f \"$OSTD_LIB\""
-    if [ "$BUILD_LIB" = "mixed" ]; then
-        evalv "rm -f \"$OSTD_DYNLIB\""
-    fi
+    evalv "rm -f \"$OSTD_STATIC_LIB\""
+    evalv "rm -f \"$OSTD_SHARED_LIB\""
     evalv "rm -f test_runner.o test_runner"
 }
 
-# call_cxx input output
+# call_cxx input output [shared]
 call_cxx() {
-    echoq "CXX: $1"
-    evalv "${CXX} ${OSTD_CPPFLAGS} ${OSTD_CXXFLAGS} -c -o \"${2}\" \"${1}\""
-    if [ "$BUILD_LIB" = "mixed" ] && [ "x$3" = "xlib" ]; then
-        echoq "CXX (dynamic): $1"
-        DYNOBJ=$(echo "$2" | sed 's/\.o/_dyn\.o/g')
-        evalv "${CXX} ${OSTD_CPPFLAGS} ${OSTD_CXXFLAGS} -fPIC -c -o \"${DYNOBJ}\" \"${1}\""
+    FLAGS="${OSTD_CPPFLAGS} ${OSTD_CXXFLAGS}"
+    if [ "x$3" = "xshared" ]; then
+        echoq "CXX (shared): $1"
+        FLAGS="${FLAGS} -fPIC"
+    else
+        echoq "CXX: $1"
     fi
+    evalv "${CXX} ${FLAGS} -c -o \"${2}\" \"${1}\""
 }
 
 # call_as input output
 call_as() {
     echoq "AS: $1"
-    evalv "${CPP} -x assembler-with-cpp \"${1}\" | ${AS} -o \"${2}\""
-    if [ "$BUILD_LIB" = "mixed" ]; then
-        cp "$2" "$(echo $2 | sed 's/\.o/_dyn\.o/')"
-    fi
+    evalv "${CPP} -x assembler-with-cpp \"${1}\" | \
+        ${AS} ${OSTD_ASFLAGS} -o \"${2}\""
 }
 
 # call_ld output file1 file2 ...
@@ -224,76 +217,79 @@ call_ld() {
 
 # call_ldlib output file1 file2 ...
 call_ldlib() {
-    if [ "$BUILD_LIB" = "shared" ]; then
+    LIBTYPE="$1"
+    shift
+    if [ "$LIBTYPE" = "shared" ]; then
         call_ld "$@" "-shared"
     else
         echoq "AR: $1"
         evalv "${AR} rcs $@"
-    fi
-    if [ "$BUILD_LIB" = "mixed" ]; then
-        OUT=$(echo "$1" | sed 's/\.a/\.so/')
-        shift
-        OBJS="$@"
-        DYN_OBJ=$(echo "$OBJS" | sed 's/\.o/_dyn\.o/g')
-        call_ld "$OUT" "$DYN_OBJ" "-fPIC -shared"
     fi
 }
 
 # build_example name
 build_example() {
     call_cxx "examples/${1}.cc" "examples/${1}.o"
-    call_ld "examples/${1}" "examples/${1}.o" "$OSTD_LIB"
+    call_ld "examples/${1}" "examples/${1}.o" "$OSTD_DEFAULT_LIB"
     rm -f "examples/${1}.o"
 }
 
 # build test runner
 build_test_runner() {
     call_cxx test_runner.cc test_runner.o
-    call_ld test_runner test_runner.o "$OSTD_LIB"
+    call_ld test_runner test_runner.o "$OSTD_DEFAULT_LIB"
     rm -f test_runner.o
 }
 
-# add_sfx_pfx str sfx pfx
-add_sfx_pfx() {
-    RET=""
-    for it in $1; do
-        RET="$RET ${3}${it}${2}"
-    done
-    echo $RET
-}
-
 # check if cleaning
-if [ "$CLEAN" = "true" ]; then
+if [ "$CLEAN" = "yes" ]; then
     clean
     exit 0
 fi
 
-# build assembly
+# build library
+
+# built as files are compiled, used at link
+ASM_OBJ=""
+CXX_OBJ=""
+CXX_DYNOBJ=""
+
 echo "Building the library..."
 for as in $ASM_SOURCES; do
     call_as "${ASM_SOURCE_DIR}/${as}.S" "${ASM_SOURCE_DIR}/${as}.o" &
+    ASM_OBJ="${ASM_OBJ} ${ASM_SOURCE_DIR}/${as}.o"
 done
 for cs in $CXX_SOURCES; do
-    call_cxx "${CXX_SOURCE_DIR}/${cs}.cc" "${CXX_SOURCE_DIR}/${cs}.o" lib &
+    if [ "$BUILD_STATIC" = "yes" ]; then
+        call_cxx "${CXX_SOURCE_DIR}/${cs}.cc" "${CXX_SOURCE_DIR}/${cs}.o" &
+        CXX_OBJ="${CXX_OBJ} ${CXX_SOURCE_DIR}/${cs}.o"
+    fi
+    if [ "$BUILD_SHARED" = "yes" ]; then
+        call_cxx "${CXX_SOURCE_DIR}/${cs}.cc" \
+            "${CXX_SOURCE_DIR}/${cs}_dyn.o" shared &
+        CXX_DYNOBJ="${CXX_DYNOBJ} ${CXX_SOURCE_DIR}/${cs}_dyn.o"
+    fi
 done
 wait
 
-ASM_OBJ=$(add_sfx_pfx "$ASM_SOURCES" ".o" "$ASM_SOURCE_DIR/")
-CXX_OBJ=$(add_sfx_pfx "$CXX_SOURCES" ".o" "$CXX_SOURCE_DIR/")
-CXX_DYNOBJ=$(add_sfx_pfx "$CXX_SOURCES" ".o" "$CXX_SOURCE_DIR/dyn_")
-
-call_ldlib "$OSTD_LIB" "$ASM_OBJ" "$CXX_OBJ"
+if [ "$BUILD_STATIC" = "yes" ]; then
+    call_ldlib static "$OSTD_STATIC_LIB" "$ASM_OBJ" "$CXX_OBJ"
+    evalv "rm -f $CXX_OBJ"
+fi
+if [ "$BUILD_SHARED" = "yes" ]; then
+    call_ldlib shared "$OSTD_SHARED_LIB" "$ASM_OBJ" "$CXX_DYNOBJ"
+    evalv "rm -f $CXX_DYNOBJ"
+fi
 evalv "rm -f $ASM_OBJ"
-evalv "rm -f $CXX_OBJ"
 
 # build test runner
-if [ "$BUILD_TESTSUITE" = "true" ]; then
+if [ "$BUILD_TESTSUITE" = "yes" ]; then
     echo "Building test runner..."
     build_test_runner &
 fi
 
 # build examples
-if [ "$BUILD_EXAMPLES" = "true" ]; then
+if [ "$BUILD_EXAMPLES" = "yes" ]; then
     echo "Building examples..."
     for ex in $EXAMPLES; do
         build_example "$ex" &
