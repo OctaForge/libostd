@@ -66,9 +66,9 @@ void file_info::init_from_str(string_range path) {
         p_type = file_type::UNKNOWN;
     }
 
-    p_atime = detail::filetime_to_time_t(attr.ftLastAccessTime);
-    p_mtime = detail::filetime_to_time_t(attr.ftLastWriteTime);
-    p_ctime = detail::filetime_to_time_t(attr.ftCreationTime);
+    p_atime = filetime_to_time_t(attr.ftLastAccessTime);
+    p_mtime = filetime_to_time_t(attr.ftLastWriteTime);
+    p_ctime = filetime_to_time_t(attr.ftCreationTime);
 #else
     if (S_ISREG(st.st_mode)) {
         p_type = file_type::REGULAR;
