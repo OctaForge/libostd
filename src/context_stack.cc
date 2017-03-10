@@ -39,7 +39,7 @@ namespace detail {
 #if defined(OSTD_PLATFORM_WIN32)
         void *p = VirtualAlloc(0, sz, MEM_COMMIT, PAGE_READWRITE);
         if (!p) {
-            throw std::bad_alloc{}
+            throw std::bad_alloc{};
         }
         return p;
 #elif defined(OSTD_PLATFORM_POSIX)

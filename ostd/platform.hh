@@ -75,18 +75,14 @@
 #endif
 
 #ifdef OSTD_PLATFORM_WIN32
-#  ifdef OSTD_LIBRARY_DLL
-#    ifdef OSTD_TOOLCHAIN_GNU
-#      define OSTD_EXPORT __attribute__((dllexport))
-#    else
+#  if defined(OSTD_BUILD_LIB) || defined(OSTD_BUILD_DLL)
+#    ifdef OSTD_BUILD_DLL
 #      define OSTD_EXPORT __declspec(dllexport)
+#    else
+#      define OSTD_EXPORT
 #    endif
 #  else
-#    ifdef OSTD_TOOLCHAIN_GNU
-#      define OSTD_EXPORT __attribute__((dllimport))
-#    else
-#      define OSTD_EXPORT __declspec(dllimport)
-#    endif
+#    define OSTD_EXPORT __declspec(dllimport)
 #  endif
 #  define OSTD_LOCAL
 #else
