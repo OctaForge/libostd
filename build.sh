@@ -13,7 +13,7 @@ ASM_SOURCES="jump_all_gas make_all_gas ontop_all_gas"
 
 # c++ sources
 CXX_SOURCE_DIR="src"
-CXX_SOURCES="context_stack io filesystem"
+CXX_SOURCES="context_stack io"
 
 # output lib
 OSTD_LIB="libostd"
@@ -208,7 +208,7 @@ call_as() {
 # call_ld output file1 file2 ...
 call_ld() {
     echoq "LD: $1"
-    evalv "${CXX} ${OSTD_CPPFLAGS} ${OSTD_CXXFLAGS} ${OSTD_LDFLAGS} -o $@"
+    evalv "${CXX} ${OSTD_CPPFLAGS} ${OSTD_CXXFLAGS} -o $@ ${OSTD_LDFLAGS}"
     if [ "$BUILD_CFG" = "release" ]; then
         echoq "STRIP: $1"
         evalv "$STRIP \"$1\""

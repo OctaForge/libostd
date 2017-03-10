@@ -35,7 +35,7 @@ int main() {
     /* do not change past this point */
 
     int nsuccess = 0, nfailed = 0;
-    string_range modname = nullptr;
+    std::string modname = nullptr;
 
     auto print_result = [&](string_range fmsg = nullptr) {
         write(modname, "...\t");
@@ -48,23 +48,31 @@ int main() {
         }
     };
 
-    directory_stream ds{testdir};
-    for (auto v: iter(ds)) {
-        if ((v.type() != file_type::REGULAR) || (v.extension() != srcext))
+    filesystem::directory_iterator ds{testdir};
+    for (auto &v: ds) {
+        auto p = filesystem::path{v};
+        if (
+            (!filesystem::is_regular_file(p)) ||
+            (p.extension().string() != srcext)
+        ) {
             continue;
+        }
 
-        modname = v.stem();
+        modname = p.stem().string();
 
         std::string exepath = testdir;
-        exepath += PATH_SEPARATOR;
+        exepath += char(filesystem::path::preferred_separator);
         exepath += modname;
 #ifdef OSTD_PLATFORM_WIN32
         exepath += ".exe";
 #endif
 
         auto cxxcmd = appender<std::string>();
-        format(cxxcmd, "%s %s%s%s -o %s %s", compiler, testdir, PATH_SEPARATOR,
-               v.filename(), exepath, cxxflags);
+        format(
+            cxxcmd, "%s %s%s%s -o %s %s", compiler, testdir,
+            char(filesystem::path::preferred_separator),
+            p.filename(), exepath, cxxflags
+        );
         if (!userflags.empty()) {
             cxxcmd.get() += ' ';
             cxxcmd.get() += userflags;

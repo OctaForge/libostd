@@ -4,16 +4,16 @@
 
 using namespace ostd;
 
-void list_dirs(string_range path, int off = 0) {
-    directory_stream ds{path};
-    /* iterate all items in directory */
-    for (auto v: iter(ds)) {
-        if (v.type() != file_type::DIRECTORY) {
+void list_dirs(filesystem::path const &path, int off = 0) {
+    filesystem::directory_iterator ds{path};
+    for (auto &v: ds) {
+        auto p = filesystem::path{v};
+        if (!filesystem::is_directory(p)) {
             continue;
         }
         for_each(range(off), [](int) { write(' '); });
-        writeln(v.filename());
-        list_dirs(v.path(), off + 1);
+        writeln(p.filename());
+        list_dirs(p, off + 1);
     }
 }
 

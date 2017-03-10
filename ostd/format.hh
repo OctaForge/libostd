@@ -282,13 +282,13 @@ struct format_spec {
     bool is_nested() const { return p_is_nested; }
 
     template<typename R, typename ...A>
-    inline R &&format(R &&writer, A const &...args) {
+    R &&format(R &&writer, A const &...args) {
         write_fmt(writer, args...);
         return std::forward<R>(writer);
     }
 
     template<typename R, typename T>
-    inline R &&format_value(R &&writer, T const &val) {
+    R &&format_value(R &&writer, T const &val) const {
         write_arg(writer, 0, val);
         return std::forward<R>(writer);
     }
