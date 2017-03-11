@@ -567,6 +567,20 @@ inline void swap(generator<T> &a, generator<T> &b) {
     a.swap(b);
 }
 
+namespace detail {
+    template<typename T>
+    struct yield_type_base {
+        using type = typename generator<T>::yield_type;
+    };
+    template<typename R, typename ...A>
+    struct yield_type_base<R(A...)> {
+        using type = typename coroutine<R(A...)>::yield_type;
+    };
+}
+
+template<typename T>
+using yield_type = typename detail::yield_type_base<T>::type;
+
 template<typename T>
 struct generator_range: input_range<generator_range<T>> {
     using range_category  = input_range_tag;
