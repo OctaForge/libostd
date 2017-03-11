@@ -4,7 +4,7 @@
 using namespace ostd;
 
 int main() {
-    generator<int> g = [](auto yield) -> void {
+    generator<int> g = [](auto yield) {
         for (int i: range(5, 26, 5)) {
             yield(i);
         }
