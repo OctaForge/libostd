@@ -423,6 +423,18 @@ public:
     bool operator!=(range_half const &half) const {
         return !equals(half);
     }
+    bool operator<(range_half const &half) const {
+        return distance(half) > 0;
+    }
+    bool operator>(range_half const &half) const {
+        return distance(half) < 0;
+    }
+    bool operator<=(range_half const &half) const {
+        return distance(half) >= 0;
+    }
+    bool operator>=(range_half const &half) const {
+        return distance(half) <= 0;
+    }
 
     /* iterator like interface */
 
