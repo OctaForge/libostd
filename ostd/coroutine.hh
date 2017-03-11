@@ -99,16 +99,31 @@ namespace detail {
     template<typename ...A>
     struct coro_types {
         using yield_type = std::tuple<A...>;
+
+        static yield_type get(std::tuple<arg_wrapper<A>...> &args) {
+            return std::move(args);
+        }
     };
 
     template<typename A>
     struct coro_types<A> {
         using yield_type = A;
+
+        static yield_type get(std::tuple<arg_wrapper<A>> &args) {
+            return std::forward<A>(std::get<0>(args));
+        }
     };
 
     template<typename A, typename B>
     struct coro_types<A, B> {
         using yield_type = std::pair<A, B>;
+
+        static yield_type get(std::tuple<arg_wrapper<A>, arg_wrapper<B>> &args) {
+            return std::make_pair(
+                std::forward<A>(std::get<0>(args)),
+                std::forward<B>(std::get<1>(args))
+            );
+        }
     };
 
     template<>
@@ -130,15 +145,15 @@ namespace detail {
 
         template<size_t ...I>
         coro_args<A...> get_args(std::index_sequence<I...>) {
-            if constexpr(sizeof...(A) == 0) {
-                return;
-            } else if constexpr(sizeof...(A) == 1) {
-                return std::forward<A...>(std::get<0>(p_args));
-            } else if constexpr(sizeof...(A) == 2) {
-                return std::make_pair(std::forward<A>(std::get<I>(p_args))...);
-            } else {
-                return std::move(p_args);
-            }
+            return coro_types<A...>::get(p_args);
+        }
+
+        void set_args(A ...args) {
+            p_args = std::make_tuple(arg_wrapper<A>(std::forward<A>(args))...);
+        }
+
+        R get_result() {
+            return std::forward<R>(p_result);
         }
 
         template<typename Y, typename F, size_t ...I>
@@ -147,12 +162,6 @@ namespace detail {
                 std::forward<Y>(yielder),
                 std::forward<A>(std::get<I>(p_args))...
             ));
-        }
-
-        R call(A ...args) {
-            p_args = std::make_tuple(arg_wrapper<A>(std::forward<A>(args))...);
-            coroutine_context::call();
-            return std::forward<R>(p_result);
         }
 
         void swap(coro_base &other) {
@@ -175,14 +184,15 @@ namespace detail {
         template<size_t ...I>
         void get_args(std::index_sequence<I...>) {}
 
+        void set_args() {}
+
+        R get_result() {
+            return std::forward<R>(p_result);
+        }
+
         template<typename Y, typename F, size_t ...I>
         void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
             p_result = std::forward<R>(func(std::forward<Y>(yielder)));
-        }
-
-        R call() {
-            coroutine_context::call();
-            return std::forward<R>(this->p_result);
         }
 
         void swap(coro_base &other) {
@@ -202,16 +212,14 @@ namespace detail {
 
         template<size_t ...I>
         coro_args<A...> get_args(std::index_sequence<I...>) {
-            if constexpr(sizeof...(A) == 0) {
-                return;
-            } else if constexpr(sizeof...(A) == 1) {
-                return std::forward<A...>(std::get<0>(p_args));
-            } else if constexpr(sizeof...(A) == 2) {
-                return std::make_pair(std::forward<A>(std::get<I>(p_args))...);
-            } else {
-                return std::move(p_args);
-            }
+            return coro_types<A...>::get(p_args);
         }
+
+        void set_args(A ...args) {
+            p_args = std::make_tuple(arg_wrapper<A>(std::forward<A>(args))...);
+        }
+
+        void get_result() {}
 
         template<typename Y, typename F, size_t ...I>
         void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
@@ -219,11 +227,6 @@ namespace detail {
                 std::forward<Y>(yielder),
                 std::forward<A>(std::get<I>(p_args))...
             );
-        }
-
-        void call(A ...args) {
-            p_args = std::make_tuple(arg_wrapper<A>(std::forward<A>(args))...);
-            coroutine_context::call();
         }
 
         void swap(coro_base &other) {
@@ -244,13 +247,13 @@ namespace detail {
         template<size_t ...I>
         void get_args(std::index_sequence<I...>) {}
 
+        void set_args() {}
+
+        void get_result() {}
+
         template<typename Y, typename F, size_t ...I>
         void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
             func(std::forward<Y>(yielder));
-        }
-
-        void call() {
-            coroutine_context::call();
         }
 
         void swap(coro_base &other) {
@@ -373,7 +376,9 @@ public:
         if (this->p_state == detail::coroutine_context::state::TERM) {
             throw coroutine_error{"dead coroutine"};
         }
-        return this->call(std::forward<A>(args)...);
+        this->set_args(std::forward<A>(args)...);
+        detail::coroutine_context::call();
+        return this->get_result();
     }
 
     R operator()(A ...args) {
