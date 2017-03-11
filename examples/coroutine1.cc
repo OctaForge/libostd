@@ -37,7 +37,13 @@ int main() {
         int val = 5;
         for (int i: range(steps)) {
             writeln("    calling into coroutine...");
-            auto v = f(val);
+            int v;
+            try {
+                v = f(val);
+            } catch (coroutine_error const &e) {
+                writefln("coroutine error: %s", e.what());
+                return 0;
+            }
             writefln("    called into coroutine which yielded: %s", v);
             writefln("    call loop iteration %s done", i + 1);
             writefln("    coroutine dead: %s", !f);
@@ -285,6 +291,5 @@ starting main...
     call loop iteration 6 done
     coroutine dead: true
     calling into coroutine...
-terminating with uncaught exception of type ostd::coroutine_error: dead coroutine
-zsh: abort      ./coro
+coroutine error: dead coroutine
 */
