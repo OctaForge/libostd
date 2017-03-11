@@ -455,6 +455,8 @@ public:
             return;
         }
         this->make_context(sa, &context_call<SA>);
+        /* generate an initial value */
+        resume();
     }
 
     generator(generator const &) = delete;
@@ -561,9 +563,7 @@ struct generator_range: input_range<generator_range<T>> {
     using difference_type = stream_off_t;
 
     generator_range() = delete;
-    generator_range(generator<T> &g): p_gen(&g) {
-        pop_front();
-    }
+    generator_range(generator<T> &g): p_gen(&g) {}
     generator_range(generator_range const &r): p_gen(r.p_gen) {}
 
     bool empty() const {
