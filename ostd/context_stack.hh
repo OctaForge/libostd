@@ -67,13 +67,12 @@ struct basic_fixedsize_stack {
     using traits_type = TR;
 
     basic_fixedsize_stack(size_t ss = TR::default_size()) noexcept:
-        p_size(ss)
+        p_size(std::clamp(ss, TR::minimum_size(), TR::maximum_size()))
     {}
 
     stack_context allocate() {
         size_t ss = p_size;
 
-        ss = std::clamp(ss, TR::minimum_size(), TR::maximum_size());
         size_t pgs = TR::page_size();
         size_t npg = std::max(ss / pgs, size_t(size_t(Protected) + 1));
         size_t asize = npg * pgs;
@@ -129,12 +128,11 @@ struct basic_segmented_stack {
     using traits_type = TR;
 
     basic_segmented_stack(size_t ss = TR::default_size()) noexcept:
-        p_size(ss)
+        p_size(std::clamp(ss, TR::minimum_size(), TR::maximum_size()))
     {}
 
     stack_context allocate() {
         size_t ss = p_size;
-        ss = std::clamp(ss, TR::minimum_size(), TR::maximum_size());
 
         stack_context ret;
         void *p = detail::__splitstack_makecontext(
