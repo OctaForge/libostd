@@ -47,7 +47,7 @@ protected:
     };
 
     enum class state {
-        INIT = 0, HOLD, EXEC, TERM
+        HOLD = 0, EXEC, TERM
     };
 
     coroutine_context() {}
@@ -60,8 +60,8 @@ protected:
     {
         c.p_coro = c.p_orig = nullptr;
         c.p_stack = { nullptr, 0 };
-        c.p_state = state::TERM;
         c.p_sa = nullptr;
+        c.set_dead();
     }
 
     coroutine_context &operator=(coroutine_context const &) = delete;
@@ -79,7 +79,13 @@ protected:
     }
 
     void unwind() {
-        if (p_state == state::INIT) {
+        if (is_dead()) {
+            /* this coroutine was either initialized with a null function or
+             * it's already terminated and thus its stack has already unwound
+             */
+            return;
+        }
+        if (!p_orig) {
             /* this coroutine never got to live :(
              * let it call the entry point at least this once...
              * this will kill the stack so we don't leak memory
@@ -97,6 +103,7 @@ protected:
 
     template<typename SA>
     void finish() {
+        set_dead();
         ostd_ontop_fcontext(p_orig, this, [](transfer_t t) -> transfer_t {
             auto &self = *(static_cast<coroutine_context *>(t.data));
             auto &sa = *(static_cast<SA *>(self.p_sa));
@@ -112,6 +119,18 @@ protected:
     void yield_jump() {
         p_state = state::HOLD;
         p_orig = ostd_jump_fcontext(p_orig, nullptr).ctx;
+    }
+
+    bool is_hold() const {
+        return (p_state == state::HOLD);
+    }
+
+    bool is_dead() const {
+        return (p_state == state::TERM);
+    }
+
+    void set_dead() {
+        p_state = state::TERM;
     }
 
     void swap(coroutine_context &other) noexcept {
@@ -142,7 +161,7 @@ protected:
     fcontext_t p_coro;
     fcontext_t p_orig;
     std::exception_ptr p_except;
-    state p_state = state::INIT;
+    state p_state = state::HOLD;
     void *p_sa;
 };
 

@@ -341,14 +341,22 @@ public:
     {
         /* that way there is no context creation/stack allocation */
         if (!p_func) {
+            this->set_dead();
             return;
         }
         this->make_context(sa, &context_call<SA>);
     }
 
+    template<typename SA = default_stack>
+    coroutine(std::nullptr_t, SA = SA{0}):
+        base_t(), p_func(nullptr)
+    {
+        this->set_dead();
+    }
+
     coroutine(coroutine const &) = delete;
     coroutine(coroutine &&c):
-        detail::coro_base<R, A...>(std::move(c)), p_func(std::move(c.p_func))
+        base_t(std::move(c)), p_func(std::move(c.p_func))
     {
         c.p_func = nullptr;
     }
@@ -361,19 +369,15 @@ public:
     }
 
     ~coroutine() {
-        if (this->p_state == detail::coroutine_context::state::TERM) {
-            /* the stack has already unwound by a normal return */
-            return;
-        }
         this->unwind();
     }
 
     explicit operator bool() const {
-        return (this->p_state != detail::coroutine_context::state::TERM);
+        return !this->is_dead();
     }
 
     R resume(A ...args) {
-        if (this->p_state == detail::coroutine_context::state::TERM) {
+        if (this->is_dead()) {
             throw coroutine_error{"dead coroutine"};
         }
         this->set_args(std::forward<A>(args)...);
@@ -396,8 +400,10 @@ private:
     static void context_call(detail::transfer_t t) {
         auto &self = *(static_cast<coroutine *>(t.data));
         self.p_orig = t.ctx;
-        if (self.p_state == detail::coroutine_context::state::INIT) {
-            /* we never got to execute properly */
+        if (self.is_hold()) {
+            /* we never got to execute properly, we're HOLD because we
+             * jumped here without setting the state to EXEC before that
+             */
             goto release;
         }
         try {
@@ -413,7 +419,6 @@ private:
         }
         /* switch back, release stack */
 release:
-        self.p_state = detail::coroutine_context::state::TERM;
         self.template finish<SA>();
     }
 
@@ -434,6 +439,8 @@ namespace detail {
 template<typename T>
 struct generator: detail::coroutine_context {
 private:
+    using base_t = detail::coroutine_context;
+
     struct yielder {
         yielder(generator<T> &g): p_gen(g) {}
 
@@ -458,9 +465,12 @@ public:
     generator() = delete;
 
     template<typename F, typename SA = default_stack>
-    generator(F func, SA sa = SA{0}): p_func(std::move(func)) {
+    generator(F func, SA sa = SA{0}):
+        base_t(), p_func(std::move(func))
+    {
         /* that way there is no context creation/stack allocation */
         if (!p_func) {
+            this->set_dead();
             return;
         }
         this->make_context(sa, &context_call<SA>);
@@ -468,9 +478,16 @@ public:
         resume();
     }
 
+    template<typename SA = default_stack>
+    generator(std::nullptr_t, SA = SA{0}):
+        base_t(), p_func(nullptr)
+    {
+        this->set_dead();
+    }
+
     generator(generator const &) = delete;
     generator(generator &&c):
-        p_func(std::move(c.p_func)), p_result(c.p_result)
+        base_t(std::move(c)), p_func(std::move(c.p_func)), p_result(c.p_result)
     {
         c.p_func = nullptr;
         c.p_result = nullptr;
@@ -478,6 +495,7 @@ public:
 
     generator &operator=(generator const &) = delete;
     generator &operator=(generator &&c) {
+        base_t::operator=(std::move(c));
         p_func = std::move(c.p_func);
         p_result = c.p_result;
         c.p_func = nullptr;
@@ -485,18 +503,15 @@ public:
     }
 
     ~generator() {
-        if (this->p_state == detail::coroutine_context::state::TERM) {
-            return;
-        }
         this->unwind();
     }
 
     explicit operator bool() const {
-        return (this->p_state != detail::coroutine_context::state::TERM);
+        return !this->is_dead();
     }
 
     void resume() {
-        if (this->p_state == detail::coroutine_context::state::TERM) {
+        if (this->is_dead()) {
             throw coroutine_error{"dead generator"};
         }
         detail::coroutine_context::call();
@@ -517,7 +532,7 @@ public:
     }
 
     bool empty() const {
-        return (!p_result || this->p_state == detail::coroutine_context::state::TERM);
+        return (!p_result || this->is_dead());
     }
 
     generator_range<T> iter();
@@ -539,7 +554,7 @@ private:
     static void context_call(detail::transfer_t t) {
         auto &self = *(static_cast<generator *>(t.data));
         self.p_orig = t.ctx;
-        if (self.p_state == detail::coroutine_context::state::INIT) {
+        if (self.is_hold()) {
             goto release;
         }
         try {
@@ -550,7 +565,6 @@ private:
             self.p_except = std::current_exception();
         }
 release:
-        self.p_state = detail::coroutine_context::state::TERM;
         self.p_result = nullptr;
         self.template finish<SA>();
     }
