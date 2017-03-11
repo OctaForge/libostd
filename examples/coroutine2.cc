@@ -4,12 +4,10 @@
 using namespace ostd;
 
 int main() {
-    coroutine<int()> g = [](auto yield) {
-        yield(5);
-        yield(10);
-        yield(15);
-        yield(20);
-        return 25;
+    generator<int> g = [](auto yield) -> void {
+        for (int i: range(5, 26, 5)) {
+            yield(i);
+        }
     };
 
     writeln("generator test");

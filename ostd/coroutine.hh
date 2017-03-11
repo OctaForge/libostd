@@ -26,9 +26,6 @@ struct coroutine_error: std::runtime_error {
 template<typename T>
 struct coroutine;
 
-template<typename T>
-struct coroutine_range;
-
 namespace detail {
     /* like reference_wrapper but for any value */
     template<typename T>
@@ -114,45 +111,42 @@ namespace detail {
         using yield_type = std::pair<A, B>;
     };
 
+    template<>
+    struct coro_types<> {
+        using yield_type = void;
+    };
+
     template<typename ...A>
     using coro_args = typename coro_types<A...>::yield_type;
 
-    template<typename ...A, size_t ...I>
-    inline coro_args<A...> yield_ret(
-        std::tuple<arg_wrapper<A>...> &args, std::index_sequence<I...>
-    ) {
-        if constexpr(sizeof...(A) == 1) {
-            return std::forward<A...>(std::get<0>(args));
-        } else if constexpr(sizeof...(A) == 2) {
-            return std::make_pair(std::forward<A>(std::get<I>(args))...);
-        } else {
-            return std::move(args);
-        }
-    }
+    template<typename R, typename ...A>
+    struct coro_yielder;
 
     /* default case, yield returns args and takes a value */
     template<typename R, typename ...A>
     struct coro_base: coroutine_context {
     protected:
-        struct yielder {
-            yielder(coro_base<R, A...> &coro): p_coro(coro) {}
+        friend struct coro_yielder<R, A...>;
 
-            coro_args<A...> operator()(R &&ret) {
-                p_coro.p_result = std::forward<R>(ret);
-                p_coro.yield_jump();
-                return yield_ret(
-                    p_coro.p_args, std::make_index_sequence<sizeof...(A)>{}
-                );
+        template<size_t ...I>
+        coro_args<A...> get_args(std::index_sequence<I...>) {
+            if constexpr(sizeof...(A) == 0) {
+                return;
+            } else if constexpr(sizeof...(A) == 1) {
+                return std::forward<A...>(std::get<0>(p_args));
+            } else if constexpr(sizeof...(A) == 2) {
+                return std::make_pair(std::forward<A>(std::get<I>(p_args))...);
+            } else {
+                return std::move(p_args);
             }
-        private:
-            coro_base<R, A...> &p_coro;
-        };
+        }
 
-        template<typename F, size_t ...I>
-        void call_helper(F &func, std::index_sequence<I...>) {
-            p_result = std::forward<R>(
-                func(yielder{*this}, std::forward<A>(std::get<I>(p_args))...)
-            );
+        template<typename Y, typename F, size_t ...I>
+        void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
+            p_result = std::forward<R>(func(
+                std::forward<Y>(yielder),
+                std::forward<A>(std::get<I>(p_args))...
+            ));
         }
 
         R call(A ...args) {
@@ -175,23 +169,15 @@ namespace detail {
     /* yield takes a value but doesn't return any args */
     template<typename R>
     struct coro_base<R>: coroutine_context {
-        coroutine_range<R> iter();
-
     protected:
-        struct yielder {
-            yielder(coro_base<R> &coro): p_coro(coro) {}
+        friend struct coro_yielder<R>;
 
-            void operator()(R &&ret) {
-                p_coro.p_result = std::forward<R>(ret);
-                p_coro.yield_jump();
-            }
-        private:
-            coro_base<R> &p_coro;
-        };
+        template<size_t ...I>
+        void get_args(std::index_sequence<I...>) {}
 
-        template<typename F, size_t ...I>
-        void call_helper(F &func, std::index_sequence<I...>) {
-            p_result = std::forward<R>(func(yielder{*this}));
+        template<typename Y, typename F, size_t ...I>
+        void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
+            p_result = std::forward<R>(func(std::forward<Y>(yielder)));
         }
 
         R call() {
@@ -212,22 +198,27 @@ namespace detail {
     template<typename ...A>
     struct coro_base<void, A...>: coroutine_context {
     protected:
-        struct yielder {
-            yielder(coro_base<void, A...> &coro): p_coro(coro) {}
+        friend struct coro_yielder<void, A...>;
 
-            coro_args<A...> operator()() {
-                p_coro.yield_jump();
-                return yield_ret(
-                    p_coro.p_args, std::make_index_sequence<sizeof...(A)>{}
-                );
+        template<size_t ...I>
+        coro_args<A...> get_args(std::index_sequence<I...>) {
+            if constexpr(sizeof...(A) == 0) {
+                return;
+            } else if constexpr(sizeof...(A) == 1) {
+                return std::forward<A...>(std::get<0>(p_args));
+            } else if constexpr(sizeof...(A) == 2) {
+                return std::make_pair(std::forward<A>(std::get<I>(p_args))...);
+            } else {
+                return std::move(p_args);
             }
-        private:
-            coro_base<void, A...> &p_coro;
-        };
+        }
 
-        template<typename F, size_t ...I>
-        void call_helper(F &func, std::index_sequence<I...>) {
-            func(yielder{*this}, std::forward<A>(std::get<I>(p_args))...);
+        template<typename Y, typename F, size_t ...I>
+        void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
+            func(
+                std::forward<Y>(yielder),
+                std::forward<A>(std::get<I>(p_args))...
+            );
         }
 
         void call(A ...args) {
@@ -248,19 +239,14 @@ namespace detail {
     template<>
     struct coro_base<void>: coroutine_context {
     protected:
-        struct yielder {
-            yielder(coro_base<void> &coro): p_coro(coro) {}
+        friend struct coro_yielder<void>;
 
-            void operator()() {
-                p_coro.yield_jump();
-            }
-        private:
-            coro_base<void> &p_coro;
-        };
+        template<size_t ...I>
+        void get_args(std::index_sequence<I...>) {}
 
-        template<typename F, size_t ...I>
-        void call_helper(F &func, std::index_sequence<I...>) {
-            func(yielder{*this});
+        template<typename Y, typename F, size_t ...I>
+        void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
+            func(std::forward<Y>(yielder));
         }
 
         void call() {
@@ -271,6 +257,67 @@ namespace detail {
             coroutine_context::swap(other);
         }
     };
+
+    template<typename R, typename ...A>
+    struct coro_yielder {
+        coro_yielder(coro_base<R, A...> &coro): p_coro(coro) {}
+
+        coro_args<A...> operator()(R &&ret) {
+            p_coro.p_result = std::forward<R>(ret);
+            p_coro.yield_jump();
+            return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
+        }
+
+        coro_args<A...> operator()(R const &ret) {
+            p_coro.p_result = ret;
+            p_coro.yield_jump();
+            return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
+        }
+
+    private:
+        coro_base<R, A...> &p_coro;
+    };
+
+    template<typename R, typename ...A>
+    struct coro_yielder<R &, A...> {
+        coro_yielder(coro_base<R &, A...> &coro): p_coro(coro) {}
+
+        coro_args<A...> operator()(R &ret) {
+            p_coro.p_result = ret;
+            p_coro.yield_jump();
+            return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
+        }
+
+    private:
+        coro_base<R &, A...> &p_coro;
+    };
+
+    template<typename R, typename ...A>
+    struct coro_yielder<R &&, A...> {
+        coro_yielder(coro_base<R &&, A...> &coro): p_coro(coro) {}
+
+        coro_args<A...> operator()(R &&ret) {
+            p_coro.p_result = std::forward<R>(ret);
+            p_coro.yield_jump();
+            return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
+        }
+
+    private:
+        coro_base<R &&, A...> &p_coro;
+    };
+
+    template<typename ...A>
+    struct coro_yielder<void, A...> {
+        coro_yielder(coro_base<void, A...> &coro): p_coro(coro) {}
+
+        coro_args<A...> operator()() {
+            p_coro.yield_jump();
+            return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
+        }
+
+    private:
+        coro_base<void, A...> &p_coro;
+    };
 } /* namespace detail */
 
 template<typename R, typename ...A>
@@ -279,7 +326,7 @@ private:
     using base_t = detail::coro_base<R, A...>;
 
 public:
-    using yield_type = typename detail::coro_base<R, A...>::yielder;
+    using yield_type = detail::coro_yielder<R, A...>;
 
     /* we have no way to assign a function anyway... */
     coroutine() = delete;
@@ -349,7 +396,9 @@ private:
             goto release;
         }
         try {
-            self.call_helper(self.p_func, std::index_sequence_for<A...>{});
+            self.call_helper(
+                yield_type{self}, self.p_func, std::index_sequence_for<A...>{}
+            );
         } catch (detail::coroutine_context::forced_unwind v) {
             /* forced_unwind is unique */
             self.p_orig = v.ctx;
@@ -371,50 +420,174 @@ inline void swap(coroutine<R(A...)> &a, coroutine<R(A...)> &b) {
     a.swap(b);
 }
 
+template<typename T> struct generator_range;
+
 template<typename T>
-struct coroutine_range: input_range<coroutine_range<T>> {
+struct generator: detail::coroutine_context {
+private:
+    struct yielder {
+        yielder(generator<T> &g): p_gen(g) {}
+
+        void operator()(T &&ret) {
+            p_gen.p_result = &ret;
+            p_gen.yield_jump();
+        }
+
+        void operator()(T &ret) {
+            p_gen.p_result = &ret;
+            p_gen.yield_jump();
+        }
+    private:
+        generator<T> &p_gen;
+    };
+
+public:
+    using range = generator_range<T>;
+
+    using yield_type = yielder;
+
+    generator() = delete;
+
+    template<typename F, typename SA = default_stack>
+    generator(F func, SA sa = SA{0}): p_func(std::move(func)) {
+        /* that way there is no context creation/stack allocation */
+        if (!p_func) {
+            return;
+        }
+        this->make_context(sa, &context_call<SA>);
+    }
+
+    generator(generator const &) = delete;
+    generator(generator &&c):
+        p_func(std::move(c.p_func)), p_result(c.p_result)
+    {
+        c.p_func = nullptr;
+        c.p_result = nullptr;
+    }
+
+    generator &operator=(generator const &) = delete;
+    generator &operator=(generator &&c) {
+        p_func = std::move(c.p_func);
+        p_result = c.p_result;
+        c.p_func = nullptr;
+        c.p_result = nullptr;
+    }
+
+    ~generator() {
+        if (this->p_state == detail::coroutine_context::state::TERM) {
+            return;
+        }
+        this->unwind();
+    }
+
+    explicit operator bool() const {
+        return (this->p_state != detail::coroutine_context::state::TERM);
+    }
+
+    void resume() {
+        if (this->p_state == detail::coroutine_context::state::TERM) {
+            throw coroutine_error{"dead generator"};
+        }
+        detail::coroutine_context::call();
+    }
+
+    T &value() {
+        if (!p_result) {
+            throw coroutine_error{"no value"};
+        }
+        return *p_result;
+    }
+
+    T const &value() const {
+        if (!p_result) {
+            throw coroutine_error{"no value"};
+        }
+        return *p_result;
+    }
+
+    bool empty() const {
+        return (!p_result || this->p_state == detail::coroutine_context::state::TERM);
+    }
+
+    generator_range<T> iter();
+
+    void swap(generator &other) {
+        using std::swap;
+        swap(p_func, other.p_func);
+        swap(p_result, other.p_result);
+        detail::coroutine_context::swap(other);
+    }
+
+private:
+    /* the main entry point of the generator */
+    template<typename SA>
+    static void context_call(detail::transfer_t t) {
+        auto &self = *(static_cast<generator *>(t.data));
+        self.p_orig = t.ctx;
+        if (self.p_state == detail::coroutine_context::state::INIT) {
+            goto release;
+        }
+        try {
+            self.p_func(yield_type{self});
+        } catch (detail::coroutine_context::forced_unwind v) {
+            self.p_orig = v.ctx;
+        } catch (...) {
+            self.p_except = std::current_exception();
+        }
+release:
+        self.p_state = detail::coroutine_context::state::TERM;
+        self.p_result = nullptr;
+        self.template finish<SA>();
+    }
+
+    std::function<void(yield_type)> p_func;
+    /* we can use a pointer because even stack values are alive
+     * as long as the coroutine is alive (and it is on every yield)
+     */
+    T *p_result = nullptr;
+};
+
+template<typename T>
+inline void swap(generator<T> &a, generator<T> &b) {
+    a.swap(b);
+}
+
+template<typename T>
+struct generator_range: input_range<generator_range<T>> {
     using range_category  = input_range_tag;
     using value_type      = T;
     using reference       = T &;
     using size_type       = size_t;
     using difference_type = stream_off_t;
 
-    coroutine_range() = delete;
-    coroutine_range(coroutine<T()> &c): p_coro(&c) {
+    generator_range() = delete;
+    generator_range(generator<T> &g): p_gen(&g) {
         pop_front();
     }
-    coroutine_range(coroutine_range const &r):
-        p_coro(r.p_coro), p_item(r.p_item) {}
+    generator_range(generator_range const &r): p_gen(r.p_gen) {}
 
     bool empty() const {
-        return !p_item;
+        return p_gen->empty();
     }
 
     void pop_front() {
-        if (*p_coro) {
-            p_item = (*p_coro)();
-        } else {
-            p_item = std::nullopt;
-        }
+        p_gen->resume();
     }
 
     reference front() const {
-        return p_item.value();
+        return p_gen->value();
     }
 
-    bool equals_front(coroutine_range const &g) const {
-        return p_coro == g.p_coro;
+    bool equals_front(generator_range const &g) const {
+        return p_gen == g.p_gen;
     }
 private:
-    coroutine<T()> *p_coro;
-    mutable std::optional<T> p_item;
+    generator<T> *p_gen;
 };
 
-namespace detail {
-    template<typename R>
-    coroutine_range<R> coro_base<R>::iter() {
-        return coroutine_range<R>{static_cast<coroutine<R()> &>(*this)};
-    }
+template<typename T>
+generator_range<T> generator<T>::iter() {
+    return generator_range<T>{*this};
 }
 
 } /* namespace ostd */
