@@ -4,14 +4,14 @@
 using namespace ostd;
 
 int main() {
-    generator<int> g = [](auto yield) {
+    auto f = [](auto yield) {
         for (int i: range(5, 26, 5)) {
             yield(i);
         }
     };
 
     writeln("generator test");
-    for (int i: g.iter()) {
+    for (int i: generator<int>{f}) {
         writefln("generated: %s", i);
     }
 }

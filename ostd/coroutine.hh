@@ -427,6 +427,10 @@ inline void swap(coroutine<R(A...)> &a, coroutine<R(A...)> &b) {
 
 template<typename T> struct generator_range;
 
+namespace detail {
+    template<typename T> struct generator_iterator;
+}
+
 template<typename T>
 struct generator: detail::coroutine_context {
 private:
@@ -518,6 +522,10 @@ public:
 
     generator_range<T> iter();
 
+    /* for range for loop; they're the same, operator!= bypasses comparing */
+    detail::generator_iterator<T> begin();
+    detail::generator_iterator<T> end();
+
     void swap(generator &other) {
         using std::swap;
         swap(p_func, other.p_func);
@@ -565,11 +573,10 @@ struct generator_range: input_range<generator_range<T>> {
     using value_type      = T;
     using reference       = T &;
     using size_type       = size_t;
-    using difference_type = stream_off_t;
+    using difference_type = ptrdiff_t;
 
     generator_range() = delete;
     generator_range(generator<T> &g): p_gen(&g) {}
-    generator_range(generator_range const &r): p_gen(r.p_gen) {}
 
     bool empty() const {
         return p_gen->empty();
@@ -593,6 +600,41 @@ private:
 template<typename T>
 generator_range<T> generator<T>::iter() {
     return generator_range<T>{*this};
+}
+
+namespace detail {
+    /* deliberately incomplete, only for range for loop */
+    template<typename T>
+    struct generator_iterator {
+        generator_iterator() = delete;
+        generator_iterator(generator<T> &g): p_gen(&g) {}
+
+        bool operator!=(generator_iterator const &) {
+            return !p_gen->empty();
+        }
+
+        T &operator*() const {
+            return p_gen->value();
+        }
+
+        generator_iterator &operator++() {
+            p_gen->resume();
+            return *this;
+        }
+
+    private:
+        generator<T> *p_gen;
+    };
+} /* namespace detail */
+
+template<typename T>
+detail::generator_iterator<T> generator<T>::begin() {
+    return detail::generator_iterator<T>{*this};
+}
+
+template<typename T>
+detail::generator_iterator<T> generator<T>::end() {
+    return detail::generator_iterator<T>{*this};
 }
 
 } /* namespace ostd */

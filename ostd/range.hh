@@ -268,11 +268,6 @@ namespace detail {
             return get_ref().front();
         }
         bool operator!=(range_iterator) const { return !get_ref().empty(); }
-        void swap(range_iterator &v) {
-            using std::swap;
-            swap(get_ref(). v.get_ref());
-            swap(p_init, v.p_init);
-        }
     private:
         T &get_ref() { return *reinterpret_cast<T *>(&p_range); }
         T const &get_ref() const { return *reinterpret_cast<T const *>(&p_range); }
