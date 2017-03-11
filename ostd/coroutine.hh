@@ -355,14 +355,14 @@ public:
     }
 
     coroutine(coroutine const &) = delete;
-    coroutine(coroutine &&c):
+    coroutine(coroutine &&c) noexcept:
         base_t(std::move(c)), p_func(std::move(c.p_func))
     {
         c.p_func = nullptr;
     }
 
     coroutine &operator=(coroutine const &) = delete;
-    coroutine &operator=(coroutine &&c) {
+    coroutine &operator=(coroutine &&c) noexcept {
         base_t::operator=(std::move(c));
         p_func = std::move(c.p_func);
         c.p_func = nullptr;
@@ -372,7 +372,7 @@ public:
         this->unwind();
     }
 
-    explicit operator bool() const {
+    explicit operator bool() const noexcept {
         return !this->is_dead();
     }
 
@@ -389,7 +389,7 @@ public:
         return resume(std::forward<A>(args)...);
     }
 
-    void swap(coroutine &other) {
+    void swap(coroutine &other) noexcept {
         std::swap(p_func, other.p_func);
         base_t::swap(other);
     }
@@ -426,7 +426,7 @@ release:
 };
 
 template<typename R, typename ...A>
-inline void swap(coroutine<R(A...)> &a, coroutine<R(A...)> &b) {
+inline void swap(coroutine<R(A...)> &a, coroutine<R(A...)> &b) noexcept {
     a.swap(b);
 }
 
@@ -486,7 +486,7 @@ public:
     }
 
     generator(generator const &) = delete;
-    generator(generator &&c):
+    generator(generator &&c) noexcept:
         base_t(std::move(c)), p_func(std::move(c.p_func)), p_result(c.p_result)
     {
         c.p_func = nullptr;
@@ -494,7 +494,7 @@ public:
     }
 
     generator &operator=(generator const &) = delete;
-    generator &operator=(generator &&c) {
+    generator &operator=(generator &&c) noexcept {
         base_t::operator=(std::move(c));
         p_func = std::move(c.p_func);
         p_result = c.p_result;
@@ -506,7 +506,7 @@ public:
         this->unwind();
     }
 
-    explicit operator bool() const {
+    explicit operator bool() const noexcept {
         return !this->is_dead();
     }
 
@@ -531,17 +531,17 @@ public:
         return *p_result;
     }
 
-    bool empty() const {
+    bool empty() const noexcept {
         return (!p_result || this->is_dead());
     }
 
-    generator_range<T> iter();
+    generator_range<T> iter() noexcept;
 
     /* for range for loop; they're the same, operator!= bypasses comparing */
-    detail::generator_iterator<T> begin();
-    detail::generator_iterator<T> end();
+    detail::generator_iterator<T> begin() noexcept;
+    detail::generator_iterator<T> end() noexcept;
 
-    void swap(generator &other) {
+    void swap(generator &other) noexcept {
         using std::swap;
         swap(p_func, other.p_func);
         swap(p_result, other.p_result);
@@ -577,7 +577,7 @@ release:
 };
 
 template<typename T>
-inline void swap(generator<T> &a, generator<T> &b) {
+inline void swap(generator<T> &a, generator<T> &b) noexcept {
     a.swap(b);
 }
 
@@ -606,7 +606,7 @@ struct generator_range: input_range<generator_range<T>> {
     generator_range() = delete;
     generator_range(generator<T> &g): p_gen(&g) {}
 
-    bool empty() const {
+    bool empty() const noexcept {
         return p_gen->empty();
     }
 
@@ -618,7 +618,7 @@ struct generator_range: input_range<generator_range<T>> {
         return p_gen->value();
     }
 
-    bool equals_front(generator_range const &g) const {
+    bool equals_front(generator_range const &g) const noexcept {
         return p_gen == g.p_gen;
     }
 private:
@@ -626,7 +626,7 @@ private:
 };
 
 template<typename T>
-generator_range<T> generator<T>::iter() {
+generator_range<T> generator<T>::iter() noexcept {
     return generator_range<T>{*this};
 }
 
@@ -637,7 +637,7 @@ namespace detail {
         generator_iterator() = delete;
         generator_iterator(generator<T> &g): p_gen(&g) {}
 
-        bool operator!=(generator_iterator const &) {
+        bool operator!=(generator_iterator const &) noexcept {
             return !p_gen->empty();
         }
 
@@ -656,12 +656,12 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T>
-detail::generator_iterator<T> generator<T>::begin() {
+detail::generator_iterator<T> generator<T>::begin() noexcept {
     return detail::generator_iterator<T>{*this};
 }
 
 template<typename T>
-detail::generator_iterator<T> generator<T>::end() {
+detail::generator_iterator<T> generator<T>::end() noexcept {
     return detail::generator_iterator<T>{*this};
 }
 
