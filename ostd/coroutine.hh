@@ -267,14 +267,12 @@ namespace detail {
 
         coro_args<A...> operator()(R &&ret) {
             p_coro.p_result = std::forward<R>(ret);
-            p_coro.set_hold();
             p_coro.yield_jump();
             return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
         }
 
         coro_args<A...> operator()(R const &ret) {
             p_coro.p_result = ret;
-            p_coro.set_hold();
             p_coro.yield_jump();
             return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
         }
@@ -289,7 +287,6 @@ namespace detail {
 
         coro_args<A...> operator()(R &ret) {
             p_coro.p_result = ret;
-            p_coro.set_hold();
             p_coro.yield_jump();
             return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
         }
@@ -304,7 +301,6 @@ namespace detail {
 
         coro_args<A...> operator()(R &&ret) {
             p_coro.p_result = std::forward<R>(ret);
-            p_coro.set_hold();
             p_coro.yield_jump();
             return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
         }
@@ -318,7 +314,6 @@ namespace detail {
         coro_yielder(coro_base<void, A...> &coro): p_coro(coro) {}
 
         coro_args<A...> operator()() {
-            p_coro.set_hold();
             p_coro.yield_jump();
             return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
         }
@@ -424,8 +419,7 @@ private:
         }
         /* switch back, release stack */
 release:
-        self.set_dead();
-        self.yield_jump();
+        self.template finish<SA>();
     }
 
     std::function<R(yield_type, A...)> p_func;
@@ -452,13 +446,11 @@ private:
 
         void operator()(T &&ret) {
             p_gen.p_result = &ret;
-            p_gen.set_hold();
             p_gen.yield_jump();
         }
 
         void operator()(T &ret) {
             p_gen.p_result = &ret;
-            p_gen.set_hold();
             p_gen.yield_jump();
         }
     private:
@@ -574,8 +566,7 @@ private:
         }
 release:
         self.p_result = nullptr;
-        self.set_dead();
-        self.yield_jump();
+        self.template finish<SA>();
     }
 
     std::function<void(yield_type)> p_func;

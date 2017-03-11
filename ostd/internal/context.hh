@@ -56,12 +56,11 @@ protected:
     coroutine_context(coroutine_context &&c):
         p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
         p_except(std::move(c.p_except)), p_state(std::move(c.p_state)),
-        p_sa(c.p_sa), p_free(c.p_free)
+        p_sa(c.p_sa)
     {
         c.p_coro = c.p_orig = nullptr;
         c.p_stack = { nullptr, 0 };
         c.p_sa = nullptr;
-        c.p_free = nullptr;
         c.set_dead();
     }
 
@@ -80,21 +79,37 @@ protected:
     }
 
     void unwind() {
-        if (is_dead() || !p_orig) {
-            /* this coroutine is either done or never started */
-            free_stack();
+        if (is_dead()) {
+            /* this coroutine was either initialized with a null function or
+             * it's already terminated and thus its stack has already unwound
+             */
             return;
         }
-        /* this coroutine is suspended, and we need to make sure all
-         * the destructors for its locals get called by forcing unwind
-         */
+        if (!p_orig) {
+            /* this coroutine never got to live :(
+             * let it call the entry point at least this once...
+             * this will kill the stack so we don't leak memory
+             */
+            coro_jump();
+            return;
+        }
         ostd_ontop_fcontext(
             std::exchange(p_coro, nullptr), nullptr,
             [](transfer_t t) -> transfer_t {
                 throw forced_unwind{t.ctx};
             }
         );
-        free_stack();
+    }
+
+    template<typename SA>
+    void finish() {
+        set_dead();
+        ostd_ontop_fcontext(p_orig, this, [](transfer_t t) -> transfer_t {
+            auto &self = *(static_cast<coroutine_context *>(t.data));
+            auto &sa = *(static_cast<SA *>(self.p_sa));
+            sa.deallocate(self.p_stack);
+            return { nullptr, nullptr };
+        });
     }
 
     void coro_jump() {
@@ -102,6 +117,7 @@ protected:
     }
 
     void yield_jump() {
+        p_state = state::HOLD;
         p_orig = ostd_jump_fcontext(p_orig, nullptr).ctx;
     }
 
@@ -111,10 +127,6 @@ protected:
 
     bool is_dead() const {
         return (p_state == state::TERM);
-    }
-
-    void set_hold() {
-        p_state = state::HOLD;
     }
 
     void set_dead() {
@@ -129,7 +141,6 @@ protected:
         swap(p_except, other.p_except);
         swap(p_state, other.p_state);
         swap(p_sa, other.p_sa);
-        swap(p_free, other.p_free);
     }
 
     template<typename SA>
@@ -146,20 +157,6 @@ protected:
 
         p_coro = ostd_make_fcontext(sp, asize, callp);
         p_sa = new (sp) SA(std::move(sa));
-        p_free = &free_stack_call<SA>;
-    }
-
-    template<typename SA>
-    static void free_stack_call(void *data) {
-        auto &self = *(static_cast<coroutine_context *>(data));
-        auto &sa = *(static_cast<SA *>(self.p_sa));
-        sa.deallocate(self.p_stack);
-    }
-
-    void free_stack() {
-        if (p_free) {
-            p_free(this);
-        }
     }
 
     stack_context p_stack;
@@ -168,7 +165,6 @@ protected:
     std::exception_ptr p_except;
     state p_state = state::HOLD;
     void *p_sa = nullptr;
-    void (*p_free)(void *) = nullptr;
 };
 
 } /* namespace detail */
