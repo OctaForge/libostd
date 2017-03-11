@@ -66,8 +66,8 @@ template<typename TR, bool Protected>
 struct basic_fixedsize_stack {
     using traits_type = TR;
 
-    basic_fixedsize_stack(size_t ss = 0) noexcept:
-        p_size(ss ? ss : TR::default_size())
+    basic_fixedsize_stack(size_t ss = TR::default_size()) noexcept:
+        p_size(ss)
     {}
 
     stack_context allocate() {
@@ -128,12 +128,13 @@ template<typename TR>
 struct basic_segmented_stack {
     using traits_type = TR;
 
-    basic_segmented_stack(size_t ss = 0) noexcept:
-        p_size(ss ? ss : TR::default_size())
+    basic_segmented_stack(size_t ss = TR::default_size()) noexcept:
+        p_size(ss)
     {}
 
     stack_context allocate() {
         size_t ss = p_size;
+        ss = std::clamp(ss, TR::minimum_size(), TR::maximum_size());
 
         stack_context ret;
         void *p = detail::__splitstack_makecontext(

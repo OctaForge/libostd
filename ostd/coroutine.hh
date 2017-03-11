@@ -336,7 +336,7 @@ public:
 
     /* 0 means default size decided by the stack allocator */
     template<typename F, typename SA = default_stack>
-    coroutine(F func, SA sa = SA{0}):
+    coroutine(F func, SA sa = SA{}):
         base_t(), p_func(std::move(func))
     {
         /* that way there is no context creation/stack allocation */
@@ -465,7 +465,7 @@ public:
     generator() = delete;
 
     template<typename F, typename SA = default_stack>
-    generator(F func, SA sa = SA{0}):
+    generator(F func, SA sa = SA{}):
         base_t(), p_func(std::move(func))
     {
         /* that way there is no context creation/stack allocation */
