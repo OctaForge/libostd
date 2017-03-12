@@ -157,10 +157,9 @@ namespace detail {
         }
 
         template<typename Y, typename F, size_t ...I>
-        void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
+        void call_helper(F &func, std::index_sequence<I...>) {
             p_result = std::forward<R>(func(
-                std::forward<Y>(yielder),
-                std::forward<A>(std::get<I>(p_args))...
+                Y{*this}, std::forward<A>(std::get<I>(p_args))...
             ));
         }
 
@@ -191,8 +190,8 @@ namespace detail {
         }
 
         template<typename Y, typename F, size_t ...I>
-        void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
-            p_result = std::forward<R>(func(std::forward<Y>(yielder)));
+        void call_helper(F &func, std::index_sequence<I...>) {
+            p_result = std::forward<R>(func(Y{*this}));
         }
 
         void swap(coro_base &other) {
@@ -222,11 +221,8 @@ namespace detail {
         void get_result() {}
 
         template<typename Y, typename F, size_t ...I>
-        void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
-            func(
-                std::forward<Y>(yielder),
-                std::forward<A>(std::get<I>(p_args))...
-            );
+        void call_helper(F &func, std::index_sequence<I...>) {
+            func(Y{*this}, std::forward<A>(std::get<I>(p_args))...);
         }
 
         void swap(coro_base &other) {
@@ -252,8 +248,8 @@ namespace detail {
         void get_result() {}
 
         template<typename Y, typename F, size_t ...I>
-        void call_helper(Y &&yielder, F &func, std::index_sequence<I...>) {
-            func(std::forward<Y>(yielder));
+        void call_helper(F &func, std::index_sequence<I...>) {
+            func(Y{*this});
         }
 
         void swap(coro_base &other) {
@@ -327,6 +323,8 @@ template<typename R, typename ...A>
 struct coroutine<R(A...)>: detail::coro_base<R, A...> {
 private:
     using base_t = detail::coro_base<R, A...>;
+    /* necessary so that context callback can access privates */
+    friend struct detail::coroutine_context;
 
 public:
     using yield_type = detail::coro_yielder<R, A...>;
@@ -344,7 +342,7 @@ public:
             this->set_dead();
             return;
         }
-        this->make_context(sa, &context_call<SA>);
+        this->template make_context<coroutine<R(A...)>>(sa);
     }
 
     template<typename SA = default_stack>
@@ -395,31 +393,10 @@ public:
     }
 
 private:
-    /* the main entry point of the coroutine */
-    template<typename SA>
-    static void context_call(detail::transfer_t t) {
-        auto &self = *(static_cast<coroutine *>(t.data));
-        self.p_orig = t.ctx;
-        if (self.is_hold()) {
-            /* we never got to execute properly, we're HOLD because we
-             * jumped here without setting the state to EXEC before that
-             */
-            goto release;
-        }
-        try {
-            self.call_helper(
-                yield_type{self}, self.p_func, std::index_sequence_for<A...>{}
-            );
-        } catch (detail::coroutine_context::forced_unwind v) {
-            /* forced_unwind is unique */
-            self.p_orig = v.ctx;
-        } catch (...) {
-            /* some other exception, will be rethrown later */
-            self.p_except = std::current_exception();
-        }
-        /* switch back, release stack */
-release:
-        self.template finish<SA>();
+    void resume_call() {
+        base_t::template call_helper<yield_type>(
+            p_func, std::index_sequence_for<A...>{}
+        );
     }
 
     std::function<R(yield_type, A...)> p_func;
@@ -440,6 +417,7 @@ template<typename T>
 struct generator: detail::coroutine_context {
 private:
     using base_t = detail::coroutine_context;
+    friend struct detail::coroutine_context;
 
     struct yielder {
         yielder(generator<T> &g): p_gen(g) {}
@@ -473,7 +451,7 @@ public:
             this->set_dead();
             return;
         }
-        this->make_context(sa, &context_call<SA>);
+        this->template make_context<generator<T>>(sa);
         /* generate an initial value */
         resume();
     }
@@ -549,24 +527,8 @@ public:
     }
 
 private:
-    /* the main entry point of the generator */
-    template<typename SA>
-    static void context_call(detail::transfer_t t) {
-        auto &self = *(static_cast<generator *>(t.data));
-        self.p_orig = t.ctx;
-        if (self.is_hold()) {
-            goto release;
-        }
-        try {
-            self.p_func(yield_type{self});
-        } catch (detail::coroutine_context::forced_unwind v) {
-            self.p_orig = v.ctx;
-        } catch (...) {
-            self.p_except = std::current_exception();
-        }
-release:
-        self.p_result = nullptr;
-        self.template finish<SA>();
+    void resume_call() {
+        p_func(yield_type{*this});
     }
 
     std::function<void(yield_type)> p_func;

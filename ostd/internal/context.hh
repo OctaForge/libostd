@@ -101,17 +101,6 @@ protected:
         );
     }
 
-    template<typename SA>
-    void finish() {
-        set_dead();
-        ostd_ontop_fcontext(p_orig, this, [](transfer_t t) -> transfer_t {
-            auto &self = *(static_cast<coroutine_context *>(t.data));
-            auto &sa = *(static_cast<SA *>(self.p_sa));
-            sa.deallocate(self.p_stack);
-            return { nullptr, nullptr };
-        });
-    }
-
     void coro_jump() {
         p_coro = ostd_jump_fcontext(p_coro, this).ctx;
     }
@@ -144,7 +133,18 @@ protected:
     }
 
     template<typename SA>
-    void make_context(SA &sa, void (*callp)(transfer_t)) {
+    void finish() {
+        set_dead();
+        ostd_ontop_fcontext(p_orig, this, [](transfer_t t) -> transfer_t {
+            auto &self = *(static_cast<coroutine_context *>(t.data));
+            auto &sa = *(static_cast<SA *>(self.p_sa));
+            sa.deallocate(self.p_stack);
+            return { nullptr, nullptr };
+        });
+    }
+
+    template<typename C, typename SA>
+    void make_context(SA &sa) {
         p_stack = sa.allocate();
 
         constexpr size_t salign = alignof(SA);
@@ -155,8 +155,32 @@ protected:
         size_t asize = p_stack.size -
             (static_cast<byte *>(p_stack.ptr) - static_cast<byte *>(sp));
 
-        p_coro = ostd_make_fcontext(sp, asize, callp);
+        p_coro = ostd_make_fcontext(sp, asize, &context_call<C, SA>);
         p_sa = new (sp) SA(std::move(sa));
+    }
+
+    template<typename C, typename SA>
+    static void context_call(detail::transfer_t t) {
+        auto &self = *(static_cast<C *>(t.data));
+        self.p_orig = t.ctx;
+        if (self.is_hold()) {
+            /* we never got to execute properly, we're HOLD because we
+             * jumped here without setting the state to EXEC before that
+             */
+            goto release;
+        }
+        try {
+            self.resume_call();
+        } catch (detail::coroutine_context::forced_unwind v) {
+            /* forced_unwind is unique */
+            self.p_orig = v.ctx;
+        } catch (...) {
+            /* some other exception, will be rethrown later */
+            self.p_except = std::current_exception();
+        }
+        /* switch back, release stack */
+release:
+        self.template finish<SA>();
     }
 
     stack_context p_stack;
