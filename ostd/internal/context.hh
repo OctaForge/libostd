@@ -41,15 +41,6 @@ transfer_t OSTD_CDECL ostd_ontop_fcontext(
 
 struct coroutine_context {
 protected:
-    struct forced_unwind {
-        fcontext_t ctx;
-        forced_unwind(fcontext_t c): ctx(c) {}
-    };
-
-    enum class state {
-        HOLD = 0, EXEC, TERM
-    };
-
     coroutine_context() {}
 
     coroutine_context(coroutine_context const &) = delete;
@@ -132,17 +123,6 @@ protected:
         swap(p_sa, other.p_sa);
     }
 
-    template<typename SA>
-    void finish() {
-        set_dead();
-        ostd_ontop_fcontext(p_orig, this, [](transfer_t t) -> transfer_t {
-            auto &self = *(static_cast<coroutine_context *>(t.data));
-            auto &sa = *(static_cast<SA *>(self.p_sa));
-            sa.deallocate(self.p_stack);
-            return { nullptr, nullptr };
-        });
-    }
-
     template<typename C, typename SA>
     void make_context(SA &sa) {
         p_stack = sa.allocate();
@@ -157,6 +137,27 @@ protected:
 
         p_coro = ostd_make_fcontext(sp, asize, &context_call<C, SA>);
         p_sa = new (sp) SA(std::move(sa));
+    }
+
+private:
+    struct forced_unwind {
+        fcontext_t ctx;
+        forced_unwind(fcontext_t c): ctx(c) {}
+    };
+
+    enum class state {
+        HOLD = 0, EXEC, TERM
+    };
+
+    template<typename SA>
+    void finish() {
+        set_dead();
+        ostd_ontop_fcontext(p_orig, this, [](transfer_t t) -> transfer_t {
+            auto &self = *(static_cast<coroutine_context *>(t.data));
+            auto &sa = *(static_cast<SA *>(self.p_sa));
+            sa.deallocate(self.p_stack);
+            return { nullptr, nullptr };
+        });
     }
 
     template<typename C, typename SA>
