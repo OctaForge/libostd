@@ -366,10 +366,6 @@ public:
         c.p_func = nullptr;
     }
 
-    ~coroutine() {
-        this->unwind();
-    }
-
     explicit operator bool() const noexcept {
         return !this->is_dead();
     }
@@ -480,10 +476,6 @@ public:
         c.p_result = nullptr;
     }
 
-    ~generator() {
-        this->unwind();
-    }
-
     explicit operator bool() const noexcept {
         return !this->is_dead();
     }
@@ -510,7 +502,7 @@ public:
     }
 
     bool empty() const noexcept {
-        return (!p_result || this->is_dead());
+        return !p_result;
     }
 
     generator_range<T> iter() noexcept;
@@ -529,6 +521,8 @@ public:
 private:
     void resume_call() {
         p_func(yield_type{*this});
+        /* done, gotta null the item so that empty() returns true */
+        p_result = nullptr;
     }
 
     std::function<void(yield_type)> p_func;

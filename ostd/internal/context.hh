@@ -42,6 +42,9 @@ transfer_t OSTD_CDECL ostd_ontop_fcontext(
 struct coroutine_context {
 protected:
     coroutine_context() {}
+    ~coroutine_context() {
+        unwind();
+    }
 
     coroutine_context(coroutine_context const &) = delete;
     coroutine_context(coroutine_context &&c):
@@ -67,29 +70,6 @@ protected:
         if (p_except) {
             std::rethrow_exception(std::move(p_except));
         }
-    }
-
-    void unwind() {
-        if (is_dead()) {
-            /* this coroutine was either initialized with a null function or
-             * it's already terminated and thus its stack has already unwound
-             */
-            return;
-        }
-        if (!p_orig) {
-            /* this coroutine never got to live :(
-             * let it call the entry point at least this once...
-             * this will kill the stack so we don't leak memory
-             */
-            coro_jump();
-            return;
-        }
-        ostd_ontop_fcontext(
-            std::exchange(p_coro, nullptr), nullptr,
-            [](transfer_t t) -> transfer_t {
-                throw forced_unwind{t.ctx};
-            }
-        );
     }
 
     void coro_jump() {
@@ -148,6 +128,29 @@ private:
     enum class state {
         HOLD = 0, EXEC, TERM
     };
+
+    void unwind() {
+        if (is_dead()) {
+            /* this coroutine was either initialized with a null function or
+             * it's already terminated and thus its stack has already unwound
+             */
+            return;
+        }
+        if (!p_orig) {
+            /* this coroutine never got to live :(
+             * let it call the entry point at least this once...
+             * this will kill the stack so we don't leak memory
+             */
+            coro_jump();
+            return;
+        }
+        ostd_ontop_fcontext(
+            std::exchange(p_coro, nullptr), nullptr,
+            [](transfer_t t) -> transfer_t {
+                throw forced_unwind{t.ctx};
+            }
+        );
+    }
 
     template<typename SA>
     void finish() {
