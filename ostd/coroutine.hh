@@ -27,26 +27,44 @@ template<typename T>
 struct coroutine;
 
 namespace detail {
-    /* like reference_wrapper but for any value */
+    /* like reference_wrapper but for any value... doesn't have
+     * to be default constructible, so we can't store it directly
+     */
     template<typename T>
     struct arg_wrapper {
         arg_wrapper() = default;
-        arg_wrapper(T arg): p_arg(std::move(arg)) {}
+        arg_wrapper(T arg): p_init(true) {
+            new (&p_arg) T(std::move(arg));
+        }
+        ~arg_wrapper() {
+            if (p_init) {
+                reinterpret_cast<T *>(&p_arg)->~T();
+            }
+        }
 
         void operator=(T arg) {
-            p_arg = std::move(arg);
+            if (p_init) {
+                reinterpret_cast<T *>(&p_arg)->~T();
+            } else {
+                p_init = true;
+            }
+            new (&p_arg) T(std::move(arg));
         }
         operator T &&() {
-            return std::move(p_arg);
+            return std::move(*reinterpret_cast<T *>(&p_arg));
         }
 
         void swap(arg_wrapper &other) {
             using std::swap;
-            swap(p_arg, other.p_arg);
+            swap(
+                *reinterpret_cast<T *>(&p_arg),
+                *reinterpret_cast<T *>(&other.p_arg)
+            );
         }
 
     private:
-        T p_arg = T{};
+        std::aligned_storage_t <sizeof(T), alignof(T)> p_arg;
+        bool p_init = false;
     };
 
     template<typename T>
