@@ -577,6 +577,11 @@ struct generator_range: input_range<generator_range<T>> {
     bool equals_front(generator_range const &g) const noexcept {
         return p_gen == g.p_gen;
     }
+
+    /* same behavior as on generator itself, for range for loop */
+    detail::generator_iterator<T> begin() noexcept;
+    detail::generator_iterator<T> end() noexcept;
+
 private:
     generator<T> *p_gen;
 };
@@ -619,6 +624,16 @@ detail::generator_iterator<T> generator<T>::begin() noexcept {
 template<typename T>
 detail::generator_iterator<T> generator<T>::end() noexcept {
     return detail::generator_iterator<T>{*this};
+}
+
+template<typename T>
+detail::generator_iterator<T> generator_range<T>::begin() noexcept {
+    return detail::generator_iterator<T>{*p_gen};
+}
+
+template<typename T>
+detail::generator_iterator<T> generator_range<T>::end() noexcept {
+    return detail::generator_iterator<T>{*p_gen};
 }
 
 } /* namespace ostd */
