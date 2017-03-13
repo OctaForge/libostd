@@ -118,8 +118,16 @@ namespace detail {
     struct coro_types {
         using yield_type = std::tuple<A...>;
 
-        static yield_type get(std::tuple<arg_wrapper<A>...> &args) {
-            return std::move(args);
+        template<size_t ...I>
+        static yield_type get_impl(
+            std::tuple<std::add_pointer_t<A>...> &args,
+            std::index_sequence<I...>
+        ) {
+            return std::make_tuple(std::forward<A>(*std::get<I>(args))...);
+        }
+
+        static yield_type get(std::tuple<std::add_pointer_t<A>...> &args) {
+            return get_impl(args, std::index_sequence_for<A...>{});
         }
     };
 
@@ -127,8 +135,8 @@ namespace detail {
     struct coro_types<A> {
         using yield_type = A;
 
-        static yield_type get(std::tuple<arg_wrapper<A>> &args) {
-            return std::forward<A>(std::get<0>(args));
+        static yield_type get(std::tuple<std::add_pointer_t<A>> &args) {
+            return std::forward<A>(*std::get<0>(args));
         }
     };
 
@@ -136,10 +144,12 @@ namespace detail {
     struct coro_types<A, B> {
         using yield_type = std::pair<A, B>;
 
-        static yield_type get(std::tuple<arg_wrapper<A>, arg_wrapper<B>> &args) {
+        static yield_type get(
+            std::tuple<std::add_pointer_t<A>, std::add_pointer_t<B>> &args
+        ) {
             return std::make_pair(
-                std::forward<A>(std::get<0>(args)),
-                std::forward<B>(std::get<1>(args))
+                std::forward<A>(*std::get<0>(args)),
+                std::forward<B>(*std::get<1>(args))
             );
         }
     };
@@ -166,8 +176,8 @@ namespace detail {
             return coro_types<A...>::get(p_args);
         }
 
-        void set_args(A ...args) {
-            p_args = std::make_tuple(arg_wrapper<A>(std::forward<A>(args))...);
+        void set_args(std::add_pointer_t<A> ...args) {
+            p_args = std::make_tuple(args...);
         }
 
         R get_result() {
@@ -177,7 +187,7 @@ namespace detail {
         template<typename Y, typename F, size_t ...I>
         void call_helper(F &func, std::index_sequence<I...>) {
             p_result = std::forward<R>(func(
-                Y{*this}, std::forward<A>(std::get<I>(p_args))...
+                Y{*this}, std::forward<A>(*std::get<I>(p_args))...
             ));
         }
 
@@ -188,7 +198,7 @@ namespace detail {
             coroutine_context::swap(other);
         }
 
-        std::tuple<arg_wrapper<A>...> p_args;
+        std::tuple<std::add_pointer_t<A>...> p_args;
         arg_wrapper<R> p_result;
     };
 
@@ -232,15 +242,15 @@ namespace detail {
             return coro_types<A...>::get(p_args);
         }
 
-        void set_args(A ...args) {
-            p_args = std::make_tuple(arg_wrapper<A>(std::forward<A>(args))...);
+        void set_args(std::add_pointer_t<A> ...args) {
+            p_args = std::make_tuple(args...);
         }
 
         void get_result() {}
 
         template<typename Y, typename F, size_t ...I>
         void call_helper(F &func, std::index_sequence<I...>) {
-            func(Y{*this}, std::forward<A>(std::get<I>(p_args))...);
+            func(Y{*this}, std::forward<A>(*std::get<I>(p_args))...);
         }
 
         void swap(coro_base &other) {
@@ -249,7 +259,7 @@ namespace detail {
             coroutine_context::swap(other);
         }
 
-        std::tuple<arg_wrapper<A>...> p_args;
+        std::tuple<std::add_pointer_t<A>...> p_args;
     };
 
     /* yield doesn't take a value or return any args */
@@ -392,13 +402,19 @@ public:
         if (this->is_dead()) {
             throw coroutine_error{"dead coroutine"};
         }
-        this->set_args(std::forward<A>(args)...);
+        this->set_args(&args...);
         detail::coroutine_context::call();
         return this->get_result();
     }
 
     R operator()(A ...args) {
-        return resume(std::forward<A>(args)...);
+        /* duplicate the logic so we don't copy/move the args */
+        if (this->is_dead()) {
+            throw coroutine_error{"dead coroutine"};
+        }
+        this->set_args(&args...);
+        detail::coroutine_context::call();
+        return this->get_result();
     }
 
     void swap(coroutine &other) noexcept {
