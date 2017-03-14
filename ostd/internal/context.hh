@@ -107,8 +107,10 @@ protected:
     void make_context(SA &sa) {
         p_stack = sa.allocate();
 
-        constexpr size_t salign = alignof(SA);
+        /* 16 byte stack pointer alignment */
+        constexpr size_t salign = 16;
         constexpr size_t sasize = sizeof(SA);
+
         void *sp = static_cast<byte *>(p_stack.ptr) - sasize - salign;
         size_t space = sasize + salign;
         sp = std::align(salign, sasize, sp, space);
