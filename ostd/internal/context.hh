@@ -49,12 +49,10 @@ protected:
     coroutine_context(coroutine_context const &) = delete;
     coroutine_context(coroutine_context &&c):
         p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
-        p_except(std::move(c.p_except)), p_state(std::move(c.p_state)),
-        p_sa(c.p_sa)
+        p_except(std::move(c.p_except)), p_state(std::move(c.p_state))
     {
         c.p_coro = c.p_orig = nullptr;
         c.p_stack = { nullptr, 0 };
-        c.p_sa = nullptr;
         c.set_dead();
     }
 
@@ -100,28 +98,38 @@ protected:
         swap(p_orig, other.p_orig);
         swap(p_except, other.p_except);
         swap(p_state, other.p_state);
-        swap(p_sa, other.p_sa);
     }
 
     template<typename C, typename SA>
     void make_context(SA &sa) {
         p_stack = sa.allocate();
 
+        void *sp = get_stack_ptr<SA>();
+        size_t asize = p_stack.size -
+            (static_cast<byte *>(p_stack.ptr) - static_cast<byte *>(sp));
+
+        p_coro = ostd_make_fcontext(sp, asize, &context_call<C, SA>);
+        new (sp) SA(std::move(sa));
+    }
+
+private:
+    /* we also store the stack allocator at the end of the stack */
+    template<typename SA>
+    void *get_stack_ptr() {
         /* 16 byte stack pointer alignment */
         constexpr size_t salign = 16;
+        /* makes enough space so that we can store the allocator at
+         * stack pointer location (we'll need it for dealloc later)
+         */
         constexpr size_t sasize = sizeof(SA);
 
         void *sp = static_cast<byte *>(p_stack.ptr) - sasize - salign;
         size_t space = sasize + salign;
         sp = std::align(salign, sasize, sp, space);
-        size_t asize = p_stack.size -
-            (static_cast<byte *>(p_stack.ptr) - static_cast<byte *>(sp));
 
-        p_coro = ostd_make_fcontext(sp, asize, &context_call<C, SA>);
-        p_sa = new (sp) SA(std::move(sa));
+        return sp;
     }
 
-private:
     struct forced_unwind {
         fcontext_t ctx;
         forced_unwind(fcontext_t c): ctx(c) {}
@@ -159,8 +167,11 @@ private:
         set_dead();
         ostd_ontop_fcontext(p_orig, this, [](transfer_t t) -> transfer_t {
             auto &self = *(static_cast<coroutine_context *>(t.data));
-            auto &sa = *(static_cast<SA *>(self.p_sa));
-            sa.deallocate(self.p_stack);
+            auto &sa = *(static_cast<SA *>(self.get_stack_ptr<SA>()));
+            SA dsa{std::move(sa)};
+            /* in case it holds any state that needs destroying */
+            sa.~SA();
+            dsa.deallocate(self.p_stack);
             return { nullptr, nullptr };
         });
     }
@@ -194,7 +205,6 @@ release:
     fcontext_t p_orig;
     std::exception_ptr p_except;
     state p_state = state::HOLD;
-    void *p_sa = nullptr;
 };
 
 } /* namespace detail */
