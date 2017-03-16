@@ -565,7 +565,7 @@ private:
     /* we can use a pointer because even stack values are alive
      * as long as the coroutine is alive (and it is on every yield)
      */
-    std::decay_t<T> *p_result = nullptr;
+    std::remove_reference_t<T> *p_result = nullptr;
 };
 
 template<typename T>
