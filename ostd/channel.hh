@@ -17,8 +17,20 @@ struct channel_error: std::logic_error {
     using std::logic_error::logic_error;
 };
 
-template<typename T>
+template<typename T, typename C = std::condition_variable>
 struct channel {
+    using condition_variable_type = C;
+
+    /* default ctor works for default C */
+    channel() {}
+
+    /* constructing using a function object, keep in mind that condvars are
+     * not copy or move constructible, so the func has to work in a way that
+     * elides copying and moving (by directly returning the type ctor call)
+     */
+    template<typename F>
+    channel(F func): p_cond(func()) {}
+
     void put(T const &val) {
         put_impl(val);
     }
@@ -73,7 +85,7 @@ private:
     }
 
     std::list<T> p_messages;
-    std::condition_variable p_cond;
+    C p_cond;
     mutable std::mutex p_lock;
     bool p_closed = false;
 };
