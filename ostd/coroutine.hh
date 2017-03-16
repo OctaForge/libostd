@@ -27,6 +27,9 @@ template<typename T>
 struct coroutine;
 
 namespace detail {
+    template<typename T>
+    using coro_arg = std::add_pointer_t<std::remove_reference_t<T>>;
+
     /* dealing with args */
     template<typename ...A>
     struct coro_types {
@@ -34,13 +37,12 @@ namespace detail {
 
         template<size_t ...I>
         static yield_type get_impl(
-            std::tuple<std::add_pointer_t<A>...> &args,
-            std::index_sequence<I...>
+            std::tuple<coro_arg<A>...> &args, std::index_sequence<I...>
         ) {
             return std::make_tuple(std::forward<A>(*std::get<I>(args))...);
         }
 
-        static yield_type get(std::tuple<std::add_pointer_t<A>...> &args) {
+        static yield_type get(std::tuple<coro_arg<A>...> &args) {
             return get_impl(args, std::index_sequence_for<A...>{});
         }
     };
@@ -49,7 +51,7 @@ namespace detail {
     struct coro_types<A> {
         using yield_type = A;
 
-        static yield_type get(std::tuple<std::add_pointer_t<A>> &args) {
+        static yield_type get(std::tuple<coro_arg<A>> &args) {
             return std::forward<A>(*std::get<0>(args));
         }
     };
@@ -58,9 +60,7 @@ namespace detail {
     struct coro_types<A, B> {
         using yield_type = std::pair<A, B>;
 
-        static yield_type get(
-            std::tuple<std::add_pointer_t<A>, std::add_pointer_t<B>> &args
-        ) {
+        static yield_type get(std::tuple<coro_arg<A>, coro_arg<B>> &args) {
             return std::make_pair(
                 std::forward<A>(*std::get<0>(args)),
                 std::forward<B>(*std::get<1>(args))
@@ -132,22 +132,15 @@ namespace detail {
     template<typename R>
     using coro_result = typename coro_rtype<R>::type;
 
-    /* forward declare generic yielder for friends */
-    template<typename R, typename ...A>
-    struct coro_yielder;
-
     /* default case, yield returns args and takes a value */
     template<typename R, typename ...A>
-    struct coro_base: coroutine_context {
-    protected:
-        friend struct coro_yielder<R, A...>;
-
+    struct coro_stor {
         template<size_t ...I>
         coro_args<A...> get_args(std::index_sequence<I...>) {
             return coro_types<A...>::get(p_args);
         }
 
-        void set_args(std::add_pointer_t<A> ...args) {
+        void set_args(coro_arg<A> ...args) {
             p_args = std::make_tuple(args...);
         }
 
@@ -156,31 +149,28 @@ namespace detail {
         }
 
         template<typename Y, typename F, size_t ...I>
-        void call_helper(F &func, std::index_sequence<I...>) {
+        void call_helper(F &func, Y &&yielder, std::index_sequence<I...>) {
             coro_rtype<R>::store(p_result, std::forward<R>(func(
-                Y{*this}, std::forward<A>(*std::get<I>(p_args))...
+                std::forward<Y>(yielder),
+                std::forward<A>(*std::get<I>(p_args))...
             )));
         }
 
-        void swap(coro_base &other) {
+        void swap(coro_stor &other) {
             using std::swap;
             swap(p_args, other.p_args);
             /* no need to swap result as result is always only alive
              * for the time of a single resume, in which no swap happens
              */
-            coroutine_context::swap(other);
         }
 
-        std::tuple<std::add_pointer_t<A>...> p_args;
+        std::tuple<coro_arg<A>...> p_args;
         coro_result<R> p_result;
     };
 
     /* yield takes a value but doesn't return any args */
     template<typename R>
-    struct coro_base<R>: coroutine_context {
-    protected:
-        friend struct coro_yielder<R>;
-
+    struct coro_stor<R> {
         template<size_t ...I>
         void get_args(std::index_sequence<I...>) {}
 
@@ -191,54 +181,50 @@ namespace detail {
         }
 
         template<typename Y, typename F, size_t ...I>
-        void call_helper(F &func, std::index_sequence<I...>) {
-            coro_rtype<R>::store(p_result, std::forward<R>(func(Y{*this})));
+        void call_helper(F &func, Y &&yielder, std::index_sequence<I...>) {
+            coro_rtype<R>::store(
+                p_result, std::forward<R>(func(std::forward<Y>(yielder)))
+            );
         }
 
-        void swap(coro_base &other) {
-            coroutine_context::swap(other);
-        }
+        void swap(coro_stor &) {}
 
         coro_result<R> p_result;
     };
 
     /* yield doesn't take a value and returns args */
     template<typename ...A>
-    struct coro_base<void, A...>: coroutine_context {
-    protected:
-        friend struct coro_yielder<void, A...>;
-
+    struct coro_stor<void, A...> {
         template<size_t ...I>
         coro_args<A...> get_args(std::index_sequence<I...>) {
             return coro_types<A...>::get(p_args);
         }
 
-        void set_args(std::add_pointer_t<A> ...args) {
+        void set_args(coro_arg<A> ...args) {
             p_args = std::make_tuple(args...);
         }
 
         void get_result() {}
 
         template<typename Y, typename F, size_t ...I>
-        void call_helper(F &func, std::index_sequence<I...>) {
-            func(Y{*this}, std::forward<A>(*std::get<I>(p_args))...);
+        void call_helper(F &func, Y &&yielder, std::index_sequence<I...>) {
+            func(
+                std::forward<Y>(yielder),
+                std::forward<A>(*std::get<I>(p_args))...
+            );
         }
 
-        void swap(coro_base &other) {
+        void swap(coro_stor &other) {
             using std::swap;
             swap(p_args, other.p_args);
-            coroutine_context::swap(other);
         }
 
-        std::tuple<std::add_pointer_t<A>...> p_args;
+        std::tuple<coro_arg<A>...> p_args;
     };
 
     /* yield doesn't take a value or return any args */
     template<>
-    struct coro_base<void>: coroutine_context {
-    protected:
-        friend struct coro_yielder<void>;
-
+    struct coro_stor<void> {
         template<size_t ...I>
         void get_args(std::index_sequence<I...>) {}
 
@@ -247,86 +233,88 @@ namespace detail {
         void get_result() {}
 
         template<typename Y, typename F, size_t ...I>
-        void call_helper(F &func, std::index_sequence<I...>) {
-            func(Y{*this});
+        void call_helper(F &func, Y &&yielder, std::index_sequence<I...>) {
+            func(std::forward<Y>(yielder));
         }
 
-        void swap(coro_base &other) {
-            coroutine_context::swap(other);
-        }
-    };
-
-    template<typename R, typename ...A>
-    struct coro_yielder {
-        coro_yielder(coro_base<R, A...> &coro): p_coro(coro) {}
-
-        coro_args<A...> operator()(R &&ret) {
-            coro_rtype<R>::store(p_coro.p_result, std::move(ret));
-            p_coro.yield_jump();
-            return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
-        }
-
-        coro_args<A...> operator()(R const &ret) {
-            coro_rtype<R>::store(p_coro.p_result, ret);
-            p_coro.yield_jump();
-            return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
-        }
-
-    private:
-        coro_base<R, A...> &p_coro;
-    };
-
-    template<typename R, typename ...A>
-    struct coro_yielder<R &, A...> {
-        coro_yielder(coro_base<R &, A...> &coro): p_coro(coro) {}
-
-        coro_args<A...> operator()(R &ret) {
-            coro_rtype<R &>::store(p_coro.p_result, ret);
-            p_coro.yield_jump();
-            return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
-        }
-
-    private:
-        coro_base<R &, A...> &p_coro;
-    };
-
-    template<typename R, typename ...A>
-    struct coro_yielder<R &&, A...> {
-        coro_yielder(coro_base<R &&, A...> &coro): p_coro(coro) {}
-
-        coro_args<A...> operator()(R &&ret) {
-            coro_rtype<R &&>::store(p_coro.p_result, std::move(ret));
-            p_coro.yield_jump();
-            return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
-        }
-
-    private:
-        coro_base<R &&, A...> &p_coro;
-    };
-
-    template<typename ...A>
-    struct coro_yielder<void, A...> {
-        coro_yielder(coro_base<void, A...> &coro): p_coro(coro) {}
-
-        coro_args<A...> operator()() {
-            p_coro.yield_jump();
-            return p_coro.get_args(std::make_index_sequence<sizeof...(A)>{});
-        }
-
-    private:
-        coro_base<void, A...> &p_coro;
+        void swap(coro_stor &) {}
     };
 } /* namespace detail */
 
 template<typename R, typename ...A>
-struct coroutine<R(A...)>: detail::coro_base<R, A...> {
+struct coroutine<R(A...)>: detail::coroutine_context {
 private:
-    using base_t = detail::coro_base<R, A...>;
+    using base_t = detail::coroutine_context;
     /* necessary so that context callback can access privates */
     friend struct detail::coroutine_context;
 
+    template<typename RR, typename ...AA>
+    struct yielder {
+        yielder(coroutine<RR(AA...)> &coro): p_coro(coro) {}
+
+        detail::coro_args<AA...> operator()(RR &&ret) {
+            detail::coro_rtype<RR>::store(
+                p_coro.p_stor.p_result, std::move(ret)
+            );
+            p_coro.yield_jump();
+            return p_coro.p_stor.get_args(std::index_sequence_for<AA...>{});
+        }
+
+        detail::coro_args<AA...> operator()(RR const &ret) {
+            detail::coro_rtype<RR>::store(p_coro.p_stor.p_result, ret);
+            p_coro.yield_jump();
+            return p_coro.p_stor.get_args(std::index_sequence_for<AA...>{});
+        }
+
+    private:
+        coroutine<RR(AA...)> &p_coro;
+    };
+
+    template<typename RR, typename ...AA>
+    struct yielder<RR &, AA...> {
+        yielder(coroutine<RR &(AA...)> &coro): p_coro(coro) {}
+
+        detail::coro_args<AA...> operator()(RR &ret) {
+            detail::coro_rtype<RR &>::store(p_coro.p_stor.p_result, ret);
+            p_coro.yield_jump();
+            return p_coro.p_stor.get_args(std::index_sequence_for<AA...>{});
+        }
+
+    private:
+        coroutine<RR &(AA...)> &p_coro;
+    };
+
+    template<typename RR, typename ...AA>
+    struct yielder<RR &&, AA...> {
+        yielder(coroutine<RR &&(AA...)> &coro): p_coro(coro) {}
+
+        detail::coro_args<AA...> operator()(RR &&ret) {
+            detail::coro_rtype<RR &&>::store(
+                p_coro.p_stor.p_result, std::move(ret)
+            );
+            p_coro.yield_jump();
+            return p_coro.p_stor.get_args(std::index_sequence_for<AA...>{});
+        }
+
+    private:
+        coroutine<RR &&(AA...)> &p_coro;
+    };
+
+    template<typename ...AA>
+    struct yielder<void, AA...> {
+        yielder(coroutine<void(AA...)> &coro): p_coro(coro) {}
+
+        detail::coro_args<AA...> operator()() {
+            p_coro.yield_jump();
+            return p_coro.p_stor.get_args(std::index_sequence_for<AA...>{});
+        }
+
+    private:
+        coroutine<void(AA...)> &p_coro;
+    };
+
 public:
-    using yield_type = detail::coro_yielder<R, A...>;
+    using yield_type = yielder<R, A...>;
 
     /* we have no way to assign a function anyway... */
     coroutine() = delete;
@@ -334,7 +322,7 @@ public:
     /* 0 means default size decided by the stack allocator */
     template<typename F, typename SA = default_stack>
     coroutine(F func, SA sa = SA{}):
-        base_t(), p_func(std::move(func))
+        base_t(), p_stor(), p_func(std::move(func))
     {
         /* that way there is no context creation/stack allocation */
         if (!p_func) {
@@ -346,14 +334,15 @@ public:
 
     template<typename SA = default_stack>
     coroutine(std::nullptr_t, SA = SA{0}):
-        base_t(), p_func(nullptr)
+        base_t(), p_stor(), p_func(nullptr)
     {
         this->set_dead();
     }
 
     coroutine(coroutine const &) = delete;
     coroutine(coroutine &&c) noexcept:
-        base_t(std::move(c)), p_func(std::move(c.p_func))
+        base_t(std::move(c)),
+        p_stor(std::move(c.p_stor)), p_func(std::move(c.p_func))
     {
         c.p_func = nullptr;
     }
@@ -361,6 +350,7 @@ public:
     coroutine &operator=(coroutine const &) = delete;
     coroutine &operator=(coroutine &&c) noexcept {
         base_t::operator=(std::move(c));
+        p_stor = std::move(c.p_stor);
         p_func = std::move(c.p_func);
         c.p_func = nullptr;
     }
@@ -374,7 +364,7 @@ public:
             throw coroutine_error{"dead coroutine"};
         }
         this->set_args(&args...);
-        detail::coroutine_context::call();
+        base_t::call();
         return this->get_result();
     }
 
@@ -383,23 +373,25 @@ public:
         if (this->is_dead()) {
             throw coroutine_error{"dead coroutine"};
         }
-        this->set_args(&args...);
-        detail::coroutine_context::call();
-        return this->get_result();
+        p_stor.set_args(&args...);
+        base_t::call();
+        return p_stor.get_result();
     }
 
     void swap(coroutine &other) noexcept {
+        p_stor.swap(other.p_stor);
         std::swap(p_func, other.p_func);
         base_t::swap(other);
     }
 
 private:
     void resume_call() {
-        base_t::template call_helper<yield_type>(
-            p_func, std::index_sequence_for<A...>{}
+        p_stor.call_helper(
+            p_func, yield_type{*this}, std::index_sequence_for<A...>{}
         );
     }
 
+    detail::coro_stor<R, A...> p_stor;
     std::function<R(yield_type, A...)> p_func;
 };
 
