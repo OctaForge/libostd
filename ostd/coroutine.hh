@@ -420,26 +420,57 @@ private:
     using base_t = detail::coroutine_context;
     friend struct detail::coroutine_context;
 
+    template<typename U>
     struct yielder {
-        yielder(generator<T> &g): p_gen(g) {}
+        yielder(generator<U> &g): p_gen(g) {}
 
-        void operator()(T &&ret) {
+        void operator()(U &&ret) {
             p_gen.p_result = &ret;
             p_gen.yield_jump();
         }
 
-        void operator()(T &ret) {
+        void operator()(U const &ret) {
+            if constexpr(std::is_const_v<U>) {
+                p_gen.p_result = &ret;
+                p_gen.yield_jump();
+            } else {
+                T val{ret};
+                p_gen.p_result = &val;
+                p_gen.yield_jump();
+            }
+        }
+    private:
+        generator<U> &p_gen;
+    };
+
+    template<typename U>
+    struct yielder<U &> {
+        yielder(generator<U> &g): p_gen(g) {}
+
+        void operator()(U &ret) {
             p_gen.p_result = &ret;
             p_gen.yield_jump();
         }
     private:
-        generator<T> &p_gen;
+        generator<U> &p_gen;
+    };
+
+    template<typename U>
+    struct yielder<U &&> {
+        yielder(generator<U> &g): p_gen(g) {}
+
+        void operator()(U &&ret) {
+            p_gen.p_result = &ret;
+            p_gen.yield_jump();
+        }
+    private:
+        generator<U> &p_gen;
     };
 
 public:
     using range = generator_range<T>;
 
-    using yield_type = yielder;
+    using yield_type = yielder<T>;
 
     generator() = delete;
 
@@ -534,7 +565,7 @@ private:
     /* we can use a pointer because even stack values are alive
      * as long as the coroutine is alive (and it is on every yield)
      */
-    T *p_result = nullptr;
+    std::decay_t<T> *p_result = nullptr;
 };
 
 template<typename T>
