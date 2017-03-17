@@ -145,10 +145,11 @@ namespace detail {
             return std::forward<R>(coro_rtype<R>::get(p_result));
         }
 
-        void call_helper(Y &&yielder) {
-            std::apply([this, yielder = std::move(yielder)](auto ...args) {
+        template<typename C>
+        void call_helper(C &coro) {
+            std::apply([this, &coro](auto ...args) {
                 coro_rtype<R>::store(p_result, std::forward<R>(p_func(
-                    std::move(yielder), std::forward<A>(*args)...
+                    Y{coro}, std::forward<A>(*args)...
                 )));
             }, p_args);
         }
@@ -180,9 +181,10 @@ namespace detail {
             return std::forward<R>(coro_rtype<R>::get(p_result));
         }
 
-        void call_helper(Y &&yielder) {
+        template<typename C>
+        void call_helper(C &coro) {
             coro_rtype<R>::store(
-                p_result, std::forward<R>(p_func(std::move(yielder)))
+                p_result, std::forward<R>(p_func(Y{coro}))
             );
         }
 
@@ -210,9 +212,10 @@ namespace detail {
 
         void get_result() {}
 
-        void call_helper(Y &&yielder) {
-            std::apply([this, yielder = std::move(yielder)](auto ...args) {
-                p_func(std::move(yielder), std::forward<A>(*args)...);
+        template<typename C>
+        void call_helper(C &coro) {
+            std::apply([this, &coro](auto ...args) {
+                p_func(Y{coro}, std::forward<A>(*args)...);
             }, p_args);
         }
 
@@ -237,8 +240,9 @@ namespace detail {
 
         void get_result() {}
 
-        void call_helper(Y &&yielder) {
-            p_func(std::move(yielder));
+        template<typename C>
+        void call_helper(C &coro) {
+            p_func(Y{coro});
         }
 
         void swap(coro_stor &other) {
@@ -387,7 +391,7 @@ public:
 
 private:
     void resume_call() {
-        p_stor.call_helper(yield_type{*this});
+        p_stor.call_helper(*this);
     }
 
     detail::coro_stor<yield_type, R, A...> p_stor;
