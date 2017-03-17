@@ -133,8 +133,11 @@ namespace detail {
     using coro_result = typename coro_rtype<R>::type;
 
     /* default case, yield returns args and takes a value */
-    template<typename R, typename ...A>
+    template<typename Y, typename R, typename ...A>
     struct coro_stor {
+        template<typename F>
+        coro_stor(F &&func): p_func(std::forward<F>(func)) {}
+
         template<size_t ...I>
         coro_args<A...> get_args(std::index_sequence<I...>) {
             return coro_types<A...>::get(p_args);
@@ -148,29 +151,34 @@ namespace detail {
             return std::forward<R>(coro_rtype<R>::get(p_result));
         }
 
-        template<typename Y, typename F, size_t ...I>
-        void call_helper(F &func, Y &&yielder, std::index_sequence<I...>) {
-            coro_rtype<R>::store(p_result, std::forward<R>(func(
-                std::forward<Y>(yielder),
+        template<size_t ...I>
+        void call_helper(Y &&yielder, std::index_sequence<I...>) {
+            coro_rtype<R>::store(p_result, std::forward<R>(p_func(
+                std::move(yielder),
                 std::forward<A>(*std::get<I>(p_args))...
             )));
         }
 
         void swap(coro_stor &other) {
             using std::swap;
+            swap(p_func, other.p_func);
             swap(p_args, other.p_args);
             /* no need to swap result as result is always only alive
              * for the time of a single resume, in which no swap happens
              */
         }
 
+        std::function<R(Y, A...)> p_func;
         std::tuple<coro_arg<A>...> p_args;
         coro_result<R> p_result;
     };
 
     /* yield takes a value but doesn't return any args */
-    template<typename R>
-    struct coro_stor<R> {
+    template<typename Y, typename R>
+    struct coro_stor<Y, R> {
+        template<typename F>
+        coro_stor(F &&func): p_func(std::forward<F>(func)) {}
+
         template<size_t ...I>
         void get_args(std::index_sequence<I...>) {}
 
@@ -180,21 +188,27 @@ namespace detail {
             return std::forward<R>(coro_rtype<R>::get(p_result));
         }
 
-        template<typename Y, typename F, size_t ...I>
-        void call_helper(F &func, Y &&yielder, std::index_sequence<I...>) {
+        template<size_t ...I>
+        void call_helper(Y &&yielder, std::index_sequence<I...>) {
             coro_rtype<R>::store(
-                p_result, std::forward<R>(func(std::forward<Y>(yielder)))
+                p_result, std::forward<R>(p_func(std::move(yielder)))
             );
         }
 
-        void swap(coro_stor &) {}
+        void swap(coro_stor &other) {
+            std::swap(p_func, other.p_func);
+        }
 
+        std::function<R(Y)> p_func;
         coro_result<R> p_result;
     };
 
     /* yield doesn't take a value and returns args */
-    template<typename ...A>
-    struct coro_stor<void, A...> {
+    template<typename Y, typename ...A>
+    struct coro_stor<Y, void, A...> {
+        template<typename F>
+        coro_stor(F &&func): p_func(std::forward<F>(func)) {}
+
         template<size_t ...I>
         coro_args<A...> get_args(std::index_sequence<I...>) {
             return coro_types<A...>::get(p_args);
@@ -206,25 +220,27 @@ namespace detail {
 
         void get_result() {}
 
-        template<typename Y, typename F, size_t ...I>
-        void call_helper(F &func, Y &&yielder, std::index_sequence<I...>) {
-            func(
-                std::forward<Y>(yielder),
-                std::forward<A>(*std::get<I>(p_args))...
-            );
+        template<size_t ...I>
+        void call_helper(Y &&yielder, std::index_sequence<I...>) {
+            p_func(std::move(yielder), std::forward<A>(*std::get<I>(p_args))...);
         }
 
         void swap(coro_stor &other) {
             using std::swap;
+            swap(p_func, other.p_func);
             swap(p_args, other.p_args);
         }
 
+        std::function<void(Y, A...)> p_func;
         std::tuple<coro_arg<A>...> p_args;
     };
 
     /* yield doesn't take a value or return any args */
-    template<>
-    struct coro_stor<void> {
+    template<typename Y>
+    struct coro_stor<Y, void> {
+        template<typename F>
+        coro_stor(F &&func): p_func(std::forward<F>(func)) {}
+
         template<size_t ...I>
         void get_args(std::index_sequence<I...>) {}
 
@@ -232,12 +248,16 @@ namespace detail {
 
         void get_result() {}
 
-        template<typename Y, typename F, size_t ...I>
-        void call_helper(F &func, Y &&yielder, std::index_sequence<I...>) {
-            func(std::forward<Y>(yielder));
+        template<size_t ...I>
+        void call_helper(Y &&yielder, std::index_sequence<I...>) {
+            p_func(std::move(yielder));
         }
 
-        void swap(coro_stor &) {}
+        void swap(coro_stor &other) {
+            std::swap(p_func, other.p_func);
+        }
+
+        std::function<void(Y)> p_func;
     };
 } /* namespace detail */
 
@@ -321,11 +341,9 @@ public:
 
     /* 0 means default size decided by the stack allocator */
     template<typename F, typename SA = default_stack>
-    coroutine(F func, SA sa = SA{}):
-        base_t(), p_stor(), p_func(std::move(func))
-    {
+    coroutine(F func, SA sa = SA{}): base_t(), p_stor(std::move(func)) {
         /* that way there is no context creation/stack allocation */
-        if (!p_func) {
+        if (!p_stor.p_func) {
             this->set_dead();
             return;
         }
@@ -333,26 +351,22 @@ public:
     }
 
     template<typename SA = default_stack>
-    coroutine(std::nullptr_t, SA = SA{0}):
-        base_t(), p_stor(), p_func(nullptr)
-    {
+    coroutine(std::nullptr_t, SA = SA{0}): base_t(), p_stor() {
         this->set_dead();
     }
 
     coroutine(coroutine const &) = delete;
     coroutine(coroutine &&c) noexcept:
-        base_t(std::move(c)),
-        p_stor(std::move(c.p_stor)), p_func(std::move(c.p_func))
+        base_t(std::move(c)), p_stor(std::move(c.p_stor))
     {
-        c.p_func = nullptr;
+        c.p_stor.p_func = nullptr;
     }
 
     coroutine &operator=(coroutine const &) = delete;
     coroutine &operator=(coroutine &&c) noexcept {
         base_t::operator=(std::move(c));
         p_stor = std::move(c.p_stor);
-        p_func = std::move(c.p_func);
-        c.p_func = nullptr;
+        c.p_stor.p_func = nullptr;
     }
 
     explicit operator bool() const noexcept {
@@ -380,19 +394,15 @@ public:
 
     void swap(coroutine &other) noexcept {
         p_stor.swap(other.p_stor);
-        std::swap(p_func, other.p_func);
         base_t::swap(other);
     }
 
 private:
     void resume_call() {
-        p_stor.call_helper(
-            p_func, yield_type{*this}, std::index_sequence_for<A...>{}
-        );
+        p_stor.call_helper(yield_type{*this}, std::index_sequence_for<A...>{});
     }
 
-    detail::coro_stor<R, A...> p_stor;
-    std::function<R(yield_type, A...)> p_func;
+    detail::coro_stor<yield_type, R, A...> p_stor;
 };
 
 template<typename R, typename ...A>
