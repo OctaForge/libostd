@@ -8,6 +8,7 @@
 
 #include <exception>
 #include <utility>
+#include <typeinfo>
 
 #include "ostd/types.hh"
 #include "ostd/platform.hh"
@@ -16,30 +17,50 @@
 namespace ostd {
 namespace detail {
 
-/* from boost.fcontext */
-using fcontext_t = void *;
+    /* from boost.fcontext */
+    using fcontext_t = void *;
 
-struct transfer_t {
-    fcontext_t ctx;
-    void *data;
-};
+    struct transfer_t {
+        fcontext_t ctx;
+        void *data;
+    };
 
-extern "C" OSTD_EXPORT
-transfer_t OSTD_CDECL ostd_jump_fcontext(
-    fcontext_t const to, void *vp
-);
+    extern "C" OSTD_EXPORT
+    transfer_t OSTD_CDECL ostd_jump_fcontext(
+        fcontext_t const to, void *vp
+    );
 
-extern "C" OSTD_EXPORT
-fcontext_t OSTD_CDECL ostd_make_fcontext(
-    void *sp, size_t size, void (*fn)(transfer_t)
-);
+    extern "C" OSTD_EXPORT
+    fcontext_t OSTD_CDECL ostd_make_fcontext(
+        void *sp, size_t size, void (*fn)(transfer_t)
+    );
 
-extern "C" OSTD_EXPORT
-transfer_t OSTD_CDECL ostd_ontop_fcontext(
-    fcontext_t const to, void *vp, transfer_t (*fn)(transfer_t)
-);
+    extern "C" OSTD_EXPORT
+    transfer_t OSTD_CDECL ostd_ontop_fcontext(
+        fcontext_t const to, void *vp, transfer_t (*fn)(transfer_t)
+    );
+
+} /* namespace detail */
 
 struct coroutine_context {
+    virtual std::type_info const &coroutine_type() const = 0;
+
+    template<typename T>
+    T *coroutine() {
+        if (coroutine_type() == typeid(T)) {
+            return reinterpret_cast<T *>(this);
+        }
+        return nullptr;
+    }
+
+    template<typename T>
+    T const *coroutine() const {
+        if (coroutine_type() == typeid(T)) {
+            return reinterpret_cast<T const *>(this);
+        }
+        return nullptr;
+    }
+
 protected:
     coroutine_context() {}
     ~coroutine_context() {
@@ -71,12 +92,12 @@ protected:
     }
 
     void coro_jump() {
-        p_coro = ostd_jump_fcontext(p_coro, this).ctx;
+        p_coro = detail::ostd_jump_fcontext(p_coro, this).ctx;
     }
 
     void yield_jump() {
         p_state = state::HOLD;
-        p_orig = ostd_jump_fcontext(p_orig, nullptr).ctx;
+        p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
     }
 
     bool is_hold() const {
@@ -108,7 +129,7 @@ protected:
         size_t asize = p_stack.size -
             (static_cast<byte *>(p_stack.ptr) - static_cast<byte *>(sp));
 
-        p_coro = ostd_make_fcontext(sp, asize, &context_call<C, SA>);
+        p_coro = detail::ostd_make_fcontext(sp, asize, &context_call<C, SA>);
         new (sp) SA(std::move(sa));
     }
 
@@ -131,8 +152,8 @@ private:
     }
 
     struct forced_unwind {
-        fcontext_t ctx;
-        forced_unwind(fcontext_t c): ctx(c) {}
+        detail::fcontext_t ctx;
+        forced_unwind(detail::fcontext_t c): ctx(c) {}
     };
 
     enum class state {
@@ -154,9 +175,9 @@ private:
             coro_jump();
             return;
         }
-        ostd_ontop_fcontext(
+        detail::ostd_ontop_fcontext(
             std::exchange(p_coro, nullptr), nullptr,
-            [](transfer_t t) -> transfer_t {
+            [](detail::transfer_t t) -> detail::transfer_t {
                 throw forced_unwind{t.ctx};
             }
         );
@@ -165,15 +186,17 @@ private:
     template<typename SA>
     void finish() {
         set_dead();
-        ostd_ontop_fcontext(p_orig, this, [](transfer_t t) -> transfer_t {
-            auto &self = *(static_cast<coroutine_context *>(t.data));
-            auto &sa = *(static_cast<SA *>(self.get_stack_ptr<SA>()));
-            SA dsa{std::move(sa)};
-            /* in case it holds any state that needs destroying */
-            sa.~SA();
-            dsa.deallocate(self.p_stack);
-            return { nullptr, nullptr };
-        });
+        detail::ostd_ontop_fcontext(
+            p_orig, this, [](detail::transfer_t t) -> detail::transfer_t {
+                auto &self = *(static_cast<coroutine_context *>(t.data));
+                auto &sa = *(static_cast<SA *>(self.get_stack_ptr<SA>()));
+                SA dsa{std::move(sa)};
+                /* in case it holds any state that needs destroying */
+                sa.~SA();
+                dsa.deallocate(self.p_stack);
+                return { nullptr, nullptr };
+            }
+        );
     }
 
     template<typename C, typename SA>
@@ -188,7 +211,7 @@ private:
         }
         try {
             self.resume_call();
-        } catch (detail::coroutine_context::forced_unwind v) {
+        } catch (coroutine_context::forced_unwind v) {
             /* forced_unwind is unique */
             self.p_orig = v.ctx;
         } catch (...) {
@@ -201,13 +224,12 @@ release:
     }
 
     stack_context p_stack;
-    fcontext_t p_coro;
-    fcontext_t p_orig;
+    detail::fcontext_t p_coro;
+    detail::fcontext_t p_orig;
     std::exception_ptr p_except;
     state p_state = state::HOLD;
 };
 
-} /* namespace detail */
 } /* namespace ostd */
 
 #endif

@@ -14,6 +14,22 @@ int main() {
     for (int i: generator<int>{f}) {
         writefln("generated: %s", i);
     }
+
+    generator<int> x{f};
+    /* coroutine_context exists as a base type for any coroutine */
+    coroutine_context &ctx = x;
+
+    writefln(
+        "generator is coroutine<int()>: %s",
+        bool(ctx.coroutine<coroutine<int()>>())
+    );
+    writefln(
+        "generator is generator<int>: %s",
+        bool(ctx.coroutine<generator<int>>())
+    );
+
+    generator<int> &gr = *ctx.coroutine<generator<int>>();
+    writefln("value of cast back generator: %s", gr.value());
 }
 
 /*

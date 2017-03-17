@@ -254,11 +254,11 @@ namespace detail {
 } /* namespace detail */
 
 template<typename R, typename ...A>
-struct coroutine<R(A...)>: detail::coroutine_context {
+struct coroutine<R(A...)>: coroutine_context {
 private:
-    using base_t = detail::coroutine_context;
+    using base_t = coroutine_context;
     /* necessary so that context callback can access privates */
-    friend struct detail::coroutine_context;
+    friend struct coroutine_context;
 
     template<typename RR, typename ...AA>
     struct yielder {
@@ -389,6 +389,20 @@ public:
         base_t::swap(other);
     }
 
+    std::type_info const &target_type() const {
+        return p_stor.p_func.target_type();
+    }
+
+    template<typename F>
+    F *target() { return p_stor.p_func.target(); }
+
+    template<typename F>
+    F const *target() const { return p_stor.p_func.target(); }
+
+    std::type_info const &coroutine_type() const {
+        return typeid(coroutine);
+    }
+
 private:
     void resume_call() {
         p_stor.call_helper(*this);
@@ -409,10 +423,10 @@ namespace detail {
 }
 
 template<typename T>
-struct generator: detail::coroutine_context {
+struct generator: coroutine_context {
 private:
-    using base_t = detail::coroutine_context;
-    friend struct detail::coroutine_context;
+    using base_t = coroutine_context;
+    friend struct coroutine_context;
 
     template<typename U>
     struct yielder {
@@ -514,7 +528,7 @@ public:
         if (this->is_dead()) {
             throw coroutine_error{"dead generator"};
         }
-        detail::coroutine_context::call();
+        coroutine_context::call();
     }
 
     T &value() {
@@ -545,7 +559,21 @@ public:
         using std::swap;
         swap(p_func, other.p_func);
         swap(p_result, other.p_result);
-        detail::coroutine_context::swap(other);
+        coroutine_context::swap(other);
+    }
+
+    std::type_info const &target_type() const {
+        return p_func.target_type();
+    }
+
+    template<typename F>
+    F *target() { return p_func.target(); }
+
+    template<typename F>
+    F const *target() const { return p_func.target(); }
+
+    std::type_info const &coroutine_type() const {
+        return typeid(generator);
     }
 
 private:
