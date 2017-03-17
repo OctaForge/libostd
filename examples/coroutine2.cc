@@ -39,4 +39,7 @@ generated: 10
 generated: 15
 generated: 20
 generated: 25
+generator is coroutine<int()>: false
+generator is generator<int>: true
+value of cast back generator: 5
 */
