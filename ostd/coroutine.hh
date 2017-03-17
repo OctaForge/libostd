@@ -339,7 +339,7 @@ public:
             this->set_dead();
             return;
         }
-        this->template make_context<coroutine<R(A...)>>(sa);
+        this->make_context<coroutine<R(A...)>>(sa);
     }
 
     template<typename SA = default_stack>
@@ -477,7 +477,7 @@ public:
             this->set_dead();
             return;
         }
-        this->template make_context<generator<T>>(sa);
+        this->make_context<generator<T>>(sa);
         /* generate an initial value */
         resume();
     }
