@@ -15,8 +15,10 @@
 #include "ostd/context_stack.hh"
 
 namespace ostd {
-namespace detail {
 
+struct coroutine_context;
+
+namespace detail {
     /* from boost.fcontext */
     using fcontext_t = void *;
 
@@ -40,12 +42,19 @@ namespace detail {
         fcontext_t const to, void *vp, transfer_t (*fn)(transfer_t)
     );
 
+    OSTD_EXPORT extern thread_local coroutine_context *coro_current;
 } /* namespace detail */
 
 struct coroutine_context {
+    static coroutine_context *current() {
+        return detail::coro_current;
+    }
+
 protected:
     coroutine_context() {}
-    ~coroutine_context() {
+
+    /* coroutine context must be polymorphic */
+    virtual ~coroutine_context() {
         unwind();
     }
 
@@ -67,7 +76,11 @@ protected:
 
     void call() {
         p_state = state::EXEC;
+        /* switch to new coroutine */
+        coroutine_context *curr = std::exchange(detail::coro_current, this);
         coro_jump();
+        /* switch back to previous */
+        detail::coro_current = curr;
         if (p_except) {
             std::rethrow_exception(std::move(p_except));
         }

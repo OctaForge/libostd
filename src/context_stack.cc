@@ -158,4 +158,10 @@ size_t stack_traits::default_size() noexcept {
 #endif
 }
 
+struct coroutine_context;
+
+namespace detail {
+    OSTD_EXPORT thread_local coroutine_context *coro_current = nullptr;
+}
+
 } /* namespace ostd */
