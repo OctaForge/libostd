@@ -17,18 +17,18 @@ int main() {
 
     generator<int> x{f};
     /* coroutine_context exists as a base type for any coroutine */
-    coroutine_context &ctx = x;
+    coroutine_context *ctx = &x;
 
     writefln(
         "generator is coroutine<int()>: %s",
-        bool(ctx.coroutine<coroutine<int()>>())
+        bool(dynamic_cast<coroutine<int()> *>(ctx))
     );
     writefln(
         "generator is generator<int>: %s",
-        bool(ctx.coroutine<generator<int>>())
+        bool(dynamic_cast<generator<int> *>(ctx))
     );
 
-    generator<int> &gr = *ctx.coroutine<generator<int>>();
+    generator<int> &gr = dynamic_cast<generator<int> &>(*ctx);
     writefln("value of cast back generator: %s", gr.value());
 }
 

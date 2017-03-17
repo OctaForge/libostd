@@ -399,10 +399,6 @@ public:
     template<typename F>
     F const *target() const { return p_stor.p_func.target(); }
 
-    std::type_info const &coroutine_type() const {
-        return typeid(coroutine);
-    }
-
 private:
     void resume_call() {
         p_stor.call_helper(*this);
@@ -571,10 +567,6 @@ public:
 
     template<typename F>
     F const *target() const { return p_func.target(); }
-
-    std::type_info const &coroutine_type() const {
-        return typeid(generator);
-    }
 
 private:
     void resume_call() {

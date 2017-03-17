@@ -43,24 +43,6 @@ namespace detail {
 } /* namespace detail */
 
 struct coroutine_context {
-    virtual std::type_info const &coroutine_type() const = 0;
-
-    template<typename T>
-    T *coroutine() {
-        if (coroutine_type() == typeid(T)) {
-            return reinterpret_cast<T *>(this);
-        }
-        return nullptr;
-    }
-
-    template<typename T>
-    T const *coroutine() const {
-        if (coroutine_type() == typeid(T)) {
-            return reinterpret_cast<T const *>(this);
-        }
-        return nullptr;
-    }
-
 protected:
     coroutine_context() {}
     ~coroutine_context() {
