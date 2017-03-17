@@ -35,15 +35,10 @@ namespace detail {
     struct coro_types {
         using yield_type = std::tuple<A...>;
 
-        template<size_t ...I>
-        static yield_type get_impl(
-            std::tuple<coro_arg<A>...> &args, std::index_sequence<I...>
-        ) {
-            return std::make_tuple(std::forward<A>(*std::get<I>(args))...);
-        }
-
         static yield_type get(std::tuple<coro_arg<A>...> &args) {
-            return get_impl(args, std::index_sequence_for<A...>{});
+            return std::apply([](auto ...args) {
+                return std::make_tuple(std::forward<A>(*args)...);
+            }, args);
         }
     };
 
@@ -138,8 +133,7 @@ namespace detail {
         template<typename F>
         coro_stor(F &&func): p_func(std::forward<F>(func)) {}
 
-        template<size_t ...I>
-        coro_args<A...> get_args(std::index_sequence<I...>) {
+        coro_args<A...> get_args() {
             return coro_types<A...>::get(p_args);
         }
 
@@ -151,12 +145,12 @@ namespace detail {
             return std::forward<R>(coro_rtype<R>::get(p_result));
         }
 
-        template<size_t ...I>
-        void call_helper(Y &&yielder, std::index_sequence<I...>) {
-            coro_rtype<R>::store(p_result, std::forward<R>(p_func(
-                std::move(yielder),
-                std::forward<A>(*std::get<I>(p_args))...
-            )));
+        void call_helper(Y &&yielder) {
+            std::apply([this, yielder = std::move(yielder)](auto ...args) {
+                coro_rtype<R>::store(p_result, std::forward<R>(p_func(
+                    std::move(yielder), std::forward<A>(*args)...
+                )));
+            }, p_args);
         }
 
         void swap(coro_stor &other) {
@@ -179,17 +173,14 @@ namespace detail {
         template<typename F>
         coro_stor(F &&func): p_func(std::forward<F>(func)) {}
 
-        template<size_t ...I>
-        void get_args(std::index_sequence<I...>) {}
-
+        void get_args() {}
         void set_args() {}
 
         R get_result() {
             return std::forward<R>(coro_rtype<R>::get(p_result));
         }
 
-        template<size_t ...I>
-        void call_helper(Y &&yielder, std::index_sequence<I...>) {
+        void call_helper(Y &&yielder) {
             coro_rtype<R>::store(
                 p_result, std::forward<R>(p_func(std::move(yielder)))
             );
@@ -209,8 +200,7 @@ namespace detail {
         template<typename F>
         coro_stor(F &&func): p_func(std::forward<F>(func)) {}
 
-        template<size_t ...I>
-        coro_args<A...> get_args(std::index_sequence<I...>) {
+        coro_args<A...> get_args() {
             return coro_types<A...>::get(p_args);
         }
 
@@ -220,9 +210,10 @@ namespace detail {
 
         void get_result() {}
 
-        template<size_t ...I>
-        void call_helper(Y &&yielder, std::index_sequence<I...>) {
-            p_func(std::move(yielder), std::forward<A>(*std::get<I>(p_args))...);
+        void call_helper(Y &&yielder) {
+            std::apply([this, yielder = std::move(yielder)](auto ...args) {
+                p_func(std::move(yielder), std::forward<A>(*args)...);
+            }, p_args);
         }
 
         void swap(coro_stor &other) {
@@ -241,15 +232,12 @@ namespace detail {
         template<typename F>
         coro_stor(F &&func): p_func(std::forward<F>(func)) {}
 
-        template<size_t ...I>
-        void get_args(std::index_sequence<I...>) {}
-
+        void get_args() {}
         void set_args() {}
 
         void get_result() {}
 
-        template<size_t ...I>
-        void call_helper(Y &&yielder, std::index_sequence<I...>) {
+        void call_helper(Y &&yielder) {
             p_func(std::move(yielder));
         }
 
@@ -277,13 +265,13 @@ private:
                 p_coro.p_stor.p_result, std::move(ret)
             );
             p_coro.yield_jump();
-            return p_coro.p_stor.get_args(std::index_sequence_for<AA...>{});
+            return p_coro.p_stor.get_args();
         }
 
         detail::coro_args<AA...> operator()(RR const &ret) {
             detail::coro_rtype<RR>::store(p_coro.p_stor.p_result, ret);
             p_coro.yield_jump();
-            return p_coro.p_stor.get_args(std::index_sequence_for<AA...>{});
+            return p_coro.p_stor.get_args();
         }
 
     private:
@@ -297,7 +285,7 @@ private:
         detail::coro_args<AA...> operator()(RR &ret) {
             detail::coro_rtype<RR &>::store(p_coro.p_stor.p_result, ret);
             p_coro.yield_jump();
-            return p_coro.p_stor.get_args(std::index_sequence_for<AA...>{});
+            return p_coro.p_stor.get_args();
         }
 
     private:
@@ -313,7 +301,7 @@ private:
                 p_coro.p_stor.p_result, std::move(ret)
             );
             p_coro.yield_jump();
-            return p_coro.p_stor.get_args(std::index_sequence_for<AA...>{});
+            return p_coro.p_stor.get_args();
         }
 
     private:
@@ -326,7 +314,7 @@ private:
 
         detail::coro_args<AA...> operator()() {
             p_coro.yield_jump();
-            return p_coro.p_stor.get_args(std::index_sequence_for<AA...>{});
+            return p_coro.p_stor.get_args();
         }
 
     private:
@@ -399,7 +387,7 @@ public:
 
 private:
     void resume_call() {
-        p_stor.call_helper(yield_type{*this}, std::index_sequence_for<A...>{});
+        p_stor.call_helper(yield_type{*this});
     }
 
     detail::coro_stor<yield_type, R, A...> p_stor;
