@@ -19,8 +19,8 @@ struct thread_scheduler {
     }
 
     template<typename F, typename ...A>
-    void start(F &&func, A &&...args) {
-        func(std::forward<A>(args)...);
+    auto start(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
+        return func(std::forward<A>(args)...);
     }
 
     template<typename F, typename ...A>
