@@ -18,6 +18,13 @@
 
 namespace ostd {
 
+namespace detail {
+    template<typename T>
+    using task_result_of = std::conditional_t<
+        std::is_same_v<T, void>, void, std::future<T>
+    >;
+}
+
 struct thread_pool {
     void start(size_t size = std::thread::hardware_concurrency()) {
         p_running = true;
@@ -52,7 +59,9 @@ struct thread_pool {
     }
 
     template<typename F, typename ...A>
-    auto push(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
+    auto push(F &&func, A &&...args) ->
+        detail::task_result_of<std::result_of_t<F(A...)>>
+    {
         using R = std::result_of_t<F(A...)>;
         if constexpr(std::is_same_v<R, void>) {
             /* void-returning funcs return void */
