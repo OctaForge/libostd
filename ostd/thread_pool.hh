@@ -70,9 +70,14 @@ struct thread_pool {
             p_cond.notify_one();
         } else {
             /* non-void-returning funcs return a future */
-            std::packaged_task<R> t{
-                std::bind(std::forward<F>(func), std::forward<A>(args)...)
-            };
+            std::packaged_task<R> t;
+            if constexpr(sizeof...(A) == 0) {
+                t = std::packaged_task<R>{std::forward<F>(func)};
+            } else {
+                t = std::packaged_task<R>{
+                    std::bind(std::forward<F>(func), std::forward<A>(args)...)
+                };
+            }
             auto ret = t.get_future();
             std::unique_lock<std::mutex> l{p_lock};
             if (!p_running) {
