@@ -13,11 +13,7 @@ void foo() {
 
     auto c = sched.make_channel<int>();
     auto f = [&c](auto half) {
-        int ret = 0;
-        for (int i: half) {
-            ret += i;
-        }
-        c.put(ret);
+        c.put(foldl(half, 0));
     };
     sched.spawn(f, h1);
     sched.spawn(f, h2);
