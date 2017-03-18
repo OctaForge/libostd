@@ -5,7 +5,7 @@ set -e
 
 # example sources
 EXAMPLES="format listdir range range_pipe signal"
-EXAMPLES="${EXAMPLES} stream1 stream2 coroutine1 coroutine2"
+EXAMPLES="${EXAMPLES} stream1 stream2 coroutine1 coroutine2 concurrency"
 
 # assembly sources
 ASM_SOURCE_DIR="src/asm"
@@ -136,7 +136,7 @@ if [ ! -z "$CPPFLAGS" ]; then
 fi
 
 # linker flags
-OSTD_LDFLAGS=""
+OSTD_LDFLAGS="-pthread"
 
 # custom linker flags
 if [ ! -z "$LDFLAGS" ]; then
