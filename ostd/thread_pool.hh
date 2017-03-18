@@ -60,9 +60,13 @@ struct thread_pool {
             if (!p_running) {
                 throw std::runtime_error{"push on stopped thread_pool"};
             }
-            p_tasks.push(
-                std::bind(std::forward<F>(func), std::forward<A>(args)...)
-            );
+            if constexpr(sizeof...(A) == 0) {
+                p_tasks.push(std::forward<F>(func));
+            } else {
+                p_tasks.push(
+                    std::bind(std::forward<F>(func), std::forward<A>(args)...)
+                );
+            }
             p_cond.notify_one();
         } else {
             /* non-void-returning funcs return a future */
