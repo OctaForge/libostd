@@ -6,7 +6,6 @@
 #ifndef OSTD_CONCURRENCY_HH
 #define OSTD_CONCURRENCY_HH
 
-#include <stdio.h>
 #include <thread>
 #include <utility>
 
