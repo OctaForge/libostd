@@ -125,28 +125,33 @@ size_t stack_traits::page_size() noexcept {
 
 size_t stack_traits::minimum_size() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
-    /* no func on windows, sane default */
-    return sizeof(void *) * 1024;
+    /* no func on windows, sane default of 8 KiB */
+    return 8 * 1024;
 #elif defined(OSTD_PLATFORM_POSIX)
+    /* typically 8 KiB but can be much larger on some platforms */
     return SIGSTKSZ;
 #endif
 }
 
 size_t stack_traits::maximum_size() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
-    /* no func on windows either */
+    /* value is technically undefined when is_unbounded() is
+     * true, just default to 1 GiB so we actually return something
+     */
     return 1024 * 1024 * 1024;
 #elif defined(OSTD_PLATFORM_POSIX)
+    /* can be RLIM_INFINITY, but that's ok, see above */
     return size_t(detail::ctx_rlimit().rlim_max);
 #endif
 }
 
 size_t stack_traits::default_size() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
-    /* no func on windows either */
-    return sizeof(void *) * minimum_size();
+    /* no func on windows either, default to 64 KiB */
+    return 8 * 8 * 1024;
 #elif defined(OSTD_PLATFORM_POSIX)
-    size_t r = sizeof(void *) * minimum_size();
+    /* default to at least 64 KiB (see minimum_size comment) */
+    constexpr size_t r = std::max(8 * 8 * 1024, SIGSTKSZ);
     if (is_unbounded()) {
         return r;
     }
