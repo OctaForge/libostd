@@ -16,6 +16,9 @@
 namespace ostd {
 
 struct thread_scheduler {
+    template<typename T>
+    using channel_type = channel<T>;
+
     ~thread_scheduler() {
         join_all();
     }
@@ -118,6 +121,9 @@ private:
     };
 
 public:
+    template<typename T>
+    using channel_type = channel<T, coro_cond>;
+
     template<typename F, typename ...A>
     auto start(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
         using R = std::result_of_t<F(A...)>;
@@ -187,6 +193,21 @@ private:
     std::list<coro> p_coros;
     typename std::list<coro>::iterator p_idx = p_coros.end();
 };
+
+template<typename S, typename F, typename ...A>
+inline void spawn(S &sched, F &&func, A &&...args) {
+    sched.spawn(std::forward<F>(func), std::forward<A>(args)...);
+}
+
+template<typename S>
+inline void yield(S &sched) {
+    sched.yield();
+}
+
+template<typename T, typename S>
+inline auto make_channel(S &sched) -> typename S::template channel_type<T> {
+    return sched.template make_channel<T>();
+}
 
 } /* namespace ostd */
 

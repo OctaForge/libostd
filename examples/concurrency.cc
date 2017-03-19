@@ -7,12 +7,12 @@ int main() {
     auto foo = [](auto &sched) {
         auto arr = ostd::iter({ 150, 38, 76, 25, 67, 18, -15,  215, 25, -10 });
 
-        auto c = sched.template make_channel<int>();
+        auto c = make_channel<int>(sched);
         auto f = [](auto c, auto half) {
             c.put(foldl(half, 0));
         };
-        sched.spawn(f, c, arr.slice(0, arr.size() / 2));
-        sched.spawn(f, c, arr.slice(arr.size() / 2, arr.size()));
+        spawn(sched, f, c, arr.slice(0, arr.size() / 2));
+        spawn(sched, f, c, arr.slice(arr.size() / 2, arr.size()));
 
         int a, b;
         c.get(a), c.get(b);
