@@ -17,17 +17,6 @@
 #  error "Unsupported platform"
 #endif
 
-/* we can do this as we only support clang 4+ and gcc 7+
- * which always have support for segmented stacks
- */
-#ifdef OSTD_USE_SEGMENTED_STACKS
-#  if !defined(OSTD_PLATFORM_POSIX) || \
-    (!defined(OSTD_TOOLCHAIN_GNU) && !defined(OSTD__TOOLCHAIN_CLANG))
-#    error "compiler/toolchain does not support segmented_stack stacks"
-#  endif
-#  define OSTD_CONTEXT_SEGMENTS 10
-#endif
-
 #ifdef OSTD_USE_VALGRIND
 #  include <valgrind/valgrind.h>
 #endif
@@ -35,14 +24,8 @@
 namespace ostd {
 
 struct stack_context {
-#ifdef OSTD_USE_SEGMENTED_STACKS
-    using segments_context = void *[OSTD_CONTEXT_SEGMENTS];
-#endif
     void *ptr = nullptr;
     size_t size = 0;
-#ifdef OSTD_USE_SEGMENTED_STACKS
-    segments_context segments_ctx = {};
-#endif
 #ifdef OSTD_USE_VALGRIND
     int valgrind_id = 0;
 #endif
@@ -256,64 +239,7 @@ inline void swap(basic_stack_pool<TR, P> &a, basic_stack_pool<TR, P> &b) noexcep
 using stack_pool = basic_stack_pool<stack_traits, false>;
 using protected_stack_pool = basic_stack_pool<stack_traits, true>;
 
-#ifdef OSTD_USE_SEGMENTED_STACKS
-namespace detail {
-    extern "C" {
-        /* from libgcc */
-        void *__splitstack_makecontext(
-            size_t st_size, void *ctx[OSTD_CONTEXT_SEGMENTS], size_t *size
-        );
-        void __splitstack_releasecontext(void *ctx[OSTD_CONTEXT_SEGMENTS]);
-        void __splitstack_resetcontext(void *ctx[OSTD_CONTEXT_SEGMENTS]);
-        void __splitstack_block_signals_context(
-            void *ctx[OSTD_CONTEXT_SEGMENTS], int *new_val, int *old_val
-        );
-    }
-}
-
-template<typename TR>
-struct basic_segmented_stack {
-    using traits_type = TR;
-
-    basic_segmented_stack(size_t ss = TR::default_size()) noexcept:
-        p_size(std::clamp(ss, TR::minimum_size(), TR::maximum_size()))
-    {}
-
-    stack_context allocate() {
-        size_t ss = p_size;
-
-        stack_context ret;
-        void *p = detail::__splitstack_makecontext(
-            ss, ret.segments_ctx, &ret.size
-        );
-        if (!p) {
-            throw std::bad_alloc{};
-        }
-
-        ret.ptr = static_cast<byte *>(p) + ret.size;
-
-        int off = 0;
-        detail::__splitstack_block_signals_context(ret.segments_ctx, &off, 0);
-
-        return ret;
-    }
-
-    void deallocate(stack_context &st) noexcept {
-        detail::__splitstack_releasecontext(st.segments_ctx);
-    }
-
-private:
-    size_t p_size;
-};
-
-using segmented_stack = basic_segmented_stack<stack_traits>;
-#endif /* OSTD_USE_SEGMENTED_STACKS */
-
-#ifdef OSTD_USE_SEGMENTED_STACKS
-using default_stack = segmented_stack;
-#else
 using default_stack = fixedsize_stack;
-#endif
 
 } /* namespace ostd */
 

@@ -64,13 +64,7 @@ the correct ones.
 
 There is also support for stack allocators inspired again by the Boost.Context
 library, with fixed size protected and unprotected allocators available on all
-platforms and segmented stacks available on POSIX platforms with GCC and Clang.
-In order to use segmented stacks, there are 2 things you have to do:
-
-* Enable `OSTD_USE_SEGMENTED_STACKS`
-* Build with `-fsplit-stack -static-libgcc`
-
-Segmented stacks are used by default when enabled, otherwise unprotected fixed
-size stacks are used (on Windows the latter is always used by default).
+platforms, as well as a stack pool which allocates stacks in batches and
+recycles dead stacks.
 
 There is also Valgrind support, enabled with `OSTD_USE_VALGRIND`.
