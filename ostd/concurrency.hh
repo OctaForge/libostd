@@ -77,7 +77,8 @@ private:
     std::mutex p_lock;
 };
 
-struct simple_coroutine_scheduler {
+template<typename TR, bool Protected>
+struct basic_simple_coroutine_scheduler {
 private:
     /* simple one just for channels */
     struct coro_cond {
@@ -87,7 +88,7 @@ private:
         coro_cond &operator=(coro_cond const &) = delete;
         coro_cond &operator=(coro_cond &&) = delete;
 
-        coro_cond(simple_coroutine_scheduler &s, std::mutex &mtx):
+        coro_cond(basic_simple_coroutine_scheduler &s, std::mutex &mtx):
             p_sched(s), p_mtx(mtx)
         {}
 
@@ -115,7 +116,7 @@ private:
             p_mtx.lock();
         }
     private:
-        simple_coroutine_scheduler &p_sched;
+        basic_simple_coroutine_scheduler &p_sched;
         std::mutex &p_mtx;
         bool p_notified = false;
     };
@@ -123,6 +124,11 @@ private:
 public:
     template<typename T>
     using channel_type = channel<T, coro_cond>;
+
+    basic_simple_coroutine_scheduler(
+        size_t ss = TR::default_size(),
+        size_t cs = basic_stack_pool<TR, Protected>::DEFAULT_CHUNK_SIZE
+    ): p_coros(), p_stacks(ss, cs) {}
 
     template<typename F, typename ...A>
     auto start(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
@@ -145,13 +151,13 @@ public:
         if constexpr(sizeof...(A) == 0) {
             p_coros.emplace_back([lfunc = std::forward<F>(func)](auto) {
                 lfunc();
-            });
+            }, p_stacks.get_allocator());
         } else {
             p_coros.emplace_back([lfunc = std::bind(
                 std::forward<F>(func), std::forward<A>(args)...
             )](auto) mutable {
                 lfunc();
-            });
+            }, p_stacks.get_allocator());
         }
     }
 
@@ -159,7 +165,7 @@ public:
         auto ctx = coroutine_context::current();
         coro *c = dynamic_cast<coro *>(ctx);
         if (c) {
-            coro::yield_type{*c}();
+            typename coro::yield_type{*c}();
             return;
         }
         throw std::runtime_error{"no task to yield"};
@@ -191,8 +197,15 @@ private:
     }
 
     std::list<coro> p_coros;
+    basic_stack_pool<TR, Protected> p_stacks;
     typename std::list<coro>::iterator p_idx = p_coros.end();
 };
+
+using simple_coroutine_scheduler =
+    basic_simple_coroutine_scheduler<stack_traits, false>;
+
+using protected_simple_coroutine_scheduler =
+    basic_simple_coroutine_scheduler<stack_traits, true>;
 
 template<typename S, typename F, typename ...A>
 inline void spawn(S &sched, F &&func, A &&...args) {
