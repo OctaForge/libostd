@@ -46,8 +46,11 @@ struct channel {
         p_state->put(std::move(val));
     }
 
-    bool get(T &val) {
-        return p_state->get(val, true);
+    T get() {
+        T ret;
+        /* guaranteed to return true if at all */
+        p_state->get(ret, true);
+        return ret;
     }
 
     bool try_get(T &val) {
@@ -87,9 +90,12 @@ private:
                 }
             }
             if (p_messages.empty()) {
+                if (p_closed) {
+                    throw channel_error{"get from a closed channel"};
+                }
                 return false;
             }
-            val = p_messages.front();
+            val = std::move(p_messages.front());
             p_messages.pop_front();
             return true;
         }

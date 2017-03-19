@@ -12,10 +12,9 @@ int main() {
             c.put(foldl(half, 0));
         };
         spawn(sched, f, c, arr.slice(0, arr.size() / 2));
-        spawn(sched, f, c, arr.slice(arr.size() / 2, arr.size()));
+        spawn(sched, f, c, arr + (arr.size() / 2));
 
-        int a, b;
-        c.get(a), c.get(b);
+        int a = c.get(), b = c.get();
         writefln("%s + %s = %s", a, b, a + b);
     };
 
