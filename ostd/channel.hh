@@ -29,7 +29,7 @@ struct channel {
      * elides copying and moving (by directly returning the type ctor call)
      */
     template<typename F>
-    channel(F func): p_cond(func()) {}
+    channel(F func): p_lock(), p_cond(func(p_lock)) {}
 
     void put(T const &val) {
         put_impl(val);
@@ -85,8 +85,8 @@ private:
     }
 
     std::list<T> p_messages;
-    C p_cond;
     mutable std::mutex p_lock;
+    C p_cond;
     bool p_closed = false;
 };
 
