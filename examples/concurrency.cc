@@ -11,15 +11,15 @@ void foo(S &sched) {
     auto h2 = arr.slice(arr.size() / 2, arr.size());
 
     auto c = sched.template make_channel<int>();
-    auto f = [c](auto half) {
-        c->put(foldl(half, 0));
+    auto f = [](auto c, auto half) {
+        c.put(foldl(half, 0));
     };
-    sched.spawn(f, h1);
-    sched.spawn(f, h2);
+    sched.spawn(f, c, h1);
+    sched.spawn(f, c, h2);
 
     int a, b;
-    c->get(a);
-    c->get(b);
+    c.get(a);
+    c.get(b);
     writefln("first half: %s", a);
     writefln("second half: %s", b);
     writefln("total: %s", a + b);

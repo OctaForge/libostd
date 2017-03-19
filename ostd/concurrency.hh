@@ -44,8 +44,8 @@ struct thread_scheduler {
     }
 
     template<typename T>
-    std::shared_ptr<channel<T>> make_channel() {
-        return std::shared_ptr<channel<T>>{new channel<T>{}};
+    channel<T> make_channel() {
+        return channel<T>{};
     }
 
 private:
@@ -143,7 +143,7 @@ public:
         } else {
             p_coros.emplace_back([lfunc = std::bind(
                 std::forward<F>(func), std::forward<A>(args)...
-            )](auto) {
+            )](auto) mutable {
                 lfunc();
             });
         }
@@ -160,12 +160,10 @@ public:
     }
 
     template<typename T>
-    std::shared_ptr<channel<T, coro_cond>> make_channel() {
-        return std::shared_ptr<channel<T, coro_cond>>{
-            new channel<T, coro_cond>{[this](std::mutex &mtx) {
-                return coro_cond{*this, mtx};
-            }}
-        };
+    channel<T, coro_cond> make_channel() {
+        return channel<T, coro_cond>{[this](std::mutex &mtx) {
+            return coro_cond{*this, mtx};
+        }};
     }
 private:
     struct coro: coroutine<void()> {
