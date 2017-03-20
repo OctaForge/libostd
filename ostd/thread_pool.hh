@@ -19,6 +19,74 @@
 
 namespace ostd {
 
+namespace detail {
+    struct tpool_func_base {
+        tpool_func_base() {}
+        virtual ~tpool_func_base() {}
+        virtual void clone(tpool_func_base *func) = 0;
+        virtual void call() = 0;
+    };
+
+    template<typename F>
+    struct tpool_func_impl: tpool_func_base {
+        tpool_func_impl(F &&func): p_func(std::move(func)) {}
+
+        void clone(tpool_func_base *p) {
+            new (p) tpool_func_impl(std::move(p_func));
+        }
+
+        void call() {
+            p_func();
+        }
+
+    private:
+        F p_func;
+    };
+
+    struct tpool_func {
+        tpool_func() = delete;
+        tpool_func(tpool_func const &) = delete;
+        tpool_func &operator=(tpool_func const &) = delete;
+
+        tpool_func(tpool_func &&func) {
+            if (static_cast<void *>(func.p_func) == &func.p_buf) {
+                p_func = reinterpret_cast<tpool_func_base *>(&p_buf);
+                func.p_func->clone(p_func);
+            } else {
+                p_func = func.p_func;
+                func.p_func = nullptr;
+            }
+        }
+
+        template<typename F>
+        tpool_func(F &&func) {
+            if (sizeof(F) <= sizeof(p_buf)) {
+                p_func = ::new(reinterpret_cast<void *>(&p_buf))
+                    tpool_func_impl<F>{std::move(func)};
+            } else {
+                p_func = new tpool_func_impl<F>{std::move(func)};
+            }
+        }
+
+        ~tpool_func() {
+            if (static_cast<void *>(p_func) == &p_buf) {
+                p_func->~tpool_func_base();
+            } else {
+                delete p_func;
+            }
+        }
+
+        void operator()() {
+            p_func->call();
+        }
+    private:
+        std::aligned_storage_t<
+            sizeof(std::packaged_task<void()>) + sizeof(void *)
+        > p_buf;
+        tpool_func_base *p_func;
+    };
+}
+
 struct thread_pool {
     void start(size_t size = std::thread::hardware_concurrency()) {
         p_running = true;
@@ -58,21 +126,21 @@ struct thread_pool {
         std::future<std::result_of_t<F(A...)>>
     {
         using R = std::result_of_t<F(A...)>;
-        /* TODO: we can ditch the shared_ptr by implementing our own
-         * move-only backing representation to replace use of std::function
-         */
-        auto t = std::make_shared<std::packaged_task<R()>>(
-            std::bind(std::forward<F>(func), std::forward<A>(args)...)
-        );
-        auto ret = t->get_future();
+        std::packaged_task<R()> t;
+        if constexpr(sizeof...(A) == 0) {
+            t = std::packaged_task<R()>{std::forward<F>(func)};
+        } else {
+            t = std::packaged_task<R()>{
+                std::bind(std::forward<F>(func), std::forward<A>(args)...)
+            };
+        }
+        auto ret = t.get_future();
         {
             std::lock_guard<std::mutex> l{p_lock};
             if (!p_running) {
                 throw std::runtime_error{"push on stopped thread_pool"};
             }
-            p_tasks.emplace([t = std::move(t)]() mutable {
-                (*t)();
-            });
+            p_tasks.emplace(std::move(t));
         }
         p_cond.notify_one();
         return ret;
@@ -88,7 +156,7 @@ private:
             if (!p_running && p_tasks.empty()) {
                 return;
             }
-            auto t = std::move(p_tasks.front());
+            auto t{std::move(p_tasks.front())};
             p_tasks.pop();
             l.unlock();
             t();
@@ -98,7 +166,7 @@ private:
     std::condition_variable p_cond;
     std::mutex p_lock;
     std::vector<std::thread> p_thrs;
-    std::queue<std::function<void()>> p_tasks;
+    std::queue<detail::tpool_func> p_tasks;
     bool p_running = false;
 };
 
