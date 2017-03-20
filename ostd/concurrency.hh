@@ -88,9 +88,7 @@ private:
         coro_cond &operator=(coro_cond const &) = delete;
         coro_cond &operator=(coro_cond &&) = delete;
 
-        coro_cond(basic_simple_coroutine_scheduler &s, std::mutex &mtx):
-            p_sched(s), p_mtx(mtx)
-        {}
+        coro_cond(basic_simple_coroutine_scheduler &s): p_sched(s) {}
 
         template<typename L>
         void wait(L &l) noexcept {
@@ -104,20 +102,15 @@ private:
 
         void notify_one() noexcept {
             p_notified = true;
-            p_mtx.unlock();
             p_sched.yield();
-            p_mtx.lock();
         }
 
         void notify_all() noexcept {
             p_notified = true;
-            p_mtx.unlock();
             p_sched.yield();
-            p_mtx.lock();
         }
     private:
         basic_simple_coroutine_scheduler &p_sched;
-        std::mutex &p_mtx;
         bool p_notified = false;
     };
 
@@ -182,8 +175,8 @@ public:
 
     template<typename T>
     channel<T, coro_cond> make_channel() {
-        return channel<T, coro_cond>{[this](std::mutex &mtx) {
-            return coro_cond{*this, mtx};
+        return channel<T, coro_cond>{[this]() {
+            return coro_cond{*this};
         }};
     }
 private:

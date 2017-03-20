@@ -70,15 +70,17 @@ private:
         impl() {}
 
         template<typename F>
-        impl(F &func): p_lock(), p_cond(func(p_lock)) {}
+        impl(F &func): p_lock(), p_cond(func()) {}
 
         template<typename U>
         void put(U &&val) {
-            std::lock_guard<std::mutex> l{p_lock};
-            if (p_closed) {
-                throw channel_error{"put in a closed channel"};
+            {
+                std::lock_guard<std::mutex> l{p_lock};
+                if (p_closed) {
+                    throw channel_error{"put in a closed channel"};
+                }
+                p_messages.push_back(std::forward<U>(val));
             }
-            p_messages.push_back(std::forward<U>(val));
             p_cond.notify_one();
         }
 
@@ -106,8 +108,10 @@ private:
         }
 
         void close() {
-            std::lock_guard<std::mutex> l{p_lock};
-            p_closed = true;
+            {
+                std::lock_guard<std::mutex> l{p_lock};
+                p_closed = true;
+            }
             p_cond.notify_all();
         }
 
