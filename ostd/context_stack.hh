@@ -148,6 +148,15 @@ public:
         }
     }
 
+    void reserve(size_t n) {
+        size_t cap = p_capacity;
+        if (n <= cap) {
+            return;
+        }
+        size_t cnum = p_chunksize / p_stacksize;
+        p_unused = alloc_chunks(p_unused, (n - cap + cnum - 1) / cnum);
+    }
+
     stack_context allocate() {
         stack_node *nd = request();
         size_t ss = p_stacksize - sizeof(stack_node);
@@ -190,31 +199,43 @@ public:
 private:
     struct stack_node {
         void *next_chunk;
-        void *next;
+        stack_node *next;
     };
 
-    stack_node *request() {
-        if (!p_unused) {
-            size_t ss = p_stacksize;
-            size_t cs = p_chunksize;
-            size_t cnum = cs / ss;
+    stack_node *alloc_chunks(stack_node *un, size_t n) {
+        size_t ss = p_stacksize;
+        size_t cs = p_chunksize;
+        size_t cnum = cs / ss;
 
+        for (size_t ci = 0; ci < n; ++ci) {
             void *chunk = detail::stack_alloc(cs);
-            void *prevn = nullptr;
+            stack_node *prevn = un;
             for (size_t i = cnum; i >= 2; --i) {
-                auto *nd = get_node(chunk, ss, i);
+                auto nd = get_node(chunk, ss, i);
                 nd->next_chunk = nullptr;
                 nd->next = prevn;
                 prevn = nd;
             }
             auto *fnd = get_node(chunk, ss, 1);
             fnd->next_chunk = p_chunk;
+            /* write every time so that a potential failure results
+             * in all previously allocated chunks being freed in dtor
+             */
             p_chunk = chunk;
             fnd->next = prevn;
-            p_unused = fnd;
+            un = fnd;
         }
+        p_capacity += (n * cnum);
+
+        return un;
+    }
+
+    stack_node *request() {
         stack_node *r = p_unused;
-        p_unused = static_cast<stack_node *>(r->next);
+        if (!r) {
+            r = alloc_chunks(nullptr, 1);
+        }
+        p_unused = r->next;
         return r;
     }
 
@@ -229,6 +250,7 @@ private:
 
     size_t p_chunksize;
     size_t p_stacksize;
+    size_t p_capacity = 0;
 };
 
 template<typename TR, bool P>
