@@ -11,19 +11,13 @@
 #include <utility>
 #include <vector>
 #include <queue>
+#include <memory>
 #include <thread>
 #include <future>
 #include <mutex>
 #include <condition_variable>
 
 namespace ostd {
-
-namespace detail {
-    template<typename T>
-    using task_result_of = std::conditional_t<
-        std::is_same_v<T, void>, void, std::future<T>
-    >;
-}
 
 struct thread_pool {
     void start(size_t size = std::thread::hardware_concurrency()) {
@@ -61,48 +55,27 @@ struct thread_pool {
 
     template<typename F, typename ...A>
     auto push(F &&func, A &&...args) ->
-        detail::task_result_of<std::result_of_t<F(A...)>>
+        std::future<std::result_of_t<F(A...)>>
     {
         using R = std::result_of_t<F(A...)>;
-        if constexpr(std::is_same_v<R, void>) {
-            /* void-returning funcs return void */
-            {
-                std::lock_guard<std::mutex> l{p_lock};
-                if (!p_running) {
-                    throw std::runtime_error{"push on stopped thread_pool"};
-                }
-                if constexpr(sizeof...(A) == 0) {
-                    p_tasks.push(std::forward<F>(func));
-                } else {
-                    p_tasks.push(
-                        std::bind(std::forward<F>(func), std::forward<A>(args)...)
-                    );
-                }
+        /* TODO: we can ditch the shared_ptr by implementing our own
+         * move-only backing representation to replace use of std::function
+         */
+        auto t = std::make_shared<std::packaged_task<R()>>(
+            std::bind(std::forward<F>(func), std::forward<A>(args)...)
+        );
+        auto ret = t->get_future();
+        {
+            std::lock_guard<std::mutex> l{p_lock};
+            if (!p_running) {
+                throw std::runtime_error{"push on stopped thread_pool"};
             }
-            p_cond.notify_one();
-        } else {
-            /* non-void-returning funcs return a future */
-            std::packaged_task<R> t;
-            if constexpr(sizeof...(A) == 0) {
-                t = std::packaged_task<R>{std::forward<F>(func)};
-            } else {
-                t = std::packaged_task<R>{
-                    std::bind(std::forward<F>(func), std::forward<A>(args)...)
-                };
-            }
-            auto ret = t.get_future();
-            {
-                std::lock_guard<std::mutex> l{p_lock};
-                if (!p_running) {
-                    throw std::runtime_error{"push on stopped thread_pool"};
-                }
-                p_tasks.emplace([t = std::move(t)]() {
-                    t();
-                });
-            }
-            p_cond.notify_one();
-            return ret;
+            p_tasks.emplace([t = std::move(t)]() mutable {
+                (*t)();
+            });
         }
+        p_cond.notify_one();
+        return ret;
     }
 
 private:
