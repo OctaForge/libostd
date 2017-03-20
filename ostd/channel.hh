@@ -74,7 +74,7 @@ private:
 
         template<typename U>
         void put(U &&val) {
-            std::unique_lock<std::mutex> l{p_lock};
+            std::lock_guard<std::mutex> l{p_lock};
             if (p_closed) {
                 throw channel_error{"put in a closed channel"};
             }
@@ -101,12 +101,12 @@ private:
         }
 
         bool is_closed() const {
-            std::unique_lock<std::mutex> l{p_lock};
+            std::lock_guard<std::mutex> l{p_lock};
             return p_closed;
         }
 
         void close() {
-            std::unique_lock<std::mutex> l{p_lock};
+            std::lock_guard<std::mutex> l{p_lock};
             p_closed = true;
             p_cond.notify_all();
         }

@@ -45,12 +45,13 @@ struct thread_pool {
     }
 
     void destroy() {
-        std::unique_lock<std::mutex> l{p_lock};
-        if (!p_running) {
-            return;
+        {
+            std::lock_guard<std::mutex> l{p_lock};
+            if (!p_running) {
+                return;
+            }
+            p_running = false;
         }
-        p_running = false;
-        l.unlock();
         p_cond.notify_all();
         for (auto &tid: p_thrs) {
             tid.join();
@@ -65,16 +66,18 @@ struct thread_pool {
         using R = std::result_of_t<F(A...)>;
         if constexpr(std::is_same_v<R, void>) {
             /* void-returning funcs return void */
-            std::unique_lock<std::mutex> l{p_lock};
-            if (!p_running) {
-                throw std::runtime_error{"push on stopped thread_pool"};
-            }
-            if constexpr(sizeof...(A) == 0) {
-                p_tasks.push(std::forward<F>(func));
-            } else {
-                p_tasks.push(
-                    std::bind(std::forward<F>(func), std::forward<A>(args)...)
-                );
+            {
+                std::lock_guard<std::mutex> l{p_lock};
+                if (!p_running) {
+                    throw std::runtime_error{"push on stopped thread_pool"};
+                }
+                if constexpr(sizeof...(A) == 0) {
+                    p_tasks.push(std::forward<F>(func));
+                } else {
+                    p_tasks.push(
+                        std::bind(std::forward<F>(func), std::forward<A>(args)...)
+                    );
+                }
             }
             p_cond.notify_one();
         } else {
@@ -88,13 +91,15 @@ struct thread_pool {
                 };
             }
             auto ret = t.get_future();
-            std::unique_lock<std::mutex> l{p_lock};
-            if (!p_running) {
-                throw std::runtime_error{"push on stopped thread_pool"};
+            {
+                std::lock_guard<std::mutex> l{p_lock};
+                if (!p_running) {
+                    throw std::runtime_error{"push on stopped thread_pool"};
+                }
+                p_tasks.emplace([t = std::move(t)]() {
+                    t();
+                });
             }
-            p_tasks.emplace([t = std::move(t)]() {
-                t();
-            });
             p_cond.notify_one();
             return ret;
         }

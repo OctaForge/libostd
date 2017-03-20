@@ -30,7 +30,7 @@ struct thread_scheduler {
 
     template<typename F, typename ...A>
     void spawn(F &&func, A &&...args) {
-        std::unique_lock<std::mutex> l{p_lock};
+        std::lock_guard<std::mutex> l{p_lock};
         p_threads.emplace_front();
         auto it = p_threads.begin();
         *it = std::thread{
@@ -53,7 +53,7 @@ struct thread_scheduler {
 
 private:
     void remove_thread(typename std::list<std::thread>::iterator it) {
-        std::unique_lock<std::mutex> l{p_lock};
+        std::lock_guard<std::mutex> l{p_lock};
         std::thread t{std::exchange(p_dead, std::move(*it))};
         if (t.joinable()) {
             t.join();
@@ -63,7 +63,7 @@ private:
 
     void join_all() {
         /* wait for all threads to finish */
-        std::unique_lock<std::mutex> l{p_lock};
+        std::lock_guard<std::mutex> l{p_lock};
         if (p_dead.joinable()) {
             p_dead.join();
         }
