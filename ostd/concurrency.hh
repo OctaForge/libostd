@@ -36,7 +36,7 @@ struct thread_scheduler {
         *it = std::thread{
             [this, it](auto func, auto ...args) {
                 func(std::move(args)...);
-                this->remove_thread(it);
+                remove_thread(it);
             },
             std::forward<F>(func), std::forward<A>(args)...
         };
@@ -224,6 +224,270 @@ using simple_coroutine_scheduler =
 
 using protected_simple_coroutine_scheduler =
     basic_simple_coroutine_scheduler<stack_traits, true>;
+
+template<typename TR, bool Protected>
+struct basic_coroutine_scheduler {
+private:
+    struct task_cond;
+    struct task;
+
+    using tlist = std::list<task>;
+    using titer = typename tlist::iterator;
+
+    struct task {
+        struct coro: coroutine<void()> {
+            using coroutine<void()>::coroutine;
+            task *tptr = nullptr;
+        };
+
+        coro func;
+        task_cond *waiting_on = nullptr;
+        task *next_waiting = nullptr;
+        titer pos;
+
+        task() = delete;
+        template<typename F, typename SA>
+        task(F &&f, SA &&alloc):
+            func(std::forward<F>(f), std::forward<SA>(alloc))
+        {
+            func.tptr = this;
+        }
+
+        void operator()() {
+            func();
+        }
+
+        void yield(basic_coroutine_scheduler &sched) {
+            {
+                std::lock_guard<std::mutex> l{sched.p_lock};
+                sched.p_available.splice(
+                    sched.p_available.cend(), sched.p_running, pos
+                );
+            }
+            yield_raw();
+        }
+
+        void yield_raw() {
+            typename coro::yield_type{func}();
+        }
+
+        bool dead() const {
+            return !func;
+        }
+
+        static task *current() {
+            auto ctx = coroutine_context::current();
+            coro *c = dynamic_cast<coro *>(ctx);
+            if (!c) {
+                std::terminate();
+            }
+            return c->tptr;
+        }
+    };
+
+    struct task_cond {
+        task_cond() = delete;
+        task_cond(task_cond const &) = delete;
+        task_cond(task_cond &&) = delete;
+        task_cond &operator=(task_cond const &) = delete;
+        task_cond &operator=(task_cond &&) = delete;
+
+        task_cond(basic_coroutine_scheduler &s): p_sched(s) {}
+
+        template<typename L>
+        void wait(L &l) noexcept {
+            l.unlock();
+            task *curr = task::current();
+            p_sched.wait(this, p_waiting, curr);
+            curr->yield_raw();
+            l.lock();
+        }
+
+        void notify_one() noexcept {
+            p_sched.notify_one(p_waiting);
+        }
+
+        void notify_all() noexcept {
+            p_sched.notify_all(p_waiting);
+        }
+    private:
+        basic_coroutine_scheduler &p_sched;
+        task *p_waiting = nullptr;
+    };
+
+public:
+    template<typename T>
+    using channel_type = channel<T, task_cond>;
+
+    basic_coroutine_scheduler(
+        size_t ss = TR::default_size(),
+        size_t cs = basic_stack_pool<TR, Protected>::DEFAULT_CHUNK_SIZE
+    ):
+        p_stacks(ss, cs)
+    {}
+
+    ~basic_coroutine_scheduler() {}
+
+    template<typename F, typename ...A>
+    auto start(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
+        /* start with one task in the queue, this way we can
+         * say we've finished when the task queue becomes empty
+         */
+        using R = std::result_of_t<F(A...)>;
+        if constexpr(std::is_same_v<R, void>) {
+            spawn(std::forward<F>(func), std::forward<A>(args)...);
+            /* actually start the thread pool */
+            init();
+            destroy();
+        } else {
+            R ret;
+            spawn([&ret, func = std::forward<F>(func)](auto &&...args) {
+                ret = func(std::forward<A>(args)...);
+            }, std::forward<A>(args)...);
+            init();
+            destroy();
+            return ret;
+        }
+    }
+
+    template<typename F, typename ...A>
+    void spawn(F &&func, A &&...args) {
+        {
+            std::lock_guard<std::mutex> l{p_lock};
+            task *t = nullptr;
+            if constexpr(sizeof...(A) == 0) {
+                t = &p_available.emplace_back(
+                    [lfunc = std::forward<F>(func)](auto) {
+                        lfunc();
+                    },
+                    p_stacks.get_allocator()
+                );
+            } else {
+                t = &p_available.emplace_back(
+                    [lfunc = std::bind(
+                        std::forward<F>(func), std::forward<A>(args)...
+                    )](auto) mutable {
+                        lfunc();
+                    },
+                    p_stacks.get_allocator()
+                );
+            }
+            t->pos = --p_available.end();
+        }
+        p_cond.notify_one();
+    }
+
+    void yield() {
+        task::current()->yield(*this);
+    }
+
+    template<typename T>
+    channel<T, task_cond> make_channel() {
+        return channel<T, task_cond>{[this]() {
+            return task_cond{*this};
+        }};
+    }
+private:
+    void init() {
+        auto tf = [this]() {
+            thread_run();
+        };
+        size_t size = std::thread::hardware_concurrency();
+        for (size_t i = 0; i < size; ++i) {
+            std::thread tid{tf};
+            if (!tid.joinable()) {
+                throw std::runtime_error{"coroutine_scheduler worker failed"};
+            }
+            p_thrs.push_back(std::move(tid));
+        }
+    }
+
+    void destroy() {
+        p_cond.notify_all();
+        for (auto &tid: p_thrs) {
+            tid.join();
+            p_cond.notify_all();
+        }
+    }
+
+    void wait(task_cond *cond, task *&wt, task *t) {
+        std::lock_guard<std::mutex> l{p_lock};
+        p_waiting.splice(p_waiting.cbegin(), p_running, t->pos);
+        t->waiting_on = cond;
+        t->next_waiting = wt;
+        wt = t;
+    }
+
+    void notify_one(task *&wl) {
+        std::unique_lock<std::mutex> l{p_lock};
+        if (wl == nullptr) {
+            return;
+        }
+        wl->waiting_on = nullptr;
+        p_available.splice(p_available.cbegin(), p_waiting, wl->pos);
+        wl = wl->next_waiting;
+        l.unlock();
+        p_cond.notify_one();
+        task::current()->yield(*this);
+    }
+
+    void notify_all(task *&wl) {
+        {
+            std::unique_lock<std::mutex> l{p_lock};
+            while (wl != nullptr) {
+                wl->waiting_on = nullptr;
+                p_available.splice(p_available.cbegin(), p_waiting, wl->pos);
+                wl = wl->next_waiting;
+                l.unlock();
+                p_cond.notify_one();
+                l.lock();
+            }
+        }
+        task::current()->yield(*this);
+    }
+
+    void thread_run() {
+        for (;;) {
+            std::unique_lock<std::mutex> l{p_lock};
+            /* wait for an item to become available */
+            while (p_available.empty()) {
+                /* if all lists have become empty, we're done */
+                if (p_waiting.empty() && p_running.empty()) {
+                    return;
+                }
+                p_cond.wait(l);
+            }
+            task_run(l);
+        }
+    }
+
+    void task_run(std::unique_lock<std::mutex> &l) {
+        auto it = p_available.begin();
+        p_running.splice(p_running.cend(), p_available, it);
+        task &c = *it;
+        l.unlock();
+        c();
+        l.lock();
+        if (c.dead()) {
+            p_running.erase(it);
+        }
+        l.unlock();
+    }
+
+    std::condition_variable p_cond;
+    std::mutex p_lock;
+    std::vector<std::thread> p_thrs;
+    basic_stack_pool<TR, Protected> p_stacks;
+    tlist p_available;
+    tlist p_waiting;
+    tlist p_running;
+};
+
+using coroutine_scheduler =
+    basic_coroutine_scheduler<stack_traits, false>;
+
+using protected_coroutine_scheduler =
+    basic_coroutine_scheduler<stack_traits, true>;
 
 template<typename S, typename F, typename ...A>
 inline void spawn(S &sched, F &&func, A &&...args) {
