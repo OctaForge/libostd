@@ -257,17 +257,11 @@ private:
             func();
         }
 
-        void yield(basic_coroutine_scheduler &sched) {
-            {
-                std::lock_guard<std::mutex> l{sched.p_lock};
-                sched.p_available.splice(
-                    sched.p_available.cend(), sched.p_running, pos
-                );
-            }
-            yield_raw();
-        }
-
-        void yield_raw() {
+        void yield() {
+            /* we'll yield back to the thread we were scheduled to, which
+             * will appropriately notify one or all other waiting threads
+             * so we either get re-scheduled or the whole scheduler dies
+             */
             typename coro::yield_type{func}();
         }
 
@@ -299,7 +293,7 @@ private:
             l.unlock();
             task *curr = task::current();
             p_sched.wait(this, p_waiting, curr);
-            curr->yield_raw();
+            curr->yield();
             l.lock();
         }
 
@@ -378,7 +372,7 @@ public:
     }
 
     void yield() {
-        task::current()->yield(*this);
+        task::current()->yield();
     }
 
     template<typename T>
@@ -403,10 +397,8 @@ private:
     }
 
     void destroy() {
-        p_cond.notify_all();
         for (auto &tid: p_thrs) {
             tid.join();
-            p_cond.notify_all();
         }
     }
 
@@ -428,7 +420,7 @@ private:
         wl = wl->next_waiting;
         l.unlock();
         p_cond.notify_one();
-        task::current()->yield(*this);
+        task::current()->yield();
     }
 
     void notify_all(task *&wl) {
@@ -443,7 +435,7 @@ private:
                 l.lock();
             }
         }
-        task::current()->yield(*this);
+        task::current()->yield();
     }
 
     void thread_run() {
@@ -470,8 +462,21 @@ private:
         l.lock();
         if (c.dead()) {
             p_running.erase(it);
+            /* we're dead, notify all threads so they can be joined
+             * we check all three, saves the other threads some re-waiting
+             * when a task or tasks are already running, and those that do
+             * will do the final notify by themselves
+             */
+            if (p_available.empty() && p_waiting.empty() && p_running.empty()) {
+                l.unlock();
+                p_cond.notify_all();
+            }
+        } else if (!c.waiting_on) {
+            /* reschedule to the end of the queue */
+            p_available.splice(p_available.cend(), p_running, it);
+            l.unlock();
+            p_cond.notify_one();
         }
-        l.unlock();
     }
 
     std::condition_variable p_cond;
