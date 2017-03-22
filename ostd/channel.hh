@@ -6,6 +6,7 @@
 #ifndef OSTD_CHANNEL_HH
 #define OSTD_CHANNEL_HH
 
+#include <stdio.h>
 #include <list>
 #include <mutex>
 #include <condition_variable>

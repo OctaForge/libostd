@@ -18,7 +18,8 @@ int main() {
         spawn(sched, f, c, arr.slice(0, arr.size() / 2));
         spawn(sched, f, c, arr + (arr.size() / 2));
 
-        int a = c.get(), b = c.get();
+        int a = c.get();
+        int b = c.get();
         writefln("%s + %s = %s", a, b, a + b);
     };
 

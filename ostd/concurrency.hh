@@ -328,6 +328,12 @@ private:
 
         template<typename L>
         void wait(L &l) noexcept {
+            /* lock until the task has been added to the wait queue,
+             * that ensures that any notify/notify_any has to wait
+             * until after the task has fully blocked... we can't
+             * use unique_lock or lock_guard because they're scoped
+             */
+            p_sched.p_lock.lock();
             l.unlock();
             task *curr = task::current();
             curr->waiting_on = this;
@@ -493,8 +499,8 @@ private:
         task &c = *it;
         l.unlock();
         c();
-        l.lock();
         if (c.dead()) {
+            l.lock();
             p_running.erase(it);
             /* we're dead, notify all threads so they can be joined
              * we check all three, saves the other threads some re-waiting
@@ -507,6 +513,7 @@ private:
             }
         } else if (!c.waiting_on) {
             /* reschedule to the end of the queue */
+            l.lock();
             p_available.splice(p_available.cend(), p_running, it);
             l.unlock();
             p_cond.notify_one();
@@ -514,6 +521,8 @@ private:
             p_waiting.splice(p_waiting.cbegin(), p_running, it);
             c.next_waiting = c.waiting_on->p_waiting;
             c.waiting_on->p_waiting = &c;
+            /* wait locks the mutex, so manually unlock it here */
+            p_lock.unlock();
         }
     }
 
