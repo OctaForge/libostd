@@ -289,7 +289,7 @@ private:
         detail::csched_task p_func;
 
     public:
-        void *waiting_on = nullptr;
+        task_cond *waiting_on = nullptr;
         task *next_waiting = nullptr;
         titer pos;
 
@@ -316,6 +316,8 @@ private:
     };
 
     struct task_cond {
+        friend struct basic_coroutine_scheduler;
+
         task_cond() = delete;
         task_cond(task_cond const &) = delete;
         task_cond(task_cond &&) = delete;
@@ -328,7 +330,7 @@ private:
         void wait(L &l) noexcept {
             l.unlock();
             task *curr = task::current();
-            p_sched.wait(this, p_waiting, curr);
+            curr->waiting_on = this;
             curr->yield();
             l.lock();
         }
@@ -442,14 +444,6 @@ private:
         }
     }
 
-    void wait(task_cond *cond, task *&wt, task *t) {
-        std::lock_guard<std::mutex> l{p_lock};
-        p_waiting.splice(p_waiting.cbegin(), p_running, t->pos);
-        t->waiting_on = cond;
-        t->next_waiting = wt;
-        wt = t;
-    }
-
     void notify_one(task *&wl) {
         std::unique_lock<std::mutex> l{p_lock};
         if (wl == nullptr) {
@@ -457,7 +451,7 @@ private:
         }
         wl->waiting_on = nullptr;
         p_available.splice(p_available.cbegin(), p_waiting, wl->pos);
-        wl = wl->next_waiting;
+        wl = std::exchange(wl->next_waiting, nullptr);
         l.unlock();
         p_cond.notify_one();
         task::current()->yield();
@@ -469,7 +463,7 @@ private:
             while (wl != nullptr) {
                 wl->waiting_on = nullptr;
                 p_available.splice(p_available.cbegin(), p_waiting, wl->pos);
-                wl = wl->next_waiting;
+                wl = std::exchange(wl->next_waiting, nullptr);
                 l.unlock();
                 p_cond.notify_one();
                 l.lock();
@@ -516,6 +510,10 @@ private:
             p_available.splice(p_available.cend(), p_running, it);
             l.unlock();
             p_cond.notify_one();
+        } else {
+            p_waiting.splice(p_waiting.cbegin(), p_running, it);
+            c.next_waiting = c.waiting_on->p_waiting;
+            c.waiting_on->p_waiting = &c;
         }
     }
 
