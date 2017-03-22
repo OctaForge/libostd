@@ -75,15 +75,13 @@ protected:
     }
 
     void call() {
-        p_state = state::EXEC;
+        set_exec();
         /* switch to new coroutine */
         coroutine_context *curr = std::exchange(detail::coro_current, this);
         coro_jump();
         /* switch back to previous */
         detail::coro_current = curr;
-        if (p_except) {
-            std::rethrow_exception(std::move(p_except));
-        }
+        rethrow();
     }
 
     void coro_jump() {
@@ -105,6 +103,16 @@ protected:
 
     void set_dead() {
         p_state = state::TERM;
+    }
+
+    void set_exec() {
+        p_state = state::EXEC;
+    }
+
+    void rethrow() {
+        if (p_except) {
+            std::rethrow_exception(std::move(p_except));
+        }
     }
 
     void swap(coroutine_context &other) noexcept {

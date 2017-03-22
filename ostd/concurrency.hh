@@ -6,6 +6,8 @@
 #ifndef OSTD_CONCURRENCY_HH
 #define OSTD_CONCURRENCY_HH
 
+#include <vector>
+#include <list>
 #include <thread>
 #include <utility>
 #include <memory>
@@ -226,38 +228,38 @@ using simple_coroutine_scheduler =
 using protected_simple_coroutine_scheduler =
     basic_simple_coroutine_scheduler<stack_traits, true>;
 
-template<typename TR, bool Protected>
-struct basic_coroutine_scheduler {
-private:
-    struct task_cond;
-    struct task;
+namespace detail {
+    struct csched_task;
 
-    using tlist = std::list<task>;
-    using titer = typename tlist::iterator;
+    OSTD_EXPORT extern thread_local csched_task *current_csched_task;
 
-    struct task: coroutine_context {
+    struct csched_task: coroutine_context {
         std::function<void()> func;
-        task_cond *waiting_on = nullptr;
-        task *next_waiting = nullptr;
-        titer pos;
+        void *waiting_on = nullptr;
+        csched_task *next_waiting = nullptr;
+        typename std::list<csched_task>::iterator pos;
 
-        task() = delete;
-        task(task const &) = delete;
-        task(task &&) = delete;
-        task &operator=(task const &) = delete;
-        task &operator=(task &&) = delete;
+        csched_task() = delete;
+        csched_task(csched_task const &) = delete;
+        csched_task(csched_task &&) = delete;
+        csched_task &operator=(csched_task const &) = delete;
+        csched_task &operator=(csched_task &&) = delete;
 
         template<typename F, typename SA>
-        task(F &&f, SA &&sa): func(std::forward<F>(f)) {
+        csched_task(F &&f, SA &&sa): func(std::forward<F>(f)) {
             if (!func) {
                 this->set_dead();
                 return;
             }
-            this->make_context<task>(sa);
+            this->make_context<csched_task>(sa);
         }
 
         void operator()() {
-            this->call();
+            this->set_exec();
+            csched_task *curr = std::exchange(current_csched_task, this);
+            this->coro_jump();
+            current_csched_task = curr;
+            this->rethrow();
         }
 
         void yield() {
@@ -272,19 +274,24 @@ private:
             return this->is_dead();
         }
 
-        static task *current() {
-            auto ctx = coroutine_context::current();
-            task *t = dynamic_cast<task *>(ctx);
-            if (!t) {
-                std::terminate();
-            }
-            return t;
+        static csched_task *current() {
+            return current_csched_task;
         }
 
         void resume_call() {
             func();
         }
     };
+}
+
+template<typename TR, bool Protected>
+struct basic_coroutine_scheduler {
+private:
+    struct task_cond;
+    using task = detail::csched_task;
+
+    using tlist = std::list<task>;
+    using titer = typename tlist::iterator;
 
     struct task_cond {
         task_cond() = delete;

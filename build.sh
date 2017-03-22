@@ -13,7 +13,7 @@ ASM_SOURCES="jump_all_gas make_all_gas ontop_all_gas"
 
 # c++ sources
 CXX_SOURCE_DIR="src"
-CXX_SOURCES="context_stack io"
+CXX_SOURCES="context_stack io concurrency"
 
 # output lib
 OSTD_LIB="libostd"
