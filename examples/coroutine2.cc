@@ -30,6 +30,28 @@ int main() {
 
     generator<int> &gr = dynamic_cast<generator<int> &>(*ctx);
     writefln("value of cast back generator: %s", gr.value());
+
+    writeln("-- nested coroutine test --");
+
+    coroutine<void()> c1 = [](auto yield) {
+        coroutine<void()> c2 = [&yield](auto) {
+            writeln("inside c2 1");
+            yield();
+            writeln("inside c2 2");
+            yield();
+            writeln("inside c2 3");
+        };
+        writeln("inside c1 1");
+        c2();
+        writeln("inside c1 2");
+    };
+    writeln("outside 1");
+    c1();
+    writeln("outside 2");
+    c1();
+    writeln("outside 3");
+    c1();
+    writeln("outside exit");
 }
 
 /*
@@ -42,4 +64,14 @@ generated: 25
 generator is coroutine<int()>: false
 generator is generator<int>: true
 value of cast back generator: 5
+-- nested coroutine test --
+outside 1
+inside c1 1
+inside c2 1
+outside 2
+inside c2 2
+outside 3
+inside c2 3
+inside c1 2
+outside exit
 */

@@ -184,7 +184,7 @@ public:
         p_stacks(ss, cs),
         p_dispatcher([this]() {
             dispatch();
-        }, basic_fixedsize_stack<TR, Protected>{ss}),
+        }, p_stacks.get_allocator()),
         p_coros()
     {}
 
