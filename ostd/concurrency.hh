@@ -235,27 +235,29 @@ private:
     using tlist = std::list<task>;
     using titer = typename tlist::iterator;
 
-    struct task {
-        struct coro: coroutine<void()> {
-            using coroutine<void()>::coroutine;
-            task *tptr = nullptr;
-        };
-
-        coro func;
+    struct task: coroutine_context {
+        std::function<void()> func;
         task_cond *waiting_on = nullptr;
         task *next_waiting = nullptr;
         titer pos;
 
         task() = delete;
+        task(task const &) = delete;
+        task(task &&) = delete;
+        task &operator=(task const &) = delete;
+        task &operator=(task &&) = delete;
+
         template<typename F, typename SA>
-        task(F &&f, SA &&alloc):
-            func(std::forward<F>(f), std::forward<SA>(alloc))
-        {
-            func.tptr = this;
+        task(F &&f, SA &&sa): func(std::forward<F>(f)) {
+            if (!func) {
+                this->set_dead();
+                return;
+            }
+            this->make_context<task>(sa);
         }
 
         void operator()() {
-            func();
+            this->call();
         }
 
         void yield() {
@@ -263,20 +265,24 @@ private:
              * will appropriately notify one or all other waiting threads
              * so we either get re-scheduled or the whole scheduler dies
              */
-            typename coro::yield_type{func}();
+            this->yield_jump();
         }
 
         bool dead() const {
-            return !func;
+            return this->is_dead();
         }
 
         static task *current() {
             auto ctx = coroutine_context::current();
-            coro *c = dynamic_cast<coro *>(ctx);
-            if (!c) {
+            task *t = dynamic_cast<task *>(ctx);
+            if (!t) {
                 std::terminate();
             }
-            return c->tptr;
+            return t;
+        }
+
+        void resume_call() {
+            func();
         }
     };
 
@@ -377,16 +383,14 @@ private:
         task *t = nullptr;
         if constexpr(sizeof...(A) == 0) {
             t = &p_available.emplace_back(
-                [lfunc = std::forward<F>(func)](auto) {
-                    lfunc();
-                },
+                std::forward<F>(func),
                 std::forward<SA>(sa)
             );
         } else {
             t = &p_available.emplace_back(
                 [lfunc = std::bind(
                     std::forward<F>(func), std::forward<A>(args)...
-                )](auto) mutable {
+                )]() mutable {
                     lfunc();
                 },
                 std::forward<SA>(sa)
