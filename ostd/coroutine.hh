@@ -130,6 +130,7 @@ namespace detail {
     /* default case, yield returns args and takes a value */
     template<typename Y, typename R, typename ...A>
     struct coro_stor {
+        coro_stor(): p_func(nullptr) {}
         template<typename F>
         coro_stor(F &&func): p_func(std::forward<F>(func)) {}
 
@@ -171,6 +172,7 @@ namespace detail {
     /* yield takes a value but doesn't return any args */
     template<typename Y, typename R>
     struct coro_stor<Y, R> {
+        coro_stor(): p_func(nullptr) {}
         template<typename F>
         coro_stor(F &&func): p_func(std::forward<F>(func)) {}
 
@@ -199,6 +201,7 @@ namespace detail {
     /* yield doesn't take a value and returns args */
     template<typename Y, typename ...A>
     struct coro_stor<Y, void, A...> {
+        coro_stor(): p_func(nullptr) {}
         template<typename F>
         coro_stor(F &&func): p_func(std::forward<F>(func)) {}
 
@@ -232,6 +235,7 @@ namespace detail {
     /* yield doesn't take a value or return any args */
     template<typename Y>
     struct coro_stor<Y, void> {
+        coro_stor(): p_func(nullptr) {}
         template<typename F>
         coro_stor(F &&func): p_func(std::forward<F>(func)) {}
 
@@ -343,7 +347,7 @@ public:
     }
 
     template<typename SA = default_stack>
-    coroutine(std::nullptr_t, SA = SA{0}): base_t(), p_stor() {
+    coroutine(std::nullptr_t, SA = SA{}): base_t(), p_stor() {
         this->set_dead();
     }
 

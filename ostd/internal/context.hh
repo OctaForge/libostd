@@ -56,15 +56,17 @@ protected:
     /* coroutine context must be polymorphic */
     virtual ~coroutine_context() {
         unwind();
+        free_stack();
     }
 
     coroutine_context(coroutine_context const &) = delete;
     coroutine_context(coroutine_context &&c):
         p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
-        p_except(std::move(c.p_except)), p_state(std::move(c.p_state))
+        p_except(std::move(c.p_except)), p_state(c.p_state), p_free(c.p_free)
     {
         c.p_coro = c.p_orig = nullptr;
         c.p_stack = { nullptr, 0 };
+        c.p_free = nullptr;
         c.set_dead();
     }
 
@@ -90,6 +92,11 @@ protected:
 
     void yield_jump() {
         p_state = state::HOLD;
+        p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
+    }
+
+    void yield_done() {
+        set_dead();
         p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
     }
 
@@ -122,6 +129,7 @@ protected:
         swap(p_orig, other.p_orig);
         swap(p_except, other.p_except);
         swap(p_state, other.p_state);
+        swap(p_free, other.p_free);
     }
 
     template<typename C, typename SA>
@@ -134,6 +142,7 @@ protected:
 
         p_coro = detail::ostd_make_fcontext(sp, asize, &context_call<C, SA>);
         new (sp) SA(std::move(sa));
+        p_free = &free_stack_call<SA>;
     }
 
 private:
@@ -171,11 +180,7 @@ private:
             return;
         }
         if (!p_orig) {
-            /* this coroutine never got to live :(
-             * let it call the entry point at least this once...
-             * this will kill the stack so we don't leak memory
-             */
-            coro_jump();
+            /* this coroutine never got to live :( */
             return;
         }
         detail::ostd_ontop_fcontext(
@@ -187,19 +192,18 @@ private:
     }
 
     template<typename SA>
-    void finish() {
-        set_dead();
-        detail::ostd_ontop_fcontext(
-            p_orig, this, [](detail::transfer_t t) -> detail::transfer_t {
-                auto &self = *(static_cast<coroutine_context *>(t.data));
-                auto &sa = *(static_cast<SA *>(self.get_stack_ptr<SA>()));
-                SA dsa{std::move(sa)};
-                /* in case it holds any state that needs destroying */
-                sa.~SA();
-                dsa.deallocate(self.p_stack);
-                return { nullptr, nullptr };
-            }
-        );
+    static void free_stack_call(void *data) {
+        auto &self = *(static_cast<coroutine_context *>(data));
+        auto &sa = *(static_cast<SA *>(self.get_stack_ptr<SA>()));
+        SA dsa{std::move(sa)};
+        sa.~SA();
+        dsa.deallocate(self.p_stack);
+    }
+
+    void free_stack() {
+        if (p_free) {
+            p_free(this);
+        }
     }
 
     template<typename C, typename SA>
@@ -223,7 +227,7 @@ private:
         }
         /* switch back, release stack */
 release:
-        self.template finish<SA>();
+        self.yield_done();
     }
 
     stack_context p_stack;
@@ -231,6 +235,7 @@ release:
     detail::fcontext_t p_orig = nullptr;
     std::exception_ptr p_except;
     state p_state = state::HOLD;
+    void (*p_free)(void *) = nullptr;
 };
 
 } /* namespace ostd */
