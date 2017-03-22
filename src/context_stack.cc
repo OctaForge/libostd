@@ -74,6 +74,17 @@ namespace detail {
 #endif
     }
 
+    OSTD_EXPORT size_t stack_main_size() noexcept {
+#if defined(OSTD_PLATFORM_WIN32)
+        /* 4 MiB for windows... */
+        return 4 * 1024 * 1024;
+#else
+        struct rlimit l;
+        getrlimit(RLIMIT_STACK, &l);
+        return size_t(l.rlim_cur);
+#endif
+    }
+
     OSTD_EXPORT void stack_protect(void *p, size_t sz) noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
         DWORD oo;

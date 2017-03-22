@@ -219,8 +219,8 @@ release:
     }
 
     stack_context p_stack;
-    detail::fcontext_t p_coro;
-    detail::fcontext_t p_orig;
+    detail::fcontext_t p_coro = nullptr;
+    detail::fcontext_t p_orig = nullptr;
     std::exception_ptr p_except;
     state p_state = state::HOLD;
 };

@@ -43,6 +43,7 @@ namespace detail {
     OSTD_EXPORT void *stack_alloc(size_t sz);
     OSTD_EXPORT void stack_free(void *p, size_t sz) noexcept;
     OSTD_EXPORT void stack_protect(void *p, size_t sz) noexcept;
+    OSTD_EXPORT size_t stack_main_size() noexcept;
 }
 
 template<typename TR, bool Protected>
@@ -50,7 +51,11 @@ struct basic_fixedsize_stack {
     using traits_type = TR;
 
     basic_fixedsize_stack(size_t ss = TR::default_size()) noexcept:
-        p_size(std::clamp(ss, TR::minimum_size(), TR::maximum_size()))
+        p_size(
+            TR::is_unbounded()
+                ? std::max(ss, TR::minimum_size())
+                : std::clamp(ss, TR::minimum_size(), TR::maximum_size())
+        )
     {}
 
     stack_context allocate() {
