@@ -73,7 +73,7 @@ private:
         }
 
         template<typename F>
-        impl(F &func): p_lock(), p_cond(func) {}
+        impl(F &func): p_lock(), p_cond(func()) {}
 
         template<typename U>
         void put(U &&val) {

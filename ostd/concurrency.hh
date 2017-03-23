@@ -15,6 +15,7 @@
 #include "ostd/platform.hh"
 #include "ostd/coroutine.hh"
 #include "ostd/channel.hh"
+#include "ostd/generic_condvar.hh"
 
 namespace ostd {
 
@@ -46,9 +47,8 @@ struct thread_scheduler {
         std::this_thread::yield();
     }
 
-    template<typename T>
-    channel<T> make_channel() {
-        return channel<T>{};
+    generic_condvar make_condition() {
+        return generic_condvar{};
     }
 
 private:
@@ -221,9 +221,8 @@ public:
         ctx->yield();
     }
 
-    template<typename T>
-    channel<T> make_channel() {
-        return channel<T>{[this]() {
+    generic_condvar make_condition() {
+        return generic_condvar{[this]() {
             return coro_cond{*this};
         }};
     }
@@ -399,9 +398,8 @@ public:
         task::current()->yield();
     }
 
-    template<typename T>
-    channel<T> make_channel() {
-        return channel<T>{[this]() {
+    generic_condvar make_condition() {
+        return generic_condvar{[this]() {
             return task_cond{*this};
         }};
     }
@@ -543,7 +541,9 @@ inline void yield(S &sched) {
 
 template<typename T, typename S>
 inline channel<T> make_channel(S &sched) {
-    return sched.template make_channel<T>();
+    return channel<T>{[&sched]() {
+        return sched.make_condition();
+    }};
 }
 
 } /* namespace ostd */
