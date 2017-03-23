@@ -41,30 +41,29 @@ features (such as `if constexpr` and fold expressions) which allow a lot of
 code to be written in a cleaner way. However, it is made sure that no features
 beyond the minimum supported compiler are necessary to use the library.
 
-## Supported operating systems
+## Supported operating systems and architectures
 
-Most of OctaSTD is entirely platform independent and relies only on the
-standard library. Therefore it could in theory be used on any operating
-system that provides the right toolchain. However, to make things easier
-to deal with, it currently assumes either Windows or POSIX environment.
-Some parts (such as filesystem and context/coroutines) also use platform
-specific code that assumes these two.
+OctaSTD targets POSIX compliant operating systems and Windows. Features are
+written with those in mind, and other targets are currently not supported.
 
-OctaSTD is actively supported on Windows (x86 and x86\_64) as well as Linux,
-FreeBSD and macOS. It should also work on other POSIX systems such as the other
-BSDs or Solaris - if it doesn't, please report your problem or better, send
-patches.
+The primary targets (regularly tested) are Linux, FreeBSD and Windows on x86
+and x86\_64 as well as macOS on x86\_64. Secondary targets (irregularly tested)
+are Linux and FreeBSD on ARM, AArch64 as well as macOS on x86. Tertiary targets
+(rarely tested or untested but probably working and accepting patches for) are
+other BSDs, Solaris and AIX on x86, x86\_64, ARM, AArch64, MIPS32 and PPC32/64
+as well as other previously mentioned systems on architectures not included
+in their Tier 1 or 2 support. Other targets are unsupported (might or might
+not work, depending on POSIX compliance and ABI).
 
-### Coroutine platform support
+### Coroutines
 
-Coroutines work on POSIX and Windows systems. Context switching is done with
-platform specific assembly taken from Boost.Context, the provided assembly
-code should be enough for all supported platforms, but you need to compile
-the correct ones.
+Coroutines use platform specific assembly code taken from Boost.Context. There
+is assembly for all of the targets mentioned above.
 
 There is also support for stack allocators inspired again by the Boost.Context
 library, with fixed size protected and unprotected allocators available on all
 platforms, as well as a stack pool which allocates stacks in batches and
 recycles dead stacks.
 
-There is also Valgrind support, enabled with `OSTD_USE_VALGRIND`.
+Compile with the `OSTD_USE_VALGRIND` macro defined if you want useful Valgrind
+output when using coroutines - this makes Valgrind aware of the custom stacks.
