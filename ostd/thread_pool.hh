@@ -60,7 +60,7 @@ namespace detail {
 
         template<typename F>
         tpool_func(F &&func) {
-            if (sizeof(F) <= sizeof(p_buf)) {
+            if (sizeof(tpool_func_impl<F>) <= sizeof(p_buf)) {
                 p_func = ::new(reinterpret_cast<void *>(&p_buf))
                     tpool_func_impl<F>{std::move(func)};
             } else {
@@ -81,7 +81,7 @@ namespace detail {
         }
     private:
         std::aligned_storage_t<
-            sizeof(std::packaged_task<void()>) + sizeof(void *)
+            sizeof(tpool_func_impl<std::packaged_task<void()>>)
         > p_buf;
         tpool_func_base *p_func;
     };

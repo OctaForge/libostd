@@ -6,7 +6,8 @@
 #ifndef OSTD_CHANNEL_HH
 #define OSTD_CHANNEL_HH
 
-#include <stdio.h>
+#include <type_traits>
+#include <algorithm>
 #include <list>
 #include <mutex>
 #include <condition_variable>
@@ -19,10 +20,8 @@ struct channel_error: std::logic_error {
     using std::logic_error::logic_error;
 };
 
-template<typename T, typename C = std::condition_variable>
+template<typename T>
 struct channel {
-    using condition_variable_type = C;
-
     /* default ctor works for default C */
     channel(): p_state(new impl) {}
 
@@ -67,11 +66,68 @@ struct channel {
     }
 
 private:
+    struct cond_iface {
+        cond_iface() {}
+        virtual ~cond_iface() {}
+        virtual void notify_one() = 0;
+        virtual void notify_all() = 0;
+        virtual void wait(std::unique_lock<std::mutex> &) = 0;
+    };
+
+    template<typename C>
+    struct cond_impl: cond_iface {
+        cond_impl(): p_cond() {}
+        template<typename F>
+        cond_impl(F &func): p_cond(func()) {}
+        void notify_one() {
+            p_cond.notify_one();
+        }
+        void notify_all() {
+            p_cond.notify_all();
+        }
+        void wait(std::unique_lock<std::mutex> &l) {
+            p_cond.wait(l);
+        }
+    private:
+        C p_cond;
+    };
+
+    struct cond {
+        cond() {
+            new (reinterpret_cast<void *>(&p_condbuf))
+                cond_impl<std::condition_variable>();
+        }
+        template<typename F>
+        cond(F &func) {
+            new (reinterpret_cast<void *>(&p_condbuf))
+                cond_impl<std::result_of_t<F()>>(func);
+        }
+        ~cond() {
+            reinterpret_cast<cond_iface *>(&p_condbuf)->~cond_iface();
+        }
+
+        void notify_one() {
+            reinterpret_cast<cond_iface *>(&p_condbuf)->notify_one();
+        }
+        void notify_all() {
+            reinterpret_cast<cond_iface *>(&p_condbuf)->notify_all();
+        }
+        void wait(std::unique_lock<std::mutex> &l) {
+            reinterpret_cast<cond_iface *>(&p_condbuf)->wait(l);
+        }
+
+    private:
+        std::aligned_storage_t<std::max(
+            6 * sizeof(void *), sizeof(cond_impl<std::condition_variable>)
+        ), alignof(std::condition_variable)> p_condbuf;
+    };
+
     struct impl {
-        impl() {}
+        impl() {
+        }
 
         template<typename F>
-        impl(F &func): p_lock(), p_cond(func()) {}
+        impl(F &func): p_lock(), p_cond(func) {}
 
         template<typename U>
         void put(U &&val) {
@@ -118,7 +174,7 @@ private:
 
         std::list<T> p_messages;
         mutable std::mutex p_lock;
-        C p_cond;
+        cond p_cond;
         bool p_closed = false;
     };
 

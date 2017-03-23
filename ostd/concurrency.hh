@@ -19,9 +19,6 @@
 namespace ostd {
 
 struct thread_scheduler {
-    template<typename T>
-    using channel_type = channel<T>;
-
     ~thread_scheduler() {
         join_all();
     }
@@ -174,9 +171,6 @@ private:
     };
 
 public:
-    template<typename T>
-    using channel_type = channel<T, coro_cond>;
-
     basic_simple_coroutine_scheduler(
         size_t ss = TR::default_size(),
         size_t cs = basic_stack_pool<TR, Protected>::DEFAULT_CHUNK_SIZE
@@ -228,8 +222,8 @@ public:
     }
 
     template<typename T>
-    channel<T, coro_cond> make_channel() {
-        return channel<T, coro_cond>{[this]() {
+    channel<T> make_channel() {
+        return channel<T>{[this]() {
             return coro_cond{*this};
         }};
     }
@@ -354,9 +348,6 @@ private:
     };
 
 public:
-    template<typename T>
-    using channel_type = channel<T, task_cond>;
-
     basic_coroutine_scheduler(
         size_t ss = TR::default_size(),
         size_t cs = basic_stack_pool<TR, Protected>::DEFAULT_CHUNK_SIZE
@@ -409,8 +400,8 @@ public:
     }
 
     template<typename T>
-    channel<T, task_cond> make_channel() {
-        return channel<T, task_cond>{[this]() {
+    channel<T> make_channel() {
+        return channel<T>{[this]() {
             return task_cond{*this};
         }};
     }
@@ -551,7 +542,7 @@ inline void yield(S &sched) {
 }
 
 template<typename T, typename S>
-inline auto make_channel(S &sched) -> typename S::template channel_type<T> {
+inline channel<T> make_channel(S &sched) {
     return sched.template make_channel<T>();
 }
 
