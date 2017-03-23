@@ -632,7 +632,6 @@ inline void yield_in(S &sched) {
     sched.yield();
 }
 
-template<typename S>
 inline void yield() {
     detail::current_sched_iface.yield();
 }
