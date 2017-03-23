@@ -29,18 +29,14 @@ struct thread_scheduler {
         return func(std::forward<A>(args)...);
     }
 
-    template<typename F, typename ...A>
-    void spawn(F func, A &&...args) {
+    void spawn(std::function<void()> func) {
         std::lock_guard<std::mutex> l{p_lock};
         p_threads.emplace_front();
         auto it = p_threads.begin();
-        *it = std::thread{
-            [this, it](auto func, auto ...args) {
-                func(std::move(args)...);
-                remove_thread(it);
-            },
-            std::move(func), std::forward<A>(args)...
-        };
+        *it = std::thread{[this, it, lfunc = std::move(func)]() {
+            lfunc();
+            remove_thread(it);
+        }};
     }
 
     void yield() {
@@ -195,19 +191,8 @@ public:
         }
     }
 
-    template<typename F, typename ...A>
-    void spawn(F func, A &&...args) {
-        if constexpr(sizeof...(A) == 0) {
-            p_coros.emplace_back([lfunc = std::move(func)]() {
-                lfunc();
-            }, p_stacks.get_allocator());
-        } else {
-            p_coros.emplace_back([lfunc = std::bind(
-                std::move(func), std::forward<A>(args)...
-            )]() mutable {
-                lfunc();
-            }, p_stacks.get_allocator());
-        }
+    void spawn(std::function<void()> func) {
+        p_coros.emplace_back(std::move(func), p_stacks.get_allocator());
     }
 
     void yield() {
@@ -382,14 +367,10 @@ public:
         }
     }
 
-    template<typename F, typename ...A>
-    void spawn(F func, A &&...args) {
+    void spawn(std::function<void()> func) {
         {
             std::lock_guard<std::mutex> l{p_lock};
-            spawn_add(
-                p_stacks.get_allocator(), std::move(func),
-                std::forward<A>(args)...
-            );
+            spawn_add(p_stacks.get_allocator(), std::move(func));
         }
         p_cond.notify_one();
     }
@@ -531,7 +512,11 @@ using protected_coroutine_scheduler =
 
 template<typename S, typename F, typename ...A>
 inline void spawn(S &sched, F &&func, A &&...args) {
-    sched.spawn(std::forward<F>(func), std::forward<A>(args)...);
+    if constexpr(sizeof...(A) == 0) {
+        sched.spawn(std::forward<F>(func));
+    } else {
+        sched.spawn(std::bind(std::forward<F>(func), std::forward<A>(args)...));
+    }
 }
 
 template<typename S>
