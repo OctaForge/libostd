@@ -271,23 +271,40 @@ public:
         size_t ss = TR::default_size(),
         size_t cs = basic_stack_pool<TR, Protected>::DEFAULT_CHUNK_SIZE
     ):
-        p_stacks(ss, cs),
-        p_dispatcher([this]() {
-            dispatch();
-        }, p_stacks.get_allocator()),
-        p_coros()
+        p_stacks(ss, cs), p_coros()
     {}
 
     template<typename F, typename ...A>
     auto start(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
         detail::sched_iface_owner iface{*this};
+
         using R = std::result_of_t<F(A...)>;
+
+        basic_fixedsize_stack<TR, Protected> sa{detail::stack_main_size()};
+
         if constexpr(std::is_same_v<R, void>) {
-            func(std::forward<A>(args)...);
-            finish();
+            if constexpr(sizeof...(A) == 0) {
+                p_coros.emplace_back(std::forward<F>(func), sa);
+            } else {
+                p_coros.emplace_back(std::bind(
+                    std::forward<F>(func), std::forward<A>(args)...
+                ), sa);
+            }
+            dispatch();
         } else {
-            auto ret = func(std::forward<A>(args)...);
-            finish();
+            R ret;
+            if constexpr(sizeof...(A) == 0) {
+                p_coros.emplace_back([&ret, lfunc = std::forward<F>(func)] {
+                    ret = lfunc();
+                }, sa);
+            } else {
+                p_coros.emplace_back([&ret, lfunc = std::bind(
+                    std::forward<F>(func), std::forward<A>(args)...
+                )]() {
+                    ret = lfunc();
+                }, sa);
+            }
+            dispatch();
             return ret;
         }
     }
@@ -297,14 +314,7 @@ public:
     }
 
     void yield() {
-        auto ctx = detail::csched_task::current();
-        if (!ctx) {
-            /* yield from main means go to dispatcher and call first task */
-            p_idx = p_coros.begin();
-            p_dispatcher();
-            return;
-        }
-        ctx->yield();
+        detail::csched_task::current()->yield();
     }
 
     generic_condvar make_condition() {
@@ -316,12 +326,7 @@ private:
     void dispatch() {
         while (!p_coros.empty()) {
             if (p_idx == p_coros.end()) {
-                /* we're at the end; it's time to return to main and
-                 * continue there (potential yield from main results
-                 * in continuing from this point with the first task)
-                 */
-                detail::csched_task::current()->yield();
-                continue;
+                p_idx = p_coros.begin();
             }
             (*p_idx)();
             if (p_idx->dead()) {
@@ -332,18 +337,7 @@ private:
         }
     }
 
-    void finish() {
-        /* main has finished, but there might be either suspended or never
-         * started tasks in the queue; dispatch until there are none left
-         */
-        while (!p_coros.empty()) {
-            p_idx = p_coros.begin();
-            p_dispatcher();
-        }
-    }
-
     basic_stack_pool<TR, Protected> p_stacks;
-    detail::csched_task p_dispatcher;
     std::list<detail::csched_task> p_coros;
     typename std::list<detail::csched_task>::iterator p_idx = p_coros.end();
 };
