@@ -8,15 +8,15 @@ int main() {
      * task, which may or may not run in parallel with the other one depending
      * on the scheduler currently in use - several schedulers are shown
      */
-    auto foo = [](auto &sched) {
+    auto foo = []() {
         auto arr = ostd::iter({ 150, 38, 76, 25, 67, 18, -15,  215, 25, -10 });
 
-        auto c = make_channel<int>(sched);
+        auto c = make_channel<int>();
         auto f = [](auto c, auto half) {
             c.put(foldl(half, 0));
         };
-        spawn(sched, f, c, arr.slice(0, arr.size() / 2));
-        spawn(sched, f, c, arr + (arr.size() / 2));
+        spawn(f, c, arr.slice(0, arr.size() / 2));
+        spawn(f, c, arr + (arr.size() / 2));
 
         int a = c.get();
         int b = c.get();
@@ -30,7 +30,7 @@ int main() {
     thread_scheduler tsched;
     tsched.start([&tsched, &foo]() {
         writeln("(1) 1:1 scheduler: starting...");
-        foo(tsched);
+        foo();
         writeln("(1) 1:1 scheduler: finishing...");
     });
     writeln();
@@ -42,7 +42,7 @@ int main() {
     simple_coroutine_scheduler scsched;
     scsched.start([&scsched, &foo]() {
         writeln("(2) N:1 scheduler: starting...");
-        foo(scsched);
+        foo();
         writeln("(2) N:1 scheduler: finishing...");
     });
     writeln();
@@ -55,7 +55,7 @@ int main() {
     coroutine_scheduler csched;
     csched.start([&csched, &foo]() {
         writeln("(3) M:N scheduler: starting...");
-        foo(csched);
+        foo();
         writeln("(3) M:N scheduler: finishing...");
     });
 }
