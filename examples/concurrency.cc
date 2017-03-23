@@ -28,7 +28,7 @@ int main() {
      * Windows, less expensive on Unix-likes (but more than coroutines)
      */
     thread_scheduler tsched;
-    tsched.start([&tsched, &foo]() {
+    tsched.start([&foo]() {
         writeln("(1) 1:1 scheduler: starting...");
         foo();
         writeln("(1) 1:1 scheduler: finishing...");
@@ -40,7 +40,7 @@ int main() {
      * and portable everywhere but obviously limited to only one thread
      */
     simple_coroutine_scheduler scsched;
-    scsched.start([&scsched, &foo]() {
+    scsched.start([&foo]() {
         writeln("(2) N:1 scheduler: starting...");
         foo();
         writeln("(2) N:1 scheduler: finishing...");
@@ -53,7 +53,7 @@ int main() {
      * also is relatively cheap (you can create a big number of tasks)
      */
     coroutine_scheduler csched;
-    csched.start([&csched, &foo]() {
+    csched.start([&foo]() {
         writeln("(3) M:N scheduler: starting...");
         foo();
         writeln("(3) M:N scheduler: finishing...");
