@@ -14,6 +14,8 @@
 #include <stdexcept>
 #include <memory>
 
+#include "ostd/generic_condvar.hh"
+
 namespace ostd {
 
 struct channel_error: std::logic_error {
@@ -66,62 +68,6 @@ struct channel {
     }
 
 private:
-    struct cond_iface {
-        cond_iface() {}
-        virtual ~cond_iface() {}
-        virtual void notify_one() = 0;
-        virtual void notify_all() = 0;
-        virtual void wait(std::unique_lock<std::mutex> &) = 0;
-    };
-
-    template<typename C>
-    struct cond_impl: cond_iface {
-        cond_impl(): p_cond() {}
-        template<typename F>
-        cond_impl(F &func): p_cond(func()) {}
-        void notify_one() {
-            p_cond.notify_one();
-        }
-        void notify_all() {
-            p_cond.notify_all();
-        }
-        void wait(std::unique_lock<std::mutex> &l) {
-            p_cond.wait(l);
-        }
-    private:
-        C p_cond;
-    };
-
-    struct cond {
-        cond() {
-            new (reinterpret_cast<void *>(&p_condbuf))
-                cond_impl<std::condition_variable>();
-        }
-        template<typename F>
-        cond(F &func) {
-            new (reinterpret_cast<void *>(&p_condbuf))
-                cond_impl<std::result_of_t<F()>>(func);
-        }
-        ~cond() {
-            reinterpret_cast<cond_iface *>(&p_condbuf)->~cond_iface();
-        }
-
-        void notify_one() {
-            reinterpret_cast<cond_iface *>(&p_condbuf)->notify_one();
-        }
-        void notify_all() {
-            reinterpret_cast<cond_iface *>(&p_condbuf)->notify_all();
-        }
-        void wait(std::unique_lock<std::mutex> &l) {
-            reinterpret_cast<cond_iface *>(&p_condbuf)->wait(l);
-        }
-
-    private:
-        std::aligned_storage_t<std::max(
-            6 * sizeof(void *), sizeof(cond_impl<std::condition_variable>)
-        ), alignof(std::condition_variable)> p_condbuf;
-    };
-
     struct impl {
         impl() {
         }
@@ -174,7 +120,7 @@ private:
 
         std::list<T> p_messages;
         mutable std::mutex p_lock;
-        cond p_cond;
+        generic_condvar p_cond;
         bool p_closed = false;
     };
 
