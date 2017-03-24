@@ -29,7 +29,7 @@ struct scheduler {
     scheduler &operator=(scheduler &&) = delete;
 
     virtual void spawn(std::function<void()>) = 0;
-    virtual void yield() = 0;
+    virtual void yield() noexcept = 0;
     virtual generic_condvar make_condition() = 0;
 
     template<typename F, typename ...A>
@@ -100,7 +100,7 @@ struct thread_scheduler: scheduler {
         }};
     }
 
-    void yield() {
+    void yield() noexcept {
         std::this_thread::yield();
     }
 
@@ -166,7 +166,7 @@ namespace detail {
             this->rethrow();
         }
 
-        void yield() {
+        void yield() noexcept {
             /* we'll yield back to the thread we were scheduled to, which
              * will appropriately notify one or all other waiting threads
              * so we either get re-scheduled or the whole scheduler dies
@@ -174,11 +174,11 @@ namespace detail {
             this->yield_jump();
         }
 
-        bool dead() const {
+        bool dead() const noexcept {
             return this->is_dead();
         }
 
-        static csched_task *current() {
+        static csched_task *current() noexcept {
             return current_csched_task;
         }
 
@@ -275,7 +275,7 @@ public:
         p_coros.emplace_back(std::move(func), p_stacks.get_allocator());
     }
 
-    void yield() {
+    void yield() noexcept {
         detail::csched_task::current()->yield();
     }
 
@@ -337,15 +337,15 @@ private:
             p_func();
         }
 
-        void yield() {
+        void yield() noexcept {
             p_func.yield();
         }
 
-        bool dead() const {
+        bool dead() const noexcept {
             return p_func.dead();
         }
 
-        static task *current() {
+        static task *current() noexcept {
             return reinterpret_cast<task *>(detail::csched_task::current());
         }
     };
@@ -434,7 +434,7 @@ public:
         p_cond.notify_one();
     }
 
-    void yield() {
+    void yield() noexcept {
         task::current()->yield();
     }
 
@@ -576,7 +576,7 @@ inline void spawn(F &&func, A &&...args) {
     );
 }
 
-inline void yield() {
+inline void yield() noexcept {
     detail::current_scheduler->yield();
 }
 
