@@ -46,14 +46,19 @@ beyond the minimum supported compiler are necessary to use the library.
 OctaSTD targets POSIX compliant operating systems and Windows. Features are
 written with those in mind, and other targets are currently not supported.
 
-The primary targets (regularly tested) are Linux, FreeBSD and Windows on x86
-and x86\_64 as well as macOS on x86\_64. Secondary targets (irregularly tested)
-are Linux and FreeBSD on ARM, AArch64 as well as macOS on x86. Tertiary targets
-(rarely tested or untested but probably working and accepting patches for) are
-other BSDs, Solaris and AIX on x86, x86\_64, ARM, AArch64, MIPS32 and PPC32/64
-as well as other previously mentioned systems on architectures not included
-in their Tier 1 or 2 support. Other targets are unsupported (might or might
-not work, depending on POSIX compliance and ABI).
+Tier 1 targets are regularly tested. Tier 2 targets are irregularly tested.
+Tier 3 targets are rarely or never tested, but most likely working and
+accepting patches for. Unsupported targets may or may not work depending
+on their POSIX compliance and ABI.
+
+|                 | Linux      | FreeBSD     | macOS      | Windows     | Other BSD | Solaris  | AIX      | Others |
+|-----------------|:----------:|:-----------:|:----------:|:-----------:|:---------:|:--------:|:--------:|:------:|
+| **x86**         | **Tier 1** | **Tier 1**  | Tier 2     | **Tier 1**  | *Tier 3*  | *Tier 3* | **No**   | **No** |
+| **x86_64**      | **Tier 1** | **Tier 1**  | **Tier 1** | **Tier 1**  | *Tier 3*  | *Tier 3* | **No**   | **No** |
+| **ARM/AArch64** | Tier 2     | Tier 2      | *Tier 3*   | *Tier 3*    | *Tier 3*  | **No**   | **No**   | **No** |
+| **MIPS32**      | *Tier 3*   | *Tier 3*    | **No**     | **No**      | *Tier 3*  | **No**   | **No**   | **No** |
+| **PPC32/64**    | *Tier 3*   | *Tier 3*    | **No**     | **No**      | *Tier 3*  | **No**   | *Tier 3* | **No** |
+| **Others**      | **No**     | **No**      | **No**     | **No**      | **No**    | **No**   | **No**   | **No** |
 
 ### Coroutines
 
