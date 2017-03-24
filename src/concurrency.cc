@@ -8,7 +8,7 @@
 namespace ostd {
 namespace detail {
 
-OSTD_EXPORT sched_iface current_sched_iface;
+OSTD_EXPORT scheduler *current_scheduler = nullptr;
 OSTD_EXPORT thread_local csched_task *current_csched_task = nullptr;
 
 } /* namespace detail */

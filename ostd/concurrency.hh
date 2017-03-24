@@ -19,105 +19,45 @@
 
 namespace ostd {
 
+struct scheduler {
+    scheduler() {}
+
+    scheduler(scheduler const &) = delete;
+    scheduler(scheduler &&) = delete;
+    scheduler &operator=(scheduler const &) = delete;
+    scheduler &operator=(scheduler &&) = delete;
+
+    virtual void spawn(std::function<void()>) = 0;
+    virtual void yield() = 0;
+    virtual generic_condvar make_condition() = 0;
+};
+
 namespace detail {
-    struct sched_iface_base {
-        sched_iface_base() {}
-        virtual ~sched_iface_base() {}
+    OSTD_EXPORT extern scheduler *current_scheduler;
 
-        virtual void spawn(std::function<void()> &&func) = 0;
-        virtual void yield() = 0;
-        virtual generic_condvar make_condition() = 0;
-    };
-
-    template<typename S>
-    struct sched_iface_impl final: sched_iface_base {
-        sched_iface_impl(S &sched): p_sched(&sched) {}
-
-        virtual void spawn(std::function<void()> &&func) {
-            p_sched->spawn(std::move(func));
-        }
-        virtual void yield() {
-            p_sched->yield();
-        }
-        virtual generic_condvar make_condition() {
-            return p_sched->make_condition();
-        }
-    private:
-        S *p_sched;
-    };
-
-    struct sched_iface {
-        sched_iface() {}
+    struct current_scheduler_owner {
+        current_scheduler_owner() = delete;
 
         template<typename S>
-        void set(S &sched) {
-            if (p_curr) {
-                p_curr->~sched_iface_base();
-            }
-            new (reinterpret_cast<void *>(&p_buf))
-                sched_iface_impl<S>(sched);
-            p_curr = reinterpret_cast<sched_iface_base *>(&p_buf);
+        current_scheduler_owner(S &sched) {
+            current_scheduler = &sched;
         }
 
-        void unset() {
-            if (p_curr) {
-                p_curr->~sched_iface_base();
-                p_curr = nullptr;
-            }
-        }
+        current_scheduler_owner(current_scheduler_owner const &) = delete;
+        current_scheduler_owner(current_scheduler_owner &&) = delete;
+        current_scheduler_owner &operator=(current_scheduler_owner const &) = delete;
+        current_scheduler_owner &operator=(current_scheduler_owner &&) = delete;
 
-        ~sched_iface() {
-            unset();
-        }
-
-        sched_iface(sched_iface const &) = delete;
-        sched_iface(sched_iface &&) = delete;
-        sched_iface &operator=(sched_iface const &) = delete;
-        sched_iface &operator=(sched_iface &&) = delete;
-
-        void spawn(std::function<void()> &&func) {
-            p_curr->spawn(std::move(func));
-        }
-        void yield() {
-            p_curr->yield();
-        }
-        generic_condvar make_condition() {
-            return p_curr->make_condition();
-        }
-
-    private:
-        std::aligned_storage_t<
-            sizeof(detail::sched_iface_impl<detail::sched_iface_base>),
-            alignof(detail::sched_iface_impl<detail::sched_iface_base>)
-        > p_buf;
-        sched_iface_base *p_curr = nullptr;
-    };
-
-    OSTD_EXPORT extern sched_iface current_sched_iface;
-
-    struct sched_iface_owner {
-        sched_iface_owner() = delete;
-
-        template<typename S>
-        sched_iface_owner(S &sched) {
-            current_sched_iface.set(sched);
-        }
-
-        sched_iface_owner(sched_iface_owner const &) = delete;
-        sched_iface_owner(sched_iface_owner &&) = delete;
-        sched_iface_owner &operator=(sched_iface_owner const &) = delete;
-        sched_iface_owner &operator=(sched_iface_owner &&) = delete;
-
-        ~sched_iface_owner() {
-            current_sched_iface.unset();
+        ~current_scheduler_owner() {
+            current_scheduler = nullptr;
         }
     };
 }
 
-struct thread_scheduler {
+struct thread_scheduler: scheduler {
     template<typename F, typename ...A>
     auto start(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
-        detail::sched_iface_owner iface{*this};
+        detail::current_scheduler_owner iface{*this};
         if constexpr(std::is_same_v<std::result_of_t<F(A...)>, void>) {
             func(std::forward<A>(args)...);
             join_all();
@@ -230,7 +170,7 @@ namespace detail {
 }
 
 template<typename TR, bool Protected>
-struct basic_simple_coroutine_scheduler {
+struct basic_simple_coroutine_scheduler: scheduler {
 private:
     /* simple one just for channels */
     struct coro_cond {
@@ -276,7 +216,7 @@ public:
 
     template<typename F, typename ...A>
     auto start(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
-        detail::sched_iface_owner iface{*this};
+        detail::current_scheduler_owner iface{*this};
 
         using R = std::result_of_t<F(A...)>;
 
@@ -349,7 +289,7 @@ using protected_simple_coroutine_scheduler =
     basic_simple_coroutine_scheduler<stack_traits, true>;
 
 template<typename TR, bool Protected>
-struct basic_coroutine_scheduler {
+struct basic_coroutine_scheduler: scheduler {
 private:
     struct task_cond;
     struct task;
@@ -438,7 +378,7 @@ public:
 
     template<typename F, typename ...A>
     auto start(F func, A &&...args) -> std::result_of_t<F(A...)> {
-        detail::sched_iface_owner iface{*this};
+        detail::current_scheduler_owner iface{*this};
 
         /* start with one task in the queue, this way we can
          * say we've finished when the task queue becomes empty
@@ -622,7 +562,7 @@ namespace detail {
 
 template<typename S, typename F, typename ...A>
 inline auto spawn(S &sched, F &&func, A &&...args) -> std::enable_if_t<
-    detail::has_sched_spawn<S>
+    std::is_base_of_v<scheduler, S>
 > {
     if constexpr(sizeof...(A) == 0) {
         sched.spawn(std::forward<F>(func));
@@ -633,12 +573,12 @@ inline auto spawn(S &sched, F &&func, A &&...args) -> std::enable_if_t<
 
 template<typename F, typename ...A>
 inline auto spawn(F &&func, A &&...args) -> std::enable_if_t<
-    !detail::has_sched_spawn<F>
+    !std::is_base_of_v<scheduler, F>
 > {
     if constexpr(sizeof...(A) == 0) {
-        detail::current_sched_iface.spawn(std::forward<F>(func));
+        detail::current_scheduler->spawn(std::forward<F>(func));
     } else {
-        detail::current_sched_iface.spawn(
+        detail::current_scheduler->spawn(
             std::bind(std::forward<F>(func), std::forward<A>(args)...)
         );
     }
@@ -650,7 +590,7 @@ inline void yield(S &sched) {
 }
 
 inline void yield() {
-    detail::current_sched_iface.yield();
+    detail::current_scheduler->yield();
 }
 
 template<typename T, typename S>
@@ -662,9 +602,9 @@ inline channel<T> make_channel(S &sched) {
 
 template<typename T>
 inline channel<T> make_channel() {
-    auto &sciface = detail::current_sched_iface;
-    return channel<T>{[&sciface]() {
-        return sciface.make_condition();
+    auto *curr = detail::current_scheduler;
+    return channel<T>{[curr]() {
+        return curr->make_condition();
     }};
 }
 
