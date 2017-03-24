@@ -607,8 +607,23 @@ using coroutine_scheduler =
 using protected_coroutine_scheduler =
     basic_coroutine_scheduler<stack_traits, true>;
 
+namespace detail {
+    template<typename S>
+    std::true_type has_spawn_test(decltype(
+        std::declval<S>().spawn(std::declval<std::function<void()>>())
+    ) *);
+
+    template<typename>
+    std::false_type has_spawn_test(...);
+
+    template<typename S>
+    constexpr bool has_sched_spawn = decltype(has_spawn_test<S>(0))::value;
+}
+
 template<typename S, typename F, typename ...A>
-inline void spawn_in(S &sched, F &&func, A &&...args) {
+inline auto spawn(S &sched, F &&func, A &&...args) -> std::enable_if_t<
+    detail::has_sched_spawn<S>
+> {
     if constexpr(sizeof...(A) == 0) {
         sched.spawn(std::forward<F>(func));
     } else {
@@ -617,7 +632,9 @@ inline void spawn_in(S &sched, F &&func, A &&...args) {
 }
 
 template<typename F, typename ...A>
-inline void spawn(F &&func, A &&...args) {
+inline auto spawn(F &&func, A &&...args) -> std::enable_if_t<
+    !detail::has_sched_spawn<F>
+> {
     if constexpr(sizeof...(A) == 0) {
         detail::current_sched_iface.spawn(std::forward<F>(func));
     } else {
@@ -628,7 +645,7 @@ inline void spawn(F &&func, A &&...args) {
 }
 
 template<typename S>
-inline void yield_in(S &sched) {
+inline void yield(S &sched) {
     sched.yield();
 }
 
@@ -637,7 +654,7 @@ inline void yield() {
 }
 
 template<typename T, typename S>
-inline channel<T> make_channel_in(S &sched) {
+inline channel<T> make_channel(S &sched) {
     return channel<T>{[&sched]() {
         return sched.make_condition();
     }};
