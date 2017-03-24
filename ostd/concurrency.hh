@@ -547,23 +547,8 @@ using coroutine_scheduler =
 using protected_coroutine_scheduler =
     basic_coroutine_scheduler<stack_traits, true>;
 
-namespace detail {
-    template<typename S>
-    std::true_type has_spawn_test(decltype(
-        std::declval<S>().spawn(std::declval<std::function<void()>>())
-    ) *);
-
-    template<typename>
-    std::false_type has_spawn_test(...);
-
-    template<typename S>
-    constexpr bool has_sched_spawn = decltype(has_spawn_test<S>(0))::value;
-}
-
-template<typename S, typename F, typename ...A>
-inline auto spawn(S &sched, F &&func, A &&...args) -> std::enable_if_t<
-    std::is_base_of_v<scheduler, S>
-> {
+template<typename F, typename ...A>
+inline void spawn(scheduler &sched, F &&func, A &&...args) {
     if constexpr(sizeof...(A) == 0) {
         sched.spawn(std::forward<F>(func));
     } else {
@@ -572,20 +557,14 @@ inline auto spawn(S &sched, F &&func, A &&...args) -> std::enable_if_t<
 }
 
 template<typename F, typename ...A>
-inline auto spawn(F &&func, A &&...args) -> std::enable_if_t<
-    !std::is_base_of_v<scheduler, F>
-> {
-    if constexpr(sizeof...(A) == 0) {
-        detail::current_scheduler->spawn(std::forward<F>(func));
-    } else {
-        detail::current_scheduler->spawn(
-            std::bind(std::forward<F>(func), std::forward<A>(args)...)
-        );
-    }
+inline void spawn(F &&func, A &&...args) {
+    spawn(
+        *detail::current_scheduler,
+        std::forward<F>(func), std::forward<A>(args)...
+    );
 }
 
-template<typename S>
-inline void yield(S &sched) {
+inline void yield(scheduler &sched) {
     sched.yield();
 }
 
@@ -593,8 +572,8 @@ inline void yield() {
     detail::current_scheduler->yield();
 }
 
-template<typename T, typename S>
-inline channel<T> make_channel(S &sched) {
+template<typename T>
+inline channel<T> make_channel(scheduler &sched) {
     return channel<T>{[&sched]() {
         return sched.make_condition();
     }};
@@ -602,10 +581,7 @@ inline channel<T> make_channel(S &sched) {
 
 template<typename T>
 inline channel<T> make_channel() {
-    auto *curr = detail::current_scheduler;
-    return channel<T>{[curr]() {
-        return curr->make_condition();
-    }};
+    return make_channel<T>(*detail::current_scheduler);
 }
 
 } /* namespace ostd */
