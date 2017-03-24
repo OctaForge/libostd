@@ -30,6 +30,24 @@ struct scheduler {
     virtual void spawn(std::function<void()>) = 0;
     virtual void yield() = 0;
     virtual generic_condvar make_condition() = 0;
+
+    template<typename F, typename ...A>
+    void spawn(F &&func, A &&...args) {
+        if constexpr(sizeof...(A) == 0) {
+            spawn(std::function<void()>{func});
+        } else {
+            spawn(std::function<void()>{
+                std::bind(std::forward<F>(func), std::forward<A>(args)...)
+            });
+        }
+    }
+
+    template<typename T>
+    channel<T> make_channel() {
+        return channel<T>{[this]() {
+            return make_condition();
+        }};
+    }
 };
 
 namespace detail {
@@ -548,24 +566,10 @@ using protected_coroutine_scheduler =
     basic_coroutine_scheduler<stack_traits, true>;
 
 template<typename F, typename ...A>
-inline void spawn(scheduler &sched, F &&func, A &&...args) {
-    if constexpr(sizeof...(A) == 0) {
-        sched.spawn(std::forward<F>(func));
-    } else {
-        sched.spawn(std::bind(std::forward<F>(func), std::forward<A>(args)...));
-    }
-}
-
-template<typename F, typename ...A>
 inline void spawn(F &&func, A &&...args) {
-    spawn(
-        *detail::current_scheduler,
+    detail::current_scheduler->spawn(
         std::forward<F>(func), std::forward<A>(args)...
     );
-}
-
-inline void yield(scheduler &sched) {
-    sched.yield();
 }
 
 inline void yield() {
@@ -573,15 +577,8 @@ inline void yield() {
 }
 
 template<typename T>
-inline channel<T> make_channel(scheduler &sched) {
-    return channel<T>{[&sched]() {
-        return sched.make_condition();
-    }};
-}
-
-template<typename T>
 inline channel<T> make_channel() {
-    return make_channel<T>(*detail::current_scheduler);
+    return detail::current_scheduler->make_channel<T>();
 }
 
 } /* namespace ostd */
