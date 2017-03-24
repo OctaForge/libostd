@@ -11,6 +11,7 @@
 #include <thread>
 #include <utility>
 #include <memory>
+#include <stdexcept>
 
 #include "ostd/platform.hh"
 #include "ostd/coroutine.hh"
@@ -58,6 +59,9 @@ namespace detail {
 
         template<typename S>
         current_scheduler_owner(S &sched) {
+            if (current_scheduler) {
+                throw std::logic_error{"another scheduler already running"};
+            }
             current_scheduler = &sched;
         }
 
