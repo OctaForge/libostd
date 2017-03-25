@@ -49,6 +49,7 @@ namespace detail {
 template<typename TR, bool Protected>
 struct basic_fixedsize_stack {
     using traits_type = TR;
+    using allocator_type = basic_fixedsize_stack;
 
     basic_fixedsize_stack(size_t ss = TR::default_size()) noexcept:
         p_size(
@@ -89,6 +90,12 @@ struct basic_fixedsize_stack {
         st.ptr = nullptr;
     }
 
+    void reserve(size_t) {}
+
+    basic_fixedsize_stack get_allocator() noexcept {
+        return *this;
+    }
+
 private:
     size_t p_size;
 };
@@ -118,6 +125,7 @@ private:
 public:
     static constexpr size_t DEFAULT_CHUNK_SIZE = 32;
 
+    using traits_type = TR;
     using allocator_type = allocator;
 
     basic_stack_pool(
