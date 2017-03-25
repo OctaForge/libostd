@@ -52,6 +52,7 @@ public:
 
     virtual stack_context allocate_stack() = 0;
     virtual void deallocate_stack(stack_context &st) noexcept = 0;
+    virtual void reserve_stacks(size_t n) = 0;
 
     stack_allocator get_stack_allocator() noexcept {
         return stack_allocator{*this};
@@ -147,14 +148,17 @@ struct basic_thread_scheduler: scheduler {
     }
 
     stack_context allocate_stack() {
+        std::lock_guard<std::mutex> l{p_lock};
         return p_stacks.allocate();
     }
 
     void deallocate_stack(stack_context &st) noexcept {
+        std::lock_guard<std::mutex> l{p_lock};
         p_stacks.deallocate(st);
     }
 
     void reserve_stacks(size_t n) {
+        std::lock_guard<std::mutex> l{p_lock};
         p_stacks.reserve(n);
     }
 
@@ -505,14 +509,17 @@ public:
     }
 
     stack_context allocate_stack() {
+        std::lock_guard<std::mutex> l{p_lock};
         return p_stacks.allocate();
     }
 
     void deallocate_stack(stack_context &st) noexcept {
+        std::lock_guard<std::mutex> l{p_lock};
         p_stacks.deallocate(st);
     }
 
     void reserve_stacks(size_t n) {
+        std::lock_guard<std::mutex> l{p_lock};
         p_stacks.reserve(n);
     }
 
@@ -655,13 +662,17 @@ inline channel<T> make_channel() {
 }
 
 template<typename T, typename F>
-coroutine<T> make_coroutine(F &&func) {
+inline coroutine<T> make_coroutine(F &&func) {
     return detail::current_scheduler->make_coroutine<T>(std::forward<F>(func));
 }
 
 template<typename T, typename F>
-generator<T> make_generator(F &&func) {
+inline generator<T> make_generator(F &&func) {
     return detail::current_scheduler->make_generator<T>(std::forward<F>(func));
+}
+
+inline void reserve_stacks(size_t n) {
+    detail::current_scheduler->reserve_stacks(n);
 }
 
 } /* namespace ostd */
