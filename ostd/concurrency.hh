@@ -117,7 +117,7 @@ struct basic_thread_scheduler: scheduler {
     basic_thread_scheduler(SA &&sa = SA{}): p_stacks(std::move(sa)) {}
 
     template<typename F, typename ...A>
-    auto start(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
+    auto start(F func, A &&...args) -> std::result_of_t<F(A...)> {
         detail::current_scheduler_owner iface{*this};
         if constexpr(std::is_same_v<std::result_of_t<F(A...)>, void>) {
             func(std::forward<A>(args)...);
@@ -302,41 +302,49 @@ public:
         p_stacks(std::move(sa))
     {}
 
-    template<typename F, typename ...A>
-    auto start(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
+    template<typename TSA, typename F, typename ...A>
+    auto start(std::allocator_arg_t, TSA &&sa, F func, A &&...args)
+        -> std::result_of_t<F(A...)>
+    {
         detail::current_scheduler_owner iface{*this};
 
         using R = std::result_of_t<F(A...)>;
 
-        basic_fixedsize_stack<typename SA::traits_type, false> sa{
-            detail::stack_main_size()
-        };
-
         if constexpr(std::is_same_v<R, void>) {
             if constexpr(sizeof...(A) == 0) {
-                p_coros.emplace_back(std::forward<F>(func), sa);
+                p_coros.emplace_back(std::move(func), std::forward<TSA>(sa));
             } else {
                 p_coros.emplace_back(std::bind(
-                    std::forward<F>(func), std::forward<A>(args)...
-                ), sa);
+                    std::move(func), std::forward<A>(args)...
+                ), std::forward<TSA>(sa));
             }
             dispatch();
         } else {
             R ret;
             if constexpr(sizeof...(A) == 0) {
-                p_coros.emplace_back([&ret, lfunc = std::forward<F>(func)] {
+                p_coros.emplace_back([&ret, lfunc = std::move(func)] {
                     ret = lfunc();
-                }, sa);
+                }, std::forward<TSA>(sa));
             } else {
                 p_coros.emplace_back([&ret, lfunc = std::bind(
-                    std::forward<F>(func), std::forward<A>(args)...
+                    std::move(func), std::forward<A>(args)...
                 )]() {
                     ret = lfunc();
-                }, sa);
+                }, std::forward<TSA>(sa));
             }
             dispatch();
             return ret;
         }
+    }
+
+    template<typename F, typename ...A>
+    auto start(F func, A &&...args) -> std::result_of_t<F(A...)> {
+        basic_fixedsize_stack<typename SA::traits_type, false> sa{
+            detail::stack_main_size()
+        };
+        return start(
+            std::allocator_arg, sa, std::move(func), std::forward<A>(args)...
+        );
     }
 
     void spawn(std::function<void()> func) {
@@ -472,8 +480,10 @@ public:
 
     ~basic_coroutine_scheduler() {}
 
-    template<typename F, typename ...A>
-    auto start(F func, A &&...args) -> std::result_of_t<F(A...)> {
+    template<typename TSA, typename F, typename ...A>
+    auto start(std::allocator_arg_t, TSA &&sa, F func, A &&...args)
+        -> std::result_of_t<F(A...)>
+    {
         detail::current_scheduler_owner iface{*this};
 
         /* start with one task in the queue, this way we can
@@ -481,25 +491,38 @@ public:
          */
         using R = std::result_of_t<F(A...)>;
 
+        if constexpr(std::is_same_v<R, void>) {
+            spawn_add(
+                std::forward<TSA>(sa), std::move(func),
+                std::forward<A>(args)...
+            );
+            /* actually start the thread pool */
+            init();
+        } else {
+            R ret;
+            spawn_add(
+                std::forward<TSA>(sa),
+                [&ret, func = std::move(func)](auto &&...args) {
+                    ret = func(std::forward<A>(args)...);
+                },
+                std::forward<A>(args)...
+            );
+            init();
+            return ret;
+        }
+    }
+
+    template<typename F, typename ...A>
+    auto start(F func, A &&...args) -> std::result_of_t<F(A...)> {
         /* the default 64 KiB stack won't cut it for main, allocate a stack
          * which matches the size of the process stack outside of the pool
          */
         basic_fixedsize_stack<typename SA::traits_type, false> sa{
             detail::stack_main_size()
         };
-
-        if constexpr(std::is_same_v<R, void>) {
-            spawn_add(sa, std::move(func), std::forward<A>(args)...);
-            /* actually start the thread pool */
-            init();
-        } else {
-            R ret;
-            spawn_add(sa, [&ret, func = std::move(func)](auto &&...args) {
-                ret = func(std::forward<A>(args)...);
-            }, std::forward<A>(args)...);
-            init();
-            return ret;
-        }
+        return start(
+            std::allocator_arg, sa, std::move(func), std::forward<A>(args)...
+        );
     }
 
     void spawn(std::function<void()> func) {
