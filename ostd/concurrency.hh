@@ -111,7 +111,10 @@ namespace detail {
     };
 }
 
-struct thread_scheduler: scheduler {
+template<typename SA>
+struct basic_thread_scheduler: scheduler {
+    basic_thread_scheduler(SA &&sa = SA{}): p_stacks(std::move(sa)) {}
+
     template<typename F, typename ...A>
     auto start(F &&func, A &&...args) -> std::result_of_t<F(A...)> {
         detail::current_scheduler_owner iface{*this};
@@ -144,12 +147,15 @@ struct thread_scheduler: scheduler {
     }
 
     stack_context allocate_stack() {
-        /* TODO: store the allocator properly, for now it's fine */
-        return fixedsize_stack{}.allocate();
+        return p_stacks.allocate();
     }
 
     void deallocate_stack(stack_context &st) noexcept {
-        fixedsize_stack{}.deallocate(st);
+        p_stacks.deallocate(st);
+    }
+
+    void reserve_stacks(size_t n) {
+        p_stacks.reserve(n);
     }
 
 private:
@@ -174,10 +180,13 @@ private:
         }
     }
 
+    SA p_stacks;
     std::list<std::thread> p_threads;
     std::thread p_dead;
     std::mutex p_lock;
 };
+
+using thread_scheduler = basic_thread_scheduler<stack_pool>;
 
 namespace detail {
     struct csched_task;
@@ -235,7 +244,7 @@ namespace detail {
     };
 }
 
-template<typename TR, bool Protected>
+template<typename SA>
 struct basic_simple_coroutine_scheduler: scheduler {
 private:
     /* simple one just for channels */
@@ -273,11 +282,8 @@ private:
     };
 
 public:
-    basic_simple_coroutine_scheduler(
-        size_t ss = TR::default_size(),
-        size_t cs = basic_stack_pool<TR, Protected>::DEFAULT_CHUNK_SIZE
-    ):
-        p_stacks(ss, cs), p_coros()
+    basic_simple_coroutine_scheduler(SA &&sa = SA{}):
+        p_stacks(std::move(sa))
     {}
 
     template<typename F, typename ...A>
@@ -286,7 +292,9 @@ public:
 
         using R = std::result_of_t<F(A...)>;
 
-        basic_fixedsize_stack<TR, Protected> sa{detail::stack_main_size()};
+        basic_fixedsize_stack<typename SA::traits_type, false> sa{
+            detail::stack_main_size()
+        };
 
         if constexpr(std::is_same_v<R, void>) {
             if constexpr(sizeof...(A) == 0) {
@@ -352,18 +360,14 @@ private:
         }
     }
 
-    basic_stack_pool<TR, Protected> p_stacks;
+    SA p_stacks;
     std::list<detail::csched_task> p_coros;
     typename std::list<detail::csched_task>::iterator p_idx = p_coros.end();
 };
 
-using simple_coroutine_scheduler =
-    basic_simple_coroutine_scheduler<stack_traits, false>;
+using simple_coroutine_scheduler = basic_simple_coroutine_scheduler<stack_pool>;
 
-using protected_simple_coroutine_scheduler =
-    basic_simple_coroutine_scheduler<stack_traits, true>;
-
-template<typename TR, bool Protected>
+template<typename SA>
 struct basic_coroutine_scheduler: scheduler {
 private:
     struct task_cond;
@@ -381,9 +385,9 @@ private:
         task *next_waiting = nullptr;
         titer pos;
 
-        template<typename F, typename SA>
-        task(F &&f, SA &&sa):
-            p_func(std::forward<F>(f), std::forward<SA>(sa))
+        template<typename F, typename TSA>
+        task(F &&f, TSA &&sa):
+            p_func(std::forward<F>(f), std::forward<TSA>(sa))
         {}
 
         void operator()() {
@@ -442,11 +446,8 @@ private:
     };
 
 public:
-    basic_coroutine_scheduler(
-        size_t ss = TR::default_size(),
-        size_t cs = basic_stack_pool<TR, Protected>::DEFAULT_CHUNK_SIZE
-    ):
-        p_stacks(ss, cs)
+    basic_coroutine_scheduler(SA &&sa = SA{}):
+        p_stacks(std::move(sa))
     {}
 
     ~basic_coroutine_scheduler() {}
@@ -463,7 +464,9 @@ public:
         /* the default 64 KiB stack won't cut it for main, allocate a stack
          * which matches the size of the process stack outside of the pool
          */
-        basic_fixedsize_stack<TR, Protected> sa{detail::stack_main_size()};
+        basic_fixedsize_stack<typename SA::traits_type, false> sa{
+            detail::stack_main_size()
+        };
 
         if constexpr(std::is_same_v<R, void>) {
             spawn_add(sa, std::move(func), std::forward<A>(args)...);
@@ -506,13 +509,13 @@ public:
     }
 
 private:
-    template<typename SA, typename F, typename ...A>
-    void spawn_add(SA &&sa, F &&func, A &&...args) {
+    template<typename TSA, typename F, typename ...A>
+    void spawn_add(TSA &&sa, F &&func, A &&...args) {
         task *t = nullptr;
         if constexpr(sizeof...(A) == 0) {
             t = &p_available.emplace_back(
                 std::forward<F>(func),
-                std::forward<SA>(sa)
+                std::forward<TSA>(sa)
             );
         } else {
             t = &p_available.emplace_back(
@@ -521,7 +524,7 @@ private:
                 )]() mutable {
                     lfunc();
                 },
-                std::forward<SA>(sa)
+                std::forward<TSA>(sa)
             );
         }
         t->pos = --p_available.end();
@@ -619,17 +622,13 @@ private:
 
     std::condition_variable p_cond;
     std::mutex p_lock;
-    basic_stack_pool<TR, Protected> p_stacks;
+    SA p_stacks;
     tlist p_available;
     tlist p_waiting;
     tlist p_running;
 };
 
-using coroutine_scheduler =
-    basic_coroutine_scheduler<stack_traits, false>;
-
-using protected_coroutine_scheduler =
-    basic_coroutine_scheduler<stack_traits, true>;
+using coroutine_scheduler = basic_coroutine_scheduler<stack_pool>;
 
 template<typename F, typename ...A>
 inline void spawn(F &&func, A &&...args) {
