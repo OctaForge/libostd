@@ -21,6 +21,24 @@
 namespace ostd {
 
 struct scheduler {
+private:
+    struct stack_allocator {
+        stack_allocator() = delete;
+        stack_allocator(scheduler &s) noexcept: p_sched(&s) {}
+
+        stack_context allocate() {
+            return p_sched->allocate_stack();
+        }
+
+        void deaallocate(stack_context &st) noexcept {
+            p_sched->deallocate_stack(st);
+        }
+
+    private:
+        scheduler *p_sched;
+    };
+
+public:
     scheduler() {}
 
     scheduler(scheduler const &) = delete;
@@ -31,6 +49,13 @@ struct scheduler {
     virtual void spawn(std::function<void()>) = 0;
     virtual void yield() noexcept = 0;
     virtual generic_condvar make_condition() = 0;
+
+    virtual stack_context allocate_stack() = 0;
+    virtual void deallocate_stack(stack_context &st) noexcept = 0;
+
+    stack_allocator get_stack_allocator() noexcept {
+        return stack_allocator{*this};
+    }
 
     template<typename F, typename ...A>
     void spawn(F &&func, A &&...args) {
@@ -48,6 +73,16 @@ struct scheduler {
         return channel<T>{[this]() {
             return make_condition();
         }};
+    }
+
+    template<typename T, typename F>
+    coroutine<T> make_coroutine(F &&func) {
+        return coroutine<T>{std::forward<F>(func), get_stack_allocator()};
+    }
+
+    template<typename T, typename F>
+    generator<T> make_generator(F &&func) {
+        return generator<T>{std::forward<F>(func), get_stack_allocator()};
     }
 };
 
@@ -106,6 +141,15 @@ struct thread_scheduler: scheduler {
 
     generic_condvar make_condition() {
         return generic_condvar{};
+    }
+
+    stack_context allocate_stack() {
+        /* TODO: store the allocator properly, for now it's fine */
+        return fixedsize_stack{}.allocate();
+    }
+
+    void deallocate_stack(stack_context &st) noexcept {
+        fixedsize_stack{}.deallocate(st);
     }
 
 private:
@@ -284,6 +328,15 @@ public:
             return coro_cond{*this};
         }};
     }
+
+    stack_context allocate_stack() {
+        return p_stacks.allocate();
+    }
+
+    void deallocate_stack(stack_context &st) noexcept {
+        p_stacks.deallocate(st);
+    }
+
 private:
     void dispatch() {
         while (!p_coros.empty()) {
@@ -443,6 +496,15 @@ public:
             return task_cond{*this};
         }};
     }
+
+    stack_context allocate_stack() {
+        return p_stacks.allocate();
+    }
+
+    void deallocate_stack(stack_context &st) noexcept {
+        p_stacks.deallocate(st);
+    }
+
 private:
     template<typename SA, typename F, typename ...A>
     void spawn_add(SA &&sa, F &&func, A &&...args) {
@@ -583,6 +645,16 @@ inline void yield() noexcept {
 template<typename T>
 inline channel<T> make_channel() {
     return detail::current_scheduler->make_channel<T>();
+}
+
+template<typename T, typename F>
+coroutine<T> make_coroutine(F &&func) {
+    return detail::current_scheduler->make_coroutine<T>(std::forward<F>(func));
+}
+
+template<typename T, typename F>
+generator<T> make_generator(F &&func) {
+    return detail::current_scheduler->make_generator<T>(std::forward<F>(func));
 }
 
 } /* namespace ostd */
