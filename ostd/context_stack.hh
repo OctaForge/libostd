@@ -50,6 +50,7 @@ template<typename TR, bool Protected>
 struct basic_fixedsize_stack {
     using traits_type = TR;
     using allocator_type = basic_fixedsize_stack;
+    static constexpr bool is_thread_safe = true;
 
     basic_fixedsize_stack(size_t ss = TR::default_size()) noexcept:
         p_size(
@@ -127,6 +128,7 @@ public:
 
     using traits_type = TR;
     using allocator_type = allocator;
+    static constexpr bool is_thread_safe = false;
 
     basic_stack_pool(
         size_t ss = TR::default_size(), size_t cs = DEFAULT_CHUNK_SIZE

@@ -148,18 +148,30 @@ struct basic_thread_scheduler: scheduler {
     }
 
     stack_context allocate_stack() {
-        std::lock_guard<std::mutex> l{p_lock};
-        return p_stacks.allocate();
+        if constexpr(!SA::is_thread_safe) {
+            std::lock_guard<std::mutex> l{p_lock};
+            return p_stacks.allocate();
+        } else {
+            return p_stacks.allocate();
+        }
     }
 
     void deallocate_stack(stack_context &st) noexcept {
-        std::lock_guard<std::mutex> l{p_lock};
-        p_stacks.deallocate(st);
+        if constexpr(!SA::is_thread_safe) {
+            std::lock_guard<std::mutex> l{p_lock};
+            p_stacks.deallocate(st);
+        } else {
+            p_stacks.deallocate();
+        }
     }
 
     void reserve_stacks(size_t n) {
-        std::lock_guard<std::mutex> l{p_lock};
-        p_stacks.reserve(n);
+        if constexpr(!SA::is_thread_safe) {
+            std::lock_guard<std::mutex> l{p_lock};
+            p_stacks.reserve(n);
+        } else {
+            p_stacks.reserve(n);
+        }
     }
 
 private:
@@ -509,18 +521,30 @@ public:
     }
 
     stack_context allocate_stack() {
-        std::lock_guard<std::mutex> l{p_lock};
-        return p_stacks.allocate();
+        if constexpr(!SA::is_thread_safe) {
+            std::lock_guard<std::mutex> l{p_lock};
+            return p_stacks.allocate();
+        } else {
+            return p_stacks.allocate();
+        }
     }
 
     void deallocate_stack(stack_context &st) noexcept {
-        std::lock_guard<std::mutex> l{p_lock};
-        p_stacks.deallocate(st);
+        if constexpr(!SA::is_thread_safe) {
+            std::lock_guard<std::mutex> l{p_lock};
+            p_stacks.deallocate(st);
+        } else {
+            p_stacks.deallocate();
+        }
     }
 
     void reserve_stacks(size_t n) {
-        std::lock_guard<std::mutex> l{p_lock};
-        p_stacks.reserve(n);
+        if constexpr(!SA::is_thread_safe) {
+            std::lock_guard<std::mutex> l{p_lock};
+            p_stacks.reserve(n);
+        } else {
+            p_stacks.reserve(n);
+        }
     }
 
 private:
