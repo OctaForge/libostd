@@ -345,6 +345,10 @@ public:
         p_stacks.deallocate(st);
     }
 
+    void reserve_stacks(size_t n) {
+        p_stacks.reserve(n);
+    }
+
 private:
     void dispatch() {
         while (!p_coros.empty()) {
@@ -506,6 +510,10 @@ public:
 
     void deallocate_stack(stack_context &st) noexcept {
         p_stacks.deallocate(st);
+    }
+
+    void reserve_stacks(size_t n) {
+        p_stacks.reserve(n);
     }
 
 private:
