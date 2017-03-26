@@ -474,8 +474,10 @@ private:
     };
 
 public:
-    basic_coroutine_scheduler(SA &&sa = SA{}):
-        p_stacks(std::move(sa))
+    basic_coroutine_scheduler(
+        size_t thrs = std::thread::hardware_concurrency(), SA &&sa = SA{}
+    ):
+        p_threads(thrs), p_stacks(std::move(sa))
     {}
 
     ~basic_coroutine_scheduler() {}
@@ -593,7 +595,7 @@ private:
     }
 
     void init() {
-        size_t size = std::thread::hardware_concurrency();
+        size_t size = p_threads;
         std::vector<std::thread> thrs;
         thrs.reserve(size);
         for (size_t i = 0; i < size; ++i) {
@@ -682,6 +684,7 @@ private:
         }
     }
 
+    size_t p_threads;
     std::condition_variable p_cond;
     std::mutex p_lock;
     SA p_stacks;
