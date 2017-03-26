@@ -10,8 +10,7 @@ make the language easier and more convenient to use.
 
 It is not feature complete right now, as most things are still being worked on.
 
-Documentation (currently outdated and incomplete) for OctaSTD can be found at
-https://wiki.octaforge.org/docs/octastd.
+Documentation for OctaSTD can be found at https://docs.octaforge.org/octastd.
 
 ## Supported compilers
 
