@@ -1,6 +1,23 @@
-/* Platform specific definitions for OctaSTD.
+/** @defgroup Platform Platform support
  *
- * This file is part of OctaSTD. See COPYING.md for futher information.
+ * @brief Abstractions for platform (OS, toolchain) specific code.
+ *
+ * OctaSTD is not only a simple utility library, it also aims to make writing
+ * cross-platform code as simple as possible (while sticking to native features
+ * and therefore not making your code feel foreign on the platform). This
+ * module represents the base layer to achieve this.
+ *
+ * @{
+ */
+
+/** @file platform.hh
+ *
+ * @brief Platform specific definitions.
+ *
+ * This file defines various helper macros to deal with system and compiler
+ * checks as well as API exports and byte order.
+ *
+ * @copyright See COPYING.md in the project tree for further information.
  */
 
 #ifndef OSTD_PLATFORM_HH
@@ -11,6 +28,112 @@
 
 #include <type_traits>
 
+/* only expanded when generating documentation, define all macros */
+#ifdef OSTD_GENERATING_DOC
+
+/// Defined on Windows x86 and x86_64, otherwise undefined.
+#define OSTD_PLATFORM_WIN32
+
+/// Defined on Windows x64 only, otherwise undefined.
+#define OSTD_PLATFORM_WIN64
+
+/// Defined on all POSIX compliant systems, otherwise undefined.
+#define OSTD_PLATFORM_POSIX
+
+/// Defined on Linux.
+#define OSTD_PLATFORM_LINUX
+
+/// Defined on macOS.
+#define OSTD_PLATFORM_OSX
+
+/// Defined on DragonflyBSD.
+#define OSTD_PLATFORM_DRAGONFLYBSD
+
+/// Defined on FreeBSD.
+#define OSTD_PLATFORM_FREEBSD
+
+/// Defined on OpenBSD.
+#define OSTD_PLATFORM_OPENBSD
+
+/// Defined on NetBSD.
+#define OSTD_PLATFORM_NETBSD
+
+/// Defined on FreeBSD, NetBSD, OpenBSD and DragonflyBSD.
+#define OSTD_PLATFORM_BSD
+
+/// Defined on Solaris, Illumos and derivatives.
+#define OSTD_PLATFORM_SOLARIS
+
+/// Defined when compiling with Clang.
+#define OSTD_TOOLCHAIN_CLANG
+
+/// Defined when compiling with GCC or a compatible compiler such as Clang.
+#define OSTD_TOOLCHAIN_GNU
+
+/// Defined when compiling with Microsoft Visual Studio.
+#define OSTD_TOOLCHAIN_MSVC
+
+/// The value of #OSTD_BYTE_ORDER on little-endian systems.
+#define OSTD_ENDIAN_LIL
+
+/// The value of #OSTD_BYTE_ORDER on big-endian systems.
+#define OSTD_ENDIAN_BIG
+
+/// The system's byte order, either #OSTD_ENDIAN_LIL or #OSTD_ENDIAN_BIG.
+#define OSTD_BYTE_ORDER
+
+/** @brief Use this to annotate externally visible API.
+ *
+ * On Windows, this will expand differently when building a library and when
+ * using the resulting API. You can define `OSTD_BUILD_LIB` to declare that
+ * you're currently building a static library (in which case this macro will
+ * expand to nothing) or `OSTD_BUILD_DLL` to declare you're building a DLL
+ * (in which case it will expand to `__declspec(dllexport)`).
+ *
+ * When not building a library, this will expand to `__declspec(dllimport)`.
+ *
+ * On POSIX compliant systems, there are two possibilities. If your compiler
+ * supports it, it can expand to `__attribute__((visibility("default")))`.
+ * Otherwise, it will be empty.
+ *
+ * ~~~{.cc}
+ * OSTD_EXPORT void foo();
+ *
+ * class OSTD_EXPORT bar {
+ *     OSTD_LOCAL void private_method(); // internal to the DSO
+ *
+ * public:
+ *     void public_method();
+ * };
+ *
+ * OSTD_EXPORT extern baz external_variable;
+ * ~~~
+ *
+ * @see OSTD_LOCAL
+ */
+#define OSTD_EXPORT
+
+/** @brief Use this to annotate APIs internal to the library.
+ *
+ * On Windows, this will always expand to nothing. On POSIX compliant systems,
+ * it will expand to `__attribute__((visibility("hidden")))` on compliant
+ * compilers, otherwise also nothing. This macro is useful typically to hide
+ * private methods in classes that have been exported as whole. Otherwise,
+ * APIs that are not annontated can be considered local by default (though
+ * the actual visibility depends on your compiler flags).
+ */
+#define OSTD_LOCAL
+
+/** @brief A convenience macro for the `cdecl` calling convention on Win32.
+ *
+ * This will expand to nothing on all platforms except 32-bit Windows, where
+ * default calling convention can be overridden. You can use this to enforce
+ * the `cdecl` calling convention for external function declarations where
+ * necessary without having to write Windows specific code.
+ */
+#define OSTD_CDECL
+
+#else /* OSTD_GENERATING_DOC */
 #if defined(WIN32) || defined(_WIN32) || (defined(__WIN32) && !defined(__CYGWIN__))
 #  define OSTD_PLATFORM_WIN32 1
 #  if defined(WIN64) || defined(_WIN64)
@@ -100,8 +223,13 @@
 #else
 #  define OSTD_CDECL
 #endif
+#endif /* OSTD_GENERATING_DOC */
 
 namespace ostd {
+
+/** @addtogroup Platform
+ * @{
+ */
 
 #if defined(OSTD_TOOLCHAIN_GNU)
 
@@ -183,38 +311,38 @@ struct endian_swap<T, 8, true> {
     }
 };
 
-namespace detail {
-    template<
-        typename T, size_t N = sizeof(T), bool IsNum = std::is_arithmetic_v<T>
-    >
-    struct endian_same;
+template<typename T, bool IsNum = std::is_arithmetic_v<T>>
+struct from_lil_endian;
 
-    template<typename T>
-    struct endian_same<T, 2, true> {
-        T operator()(T v) const { return v; }
-    };
-    template<typename T>
-    struct endian_same<T, 4, true> {
-        T operator()(T v) const { return v; }
-    };
-    template<typename T>
-    struct endian_same<T, 8, true> {
-        T operator()(T v) const { return v; }
-    };
-}
+template<typename T>
+struct from_lil_endian<T, true> {
+    T operator()(T v) const {
+        if constexpr(OSTD_BYTE_ORDER == OSTD_ENDIAN_LIL) {
+            return v;
+        } else {
+            return endian_swap<T>{}(v);
+        }
+    }
+};
 
-#if OSTD_BYTE_ORDER == OSTD_ENDIAN_LIL
+template<typename T, bool IsNum = std::is_arithmetic_v<T>>
+struct from_big_endian;
+
 template<typename T>
-struct from_lil_endian: detail::endian_same<T> {};
-template<typename T>
-struct from_big_endian: endian_swap<T> {};
-#else
-template<typename T>
-struct from_lil_endian: endian_swap<T> {};
-template<typename T>
-struct from_big_endian: detail::endian_same<T> {};
-#endif
+struct from_big_endian<T, true> {
+    T operator()(T v) const {
+        if constexpr(OSTD_BYTE_ORDER != OSTD_ENDIAN_LIL) {
+            return v;
+        } else {
+            return endian_swap<T>{}(v);
+        }
+    }
+};
+
+/** @} */
 
 }
 
 #endif
+
+/** @} */
