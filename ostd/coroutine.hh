@@ -1,6 +1,20 @@
-/* Coroutines for OctaSTD.
+/** @addtogroup Concurrency
+ * @{
+ */
+
+/** @file coroutine.hh
  *
- * This file is part of OctaSTD. See COPYING.md for further information.
+ * @brief Lightweight cooperative threads.
+ *
+ * This file implements coroutines (sometimes also called fibers or green
+ * threads), which are essentially very lightweight cooperative threads.
+ * They're designed with very low context switch overhead in mind, so that
+ * they can be spawned in large numbers. Coupled with a scheduler, it's
+ * possible to create scalable concurrent/parallel applications. They can
+ * also be used as generators and generally anywhere where you'd like to
+ * suspend a function and resume it later (all kinds of async apps).
+ *
+ * @copyright See COPYING.md in the project tree for further information.
  */
 
 #ifndef OSTD_COROUTINE_HH
@@ -22,6 +36,14 @@
 
 namespace ostd {
 
+/** @addtogroup Concurrency
+ * @{
+ */
+
+/** @brief Thrown on coroutine related errors.
+ *
+ * These can include a dead coroutine/generator call/access.
+ */
 struct coroutine_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 };
@@ -55,21 +77,53 @@ namespace detail {
     OSTD_EXPORT extern thread_local coroutine_context *coro_current;
 } /* namespace detail */
 
+/** @brief An encapsulated context any coroutine-type inherits from.
+ *
+ * Internally, this provides some basic infrastructure for creating and
+ * managing the coroutine as well as its entry point. All coroutine types
+ * inherit from this.
+ */
 struct coroutine_context {
+    /** @brief Gets the currently executing coroutine context.
+     *
+     * Sometimes custom coroutine types might want to bypass being able
+     * to be accessed through this, so they can choose to avoid calling
+     * call(). The coroutine-based concurrent schedulers particularly do
+     * this. This means that if you call this while in a task, it will
+     * return either `nullptr` or the non-task coroutine we're currently in.
+     *
+     * @returns The current context.
+     */
     static coroutine_context *current() {
         return detail::coro_current;
     }
 
 protected:
+    /** Does nothing, just default-initializes the members. */
     coroutine_context() {}
 
-    /* coroutine context must be polymorphic */
+    /** @brief Unwinds the stack and frees it.
+     *
+     * If the coroutine is dead or just initialized and was never called,
+     * no unwind is performed (in the former case, it's already done, in
+     * the latter case, it was never needed in the first place). Then the
+     * stack is freed (if present) using the same stack allocator it was
+     * allocated with.
+     */
     virtual ~coroutine_context() {
         unwind();
         free_stack();
     }
 
+    /** Coroutine contexts are not copy constructible. */
     coroutine_context(coroutine_context const &) = delete;
+
+    /** @brief Moves the given context into this one.
+     *
+     * The other context is deinitialized and set as dead.
+     *
+     * @see operator=(coroutine_context &&)
+     */
     coroutine_context(coroutine_context &&c):
         p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
         p_except(std::move(c.p_except)), p_state(c.p_state), p_free(c.p_free)
@@ -80,12 +134,33 @@ protected:
         c.set_dead();
     }
 
+    /** Coroutine contexts are not copy assignable. */
     coroutine_context &operator=(coroutine_context const &) = delete;
+
+    /** @brief Moves the given context into this one.
+     *
+     * Effectively calls swap(coroutine_context &). The current context
+     * is then destroyed by the other context's destructor.
+     *
+     * @returns Returns `*this*`.
+     */
     coroutine_context &operator=(coroutine_context &&c) {
         swap(c);
         return *this;
     }
 
+    /** @brief Calls the coroutine context.
+     *
+     * Sets the state flag as executing, saves the current context and
+     * sets it to this coroutine (so that current() returns this context)
+     * and jumps into the coroutine function. Once the coroutine yields or
+     * returns, sets the current context back to what was saved previously.
+     *
+     * Additionally, propagates any uncaught exception that was thrown inside
+     * of the coroutine function by calling rethrow().
+     *
+     * @throws Whatever the coroutine function throws.
+     */
     void call() {
         set_exec();
         /* switch to new coroutine */
@@ -96,42 +171,73 @@ protected:
         rethrow();
     }
 
+    /** @brief Jumps into the coroutine context.
+     *
+     * Only valid if the coroutine is currently suspended or not started.
+     *
+     * @see yield_jump(), yield_done()
+     */
     void coro_jump() {
         p_coro = detail::ostd_jump_fcontext(p_coro, this).ctx;
     }
 
+    /** @brief Jumps out of the coroutine context.
+     *
+     * Only valid if the coroutine is currently running. Sets the state
+     * to suspended before jumping.
+     *
+     * @see coro_jump(), yield_done()
+     */
     void yield_jump() {
         p_state = state::HOLD;
         p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
     }
 
+    /** @brief Jumps out of the coroutine context.
+     *
+     * Only valid if the coroutine is currently running. Sets the state
+     * to dead before jumping.
+     *
+     * @see coro_jump(), yield_jump()
+     */
     void yield_done() {
         set_dead();
         p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
     }
 
+    /** Checks if the coroutine is suspended. */
     bool is_hold() const {
         return (p_state == state::HOLD);
     }
 
+    /** Checks if the coroutine is dead. */
     bool is_dead() const {
         return (p_state == state::TERM);
     }
 
+    /** Marks the coroutine as dead. Only valid without an active context. */
     void set_dead() {
         p_state = state::TERM;
     }
 
+    /** Marks the coroutine as executing. Only valid before coro_jump(). */
     void set_exec() {
         p_state = state::EXEC;
     }
 
+    /** @brief Rethrows an exception saved by a previous coroutine call.
+     *
+     * Call this after coro_jump() when implementing your own call().
+     * When not implementing your own call(), do not do this anywhere,
+     * the exception is already rethrown inside call().
+     */
     void rethrow() {
         if (p_except) {
             std::rethrow_exception(std::move(p_except));
         }
     }
 
+    /** Swaps the current context with another. */
     void swap(coroutine_context &other) noexcept {
         using std::swap;
         swap(p_stack, other.p_stack);
@@ -142,6 +248,23 @@ protected:
         swap(p_free, other.p_free);
     }
 
+    /** @brief Allocates a stack and creates a context.
+     *
+     * Only call this once at the point where no context was created yet.
+     * That is typically in a constructor that results in a valid coroutine.
+     *
+     * The context uses an internal entry point. The entry point calls the
+     * coroutine's function by calling the `resume_call()` method with no
+     * parameters and results on it. Any exception thrown from it is caught
+     * and saved as an `std::exception_ptr`. This is then rethrown by a call
+     * to rethrow().
+     *
+     * It's therefore necessary for @p C to give the context access to its
+     * `resume_call()` method, typically by making coroutine_context a friend.
+     *
+     * @param sa The stack allocator used to allocate the stack.
+     * @tparam C The coroutine type that inherits from the context class.
+     */
     template<typename C, typename SA>
     void make_context(SA &sa) {
         p_stack = sa.allocate();
@@ -248,6 +371,11 @@ release:
     void (*p_free)(void *) = nullptr;
 };
 
+/** @brief Unspecialized declaration of the coroutine.
+ *
+ * This one has no definition. All instances of coroutine must use `R(A...)`
+ * as template arguments, which is specialized later.
+ */
 template<typename T>
 struct coroutine;
 
@@ -482,6 +610,48 @@ namespace detail {
     };
 } /* namespace detail */
 
+/** @brief The coroutine type specialization.
+ *
+ * This is a regular coroutine. Depending on the template param, it can
+ * have a return type as well as arguments. The typical usage is as follows:
+ *
+ * ~~~{.cc}
+ * coroutine<int(float, bool)> x = [](auto yield, float a, bool b) {
+ *     writefln("call 1: %s %s", a, b);
+ *     std::tie(a, b) = yield(5); // "returns" 5
+ *     writefln("call 2: %s %s", a, b);
+ *     return 10;
+ * };
+ *
+ * int r = x(3.14f, true); // call 1: 3.14 true
+ * writeln(r); // 5
+ *
+ * r = x(6.28f, false); // call 2: 6.28 false
+ * writeln(r); // 10, x is dead here
+ * ~~~
+ *
+ * As you can see, the coroutine function takes an object by value (yield_type)
+ * and any declared arguments. Any types can be arguments as well as returns,
+ * just like with any function or functional wrapper like `std::function`.
+ *
+ * You suspend the coroutine by calling its yield type. Depending on the
+ * result type, the yielder call takes an argument or not. If `R` is `void`,
+ * the yielder takes no argument. If it's a non-reference type, the yielder
+ * takes an argument by lvalue reference to `const` (`R const &`) or by rvalue
+ * reference (`R &&`).  If it's an lvalue reference type, it takes the lvalue
+ * reference type. If it's an rvalue reference type, it takes the rvalue
+ * reference.
+ *
+ * The yielder returns a value or not depending on the argument types. With
+ * no argument types, nothing is returned. With a single argument type, the
+ * argument itself is returned. With two argument types, an `std::pair` of
+ * the arguments is returned. Otherwise, an `std::tuple` of the arguments
+ * is returned. The arguments are never copied or moved, you get them exactly
+ * as they were passed, exactly as if they were passed as regular args.
+ *
+ * @tparam R The return template type.
+ * @tparam A... The argument template types.
+ */
 template<typename R, typename ...A>
 struct coroutine<R(A...)>: coroutine_context {
 private:
@@ -555,12 +725,25 @@ private:
     };
 
 public:
+    /** The yielder type for the coroutine. Not opaque, but internal. */
     using yield_type = yielder<R, A...>;
 
-    /* we have no way to assign a function anyway... */
+    /** Coroutines are not default constructible. */
     coroutine() = delete;
 
-    /* 0 means default size decided by the stack allocator */
+    /** @brief Creates a coroutine using the given function.
+     *
+     * The function is stored in an appropriate `std::function`. If the
+     * resulting function is empty, it's the same as initializing the
+     * coroutine with a null pointer (i.e. it's dead by default).
+     *
+     * Otherwise creates a context using the provided stack allocator.
+     *
+     * @param func The function to use.
+     * @param sa The stack allocator, defaults to a default_stack.
+     *
+     * @throws Whatever an `std::function` constructor could throw.
+     */
     template<typename F, typename SA = default_stack>
     coroutine(F func, SA sa = SA{}): base_t(), p_stor(std::move(func)) {
         /* that way there is no context creation/stack allocation */
@@ -571,29 +754,60 @@ public:
         this->make_context<coroutine<R(A...)>>(sa);
     }
 
+    /** @brief Creates a dead coroutine.
+     *
+     * No context is created. No stack is allocated.
+     */
     template<typename SA = default_stack>
     coroutine(std::nullptr_t, SA = SA{}): base_t(), p_stor() {
         this->set_dead();
     }
 
+    /** Coroutines are not copy constructible. */
     coroutine(coroutine const &) = delete;
+
+    /** @brief Moves a coroutine.
+     *
+     * Moves the given coroutine's context and any other data into the new
+     * coroutine. The other coroutine is left in a dead state.
+     *
+     * @see operator=(coroutine &&)
+     */
     coroutine(coroutine &&c) noexcept:
         base_t(std::move(c)), p_stor(std::move(c.p_stor))
     {
         c.p_stor.p_func = nullptr;
     }
 
+    /** Coroutines are not copy assignable. */
     coroutine &operator=(coroutine const &) = delete;
+
+    /** @brief Moves a coroutine.
+     *
+     * Effectively like a call to swap(coroutine &).
+     */
     coroutine &operator=(coroutine &&c) noexcept {
         base_t::operator=(std::move(c));
-        p_stor = std::move(c.p_stor);
-        c.p_stor.p_func = nullptr;
+        p_stor.swap(c.p_stor);
     }
 
+    /** Checks if the coroutine is alive, returning `true` if it is. */
     explicit operator bool() const noexcept {
         return !this->is_dead();
     }
 
+    /** @brief Calls the coroutine.
+     *
+     * Executes the coroutine with the given arguments and returns whatever
+     * the coroutine returns or yields. The arguments are never copied or
+     * moved, they're passed into the coroutine exactly as real args would.
+     *
+     * @returns The value passed to `yield()` (or nothing if `R` is `void`).
+     *
+     * @throws ostd::coroutine_error if the coroutine is dead.
+     *
+     * @see operator()(A...)
+     */
     R resume(A ...args) {
         if (this->is_dead()) {
             throw coroutine_error{"dead coroutine"};
@@ -603,6 +817,12 @@ public:
         return this->get_result();
     }
 
+    /** @brief Calls the coroutine.
+     *
+     * Exactly the same as calling resume(A...), with function syntax.
+     *
+     * @see resume(A...)
+     */
     R operator()(A ...args) {
         /* duplicate the logic so we don't copy/move the args */
         if (this->is_dead()) {
@@ -613,18 +833,30 @@ public:
         return p_stor.get_result();
     }
 
+    /** Swaps two coroutines' states. */
     void swap(coroutine &other) noexcept {
         p_stor.swap(other.p_stor);
         base_t::swap(other);
     }
 
+    /** Returns the RTTI of the function stored in the coroutine. */
     std::type_info const &target_type() const {
         return p_stor.p_func.target_type();
     }
 
+    /** @brief Retrieves the stored function given its known type.
+     *
+     * @returns A pointer to the function or `nullptr` if the type
+     *          doesn't match.
+     */
     template<typename F>
     F *target() { return p_stor.p_func.target(); }
 
+    /** @brief Retrieves the stored function given its known type.
+     *
+     * @returns A pointer to the function or `nullptr` if the type
+     *          doesn't match.
+     */
     template<typename F>
     F const *target() const { return p_stor.p_func.target(); }
 
@@ -636,6 +868,7 @@ private:
     detail::coro_stor<yield_type, R, A...> p_stor;
 };
 
+/** Swaps two coroutines' states. */
 template<typename R, typename ...A>
 inline void swap(coroutine<R(A...)> &a, coroutine<R(A...)> &b) noexcept {
     a.swap(b);
@@ -647,6 +880,42 @@ namespace detail {
     template<typename T> struct generator_iterator;
 }
 
+/** @brief A generator type.
+ *
+ * Generators are much like coroutines and are also backed by contexts and
+ * stacks. However, there are a few important differences:
+ *
+ * * Generators take no arguments (besides the yielder).
+ * * Generators don't return from their function, but pass values to `yield()`.
+ * * Generators store a value until resumed, which can be checked many times.
+ * * Generators are started automatically and have a value until they die.
+ * * Generators are iterable and you can even take ranges to them.
+ *
+ * This is best described with an example:
+ *
+ * ~~~{.cc}
+ * auto x = [](auto yield) {
+ *     for (int i = 1; i <= 5; ++i) {
+ *         yield(i * 5);
+ *     }
+ * };
+ *
+ * for (int i: generator<int>{x}) {
+ *     writeln(i); // 5, 10, 15, 20, 25
+ * }
+ *
+ * generator<int> y = x;
+ * writeln(y.value()); // 5
+ * writeln(y.value()); // 5
+ * y.resume();
+ * writeln(y.value()); // 10
+ * ~~~
+ *
+ * As you can see, where coroutines are basically just resumable functions,
+ * generators are truly suitable for generating values. 
+ *
+ * @tparam T The value type to use.
+ */
 template<typename T>
 struct generator: coroutine_context {
 private:
@@ -701,12 +970,29 @@ private:
     };
 
 public:
+    /** As generators can be used with ranges, this is defined. */
     using range = generator_range<T>;
 
+    /** The yielder type for the generator. Not opaque, but internal. */
     using yield_type = yielder<T>;
 
+    /** Generators are not default constructible. */
     generator() = delete;
 
+    /** @brief Creates a generator using the given function.
+     *
+     * The function is stored in an appropriate `std::function`. If the
+     * resulting function is empty, it's the same as initializing the
+     * generator with a null pointer (i.e. it's dead by default).
+     *
+     * Otherwise creates a context using the provided stack allocator
+     * and then resumes the generator, making it get a value (or die).
+     *
+     * @param func The function to use.
+     * @param sa The stack allocator, defaults to a default_stack.
+     *
+     * @throws Whatever an `std::function` constructor could throw.
+     */
     template<typename F, typename SA = default_stack>
     generator(F func, SA sa = SA{}):
         base_t(), p_func(std::move(func))
@@ -721,6 +1007,10 @@ public:
         resume();
     }
 
+    /** @brief Creates a dead generator.
+     *
+     * No context is created. No stack is allocated.
+     */
     template<typename SA = default_stack>
     generator(std::nullptr_t, SA = SA{0}):
         base_t(), p_func(nullptr)
@@ -728,7 +1018,16 @@ public:
         this->set_dead();
     }
 
+    /** Generators are not copy constructible. */
     generator(generator const &) = delete;
+
+    /** @brief Moves a generator.
+     *
+     * Moves the given generator's context and any other data into the new
+     * generator. The other generator is left in a dead state.
+     *
+     * @see operator=(generator &&)
+     */
     generator(generator &&c) noexcept:
         base_t(std::move(c)), p_func(std::move(c.p_func)), p_result(c.p_result)
     {
@@ -736,7 +1035,13 @@ public:
         c.p_result = nullptr;
     }
 
+    /** Generators are not copy assignable. */
     generator &operator=(generator const &) = delete;
+
+    /** @brief Moves a generator.
+     *
+     * Effectively like a call to swap(generator &).
+     */
     generator &operator=(generator &&c) noexcept {
         base_t::operator=(std::move(c));
         p_func = std::move(c.p_func);
@@ -745,10 +1050,19 @@ public:
         c.p_result = nullptr;
     }
 
+    /** Checks if the generator is alive, returning `true` if it is. */
     explicit operator bool() const noexcept {
         return !this->is_dead();
     }
 
+    /** @brief Resumes the generator, going to the next value (or dying).
+     *
+     * Executes the generator and if it yields, the yielded value will then
+     * be accessible via value(). Otherwise, the generator dies and there
+     * will not be any value.
+     *
+     * @throws ostd::coroutine_error if the generator is dead.
+     */
     void resume() {
         if (this->is_dead()) {
             throw coroutine_error{"dead generator"};
@@ -756,6 +1070,14 @@ public:
         coroutine_context::call();
     }
 
+    /** @brief Retrieves a reference to the generator's value.
+     *
+     * When the generator is in a suspended state, the value it has yielded
+     * lies on it stack, which is guaranteed to be alive. Therefore we don't
+     * have to copy the value and can return a cheap reference to it.
+     *
+     * @throws ostd::coroutine_error if the generator is dead.
+     */
     T &value() {
         if (!p_result) {
             throw coroutine_error{"no value"};
@@ -763,6 +1085,14 @@ public:
         return *p_result;
     }
 
+    /** @brief Retrieves a reference to the generator's value.
+     *
+     * When the generator is in a suspended state, the value it has yielded
+     * lies on it stack, which is guaranteed to be alive. Therefore we don't
+     * have to copy the value and can return a cheap reference to it.
+     *
+     * @throws ostd::coroutine_error if the generator is dead.
+     */
     T const &value() const {
         if (!p_result) {
             throw coroutine_error{"no value"};
@@ -770,16 +1100,30 @@ public:
         return *p_result;
     }
 
+    /** Checks if the generator is has a value, returning `false` if it does. */
     bool empty() const noexcept {
         return !p_result;
     }
 
+    /** @brief Gets a range to the generator.
+     *
+     * The range is an ostd::generator_range<T>. It's an input range, so all
+     * of its copies point to the same generator instance, reflecting the same
+     * internal state.
+     */
     generator_range<T> iter() noexcept;
 
-    /* for range for loop; they're the same, operator!= bypasses comparing */
+    /** Implements a minimal iterator just for range-based for loop.
+      * Do not use directly.
+      */
     detail::generator_iterator<T> begin() noexcept;
+
+    /** Implements a minimal iterator just for range-based for loop.
+      * Do not use directly.
+      */
     detail::generator_iterator<T> end() noexcept;
 
+    /** Swaps two generators' states. */
     void swap(generator &other) noexcept {
         using std::swap;
         swap(p_func, other.p_func);
@@ -787,13 +1131,24 @@ public:
         coroutine_context::swap(other);
     }
 
+    /** Returns the RTTI of the function stored in the generator. */
     std::type_info const &target_type() const {
         return p_func.target_type();
     }
 
+    /** @brief Retrieves the stored function given its known type.
+     *
+     * @returns A pointer to the function or `nullptr` if the type
+     *          doesn't match.
+     */
     template<typename F>
     F *target() { return p_func.target(); }
 
+    /** @brief Retrieves the stored function given its known type.
+     *
+     * @returns A pointer to the function or `nullptr` if the type
+     *          doesn't match.
+     */
     template<typename F>
     F const *target() const { return p_func.target(); }
 
@@ -811,6 +1166,7 @@ private:
     std::remove_reference_t<T> *p_result = nullptr;
 };
 
+/** Swaps two generators' states. */
 template<typename T>
 inline void swap(generator<T> &a, generator<T> &b) noexcept {
     a.swap(b);
@@ -827,9 +1183,20 @@ namespace detail {
     };
 }
 
+/** @brief Gets the yielder type for the given type.
+ *
+ * If the given type is like `R(A...)`, the resulting type is an yielder type
+ * for the matching ostd::coroutine. If it's just a simple type, it's an
+ * yielder type for a generator of that type.
+ */
 template<typename T>
 using yield_type = typename detail::yield_type_base<T>::type;
 
+/** @brief A range type over a generator.
+ *
+ * This range type is a simple input range type (ostd::input_range_tag)
+ * that wraps around a generator.
+ */
 template<typename T>
 struct generator_range: input_range<generator_range<T>> {
     using range_category  = input_range_tag;
@@ -838,27 +1205,40 @@ struct generator_range: input_range<generator_range<T>> {
     using size_type       = size_t;
     using difference_type = ptrdiff_t;
 
+    /** Generator ranges are not default constructible. */
     generator_range() = delete;
+
+    /** Generator ranges are constructed using a reference to a generator. */
     generator_range(generator<T> &g): p_gen(&g) {}
 
+    /** Like ostd::generator<T>::empty(). */
     bool empty() const noexcept {
         return p_gen->empty();
     }
 
+    /** Like ostd::generator<T>::resume(). */
     void pop_front() {
         p_gen->resume();
     }
 
+    /** Like ostd::generator<T>::value(). */
     reference front() const {
         return p_gen->value();
     }
 
+    /** Simply compares the two stored generator references for equality. */
     bool equals_front(generator_range const &g) const noexcept {
         return p_gen == g.p_gen;
     }
 
-    /* same behavior as on generator itself, for range for loop */
+    /** Implements a minimal iterator just for range-based for loop.
+      * Do not use directly.
+      */
     detail::generator_iterator<T> begin() noexcept;
+
+    /** Implements a minimal iterator just for range-based for loop.
+      * Do not use directly.
+      */
     detail::generator_iterator<T> end() noexcept;
 
 private:
@@ -915,6 +1295,10 @@ detail::generator_iterator<T> generator_range<T>::end() noexcept {
     return detail::generator_iterator<T>{*p_gen};
 }
 
+/** @} */
+
 } /* namespace ostd */
 
 #endif
+
+/** @} */
