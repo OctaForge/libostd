@@ -1121,7 +1121,9 @@ public:
     /** Implements a minimal iterator just for range-based for loop.
       * Do not use directly.
       */
-    detail::generator_iterator<T> end() noexcept;
+    std::nullptr_t end() noexcept {
+        return nullptr;
+    }
 
     /** Swaps two generators' states. */
     void swap(generator &other) noexcept {
@@ -1239,7 +1241,9 @@ struct generator_range: input_range<generator_range<T>> {
     /** Implements a minimal iterator just for range-based for loop.
       * Do not use directly.
       */
-    detail::generator_iterator<T> end() noexcept;
+    std::nullptr_t end() noexcept {
+        return nullptr;
+    }
 
 private:
     generator<T> *p_gen;
@@ -1257,7 +1261,7 @@ namespace detail {
         generator_iterator() = delete;
         generator_iterator(generator<T> &g): p_gen(&g) {}
 
-        bool operator!=(generator_iterator const &) noexcept {
+        bool operator!=(std::nullptr_t) noexcept {
             return !p_gen->empty();
         }
 
@@ -1281,17 +1285,7 @@ detail::generator_iterator<T> generator<T>::begin() noexcept {
 }
 
 template<typename T>
-detail::generator_iterator<T> generator<T>::end() noexcept {
-    return detail::generator_iterator<T>{*this};
-}
-
-template<typename T>
 detail::generator_iterator<T> generator_range<T>::begin() noexcept {
-    return detail::generator_iterator<T>{*p_gen};
-}
-
-template<typename T>
-detail::generator_iterator<T> generator_range<T>::end() noexcept {
     return detail::generator_iterator<T>{*p_gen};
 }
 

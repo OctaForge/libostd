@@ -230,55 +230,23 @@ constexpr bool is_output_range = detail::is_output_range_base<T>;
 
 namespace detail {
     // range iterator
-
     template<typename T>
     struct range_iterator {
-        range_iterator(): p_range(), p_init(false) {}
-        explicit range_iterator(T const &range): p_range(), p_init(true) {
-            ::new(&get_ref()) T(range);
-        }
-        explicit range_iterator(T &&range): p_range(), p_init(true) {
-            ::new(&get_ref()) T(std::move(range));
-        }
-        range_iterator(const range_iterator &v): p_range(), p_init(true) {
-            ::new(&get_ref()) T(v.get_ref());
-        }
-        range_iterator(range_iterator &&v): p_range(), p_init(true) {
-            ::new(&get_ref()) T(std::move(v.get_ref()));
-        }
-        range_iterator &operator=(const range_iterator &v) {
-            destroy();
-            ::new(&get_ref()) T(v.get_ref());
-            p_init = true;
-            return *this;
-        }
-        range_iterator &operator=(range_iterator &&v) {
-            destroy();
-            swap(v);
-            return *this;
-        }
-        ~range_iterator() {
-            destroy();
-        }
+        range_iterator() = delete;
+        explicit range_iterator(T const &range): p_range(range) {}
+        explicit range_iterator(T &&range): p_range(std::move(range)) {}
         range_iterator &operator++() {
-            get_ref().pop_front();
+            p_range.pop_front();
             return *this;
         }
         range_reference_t<T> operator*() const {
-            return get_ref().front();
+            return p_range.front();
         }
-        bool operator!=(range_iterator) const { return !get_ref().empty(); }
+        bool operator!=(std::nullptr_t) const {
+            return !p_range.empty();
+        }
     private:
-        T &get_ref() { return *reinterpret_cast<T *>(&p_range); }
-        T const &get_ref() const { return *reinterpret_cast<T const *>(&p_range); }
-        void destroy() {
-            if (p_init) {
-                get_ref().~T();
-                p_init = false;
-            }
-        }
-        std::aligned_storage_t<sizeof(T), alignof(T)> p_range;
-        bool p_init;
+        std::decay_t<T> p_range;
     };
 }
 
@@ -553,8 +521,8 @@ struct input_range {
     detail::range_iterator<B> begin() const {
         return detail::range_iterator<B>(*static_cast<B const *>(this));
     }
-    detail::range_iterator<B> end() const {
-        return detail::range_iterator<B>();
+    std::nullptr_t end() const {
+        return nullptr;
     }
 
     template<typename Size>
