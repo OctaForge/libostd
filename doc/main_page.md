@@ -60,7 +60,7 @@ assumes termination.
 
 Additionally, a completely type-safe string formatting system with C-like
 format strings is provided. Thanks to being type-safe, you can do things
-like using the `%s` format marks for any type and you never have to specify
+like using the `%%s` format marks for any type and you never have to specify
 sizes for numerical types. The system obviously integrates with ranges, so
 you can format directly into any output range type. You can also implement
 formatting for custom types, with complete control over the format mark.
