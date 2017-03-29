@@ -221,6 +221,6 @@ private:
 
 } /* namespace ostd */
 
-/** @} */
-
 #endif
+
+/** @} */
