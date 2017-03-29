@@ -4,7 +4,7 @@
 
 /** @file generic_condvar.hh
  *
- * A single type that can encapsulate different condvar types.
+ * @brief A single type that can encapsulate different condvar types.
  *
  * @copyright See COPYING.md in the project tree for further information.
  */
