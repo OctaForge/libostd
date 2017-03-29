@@ -1,6 +1,15 @@
-/* A thread pool that can be used standalone or within a more elaborate module.
+/** @addtogroup Concurrency
+ * @{
+ */
+
+/** @file thread_pool.hh
  *
- * This file is part of OctaSTD. See COPYING.md for futher information.
+ * @brief A pool of threads with workers.
+ *
+ * This file implements a regular thread pool with worker threads. It does
+ * not do any elaborate stuff with coroutines or task scheduling.
+ *
+ * @copyright See COPYING.md in the project tree for further information.
  */
 
 #ifndef OSTD_THREAD_POOL_HH
@@ -18,6 +27,10 @@
 #include <condition_variable>
 
 namespace ostd {
+
+/** @addtogroup Concurrency
+ * @{
+ */
 
 namespace detail {
     struct tpool_func_base {
@@ -87,25 +100,43 @@ namespace detail {
     };
 }
 
+/** @brief A thread pool.
+ *
+ * A simple thread pool that lets you start a specified number of threads
+ * and queue tasks onto them. No elaborate scheduling is performed, tasks
+ * are called on threads as they become available and are assumed completed
+ * once they return.
+ */
 struct thread_pool {
+    /** @brief Starts the thread pool.
+     *
+     * Creates the threads and marks the pool as running. The number of
+     * threads defaults to the number of hardware threads in your system.
+     *
+     * @param[in] size The number of threads to use.
+     */
     void start(size_t size = std::thread::hardware_concurrency()) {
         p_running = true;
         auto tf = [this]() {
             thread_run();
         };
         for (size_t i = 0; i < size; ++i) {
-            std::thread tid{tf};
-            if (!tid.joinable()) {
-                throw std::runtime_error{"thread_pool worker failed"};
-            }
-            p_thrs.push_back(std::move(tid));
+            p_thrs.push_back(std::thread{tf});
         }
     }
 
+    /** Calls destroy(). */
     ~thread_pool() {
         destroy();
     }
 
+    /** @brief Destroys the thread pool.
+     *
+     * If the pool is not running, this method simply returns. Otherwise
+     * it notifies all threads to run any remaining queued tasks and
+     * proceeds to wait for every thread to finish, notifying the rest
+     * every time after a thread successfully exits.
+     */
     void destroy() {
         {
             std::lock_guard<std::mutex> l{p_lock};
@@ -121,6 +152,22 @@ struct thread_pool {
         }
     }
 
+    /** @brief Queues a new task for execution.
+     *
+     * Queues the given function for execution. Any extra passed parameters
+     * are bound to the function first before queuing. It also lets you
+     * retrieve the return value of the task at later point, via the
+     * returned future.
+     *
+     * The function's argument types and the provided arguments must match.
+     *
+     * @param[in] func The function to queue.
+     * @param[in] args A parameter pack matching the function's arguments.
+     *
+     * @returns A future to the return type of the task.
+     *
+     * @throws std::runtime_error if the pool is not running.
+     */
     template<typename F, typename ...A>
     auto push(F &&func, A &&...args) ->
         std::future<std::result_of_t<F(A...)>>
@@ -170,6 +217,10 @@ private:
     bool p_running = false;
 };
 
+/** @} */
+
 } /* namespace ostd */
+
+/** @} */
 
 #endif

@@ -1,6 +1,6 @@
 /** @defgroup Concurrency
  *
- * @brief Concurrent task execution support.
+ * @brief Concurrent/parallel task execution support and related APIs.
  *
  * OctaSTD provides an elaborate concurrency system that covers multiple
  * schedulers with different characteristics as well as different ways to
@@ -26,6 +26,9 @@
  * ~~~
  *
  * See the examples provided with the library for further information.
+ *
+ * It also implements all sorts of utilities for dealing with parallel
+ * programs and synchronization, including a thread pool and other facilities.
  *
  * @{
  */

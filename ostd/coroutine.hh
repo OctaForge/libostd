@@ -262,7 +262,7 @@ protected:
      * It's therefore necessary for @p C to give the context access to its
      * `resume_call()` method, typically by making coroutine_context a friend.
      *
-     * @param sa The stack allocator used to allocate the stack.
+     * @param[in] sa The stack allocator used to allocate the stack.
      * @tparam C The coroutine type that inherits from the context class.
      */
     template<typename C, typename SA>
@@ -739,8 +739,8 @@ public:
      *
      * Otherwise creates a context using the provided stack allocator.
      *
-     * @param func The function to use.
-     * @param sa The stack allocator, defaults to a default_stack.
+     * @param[in] func The function to use.
+     * @param[in] sa The stack allocator, defaults to a default_stack.
      *
      * @throws Whatever an `std::function` constructor could throw.
      */
@@ -988,8 +988,8 @@ public:
      * Otherwise creates a context using the provided stack allocator
      * and then resumes the generator, making it get a value (or die).
      *
-     * @param func The function to use.
-     * @param sa The stack allocator, defaults to a default_stack.
+     * @param[in] func The function to use.
+     * @param[in] sa The stack allocator, defaults to a default_stack.
      *
      * @throws Whatever an `std::function` constructor could throw.
      */
