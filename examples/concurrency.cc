@@ -9,14 +9,14 @@ int main() {
      * on the scheduler currently in use - several schedulers are shown
      */
     auto foo = []() {
-        auto arr = iter({ 150, 38, 76, 25, 67, 18, -15,  215, 25, -10 });
+        auto arr = { 150, 38, 76, 25, 67, 18, -15,  215, 25, -10 };
 
         auto c = make_channel<int>();
         auto f = [](auto c, auto half) {
             c.put(foldl(half, 0));
         };
-        spawn(f, c, arr.slice(0, arr.size() / 2));
-        spawn(f, c, arr + (arr.size() / 2));
+        spawn(f, c, iter(arr).slice(0, arr.size() / 2));
+        spawn(f, c, iter(arr).slice(arr.size() / 2, arr.size()));
 
         int a = c.get();
         int b = c.get();
