@@ -9,7 +9,7 @@ int main() {
      * on the scheduler currently in use - several schedulers are shown
      */
     auto foo = []() {
-        auto arr = ostd::iter({ 150, 38, 76, 25, 67, 18, -15,  215, 25, -10 });
+        auto arr = iter({ 150, 38, 76, 25, 67, 18, -15,  215, 25, -10 });
 
         auto c = make_channel<int>();
         auto f = [](auto c, auto half) {
