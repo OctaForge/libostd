@@ -97,10 +97,6 @@ public:
         return p_beg == range.p_beg;
     }
 
-    ptrdiff_t distance_front(basic_char_range const &range) const {
-        return range.p_beg - p_beg;
-    }
-
     void pop_back() {
         if (p_end == p_beg) {
             return;
@@ -119,10 +115,6 @@ public:
 
     bool equals_back(basic_char_range const &range) const {
         return p_end == range.p_end;
-    }
-
-    ptrdiff_t distance_back(basic_char_range const &range) const {
-        return range.p_end - p_end;
     }
 
     size_t size() const { return p_end - p_beg; }

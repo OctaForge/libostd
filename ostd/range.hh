@@ -627,13 +627,6 @@ public:
         return p_range.equals_front(r.p_range);
     }
 
-    difference_type distance_front(reverse_range const &r) const {
-        return -p_range.distance_back(r.p_range);
-    }
-    difference_type distance_back(reverse_range const &r) const {
-        return -p_range.distance_front(r.p_range);
-    }
-
     void pop_front() { p_range.pop_back(); }
     void pop_back() { p_range.pop_front(); }
 
@@ -695,13 +688,6 @@ public:
     }
     bool equals_back(move_range const &r) const {
         return p_range.equals_back(r.p_range);
-    }
-
-    difference_type distance_front(move_range const &r) const {
-        return p_range.distance_front(r.p_range);
-    }
-    difference_type distance_back(move_range const &r) const {
-        return p_range.distance_back(r.p_range);
     }
 
     void pop_front() { p_range.pop_front(); }
@@ -1261,10 +1247,6 @@ struct iterator_range: input_range<iterator_range<T>> {
         return p_beg == range.p_beg;
     }
 
-    difference_type distance_front(iterator_range const &range) const {
-        return range.p_beg - p_beg;
-    }
-
     /* satisfy bidirectional_range */
     void pop_back() {
         /* rely on iterators to do their own checks */
@@ -1295,10 +1277,6 @@ struct iterator_range: input_range<iterator_range<T>> {
 
     bool equals_back(iterator_range const &range) const {
         return p_end == range.p_end;
-    }
-
-    ptrdiff_t distance_back(iterator_range const &range) const {
-        return range.p_end - p_end;
     }
 
     /* satisfy finite_random_access_range */

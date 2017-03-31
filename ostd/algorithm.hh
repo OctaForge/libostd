@@ -556,20 +556,6 @@ inline auto equal(R &&range) {
     };
 }
 
-template<typename R>
-R slice_until(R range1, R range2) {
-    return range1.slice(0, range1.distance_front(range2));
-}
-
-template<typename R>
-inline auto slice_until(R &&range) {
-    return [range = std::forward<R>(range)](auto &&obj) mutable {
-        return slice_until(
-            std::forward<decltype(obj)>(obj), std::forward<R>(range)
-        );
-    };
-}
-
 /* algos that modify ranges or work with output ranges */
 
 template<typename R1, typename R2>
@@ -767,13 +753,6 @@ public:
     }
     bool equals_back(map_range const &r) const {
         return p_range.equals_front(r.p_range);
-    }
-
-    range_difference_t<T> distance_front(map_range const &r) const {
-        return p_range.distance_front(r.p_range);
-    }
-    range_difference_t<T> distance_back(map_range const &r) const {
-        return p_range.distance_back(r.p_range);
     }
 
     void pop_front() { p_range.pop_front(); }
