@@ -620,13 +620,6 @@ public:
     bool empty() const { return p_range.empty(); }
     size_type size() const { return p_range.size(); }
 
-    bool equals_front(reverse_range const &r) const {
-        return p_range.equals_back(r.p_range);
-    }
-    bool equals_back(reverse_range const &r) const {
-        return p_range.equals_front(r.p_range);
-    }
-
     void pop_front() { p_range.pop_back(); }
     void pop_back() { p_range.pop_front(); }
 
@@ -683,13 +676,6 @@ public:
     bool empty() const { return p_range.empty(); }
     size_type size() const { return p_range.size(); }
 
-    bool equals_front(move_range const &r) const {
-        return p_range.equals_front(r.p_range);
-    }
-    bool equals_back(move_range const &r) const {
-        return p_range.equals_back(r.p_range);
-    }
-
     void pop_front() { p_range.pop_front(); }
     void pop_back() { p_range.pop_back(); }
 
@@ -724,10 +710,6 @@ struct number_range: input_range<number_range<T>> {
     number_range(T v): p_a(0), p_b(v), p_step(1) {}
 
     bool empty() const { return p_a * p_step >= p_b * p_step; }
-
-    bool equals_front(number_range const &range) const {
-        return p_a == range.p_a;
-    }
 
     void pop_front() { p_a += p_step; }
     T front() const { return p_a; }
@@ -804,10 +786,6 @@ public:
 
     bool empty() const { return p_range.empty(); }
 
-    bool equals_front(enumerated_range const &r) const {
-        return p_range.equals_front(r.p_range);
-    }
-
     void pop_front() {
         p_range.pop_front();
         ++p_index;
@@ -873,10 +851,6 @@ public:
     }
 
     reference front() const { return p_range.front(); }
-
-    bool equals_front(take_range const &r) const {
-        return p_range.equals_front(r.p_range);
-    }
 };
 
 template<typename T>
@@ -915,10 +889,6 @@ public:
     }
 
     bool empty() const { return p_range.empty(); }
-
-    bool equals_front(chunks_range const &r) const {
-        return p_range.equals_front(r.p_range);
-    }
 
     void pop_front() { p_range.pop_front_n(p_chunksize); }
     void pop_front_n(size_type n) {
@@ -989,14 +959,6 @@ public:
         }, p_ranges);
     }
 
-    bool equals_front(join_range const &r) const {
-        return std::apply([&r](auto const &...r1) mutable {
-            return std::apply([&](auto const &...r2) mutable {
-                return (... && r1.equals_front(r2));
-            }, r);
-        }, p_ranges);
-    }
-
     void pop_front() {
         detail::join_range_pop<0, sizeof...(R)>(p_ranges);
     }
@@ -1054,14 +1016,6 @@ public:
     bool empty() const {
         return std::apply([](auto const &...args) {
             return (... || args.empty());
-        }, p_ranges);
-    }
-
-    bool equals_front(zip_range const &r) const {
-        return std::apply([&r](auto const &...r1) mutable {
-            return std::apply([&](auto const &...r2) mutable {
-                return (... && r1.equals_front(r2));
-            }, r);
         }, p_ranges);
     }
 
@@ -1243,10 +1197,6 @@ struct iterator_range: input_range<iterator_range<T>> {
 
     reference front() const { return *p_beg; }
 
-    bool equals_front(iterator_range const &range) const {
-        return p_beg == range.p_beg;
-    }
-
     /* satisfy bidirectional_range */
     void pop_back() {
         /* rely on iterators to do their own checks */
@@ -1274,10 +1224,6 @@ struct iterator_range: input_range<iterator_range<T>> {
     }
 
     reference back() const { return *(p_end - 1); }
-
-    bool equals_back(iterator_range const &range) const {
-        return p_end == range.p_end;
-    }
 
     /* satisfy finite_random_access_range */
     size_type size() const { return size_type(p_end - p_beg); }

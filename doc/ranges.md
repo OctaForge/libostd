@@ -45,7 +45,6 @@ input range meet the requirements for an output range. These are called
         my_range &operator=(my_range const &);
 
         bool empty() const;
-        bool equals_front() const;
         void pop_front();
         reference front() const;
 
@@ -133,15 +132,6 @@ From forward ranges onwards, independence of state is guaranteed though.
 This method checks whether the range has any elements left in it. If this
 returns true, it means `front()` is safe to use. Safe code should always
 check; the behavior is undefined if an item is retrieved on an empty range.
-
-~~~{.cc}
-    bool equals_front() const;
-~~~
-
-This checks whether the front part of the range points to the same place.
-It doesn't do a value-by-value comparison; it's like an equality check for
-the range but disregarding the ending of it. Typically this returns true
-only if the front part of the ranges point to the same memory.
 
 ~~~{.cc}
     void pop_front();

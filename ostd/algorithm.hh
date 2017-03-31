@@ -748,13 +748,6 @@ public:
     bool empty() const { return p_range.empty(); }
     range_size_t<T> size() const { return p_range.size(); }
 
-    bool equals_front(map_range const &r) const {
-        return p_range.equals_front(r.p_range);
-    }
-    bool equals_back(map_range const &r) const {
-        return p_range.equals_front(r.p_range);
-    }
-
     void pop_front() { p_range.pop_front(); }
     void pop_back() { p_range.pop_back(); }
 
@@ -849,10 +842,6 @@ public:
     }
 
     bool empty() const { return p_range.empty(); }
-
-    bool equals_front(filter_range const &r) const {
-        return p_range.equals_front(r.p_range);
-    }
 
     void pop_front() {
         p_range.pop_front();

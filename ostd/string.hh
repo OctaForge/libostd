@@ -93,10 +93,6 @@ public:
 
     T &front() const { return *p_beg; }
 
-    bool equals_front(basic_char_range const &range) const {
-        return p_beg == range.p_beg;
-    }
-
     void pop_back() {
         if (p_end == p_beg) {
             return;
@@ -112,10 +108,6 @@ public:
     }
 
     T &back() const { return *(p_end - 1); }
-
-    bool equals_back(basic_char_range const &range) const {
-        return p_end == range.p_end;
-    }
 
     size_t size() const { return p_end - p_beg; }
 

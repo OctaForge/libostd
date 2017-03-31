@@ -1228,11 +1228,6 @@ struct generator_range: input_range<generator_range<T>> {
         return p_gen->value();
     }
 
-    /** Simply compares the two stored generator references for equality. */
-    bool equals_front(generator_range const &g) const noexcept {
-        return p_gen == g.p_gen;
-    }
-
     /** Implements a minimal iterator just for range-based for loop.
       * Do not use directly.
       */

@@ -233,10 +233,6 @@ struct stream_range<T, true>: input_range<stream_range<T>> {
         }
     }
 
-    bool equals_front(stream_range const &s) const {
-        return p_stream == s.p_stream;
-    }
-
     void put(T val) {
         p_stream->put(val);
     }
@@ -298,10 +294,6 @@ struct stream_line_range: input_range<stream_line_range<T, TC>> {
             p_has_item = true;
             return p_item.get();
         }
-    }
-
-    bool equals_front(stream_line_range const &s) const {
-        return p_stream == s.p_stream;
     }
 
 private:
