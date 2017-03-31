@@ -35,7 +35,7 @@ input range meet the requirements for an output range. These are called
     #include <ostd/range.hh>
 
     struct my_range: ostd::input_range<my_range> {
-        using range_category = ostd::input_range_tag;
+        using range_category  = ostd::input_range_tag;
         using value_type      = T;
         using reference       = T &;
         using size_type       = size_t;
@@ -153,6 +153,10 @@ backing object for the range; but as an input range potentially modifies the
 internal state of its backing memory, it doesn't have to be the case. It's
 always the case for forward ranges onwards though.
 
+Calling `pop_front()` is undefined when the range is empty. It could throw
+an exception but it could also be completely unchecked and cause an invalid
+memory access.
+
 ~~~{.cc}
     reference front() const;
 ~~~
@@ -244,3 +248,17 @@ range, it will do a check **based on capabilities of the range** rather
 than just its category. Input ranges that implement output range interface are
 called *mutable* input ranges. Most frequently, their `r.put(v);` will be the
 same as `r.front() = v; r.pop_front();` but that is not guaranteed.
+
+Additionally, `put(v)` is always well defined. When it fails (for example
+when there is no more space left in the container), an exception will be
+thrown. The type of exception that is thrown depends on the particular range
+and the container it backs. When the container is unbounded, it might also
+never throw. Either way, the range type is required to properly specify its
+behavior. Throwing a custom exception type is a good thing because it lets
+algorithms `put(v)` into ranges without checking and if an error happens
+and the exception propagates, the user can check it simply as if it were
+an exception thrown from the container. This makes output ranges easy to
+work with, in many cases it would be otherwise very difficult to handle the
+errors. Also, it makes it easy to never have to handle any errors, simply
+by using output ranges backed by unbounded containers, for example
+ostd::appender\_range.
