@@ -250,22 +250,6 @@ namespace detail {
     };
 }
 
-namespace detail {
-    template<typename R>
-    void pop_front_n(R &range, range_size_t<R> n) {
-        for (range_size_t<R> i = 0; i < n; ++i) {
-            range.pop_front();
-        }
-    }
-
-    template<typename R>
-    void pop_back_n(R &range, range_size_t<R> n) {
-        for (range_size_t<R> i = 0; i < n; ++i) {
-            range.pop_back();
-        }
-    }
-}
-
 template<typename>
 struct reverse_range;
 template<typename>
@@ -281,6 +265,44 @@ struct join_range;
 template<typename ...>
 struct zip_range;
 
+template<typename IR>
+inline range_size_t<IR> range_pop_front_n(IR &range, range_size_t<IR> n) {
+    if constexpr(std::is_convertible_v<
+        range_category_t<IR>, finite_random_access_range_tag
+    >) {
+        auto rs = range.size();
+        n = std::min(n, rs);
+        range = range.slice(n, rs);
+        return n;
+    } else {
+        size_t r = 0;
+        while (n-- && !range.empty()) {
+            range.pop_front();
+            ++r;
+        }
+        return r;
+    }
+}
+
+template<typename IR>
+inline range_size_t<IR> range_pop_back_n(IR &range, range_size_t<IR> n) {
+    if constexpr(std::is_convertible_v<
+        range_category_t<IR>, finite_random_access_range_tag
+    >) {
+        auto rs = range.size();
+        n = std::min(n, rs);
+        range = range.slice(0, rs - n);
+        return n;
+    } else {
+        size_t r = 0;
+        while (n-- && !range.empty()) {
+            range.pop_back();
+            ++r;
+        }
+        return r;
+    }
+}
+
 template<typename B>
 struct input_range {
     detail::range_iterator<B> begin() const {
@@ -288,16 +310,6 @@ struct input_range {
     }
     std::nullptr_t end() const {
         return nullptr;
-    }
-
-    template<typename Size>
-    void pop_front_n(Size n) {
-        detail::pop_front_n<B>(*static_cast<B *>(this), n);
-    }
-
-    template<typename Size>
-    void pop_back_n(Size n) {
-        detail::pop_back_n<B>(*static_cast<B *>(this), n);
     }
 
     B iter() const {
@@ -336,9 +348,6 @@ struct input_range {
         return zip_range<B, R1, RR...>(iter(), std::move(r1), std::move(rr)...);
     }
 
-    /* iterator like interface operating on the front part of the range
-     * this is sometimes convenient as it can be used within expressions */
-
     auto operator*() const {
         return std::forward<decltype(static_cast<B const *>(this)->front())>(
             static_cast<B const *>(this)->front()
@@ -353,19 +362,6 @@ struct input_range {
         B tmp(*static_cast<B const *>(this));
         static_cast<B *>(this)->pop_front();
         return tmp;
-    }
-
-    template<typename Difference>
-    B operator+(Difference n) const {
-        B tmp(*static_cast<B const *>(this));
-        tmp.pop_front_n(n);
-        return tmp;
-    }
-
-    template<typename Difference>
-    B &operator+=(Difference n) {
-        static_cast<B *>(this)->pop_front_n(n);
-        return *static_cast<B *>(this);
     }
 
     /* pipe op, must be a member to work for user ranges automagically */
@@ -623,9 +619,6 @@ public:
     void pop_front() { p_range.pop_back(); }
     void pop_back() { p_range.pop_front(); }
 
-    void pop_front_n(size_type n) { p_range.pop_front_n(n); }
-    void pop_back_n(size_type n) { p_range.pop_back_n(n); }
-
     reference front() const { return p_range.back(); }
     reference back() const { return p_range.front(); }
 
@@ -678,9 +671,6 @@ public:
 
     void pop_front() { p_range.pop_front(); }
     void pop_back() { p_range.pop_back(); }
-
-    void pop_front_n(size_type n) { p_range.pop_front_n(n); }
-    void pop_back_n(size_type n) { p_range.pop_back_n(n); }
 
     reference front() const { return std::move(p_range.front()); }
     reference back() const { return std::move(p_range.back()); }
@@ -791,11 +781,6 @@ public:
         ++p_index;
     }
 
-    void pop_front_n(size_type n) {
-        p_range.pop_front_n(n);
-        p_index += n;
-    }
-
     reference front() const {
         return reference{p_index, p_range.front()};
     }
@@ -845,11 +830,6 @@ public:
         }
     }
 
-    void pop_front_n(size_type n) {
-        p_range.pop_front_n(n);
-        p_remaining -= std::min(n, p_remaining);
-    }
-
     reference front() const { return p_range.front(); }
 };
 
@@ -890,9 +870,8 @@ public:
 
     bool empty() const { return p_range.empty(); }
 
-    void pop_front() { p_range.pop_front_n(p_chunksize); }
-    void pop_front_n(size_type n) {
-        p_range.pop_front_n(p_chunksize * n);
+    void pop_front() {
+        range_pop_front_n(p_range, p_chunksize);
     }
 
     reference front() const { return p_range.take(p_chunksize); }
@@ -1180,21 +1159,6 @@ struct iterator_range: input_range<iterator_range<T>> {
         }
     }
 
-    void pop_front_n(size_type n) {
-        using IC = typename std::iterator_traits<T>::iterator_category;
-        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            p_beg += n;
-            /* rely on iterators to do their own checks */
-            if constexpr(std::is_pointer_v<T>) {
-                if (p_beg > p_end) {
-                    throw std::out_of_range{"pop_front_n of too many elements"};
-                }
-            }
-        } else {
-            detail::pop_front_n(*this, n);
-        }
-    }
-
     reference front() const { return *p_beg; }
 
     /* satisfy bidirectional_range */
@@ -1206,21 +1170,6 @@ struct iterator_range: input_range<iterator_range<T>> {
             }
         }
         --p_end;
-    }
-
-    void pop_back_n(size_type n) {
-        using IC = typename std::iterator_traits<T>::iterator_category;
-        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            p_end -= n;
-            /* rely on iterators to do their own checks */
-            if constexpr(std::is_pointer_v<T>) {
-                if (p_end < p_beg) {
-                    throw std::out_of_range{"pop_back_n of too many elements"};
-                }
-            }
-        } else {
-            detail::pop_back_n(*this, n);
-        }
     }
 
     reference back() const { return *(p_end - 1); }

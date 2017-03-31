@@ -751,13 +751,6 @@ public:
     void pop_front() { p_range.pop_front(); }
     void pop_back() { p_range.pop_back(); }
 
-    void pop_front_n(range_size_t<T> n) {
-        p_range.pop_front_n(n);
-    }
-    void pop_back_n(range_size_t<T> n) {
-        p_range.pop_back_n(n);
-    }
-
     R front() const { return p_func(p_range.front()); }
     R back() const { return p_func(p_range.back()); }
 
