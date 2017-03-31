@@ -132,7 +132,7 @@ From forward ranges onwards, independence of state is guaranteed though.
 
 This method checks whether the range has any elements left in it. If this
 returns true, it means `front()` is safe to use. Safe code should always
-check; the behavior is an item is retrieved on an empty range.
+check; the behavior is undefined if an item is retrieved on an empty range.
 
 ~~~{.cc}
     bool equals_front() const;
