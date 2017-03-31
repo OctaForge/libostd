@@ -264,20 +264,6 @@ namespace detail {
             range.pop_back();
         }
     }
-
-    template<typename R>
-    void push_front_n(R &range, range_size_t<R> n) {
-        for (range_size_t<R> i = 0; i < n; ++i) {
-            range.push_front();
-        }
-    }
-
-    template<typename R>
-    void push_back_n(R &range, range_size_t<R> n) {
-        for (range_size_t<R> i = 0; i < n; ++i) {
-            range.push_back();
-        }
-    }
 }
 
 template<typename>
@@ -312,16 +298,6 @@ struct input_range {
     template<typename Size>
     void pop_back_n(Size n) {
         detail::pop_back_n<B>(*static_cast<B *>(this), n);
-    }
-
-    template<typename Size>
-    void push_front_n(Size n) {
-        detail::push_front_n<B>(*static_cast<B *>(this), n);
-    }
-
-    template<typename Size>
-    void push_back_n(Size n) {
-        detail::push_back_n<B>(*static_cast<B *>(this), n);
     }
 
     B iter() const {
@@ -379,37 +355,16 @@ struct input_range {
         return tmp;
     }
 
-    B &operator--() {
-        static_cast<B *>(this)->push_front();
-        return *static_cast<B *>(this);
-    }
-    B operator--(int) {
-        B tmp(*static_cast<B const *>(this));
-        static_cast<B *>(this)->push_front();
-        return tmp;
-    }
-
     template<typename Difference>
     B operator+(Difference n) const {
         B tmp(*static_cast<B const *>(this));
         tmp.pop_front_n(n);
         return tmp;
     }
-    template<typename Difference>
-    B operator-(Difference n) const {
-        B tmp(*static_cast<B const *>(this));
-        tmp.push_front_n(n);
-        return tmp;
-    }
 
     template<typename Difference>
     B &operator+=(Difference n) {
         static_cast<B *>(this)->pop_front_n(n);
-        return *static_cast<B *>(this);
-    }
-    template<typename Difference>
-    B &operator-=(Difference n) {
-        static_cast<B *>(this)->push_front_n(n);
         return *static_cast<B *>(this);
     }
 
@@ -682,14 +637,8 @@ public:
     void pop_front() { p_range.pop_back(); }
     void pop_back() { p_range.pop_front(); }
 
-    void push_front() { p_range.push_back(); }
-    void push_back() { p_range.push_front(); }
-
     void pop_front_n(size_type n) { p_range.pop_front_n(n); }
     void pop_back_n(size_type n) { p_range.pop_back_n(n); }
-
-    void push_front_n(size_type n) { p_range.push_front_n(n); }
-    void push_back_n(size_type n) { p_range.push_back_n(n); }
 
     reference front() const { return p_range.back(); }
     reference back() const { return p_range.front(); }
@@ -758,14 +707,8 @@ public:
     void pop_front() { p_range.pop_front(); }
     void pop_back() { p_range.pop_back(); }
 
-    void push_front() { p_range.push_front(); }
-    void push_back() { p_range.push_back(); }
-
     void pop_front_n(size_type n) { p_range.pop_front_n(n); }
     void pop_back_n(size_type n) { p_range.pop_back_n(n); }
-
-    void push_front_n(size_type n) { p_range.push_front_n(n); }
-    void push_back_n(size_type n) { p_range.push_back_n(n); }
 
     reference front() const { return std::move(p_range.front()); }
     reference back() const { return std::move(p_range.back()); }
@@ -1296,9 +1239,6 @@ struct iterator_range: input_range<iterator_range<T>> {
             }
         }
     }
-    void push_front() {
-        --p_beg;
-    }
 
     void pop_front_n(size_type n) {
         using IC = typename std::iterator_traits<T>::iterator_category;
@@ -1312,15 +1252,6 @@ struct iterator_range: input_range<iterator_range<T>> {
             }
         } else {
             detail::pop_front_n(*this, n);
-        }
-    }
-
-    void push_front_n(size_type n) {
-        using IC = typename std::iterator_traits<T>::iterator_category;
-        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            p_beg -= n;
-        } else {
-            detail::push_front_n(*this, n);
         }
     }
 
@@ -1344,9 +1275,6 @@ struct iterator_range: input_range<iterator_range<T>> {
         }
         --p_end;
     }
-    void push_back() {
-        ++p_end;
-    }
 
     void pop_back_n(size_type n) {
         using IC = typename std::iterator_traits<T>::iterator_category;
@@ -1360,15 +1288,6 @@ struct iterator_range: input_range<iterator_range<T>> {
             }
         } else {
             detail::pop_back_n(*this, n);
-        }
-    }
-
-    void push_back_n(size_type n) {
-        using IC = typename std::iterator_traits<T>::iterator_category;
-        if constexpr(std::is_convertible_v<IC, std::random_access_iterator_tag>) {
-            p_end += n;
-        } else {
-            detail::push_back_n(*this, n);
         }
     }
 

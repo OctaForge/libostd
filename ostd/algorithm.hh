@@ -779,21 +779,11 @@ public:
     void pop_front() { p_range.pop_front(); }
     void pop_back() { p_range.pop_back(); }
 
-    void push_front() { p_range.pop_front(); }
-    void push_back() { p_range.push_back(); }
-
     void pop_front_n(range_size_t<T> n) {
         p_range.pop_front_n(n);
     }
     void pop_back_n(range_size_t<T> n) {
         p_range.pop_back_n(n);
-    }
-
-    void push_front_n(range_size_t<T> n) {
-        p_range.push_front_n(n);
-    }
-    void push_back_n(range_size_t<T> n) {
-        p_range.push_back_n(n);
     }
 
     R front() const { return p_func(p_range.front()); }

@@ -83,19 +83,12 @@ public:
             throw std::out_of_range{"pop_front on empty range"};
         }
     }
-    void push_front() {
-        --p_beg;
-    }
 
     void pop_front_n(size_t n) {
         p_beg += n;
         if (p_beg > p_end) {
             throw std::out_of_range{"pop_front_n of too many elements"};
         }
-    }
-
-    void push_front_n(size_t n) {
-        p_beg -= n;
     }
 
     T &front() const { return *p_beg; }
@@ -114,19 +107,12 @@ public:
         }
         --p_end;
     }
-    void push_back() {
-        ++p_end;
-    }
 
     void pop_back_n(size_t n) {
         p_end -= n;
         if (p_end < p_beg) {
             throw std::out_of_range{"pop_back_n of too many elements"};
         }
-    }
-
-    void push_back_n(size_t n) {
-        p_end += n;
     }
 
     T &back() const { return *(p_end - 1); }
