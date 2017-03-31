@@ -30,6 +30,8 @@ way of creating ranges is using native range types. The compatibility stuff
 is there mostly so that OctaSTD can work with existing libraries. Additionally,
 a large library of generic range algorithms is provided.
 
+For more on ranges, see [Ranges](@ref ranges).
+
 ### Concurrency
 
 OctaSTD is a complete concurrency framework, implementing a clean and
