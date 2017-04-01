@@ -69,9 +69,9 @@ namespace detail {
         range_size_t<R> rlen = range.size();
         for (range_size_t<R> i = 1; i < rlen; ++i) {
             range_size_t<R> j = i;
-            range_value_t<R> v(std::move(range[i]));
+            range_value_t<R> v{std::move(range[i])};
             while (j > 0 && !compare(range[j - 1], v)) {
-                range[j] = range[j - 1];
+                range[j] = std::move(range[j - 1]);
                 --j;
             }
             range[j] = std::move(v);
@@ -143,9 +143,7 @@ namespace detail {
         }
         swap(range[pi], range.back());
         detail::introloop(range.slice(0, pi), compare, depth - 1);
-        detail::introloop(
-            range.slice(pi + 1, range.size()), compare, depth - 1
-        );
+        detail::introloop(range.slice(pi + 1), compare, depth - 1);
     }
 
     template<typename R, typename C>
@@ -746,7 +744,7 @@ public:
     }
 
     bool empty() const { return p_range.empty(); }
-    range_size_t<T> size() const { return p_range.size(); }
+    size_type size() const { return p_range.size(); }
 
     void pop_front() { p_range.pop_front(); }
     void pop_back() { p_range.pop_back(); }
@@ -754,12 +752,15 @@ public:
     R front() const { return p_func(p_range.front()); }
     R back() const { return p_func(p_range.back()); }
 
-    R operator[](range_size_t<T> idx) const {
+    R operator[](size_type idx) const {
         return p_func(p_range[idx]);
     }
 
-    map_range slice(range_size_t<T> start, range_size_t<T> end) {
+    map_range slice(size_type start, size_type end) const {
         return map_range(p_range.slice(start, end), p_func);
+    }
+    map_range slice(size_type start) const {
+        return slice(start, size());
     }
 };
 

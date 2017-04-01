@@ -16,7 +16,7 @@ int main() {
             c.put(foldl(half, 0));
         };
         spawn(f, c, iter(arr).slice(0, arr.size() / 2));
-        spawn(f, c, iter(arr).slice(arr.size() / 2, arr.size()));
+        spawn(f, c, iter(arr).slice(arr.size() / 2));
 
         int a = c.get();
         int b = c.get();

@@ -628,6 +628,9 @@ public:
         size_type len = p_range.size();
         return reverse_range{p_range.slice(len - end, len - start)};
     }
+    reverse_range slice(size_type start) const {
+        return slice(start, size());
+    }
 };
 
 template<typename T>
@@ -679,6 +682,9 @@ public:
 
     move_range slice(size_type start, size_type end) const {
         return move_range{p_range.slice(start, end)};
+    }
+    move_range slice(size_type start) const {
+        return slice(start, size());
     }
 
     void put(value_type const &v) { p_range.put(v); }
@@ -1179,6 +1185,9 @@ struct iterator_range: input_range<iterator_range<T>> {
 
     iterator_range slice(size_type start, size_type end) const {
         return iterator_range(p_beg + start, p_beg + end);
+    }
+    iterator_range slice(size_type start) const {
+        return slice(start, size());
     }
 
     reference operator[](size_type i) const { return p_beg[i]; }

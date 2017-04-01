@@ -332,6 +332,7 @@ not the only thing, you can additionally slice them, with this method:
 
 ~~~{.cc}
     my_range slice(size_type start, size_type end) const;
+    my_range slice(size_type start) const;
 ~~~
 
 Making a slice of a range means creating a new range that contains a subset
@@ -352,6 +353,16 @@ returns the entire range, or well, a copy of it. Doing something like
 will return a range that contains everything but the first or the last items,
 provided that the range contains at very least 2 items, otherwise the behavior
 is undefined.
+
+The second method takes only the `start` argument. In this case, the second
+argument is implied to be the `size()` of the range. Therefore, the typical
+implementation will be simply
+
+~~~{.cc}
+    my_range slice(size_type start) const {
+        return slice(start, size());
+    }
+~~~
 
 The slicing indexes follow a regular half-open interval approach, so there
 shouldn't be anything unclear about it.

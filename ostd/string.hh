@@ -100,6 +100,9 @@ public:
     basic_char_range slice(size_t start, size_t end) const {
         return basic_char_range(p_beg + start, p_beg + end);
     }
+    basic_char_range slice(size_t start) const {
+        return slice(start, size());
+    }
 
     T &operator[](size_t i) const { return p_beg[i]; }
 
