@@ -93,7 +93,7 @@ that none of the provided methods are `virtual`, so it's not safe to call
 them while expecting the overridden variants to be called.
 
 ~~~{.cc}
-    using range_category = ostd::input_range_tag;
+    using range_category  = ostd::input_range_tag;
     using value_type      = T;
     using reference       = T &;
     using size_type       = size_t;
@@ -256,7 +256,7 @@ same as `r.front() = v; r.pop_front();` but that is not guaranteed.
 Additionally, `put(v)` is always well defined. When it fails (for example
 when there is no more space left in the container), an exception will be
 thrown. The type of exception that is thrown depends on the particular range
-and the container it backs. When the container is unbounded, it might also
+and the backing container. When the container is unbounded, it might also
 never throw. Either way, the range type is required to properly specify its
 behavior. Throwing a custom exception type is a good thing because it lets
 algorithms `put(v)` into ranges without checking and if an error happens
@@ -483,7 +483,7 @@ returning a lambda:
     template<typename T>
     void my_generic_algorithm(T &&arg) {
         return [arg = std::forward<T>(arg)](auto &&range) {
-            return my_generic_algorithm(
+            my_generic_algorithm(
                 std::forward<decltype(range)>(range),
                 std::forward<T>(arg)
             );
