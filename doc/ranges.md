@@ -519,6 +519,137 @@ This works thanks to ostd::input\_range having the right `|` operator
 overloads. The implementation of the chainable algorithm still has to
 be done manually though.
 
+## Example: insertion sort
+
+Let's implement the common insertion sort algorithm, but using range API.
+
+~~~{.cc}
+    template<typename Range>
+    void insertion_sort(Range range) {
+        // the type used for indexes in the given range
+        using Size = ostd::range_size_t<Range>;
+
+        // the type used for stored values in the given range
+        using Value = ostd::range_value_t<Range>;
+
+        // we're working with finite random access ranges
+        Size length = range.size();
+
+        for (Size i: ostd::range(1, length)) {
+            Size j = i;
+
+            Value v{std::move(range[i])};
+            while ((j > 0) && (range[j - 1] > v)) {
+                range[j] = std::move(range[j - 1]);
+                --j;
+            }
+            range[j] = std::move(v);
+        }
+    }
+~~~
+
+Keep in mind that the algorithm assumes that the range uses reference-like
+types for its `reference`, in order to allow writing. The values of the
+range also have to satisfy `MoveConstructible`.
+
+## Example: integer interval range
+
+Now we'll implement an input type range that will let us iterate a half
+open interval. It will be similar to the standard ostd::number\_range.
+
+It will satisfy a forward range but won't have a writable reference type.
+
+~~~{.cc}
+    #include <ostd/range.hh>
+
+    struct num_range: ostd::input_range<num_range> {
+        // forward range, copyable with independent states
+        using range_category = ostd::forward_range_tag;
+
+        // non-templated, int type for the purpose of the example
+        using value_type = int;
+
+        // we have nothing to point refs to, the range is read only
+        using reference = int;
+
+        // unused
+        using size_type       = size_t;
+        using difference_type = ptrdiff_t;
+
+        // only allow construction with specific args
+        num_range() = delete;
+
+        // our interval constructor
+        num_range(int beg, int end): p_a(beg), p_b(end) {}
+
+        bool empty() const {
+            // we're empty once the beginning has reached the end
+            return p_a >= p_b;
+        }
+
+        void pop_front() {
+            ++p_a;
+        }
+
+        reference front() const {
+            return p_a;
+        }
+
+    private:
+        int p_a, p_b;
+    };
+~~~
+
+That's basically it. We can now use it:
+
+~~~{.cc}
+    #include <ostd/io.hh>
+
+    // 5, 6, 7, 8, 9
+    for (int i: num_range{5, 10}) {
+        ostd::writeln(i);
+    }
+~~~
+
+## Example: write strings into stdout as lines
+
+As yet another example, we'll implement an output range that writes strings
+into stdout, each on a new line.
+
+~~~{.cc}
+    #include <ostd/range.hh>
+    #include <ostd/string.hh>
+    #include <ostd/io.hh>
+
+    struct strout_range: ostd::output_range<strout_range> {
+        using value_type      = ostd::string_range;
+        using reference       = ostd::string_range &;
+        using size_type       = size_t;
+        using difference_type = ptrdiff_t;
+
+        void put(ostd::string_range v) {
+            ostd::writeln(v);
+        }
+    };
+~~~
+
+And usage:
+
+~~~{.cc}
+    #include <ostd/algorithm.hh>
+    #include <ostd/range.hh>
+    #include <ostd/string.hh>
+    #include <ostd/io.hh>
+
+    ostd::string_range arr[] = {
+        "foo", "bar", "baz"
+    };
+
+    // writes foo, bar, baz, each on a new line
+    ostd::copy(ostd::iter(arr), strout_range{});
+~~~
+
+
 ## More on ranges
 
 This is not a comprehensive guide to the range API. You will have to check
