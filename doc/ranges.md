@@ -18,6 +18,17 @@ A range is a type that represents an interval of values. Just like with C++
 iterators, there are several categories of ranges, with each enhancing the
 previous in some way.
 
+You can use ranges with custom algorithms or standard algorithms that are
+implemented by OctaSTD. You can also iterate any input-type range directly
+using the range-based for loop:
+
+~~~{.cc}
+    my_range r = some_range;
+    for (range_reference_t<my_range> v: r) {
+        // done for each item of the range
+    }
+~~~
+
 ## Implementing a range
 
 Generally, there are two kinds of ranges, *input ranges* and *output ranges*.
@@ -47,10 +58,10 @@ input range meet the requirements for an output range. These are called
         bool empty() const;
         void pop_front();
         reference front() const;
-
-        // optional methods with fallbacks
-        void pop_front_n(size_type n);
     };
+
+    // optional
+    range_size_t<my_range> range_pop_front_n(my_range &range, range_size_t<my_range> n);
 ~~~
 
 This is what any input range is required to contain. An input range is the
@@ -76,10 +87,10 @@ But let's take a look at the structure first.
 
 Any input range (forward, bidirectional etc too!) is required to derive
 from ostd::input\_range like this. The type provides various convenience
-methods as well as fallbacks for optional methods. Please refer to its
-documentation for more information. Keep in mind that none of the provided
-methods are `virtual`, so it's not safe to call them while expecting the
-overridden variants to be called.
+methods as well as some core implementations necessary for the ranges to
+work. Please refer to its documentation for more information. Keep in mind
+that none of the provided methods are `virtual`, so it's not safe to call
+them while expecting the overridden variants to be called.
 
 ~~~{.cc}
     using range_category = ostd::input_range_tag;
@@ -159,13 +170,16 @@ house and kill your cat. Safe algorithms always need to check for emptiness
 first.
 
 ~~~{.cc}
-    void pop_front_n(size_type n);
+    range_size_t<my_range> range_pop_front_n(my_range &range, range_size_t<my_range> n);
 ~~~
 
-There is one more, which is optional. This pops `n` values from the range.
-It has a default implementation in ostd::input\_range which merely calls the
-`pop_front()` method `n` times. Custom range types are allowed to override
-this with their own more efficient implementations.
+There is one more, which is optional. This pops at most `n` values from the
+range, simply going over the range and popping out elements until `n` is
+reached or until the range is empty. The actual number of popped out items
+is then returned. The default implementation uses slicing for sliceable
+ranges, so it will be optimal for most of those. For other ranges, it just
+uses a simple loop. This will work universally, but might not always be
+the fastest.
 
 ### Output ranges
 
@@ -252,3 +266,262 @@ work with, in many cases it would be otherwise very difficult to handle the
 errors. Also, it makes it easy to never have to handle any errors, simply
 by using output ranges backed by unbounded containers, for example
 ostd::appender\_range.
+
+### Forward ranges
+
+Forward ranges extend input ranges. Their category tag type is obviously
+ostd::forward\_range\_tag. They don't really extend the interface at all
+compared to plain input ranges. What they do instead is provide an extra
+guarantee - **all copies of forward ranges have their own state**,
+which means changes done in one forward range will never reflect in the
+other forward ranges, even if they're copies of the range. That makes forward
+ranges suitable for multi-pass algorithms, unlike plain input ranges.
+
+### Bidirectional ranges
+
+Bidirectional ranges extend forward ranges. Their category tag type is again
+pretty obvious, ostd::bidirectional\_range\_tag. They introduce some new
+methods the type has to satisfy to qualify as a bidirectional range.
+
+~~~{.cc}
+    void pop_back();
+    reference back() const;
+~~~
+
+Bidirectional ranges are accessible from both sides. Therefore, the new methods
+allow you to pop out an item on the other side as well as retrieve it. The
+actual behavior of those methods is exactly the same, besides that they work
+on the other side of the range.
+
+~~~{.cc}
+    range_size_t<my_range> range_pop_back_n(my_range &range, range_size_t<my_range> n);
+~~~
+
+Obviously, as you could implement this optional standalone method previously
+for the front part of the range, you can now implement it for the back. The
+details for the default implementation are the same; it uses slicing for
+ranges that support it and otherwise just a simple loop.
+
+### Infinite random access ranges
+
+Infinite random access ranges are ranges that can be indexed at arbitrary
+points but do not have a known size. They extend bidirectional ranges, and
+their tag is ostd::random\_access\_range\_tag. The interface extension is
+very simple:
+
+~~~{.cc}
+    reference operator[](size_type idx) const;
+~~~
+
+This does exactly what it looks like. When indexing ranges, the index has
+to be positive, hence `size_type`. It returns a `reference`, just like front
+or back accessors.
+
+### Finite random access ranges
+
+Those extend infinite random access ranges. Their category tag is
+ostd::finite\_random\_access\_range\_tag (duh). They extend thee range
+interface some more.
+
+~~~{.cc}
+    size_type size() const;
+~~~
+
+You can check how many items are in a finite random access range. That's
+not the only thing, you can additionally slice them, with this method:
+
+~~~{.cc}
+    my_range slice(size_type start, size_type end) const;
+~~~
+
+Making a slice of a range means creating a new range that contains a subset
+of the original range's elements. The first provided argument is the first
+index included in the new range. The second argument is the index past the
+last index included in the range. Therefore, doing
+
+~~~{.cc}
+    r.slice(0, r.size());
+~~~
+
+returns the entire range, or well, a copy of it. Doing something like
+
+~~~{.cc}
+    r.slice(1, r.size() - 1);
+~~~
+
+will return a range that contains everything but the first or the last items,
+provided that the range contains at very least 2 items, otherwise the behavior
+is undefined.
+
+The slicing indexes follow a regular half-open interval approach, so there
+shouldn't be anything unclear about it.
+
+### Contiguous ranges
+
+Ranges that are contiguous have the ostd::contiguous\_range\_tag. They're like
+finite random access ranges, except they're guaranteed to back a contiguous
+block of memory. With contiguous ranges, the following assumptions are true:
+
+~~~{.cc}
+    // contiguous storage
+    (&range[range.size()] - &range[0]) == range.size()
+    // front item always points to the beginning of the storage
+    &range[0] == &range.front()
+    // back item always points to the end of the storage (but not past)
+    &range[range.size() - 1] == &range.back()
+~~~
+
+Contiguous ranges also define extra methods to let you access the internal
+buffer of the range directly:
+
+~~~{.cc}
+    value_type *data();
+    value_type const *data() const;
+~~~
+
+The meaning is obvious. They're always equivalent to `&range[0]` or
+`&range.front()`.
+
+## Range metaprogramming
+
+There are useful tricks you can use when working with ranges and specializing
+your algorithms.
+
+### Wrapper ranges
+
+Sometimes ranges need to act as wrappers for other ranges. In those cases, you
+typically want to expose a similar set of functionality as the range you are
+wrapping. So you define your category simply as
+
+~~~{.cc}
+    using range_category = range_category_t<Wrapped>;
+~~~
+
+Sometimes you can't implement all of the functionality though. What if you
+want *at most* some category, but always less if the wrapped range does not
+support it? For example, your wrapped range will always be at most bidirectional,
+but if the wrapped range is forward it will be forward, and if it's input it
+will be input. You can do that simply thanks to inheritance of category tags.
+
+~~~{.cc}
+    using range_category = std::common_type_t<
+        range_category_t<Wrapped>, ostd::bidirectional_range_tag
+    >;
+~~~
+
+If the wrapped range is for example random access, ostd::random\_access\_range\_tag
+inherits from ostd::bidirectional\_range\_tag which is the common type for
+random access range tag and bidirectional. But if it's just forward, the
+common type for forward range tag and bidirectional range tag is obviously
+just forward, as bidirectional inherits from it.
+
+If you're wrapping multiple ranges and you want the capabilities of your
+wrapper range to be the same as the common capabilities of all ranges you
+are wrapping, you can do the same. The std::common_type_t trait takes a
+variable number of type parameters.
+
+### Category checks in algorithms
+
+Consider you're implementing an algorithm which has a generic implementation
+that works for all range categories but also a more optimal implementation
+that works as long as your range is at least bidirectional. Checking by using
+std::is\_same\_v doesn't quite cut it, because that will potentially disregard
+"better than" bidirectional ranges, even though the algorithm is still valid
+for those. You could do this:
+
+~~~{.cc}
+    if constexpr(std::is_convertible_v<
+        range_category_t<my_range>, ostd::bidirectional_range_tag
+    >) {
+        // your more optimal algorithm implementation for bidir and better
+    } else {
+        // generic version for input and forward
+    }
+~~~
+
+This works again thanks to tag inheritance. Any tag better than bidirectional
+is convertible to bidirectional, because they inherit from it, directly or
+indirectly. But it still feels unwieldy. Fortunately, custom traits are
+provided by the range system.
+
+~~~{.cc}
+    if constexpr(ostd::is_bidirectional_range<my_range>) {
+        // your more optimal algorithm implementation for bidir and better
+    } else {
+        // generic version for input and forward
+    }
+~~~
+
+These break down to the same thing. Keep in mind that these never fail
+to expand, so for non-range types they will become `false`.
+
+#### Dealing with output ranges
+
+I already mentioned above that input ranges can implement the output range
+interface and become *mutable ranges*. That's why ostd::is\_output\_range
+does not only check the category, but also checks the actual capabilities
+of the range. So if it's possible to work with the range as with an output
+range (it implements the `.put(v)` method) it will still pass as an output
+range despite not having the category.
+
+## Chainable algorithms
+
+Input ranges provide support for implementing chainable algorithms. Consider
+you have the following:
+
+~~~{.cc}
+    template<typename R, typename T>
+    void my_generic_algorithm(R range, T arg) {
+        // implementation
+    }
+~~~
+
+You should typically also implement a chainable version. That's done by
+returning a lambda:
+
+~~~{.cc}
+    template<typename T>
+    void my_generic_algorithm(T &&arg) {
+        return [arg = std::forward<T>(arg)](auto &&range) {
+            return my_generic_algorithm(
+                std::forward<decltype(range)>(range),
+                std::forward<T>(arg)
+            );
+        };
+    }
+~~~
+
+Then you can do either this:
+
+~~~{.cc}
+    my_generic_algorithm(range, arg);
+~~~
+
+or you can do this:
+
+~~~{.cc}
+    range | my_generic_algorithm(arg)
+~~~
+
+This allows you to do longer chains much more readably. Instead of
+
+~~~{.cc}
+    foo(bar(baz(range, arg1), arg2), arg3)
+~~~
+
+you can simply write
+
+~~~{.cc}
+    baz(range, arg1) | bar(arg2) | foo(arg3)
+~~~
+
+This works thanks to ostd::input\_range having the right `|` operator
+overloads. The implementation of the chainable algorithm still has to
+be done manually though.
+
+## More on ranges
+
+This is not a comprehensive guide to the range API. You will have to check
+out the actual API documentation for that, start with [range.hh](@ref range.hh).
+There are many predefined range types provided by that module as well as
+various other APIs.
