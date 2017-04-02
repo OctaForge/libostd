@@ -1,6 +1,17 @@
-/* Format strings for OctaSTD. Inspired by D's std.format module.
+/** @addtogroup Strings
+ * @{
+ */
+
+/** @file format.hh
  *
- * This file is part of OctaSTD. See COPYING.md for futher information.
+ * @brief APIs for type safe formatting using C-style format strings.
+ *
+ * OctaSTD provides a powerful formatting system that lets you format into
+ * arbitrary output ranges using C-style format strings. It's type safe
+ * and supports custom object formatting without heap allocations as well
+ * as formatting of ranges, tuples and more.
+ *
+ * @copyright See COPYING.md in the project tree for further information.
  */
 
 #ifndef OSTD_FORMAT_HH
@@ -21,22 +32,64 @@
 
 namespace ostd {
 
+/** @addtogroup Strings
+ * @{
+ */
+
+/** @brief An enumeration defining flags for C-style formatting marks.
+ *
+ * Used inside ostd::format_spec. The C-style formatting mark has a flags
+ * section and each of these enum items represents one. They can be combined
+ * using the standard bitwise operators.
+ */
 enum format_flags {
-    FMT_FLAG_DASH  = 1 << 0,
-    FMT_FLAG_ZERO  = 1 << 1,
-    FMT_FLAG_SPACE = 1 << 2,
-    FMT_FLAG_PLUS  = 1 << 3,
-    FMT_FLAG_HASH  = 1 << 4,
-    FMT_FLAG_AT    = 1 << 5
+    FMT_FLAG_DASH  = 1 << 0, ///< The dash (`-`) flag.
+    FMT_FLAG_ZERO  = 1 << 1, ///< The zero (`0`) flag.
+    FMT_FLAG_SPACE = 1 << 2, ///< The space (` `) flag.
+    FMT_FLAG_PLUS  = 1 << 3, ///< The plus (`+`) flag.
+    FMT_FLAG_HASH  = 1 << 4, ///< The hash (`#`) flag.
+    FMT_FLAG_AT    = 1 << 5  ///< The at (`@`) flag.
 };
 
+/** @brief Thrown when format string does not properly match the arguments. */
 struct format_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
 struct format_spec;
 
-/* empty by default, SFINAE friendly */
+/** @brief Specialize this to format custom objects.
+ *
+ * The formatting system provides a way to format arbitrary objects. By default
+ * it's empty as all the formatting logic is builtin. To specialize for your
+ * own object, you simply do this:
+ *
+ * ~~~{.cc}
+ * template<>
+ * struct format_traits<foo> {
+ *     template<typename R>
+ *     static void to_format(foo const &v, R &writer, ostd::format_spec const &fs) {
+ *         // custom formatting here
+ *         // writer is just an output range (see ostd::output_range)
+ *     }
+ * };
+ * ~~~
+ *
+ * Obviously, you can passthrough the formatting, for example when your type
+ * contains a member and you want to format your type exactly as if it was
+ * the member, you just put this in your `to_format`:
+ *
+ * ~~~{.cc}
+ *     fs.format_value(writer, v.my_member);
+ * ~~~
+ *
+ * Anything that writes into the output range will do. The output range is
+ * exactly the same output range the outer format call is formatting into,
+ * so for example when someone is formatting into an ostd::appender_range,
+ * it will be just that.
+ *
+ * This may be specialized in other OctaSTD modules as well.
+ */
 template<typename>
 struct format_traits {};
 
@@ -181,27 +234,270 @@ namespace detail {
     constexpr bool fmt_tofmt_test = decltype(test_tofmt<T, R>(0))::value;
 }
 
+/** @brief A structure implementing type safe C-style formatting.
+ *
+ * It can be constructed either to represent a specific format specifier or
+ * with a format string to format an entire string (in which case it will
+ * parse the string and format it with the individual intermediate markings).
+ *
+ * It stores information about the current format specifier (when constructed
+ * as one or when parsing the format string) as well as the rest of the current
+ * format string. See read_until_spec() and rest() for more information.
+ *
+ * # Regular format specifiers
+ *
+ * The formatter is considerably more elaborate than C-style printf. Its
+ * basic format specifiers superficially look the same:
+ *
+ * ~~~
+ * %[position$][flags][width][.precision]specifier
+ * ~~~
+ *
+ * Position is the optional position of the argument in the pack starting
+ * with 1. It can be mixed with format specifiers without explicit position,
+ * unlike what POSIX says; the next specifier without explicit position
+ * will use the position after the largest explicit position used so far.
+ * For example, `%3$s %1$s %s` will use position 4 for the last specifier.
+ *
+ * ## Flags
+ *
+ * * The `-` flag will left-justify within the given width (right by default).
+ * * The `+` flag applies to numbers and will force sign to always show, even
+ *   for positive numbers (by default, only negative ones get a sign).
+ * * The ` ` (space) flag applies to numbers and will force a space to be
+ *   written in place of sign for positive numbers (no effect with `+`).
+ * * The `#` flag applies to integers, floats and ranges. For integers, it
+ *   will add the prefixes `0x`, `0X`, `0b` or `0B` when formatted as hex
+ *   or binary, lowercase or uppercase. For floats, it will force the output
+ *   to always contain a decimal point/comma. For ranges, it will cause
+ *   automatic expansion of values into items if the values are tuples.
+ * * The `@` flag will escape the value according to the rules.
+ * * The '0' flag will left-pad numbers with zeroes instead of spaces when
+ *   needed (according to width).
+ *
+ * ## Width
+ *
+ * Width can be specified either as a number in the format string or as `*`
+ * in which case it will be an integer argument (any integral type, must be
+ * equal or larger than zero, otherwise ostd::format_error is thrown). When
+ * an argument, the position of the argument is where the actual value should
+ * have been if no argument was used, and the actual value follows. The same
+ * applies with explicit positions.
+ *
+ * Width defines the minimum number of characters to be printed. If the value
+ * ends up being shorter, it's padded with spaces (or zeroes when formatting
+ * a number and the zero flag is used). The value is not truncated if it's
+ * actually longer than the width.
+ *
+ * ## Precision
+ *
+ * Precision can also be specified as a number or as an argument. When both
+ * width and precision are an argument, width is first. For integers, it
+ * specifies the default number of digits to be written. If the value is
+ * shorter than the precision, the result is padded with leading zeroes.
+ * If it's longer, no truncation happens. A precision of 0 means that no
+ * character is written for the value 0. For floats, it's the number of
+ * digits to be written after decimal point or comma. When not specified,
+ * it's 6. For strings, it's the maximum number of characters to be printed.
+ * By default all characters are printed. When escaping strings, the quotes
+ * are not counted into the precision and escape sequences count as a single
+ * character.
+ *
+ * # Range formatting
+ *
+ * The system also allows advanced formatting for ranges. The specifier
+ * then looks different:
+ *
+ * ~~~
+ * %[flags](contents%)
+ * ~~~
+ *
+ * The `contents` is a format specifier for each item of the range followed
+ * by a separator. For example:
+ *
+ * ~~~
+ * %(%s, %)
+ * ~~~
+ *
+ * In this case, `%s` is the specifier and `, ` is the separator. You can
+ * also explicitly delimit the separator:
+ *
+ * ~~~
+ * %(%s%|, %)
+ * ~~~
+ *
+ * The first part is used to format items and the separator is put between
+ * each two items.
+ *
+ * Two flags are used by this format. Normally, each item of the range is
+ * formatted as is, using a single specifier, even if the item is a tuple-like
+ * value. Using the `#` flag you can expand tuple-like items into multiple
+ * values. So when formatting a range over an associative map, you can do this:
+ *
+ * ~~~
+ * %#(%s: %s%|, %)
+ * ~~~
+ *
+ * to format key and value separately.
+ *
+ * You can also use the `@` flag. It will cause the `@` flag to be applied to
+ * every item of the range, therefore escaping each one. Nested range formats
+ * are also affected by this. There is no way to unapply the flag once you
+ * set it.
+ *
+ * # Tuple formatting
+ *
+ * Additionally, the system also supports advanced formatting for tuples.
+ * The syntax is similar:
+ *
+ * ~~~
+ * %[flags]<contents%>
+ * ~~~
+ *
+ * There are no delimiters here. The `contents` is simply a regular format
+ * string, with a format specifier for each tuple item.
+ *
+ * You can use the `@` flag just like you can use it with ranges. No other
+ * flag can be used when formatting tuples.
+ *
+ * # Specifiers
+ *
+ * Now for the basic specifiers themselves:
+ *
+ * * `a`, `A` - hexadecimal float like C printf (lowercase, uppercase).
+ * * `b`, `B` - binary integers (lowercase, uppercase).
+ * * `c` - character values.
+ * * `d` - decimal integers (signed or unsigned).
+ * * `e`, `E` - floats in scientific notation (lowercase, uppercase).
+ * * `f`, `F` - decimal floating point (lowercase, uppercase).
+ * * `g`, `G` - shortest representation (`e`/`E` or `f`/`F`).
+ * * `o` - octal octal (signed or unsigned)
+ * * `s` - any value with its default format
+ * * `x`, `X` - hexadecimal integers (lowercase, uppercase, signed or unsigned).
+ *
+ * You can use the `s` specifier to format any value that can be formatted
+ * at no extra cost. Because the system is type safe, how a value is meant
+ * to be formatted is decided from the type that is passed in, not the format
+ * specifier itself.
+ *
+ * All letters (uppercase and lowercase) are available for custom formatting.
+ *
+ * # Format order and rules
+ *
+ * The rules for formatting values go as follows:
+ *
+ * * First it's checked whether the value can be custom formatted using a
+ *   specialization of ostd::format_traits. If it can, it's formatted using
+ *   that, the current `format_spec` is passed in as it is and no extra
+ *   checks are made. Any letter can be used to format custom objects.
+ * * Then it's checked if the value is convertible to ostd::string_range.
+ *   If it is, it's formatted as a string. Only the `s` specifier is allowed.
+ * * Then it's checked if the value is a tuple-like object. The value is one
+ *   if `std::tuple_size<T>::value` is valid. If it is, the tuple-like object
+ *   is formatted as `<ITEM, ITEM, ITEM, ...>` by default. You need to use
+ *   the `s` specifier only to format tuples like this. The items are all
+ *   formatted using the `s` specifier.
+ * * Then ranges are tested in a similar way. The default format for ranges
+ *   is `{ITEM, ITEM, ITEM, ...}`. The `s` specifier must be used. The items
+ *   are all formatted with `s` too.
+ * * Then bools are formatted. If the `s` specifier is used, the bool is
+ *   formatted as `true` or `false`. Otherwise it's converted to `int` and
+ *   formatted using the specifier (might error depending on the specifier).
+ * * Then character values are formatted. The `c` and `s` specifiers are
+ *   allowed.
+ * * Pointers are formatted then. If the `s` specifier is used, the pointer
+ *   will be formatted as hex with the `0x` prefix. Otherwise it's converted
+ *   to `size_t` and formatted with the specifier (might error depending on
+ *   the specifier).
+ * * Then integers are formatted. Using the `s` specifier is like using the
+ *   `d` specifier.
+ * * Floats follow. Using `s` is like using `g`.
+ * * When everything is exhausted, ostd::format_error is thrown.
+ *
+ * # Escaping
+ *
+ * String and character values are subject to escaping if the `@` flag is
+ * used. Strings are put into double quotes and any unprintable values in
+ * them are converted into escape sequences. Quotes (single and double)
+ * are also escaped. Character values are put into single quotes and
+ * unprintable characters are converted into escape sequences as well.
+ * For known escape sequences, simple readable versions are used, particularly
+ * `a`, `b`, `t`, `n`, `v`, `f`, `r`. For other unprintables, the hexadecimal
+ * escape format is used.
+ *
+ * When printing tuples and ranges with the `s` specifier and the `@` flag
+ * is used, all of their items are escaped. If the items are tuples or ranges,
+ * their own items are also escaped. The `@` flag doesn't escape anything else,
+ * unless you implement support for escaping in your own custom objects.
+ *
+ * # Locale awareness
+ *
+ * The system also makes use of locales. When formatting integers, thousands
+ * grouping rules from the locale apply (no matter the base). When formatting
+ * floats, a locale specific decimal separator is used and thousands grouping
+ * also applies.
+ *
+ * # Errors and other remarks
+ *
+ * Bceause the system is type safe, there is no need to explicitly specify
+ * type lengths or any such thing. Any integral type and any floating point
+ * type can be formatted using the right specifiers.
+ *
+ * If a specifier is not allowed for a value, ostd::format_error is thrown.
+ */
 struct format_spec {
-    format_spec(string_range fmt = nullptr):
+    /** @brief Constructs with a format string and the default locale.
+     *
+     * If you use this constructor, there won't be a specific formatting
+     * specifier set in here so you won't be able to get its properties,
+     * but you will be able to format into a range with some arguments.
+     * You can also manually parse the format string, see read_until_spec().
+     *
+     * The locale used here is the default (global) locale.
+     */
+    format_spec(string_range fmt):
         p_fmt(fmt), p_loc()
     {}
 
+    /** @brief Constructs with a format string and a locale.
+     *
+     * Like format_spec(string_range), but with an explicit locale.
+     */
     format_spec(string_range fmt, std::locale const &loc):
         p_fmt(fmt), p_loc(loc)
     {}
 
-    format_spec(std::locale const &loc):
-        p_fmt(), p_loc(loc)
-    {}
-
+    /** @brief Constructs a specific format specifier.
+     *
+     * See ostd::format_flags for flags. The `spec` argument is the format
+     * specifier (for example `s`). It doesn't support tuple/range formatting
+     * nor positional arguments.
+     *
+     * Uses the default (global) locale. The locale is then potentially used
+     * for formatting values.
+     */
     format_spec(char spec, int flags = 0):
         p_flags(flags), p_spec(spec), p_loc()
     {}
 
+    /** @brief Constructs a specific format specifier with a locale.
+     *
+     * Like format_spec(char, int) but uses an explicit locale.
+     */
     format_spec(char spec, std::locale const &loc, int flags = 0):
         p_flags(flags), p_spec(spec), p_loc(loc)
     {}
 
+    /** @brief Parses the format string if constructed with one.
+     *
+     * This reads the format string, writing each character of it into
+     * `writer`, until it encounters a valid format specifier. It then
+     * stops there and returns `true`. If no format specifier was read,
+     * it returns `false`. When a format specifier is read, this structure
+     * then represents it.
+     *
+     * It's used by format() to parse the string.
+     */
     template<typename R>
     bool read_until_spec(R &writer) {
         if (p_fmt.empty()) {
@@ -222,71 +518,229 @@ struct format_spec {
         return false;
     }
 
+    /** @brief Gets the yet not parsed portion of the format string.
+     *
+     * If no read_until_spec() was called, this returns the entire format
+     * string. Otherwise, it returns the format string from the point
+     * after the format specifier this structure currently represents.
+     */
     string_range rest() const {
         return p_fmt;
     }
 
+    /** @brief Overrides the currently set locale.
+     *
+     * @returns The old locale.
+     */
     std::locale imbue(std::locale const &loc) {
         std::locale ret{p_loc};
         p_loc = loc;
         return ret;
     }
 
+    /** @brief Retrieves the currently used locale for the format state. */
     std::locale getloc() const {
         return p_loc;
     }
 
+    /** @brief Gets the width of the format specifier.
+     *
+     * If explicitly specified (say `%5s`) it will return the number that
+     * was in the format specifier. If explicitly set with set_width(),
+     * it will return that. If not set at all, it will return 0.
+     *
+     * @see has_width(), precision()
+     */
     int width() const { return p_width; }
+
+    /** @brief Gets the precision of the format specifier.
+     *
+     * If explicitly specified (say `%.5f`) it will return the number that
+     * was in the format specifier. If explicitly set with set_precision(),
+     * it will return that. If not set at all, it will return 0.
+     *
+     * @see has_precision(), width()
+     */
     int precision() const { return p_precision; }
 
+    /** @brief Gets whether a width was specified somehow.
+     *
+     * If the width was provided direclty as part of the format specifier
+     * or with an explicit argument (see set_width()), this will return
+     * `true`. Otherwise, it will return `false`.
+     *
+     * You can get the actual width using width().
+     *
+     * @see has_precision(), arg_width()
+     */
     bool has_width() const { return p_has_width; }
+
+    /** @brief Gets whether a precision was specified somehow.
+     *
+     * If the precision was provided direclty as part of the format specifier
+     * or with an explicit argument (see set_precision()), this will return
+     * `true`. Otherwise, it will return `false`.
+     *
+     * You can get the actual width using precision().
+     *
+     * @see has_width(), arg_precision()
+     */
     bool has_precision() const { return p_has_precision; }
 
+    /** @brief Gets whether a width was specified as an explicit argument.
+     *
+     * This is true if the width was specified using `*` in the format
+     * specifier. Also set by set_width(size_t, A const &...).
+     *
+     * @see has_width()
+     */
     bool arg_width() const { return p_arg_width; }
+
+    /** @brief Gets whether a precision was specified as an explicit argument.
+     *
+     * This is true if the precision was specified using `*` in the format
+     * specifier. Also set by set_precision(size_t, A const &...).
+     *
+     * @see has_width()
+     */
     bool arg_precision() const { return p_arg_precision; }
 
+    /** @brief Sets the width from an argument pack.
+     *
+     * The `idx` parameter specifies the index (starting with 0) of the
+     * width argument in the followup pack.
+     *
+     * The return value of width() will then be the argument's value.
+     * It will also make has_width() and arg_width() return true (if
+     * they previously didn't).
+     *
+     * @throws ostd::format_error when `idx` is out of bounds or the argument
+     *         has an invalid type.
+     *
+     * @see set_width(int), set_precision(size_t, A const &...);
+     */
     template<typename ...A>
     void set_width(size_t idx, A const &...args) {
         p_width = detail::get_arg_param(idx, args...);
         p_has_width = p_arg_width = true;
     }
 
+    /** @brief Sets the width to an explicit number.
+     *
+     * The return value of width() will then be the given value. It will
+     * also make has_width() return true and arg_width() return false.
+     *
+     * @see set_width(size_t, A const &...) set_precision(int)
+     */
     void set_width(int v) {
         p_width = v;
         p_has_width = true;
         p_arg_width = false;
     }
 
+    /** @brief Sets the precision from an argument pack.
+     *
+     * The `idx` parameter specifies the index (starting with 0) of the
+     * precision argument in the followup pack.
+     *
+     * The return value of precision() will then be the argument's value.
+     * It will also make has_precision() and arg_precision() return true (if
+     * they previously didn't).
+     *
+     * @throws ostd::format_error when `idx` is out of bounds or the argument
+     *         has an invalid type.
+     *
+     * @see set_precision(int), set_width(size_t, A const &...);
+     */
     template<typename ...A>
     void set_precision(size_t idx, A const &...args) {
         p_precision = detail::get_arg_param(idx, args...);
         p_has_precision = p_arg_precision = true;
     }
 
+    /** @brief Sets the precision to an explicit number.
+     *
+     * The return value of precision() will then be the given value. It will
+     * also make has_precision() return true and arg_precision() return false.
+     *
+     * @see set_precision(size_t, A const &...) set_with(int)
+     */
     void set_precision(int v) {
         p_precision = v;
         p_has_precision = true;
         p_arg_precision = false;
     }
 
+    /** @brief Gets the combination of flags for the current specifier. */
     int flags() const { return p_flags; }
 
+    /** @brief Gets the base char for the specifier. */
     char spec() const { return p_spec; }
 
+    /** @brief Gets the position of the matching argument in the pack.
+     *
+     * This applies for when the position in the format specifier was
+     * explicitly set (for example `%5$s` will have index 5) to refer
+     * to a specific argument in the pack. Keep in mind that these
+     * start with 1 (1st argument, 5th argument etc) to match the POSIX
+     * conventions on this. If the position was not specified, this just
+     * returns 0.
+     */
     byte index() const { return p_index; }
 
+    /** @brief Gets the inner part of a range or tuple format specifier.
+     *
+     * For ranges, this does not include the separator, you need to use
+     * nested_sep() to get the separator. For example, given the
+     * `%(%s, %)` specifier, this returns `%s` and for `%(%s%|, %)`
+     * it returns the same. When formatting tuples, this behaves identically,
+     * for example for `%<%s, %f%>` this returns `%s, %f`. For simple
+     * specifiers this returns an empty slice.
+     */
     string_range nested() const { return p_nested; }
+
+    /** @brief Gets the separator of a complex range format specifier.
+     *
+     * For example for `%(%s, %)` this returns `, `. With an explicit
+     * delimiter, for example for `%(%s%|, %)`, this returns the same
+     * thing as well. For simple specifiers and tuple specifiers this
+     * returns an empty slice.
+     */
     string_range nested_sep() const { return p_nested_sep; }
 
+    /** @brief Returns true if this specifier is for a tuple. */
     bool is_tuple() const { return p_is_tuple; }
+
+    /** @brief Returns true if this specifier is for a tuple or a range. */
     bool is_nested() const { return p_is_nested; }
 
+    /** @brief Formats into a range with the given arguments.
+     *
+     * When a valid format string is currently present, this formats
+     * into the given range using that format string and the provided
+     * arguments.
+     *
+     * @throws ostd::format_error when the format string and args don't match.
+     *
+     * @see format_value()
+     */
     template<typename R, typename ...A>
     R &&format(R &&writer, A const &...args) {
         write_fmt(writer, args...);
         return std::forward<R>(writer);
     }
 
+    /** @brief Formats a single value into a range.
+     *
+     * When this currently represents a valid format specifier, you can
+     * use this to format a single value with that specifier. This is very
+     * useful for example when formatting custom objects, see the example
+     * in ostd::format_traits.
+     *
+     * @throws ostd::format_error when the specifier and the value don't match.
+     *
+     * @see format()
+     */
     template<typename R, typename T>
     R &&format_value(R &&writer, T const &val) const {
         write_arg(writer, 0, val);
@@ -907,6 +1361,8 @@ private:
             if (is_nested()) {
                 if (!argpos) {
                     argpos = argidx++;
+                } else if (argpos > argidx) {
+                    argidx = argpos + 1;
                 }
                 format_spec nspec(nested(), p_loc);
                 nspec.p_gflags |= (p_flags & FMT_FLAG_AT);
@@ -943,6 +1399,9 @@ private:
                         throw format_error{"argument width not given"};
                     }
                     set_width(argpos - 2 - argprec, args...);
+                }
+                if (argpos > argidx) {
+                    argidx = argpos + 1;
                 }
             }
             write_arg(writer, argpos - 1, args...);
@@ -987,11 +1446,34 @@ private:
     char p_buf[32];
 };
 
+/** @brief Formats into an output range using a format string and arguments.
+ *
+ * Uses the default constructed std::locale (the current global locale)
+ * for locale specific formatting. There is also a version that takes an
+ * explicit locale.
+ *
+ * This is just a simple wrapper, equivalent to:
+ *
+ * ~~~{.cc}
+ *     return ostd::format_spec{fmt}.format(std::forward<R>(writer), args...);
+ * ~~~
+ */
 template<typename R, typename ...A>
 inline R &&format(R &&writer, string_range fmt, A const &...args) {
     return format_spec{fmt}.format(std::forward<R>(writer), args...);
 }
 
+/** @brief Formats into an output range using a format string and arguments.
+ *
+ * This version uses `loc` as a locale. There is also a version that uses
+ * the global locale by default.
+ *
+ * This is just a simple wrapper, equivalent to:
+ *
+ * ~~~{.cc}
+ *     return ostd::format_spec{fmt, loc}.format(std::forward<R>(writer), args...);
+ * ~~~
+ */
 template<typename R, typename ...A>
 inline R &&format(
     R &&writer, std::locale const &loc, string_range fmt, A const &...args
@@ -999,6 +1481,10 @@ inline R &&format(
     return format_spec{fmt, loc}.format(std::forward<R>(writer), args...);
 }
 
+/** @} */
+
 } /* namespace ostd */
 
 #endif
+
+/** @} */
