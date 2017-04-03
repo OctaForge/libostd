@@ -100,6 +100,9 @@ protected:
     scheduler() {}
 
 public:
+    /** Does nothing, this base class is empty. */
+    virtual ~scheduler() {}
+
     /** A scheduler is not copy constructible. */
     scheduler(scheduler const &) = delete;
 
