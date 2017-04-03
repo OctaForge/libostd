@@ -280,9 +280,11 @@ namespace detail {
  * Width can be specified either as a number in the format string or as `*`
  * in which case it will be an integer argument (any integral type, must be
  * equal or larger than zero, otherwise ostd::format_error is thrown). When
- * an argument, the position of the argument is where the actual value should
- * have been if no argument was used, and the actual value follows. The same
- * applies with explicit positions.
+ * an argument, the position of the argument is right before the actual
+ * value to format, unless precision is also an argument, in which case it's
+ * right before the precision argument. When the position of the value to
+ * format is explicit in the format string, the position refers to the value
+ * to format and width/precision are before that.
  *
  * Width defines the minimum number of characters to be printed. If the value
  * ends up being shorter, it's padded with spaces (or zeroes when formatting
@@ -309,7 +311,7 @@ namespace detail {
  * then looks different:
  *
  * ~~~
- * %[flags](contents%)
+ * %[position$][flags](contents%)
  * ~~~
  *
  * The `contents` is a format specifier for each item of the range followed
@@ -351,7 +353,7 @@ namespace detail {
  * The syntax is similar:
  *
  * ~~~
- * %[flags]<contents%>
+ * %[position$][flags]<contents%>
  * ~~~
  *
  * There are no delimiters here. The `contents` is simply a regular format
@@ -367,18 +369,23 @@ namespace detail {
  * * `a`, `A` - hexadecimal float like C printf (lowercase, uppercase).
  * * `b`, `B` - binary integers (lowercase, uppercase).
  * * `c` - character values.
- * * `d` - decimal integers (signed or unsigned).
+ * * `d` - decimal integers.
  * * `e`, `E` - floats in scientific notation (lowercase, uppercase).
  * * `f`, `F` - decimal floating point (lowercase, uppercase).
  * * `g`, `G` - shortest representation (`e`/`E` or `f`/`F`).
- * * `o` - octal octal (signed or unsigned)
- * * `s` - any value with its default format
- * * `x`, `X` - hexadecimal integers (lowercase, uppercase, signed or unsigned).
+ * * `o` - octal integers.
+ * * `s` - any value with its default format.
+ * * `x`, `X` - hexadecimal integers (lowercase, uppercase).
  *
  * You can use the `s` specifier to format any value that can be formatted
  * at no extra cost. Because the system is type safe, how a value is meant
  * to be formatted is decided from the type that is passed in, not the format
  * specifier itself.
+ *
+ * Signedness and size of integer types is determined from the value itself,
+ * which applies universally to all integer formatting with all bases. Also,
+ * the lowercase/uppercase distinction for binary only applies when a prefix
+ * is added (using the `#` flag).
  *
  * All letters (uppercase and lowercase) are available for custom formatting.
  *
@@ -437,11 +444,7 @@ namespace detail {
  * floats, a locale specific decimal separator is used and thousands grouping
  * also applies.
  *
- * # Errors and other remarks
- *
- * Bceause the system is type safe, there is no need to explicitly specify
- * type lengths or any such thing. Any integral type and any floating point
- * type can be formatted using the right specifiers.
+ * # Errors
  *
  * If a specifier is not allowed for a value, ostd::format_error is thrown.
  */
@@ -590,7 +593,7 @@ struct format_spec {
     /** @brief Gets whether a width was specified as an explicit argument.
      *
      * This is true if the width was specified using `*` in the format
-     * specifier. Also set by set_width(size_t, A const &...).
+     * specifier. Also set by set_width_arg().
      *
      * @see has_width()
      */
@@ -599,7 +602,7 @@ struct format_spec {
     /** @brief Gets whether a precision was specified as an explicit argument.
      *
      * This is true if the precision was specified using `*` in the format
-     * specifier. Also set by set_precision(size_t, A const &...).
+     * specifier. Also set by set_precision_arg().
      *
      * @see has_width()
      */
@@ -617,10 +620,10 @@ struct format_spec {
      * @throws ostd::format_error when `idx` is out of bounds or the argument
      *         has an invalid type.
      *
-     * @see set_width(int), set_precision(size_t, A const &...);
+     * @see set_width(), set_precision_arg();
      */
     template<typename ...A>
-    void set_width(size_t idx, A const &...args) {
+    void set_width_arg(size_t idx, A const &...args) {
         p_width = detail::get_arg_param(idx, args...);
         p_has_width = p_arg_width = true;
     }
@@ -630,7 +633,7 @@ struct format_spec {
      * The return value of width() will then be the given value. It will
      * also make has_width() return true and arg_width() return false.
      *
-     * @see set_width(size_t, A const &...) set_precision(int)
+     * @see set_width_arg(), set_precision()
      */
     void set_width(int v) {
         p_width = v;
@@ -650,10 +653,10 @@ struct format_spec {
      * @throws ostd::format_error when `idx` is out of bounds or the argument
      *         has an invalid type.
      *
-     * @see set_precision(int), set_width(size_t, A const &...);
+     * @see set_precision(), set_width_arg();
      */
     template<typename ...A>
-    void set_precision(size_t idx, A const &...args) {
+    void set_precision_arg(size_t idx, A const &...args) {
         p_precision = detail::get_arg_param(idx, args...);
         p_has_precision = p_arg_precision = true;
     }
@@ -663,7 +666,7 @@ struct format_spec {
      * The return value of precision() will then be the given value. It will
      * also make has_precision() return true and arg_precision() return false.
      *
-     * @see set_precision(size_t, A const &...) set_with(int)
+     * @see set_precision_arg(), set_width()
      */
     void set_precision(int v) {
         p_precision = v;
@@ -1379,11 +1382,11 @@ private:
             if (!argpos) {
                 argpos = argidx++;
                 if (arg_width()) {
-                    set_width(argpos - 1, args...);
+                    set_width_arg(argpos - 1, args...);
                     argpos = argidx++;
                 }
                 if (arg_precision()) {
-                    set_precision(argpos - 1, args...);
+                    set_precision_arg(argpos - 1, args...);
                     argpos = argidx++;
                 }
             } else {
@@ -1392,13 +1395,13 @@ private:
                     if (argpos <= 1) {
                         throw format_error{"argument precision not given"};
                     }
-                    set_precision(argpos - 2, args...);
+                    set_precision_arg(argpos - 2, args...);
                 }
                 if (arg_width()) {
                     if (argpos <= (size_t(argprec) + 1)) {
                         throw format_error{"argument width not given"};
                     }
-                    set_width(argpos - 2 - argprec, args...);
+                    set_width_arg(argpos - 2 - argprec, args...);
                 }
                 if (argpos > argidx) {
                     argidx = argpos + 1;
