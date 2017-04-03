@@ -131,7 +131,7 @@ namespace detail {
      * 7 .. string
      * 8 .. custom object
      */
-    static constexpr byte const fmt_specs[] = {
+    static constexpr unsigned char const fmt_specs[] = {
         /* uppercase spec set */
         1, 3, 8, 8, /* A B C D */
         1, 1, 1, 8, /* E F G H */
@@ -689,7 +689,7 @@ struct format_spec {
      * conventions on this. If the position was not specified, this just
      * returns 0.
      */
-    byte index() const { return p_index; }
+    unsigned char index() const { return p_index; }
 
     /** @brief Gets the inner part of a range or tuple format specifier.
      *
@@ -769,7 +769,7 @@ private:
 
     char p_spec = '\0';
 
-    byte p_index = 0;
+    unsigned char p_index = 0;
 
     bool p_is_tuple = false;
     bool p_is_nested = false;
@@ -870,7 +870,7 @@ private:
             if (ndig <= 0) return false; /* no pos given */
             int idx = atoi(p_buf);
             if (idx <= 0 || idx > 255) return false; /* bad index */
-            p_index = byte(idx);
+            p_index = static_cast<unsigned char>(idx);
             p_fmt.pop_front();
             havepos = true;
         }
@@ -1019,7 +1019,7 @@ private:
         if (isp == 's') {
             isp = (ptr ? 'x' : 'd');
         }
-        byte specn = detail::fmt_specs[isp - 65];
+        unsigned char specn = detail::fmt_specs[isp - 65];
         if (specn <= 2 || specn > 7) {
             throw format_error{"cannot format integers with the given spec"};
         }
@@ -1102,7 +1102,7 @@ private:
     template<typename R, typename T>
     void write_float(R &writer, T val) const {
         char isp = spec();
-        byte specn = detail::fmt_specs[isp - 65];
+        unsigned char specn = detail::fmt_specs[isp - 65];
         if (specn != 1 && specn != 7) {
             throw format_error{"cannot format floats with the given spec"};
         }

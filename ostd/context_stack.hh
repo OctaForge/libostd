@@ -21,7 +21,6 @@
 #include <new>
 #include <algorithm>
 
-#include "ostd/types.hh"
 #include "ostd/platform.hh"
 
 #if !defined(OSTD_PLATFORM_POSIX) && !defined(OSTD_PLATFORM_WIN32)
@@ -181,7 +180,7 @@ struct basic_fixedsize_stack {
             detail::stack_protect(p, pgs);
         }
 
-        stack_context ret{static_cast<byte *>(p) + asize, asize};
+        stack_context ret{static_cast<unsigned char *>(p) + asize, asize};
 #ifdef OSTD_USE_VALGRIND
         ret.valgrind_id = VALGRIND_STACK_REGISTER(ret.ptr, p);
 #endif
@@ -196,7 +195,9 @@ struct basic_fixedsize_stack {
 #ifdef OSTD_USE_VALGRIND
         VALGRIND_STACK_DEREGISTER(st.valgrind_id);
 #endif
-        detail::stack_free(static_cast<byte *>(st.ptr) - st.size, st.size);
+        detail::stack_free(
+            static_cast<unsigned char *>(st.ptr) - st.size, st.size
+        );
         st.ptr = nullptr;
     }
 

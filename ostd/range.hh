@@ -17,8 +17,6 @@
 #include <initializer_list>
 #include <algorithm>
 
-#include "ostd/types.hh"
-
 namespace ostd {
 
 struct input_range_tag {};

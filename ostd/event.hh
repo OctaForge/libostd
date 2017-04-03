@@ -20,7 +20,7 @@ namespace detail {
             p_class(ev.p_class), p_nfuncs(ev.p_nfuncs)
         {
             using func_t = std::function<void(C &, A...)>;
-            byte *bufp = new byte[sizeof(func_t) * p_nfuncs];
+            auto *bufp = new unsigned char[sizeof(func_t) * p_nfuncs];
             func_t *nbuf = reinterpret_cast<func_t *>(bufp);
             for (size_t i = 0; i < p_nfuncs; ++i)
                 new (&nbuf[i]) func_t(ev.p_funcs[i]);
@@ -37,7 +37,7 @@ namespace detail {
             using func_t = std::function<void(C &, A...)>;
             p_class = ev.p_class;
             p_nfuncs = ev.p_nfuncs;
-            byte *bufp = new byte[sizeof(func_t) * p_nfuncs];
+           auto *bufp = new unsigned char[sizeof(func_t) * p_nfuncs];
             func_t *nbuf = reinterpret_cast<func_t *>(bufp);
             for (size_t i = 0; i < p_nfuncs; ++i) {
                 new (&nbuf[i]) func_t(ev.p_funcs[i]);
@@ -58,7 +58,7 @@ namespace detail {
                 using func = std::function<void(C &, A...)>;
                 p_funcs[i].~func();
             }
-            delete[] reinterpret_cast<byte *>(p_funcs);
+            delete[] reinterpret_cast<unsigned char *>(p_funcs);
             p_funcs = nullptr;
             p_nfuncs = 0;
         }
@@ -72,14 +72,14 @@ namespace detail {
                     return i;
                 }
             }
-            byte *bufp = new byte[sizeof(func_t) * (p_nfuncs + 1)];
+            auto *bufp = new unsigned char[sizeof(func_t) * (p_nfuncs + 1)];
             func_t *nbuf = reinterpret_cast<func_t *>(bufp);
             for (size_t i = 0; i < p_nfuncs; ++i) {
                 new (&nbuf[i]) func_t(std::move(p_funcs[i]));
                 p_funcs[i].~func_t();
             }
             new (&nbuf[p_nfuncs]) func_t(std::forward<F>(func));
-            delete[] reinterpret_cast<byte *>(p_funcs);
+            delete[] reinterpret_cast<unsigned char *>(p_funcs);
             p_funcs = nbuf;
             return p_nfuncs++;
         }

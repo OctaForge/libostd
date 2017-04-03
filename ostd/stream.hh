@@ -18,7 +18,6 @@
 #endif
 
 #include "ostd/platform.hh"
-#include "ostd/types.hh"
 #include "ostd/range.hh"
 #include "ostd/string.hh"
 #include "ostd/format.hh"
@@ -77,13 +76,13 @@ struct stream {
     virtual void write_bytes(void const *, size_t) {}
 
     virtual int get_char() {
-        byte c;
+        unsigned char c;
         read_bytes(&c, 1);
         return c;
     }
 
     virtual void put_char(int c) {
-        byte wc = byte(c);
+        unsigned char wc = static_cast<unsigned char>(c);
         write_bytes(&wc, 1);
     }
 

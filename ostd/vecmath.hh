@@ -6,8 +6,6 @@
 #ifndef OSTD_VECMATH_HH
 #define OSTD_VECMATH_HH
 
-#include "ostd/types.hh"
-
 namespace ostd {
 
 template<typename T>
@@ -132,7 +130,7 @@ inline vec2<T> operator-(vec2<T> const &a) {
 
 using vec2f = vec2<float>;
 using vec2d = vec2<double>;
-using vec2b = vec2<byte>;
+using vec2b = vec2<unsigned char>;
 using vec2i = vec2<int>;
 
 template<typename T>
@@ -258,7 +256,7 @@ inline vec3<T> operator-(vec3<T> const &a) {
 
 using vec3f = vec3<float>;
 using vec3d = vec3<double>;
-using vec3b = vec3<byte>;
+using vec3b = vec3<unsigned char>;
 using vec3i = vec3<int>;
 
 template<typename T>
@@ -384,7 +382,7 @@ inline vec4<T> operator-(vec4<T> const &a) {
 
 using vec4f = vec4<float>;
 using vec4d = vec4<double>;
-using vec4b = vec4<byte>;
+using vec4b = vec4<unsigned char>;
 using vec4i = vec4<int>;
 
 } /* namespace ostd */

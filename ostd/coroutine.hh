@@ -29,7 +29,6 @@
 #include <optional>
 
 #include "ostd/platform.hh"
-#include "ostd/types.hh"
 #include "ostd/range.hh"
 
 #include "ostd/context_stack.hh"
@@ -268,8 +267,10 @@ protected:
         p_stack = sa.allocate();
 
         void *sp = get_stack_ptr<SA>();
-        size_t asize = p_stack.size -
-            (static_cast<byte *>(p_stack.ptr) - static_cast<byte *>(sp));
+        size_t asize = p_stack.size - (
+            static_cast<unsigned char *>(p_stack.ptr) -
+            static_cast<unsigned char *>(sp)
+        );
 
         p_coro = detail::ostd_make_fcontext(sp, asize, &context_call<C, SA>);
         new (sp) SA(std::move(sa));
@@ -287,7 +288,7 @@ private:
          */
         constexpr size_t sasize = sizeof(SA);
 
-        void *sp = static_cast<byte *>(p_stack.ptr) - sasize - salign;
+        void *sp = static_cast<unsigned char *>(p_stack.ptr) - sasize - salign;
         size_t space = sasize + salign;
         sp = std::align(salign, sasize, sp, space);
 
