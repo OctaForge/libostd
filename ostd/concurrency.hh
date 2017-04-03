@@ -75,7 +75,7 @@ namespace ostd {
  * task (the main task) which typically replaces your `main` function.
  *
  * The `start` method will also set the internal current scheduler pointer
- * so that APIs such as ostd::spawn(F &&, A &&...) can work.
+ * so that APIs such as ostd::spawn() can work.
  */
 struct scheduler {
 private:
@@ -115,12 +115,12 @@ public:
     /** @brief Spawns a task.
      *
      * Spawns a task and schedules it for execution. This is a low level
-     * interface function. Typically you will want ostd::spawn(F &&, A &&...).
+     * interface function. Typically you will want ostd::spawn().
      * The detailed behavior of the function is completely scheduler dependent.
      *
-     * @see ostd::spawn(F &&, A &&...), spawn(F &&, A &&...)
+     * @see ostd::spawn(), spawn()
      */
-    virtual void spawn(std::function<void()>) = 0;
+    virtual void do_spawn(std::function<void()>) = 0;
 
     /** @brief Tells the scheduler to re-schedule the current task.
      *
@@ -139,7 +139,7 @@ public:
      * use these condition variables to synchronize (see make_channel() for
      * an example).
      *
-     * @see make_channel(), make_coroutine(F &&), make_generator(F &&)
+     * @see make_channel(), make_coroutine(), make_generator()
      */
     virtual generic_condvar make_condition() = 0;
 
@@ -153,8 +153,7 @@ public:
      * Using get_stack_allocator() you can create an actual stack allocator
      * usable with coroutines that uses this set of methods.
      *
-     * @see deallocate_stack(stack_context &), reserve_stacks(size_t),
-     *      get_stack_allocator()
+     * @see deallocate_stack(), reserve_stacks(), get_stack_allocator()
      */
     virtual stack_context allocate_stack() = 0;
 
@@ -164,22 +163,20 @@ public:
      */
     virtual void deallocate_stack(stack_context &st) noexcept = 0;
 
-    /** @brief Reserves at least @p n stacks.
+    /** @brief Reserves at least `n` stacks.
      *
      * If the stack allocator used in the scheduler is pooled, this will
      * reserve the given number of stacks (or more). It can, however, be
      * a no-op if the allocator is not pooled.
      *
-     * @see allocate_stack(), deallocate_stack(stack_context &),
-     *      get_stack_allocator()
+     * @see allocate_stack(), deallocate_stack(), get_stack_allocator()
      */
     virtual void reserve_stacks(size_t n) = 0;
 
     /** @brief Gets a stack allocator using the scheduler's stack allocation.
      *
-     * The stack allocator will use allocate_stack() and
-     * deallocate_stack(stack_context &) to perform the alloaction and
-     * deallocation.
+     * The stack allocator will use allocate_stack() and deallocate_stack()
+     * to perform the alloaction and deallocation.
      */
     stack_allocator get_stack_allocator() noexcept {
         return stack_allocator{*this};
@@ -187,25 +184,24 @@ public:
 
     /** @brief Spawns a task using any callable and a set of arguments.
      *
-     * Just like spawn(std::function<void()>), but works for any callable
-     * and accepts arguments. If any arguments are provided, they're bound
-     * to the callable first. Then the result is converted to the right
-     * type for spawn(std::function<void()>) and passed.
+     * Just like do_spawn(), but works for any callable and accepts arguments.
+     * If any arguments are provided, they're bound to the callable first.
+     * Then the result is converted to the right type for do_spawn() and passed.
      *
      * You can use this to spawn a task directly on a scheduler. However,
      * typically you will not want to pass the scheduler around and instead
      * use the generic ostd::spawn(), which works on any scheduler.
      *
-     * @see spawn(std::function<void()>), ostd::spawn(F &&, A &&...)
+     * @see do_spawn(), ostd::spawn()
      */
     template<typename F, typename ...A>
     void spawn(F &&func, A &&...args) {
         if constexpr(sizeof...(A) == 0) {
-            spawn(std::function<void()>{func});
+            do_spawn(func);
         } else {
-            spawn(std::function<void()>{
+            do_spawn(
                 std::bind(std::forward<F>(func), std::forward<A>(args)...)
-            });
+            );
         }
     }
 
@@ -214,11 +210,11 @@ public:
      * Returns a channel that uses a condition variable type returned by
      * make_condition(). You can use this to create a channel directly
      * with the scheduler. However, typically you will not want to pass
-     * it around, so ostd::make_channel<T>() is a more convenient choice.
+     * it around, so ostd::make_channel() is a more convenient choice.
      *
      * @tparam T The type of the channel value.
      *
-     * @see ostd::make_channel<T>()
+     * @see ostd::make_channel()
      */
     template<typename T>
     channel<T> make_channel() {
@@ -229,12 +225,12 @@ public:
 
     /** @brief Creates a coroutine using the scheduler's stack allocator.
      *
-     * Using ostd::make_coroutine<T>(F &&) will do the same thing, but
-     * without the need to explicitly pass the scheduler around.
+     * Using ostd::make_coroutine() will do the same thing, but without
+     * the need to explicitly pass the scheduler around.
      *
      * @tparam T The type passed to the coroutine, `Result(Args...)`.
      *
-     * @see make_generator<T>(F &&), ostd::make_coroutine<T>(F &&)
+     * @see make_generator(), ostd::make_coroutine()
      */
     template<typename T, typename F>
     coroutine<T> make_coroutine(F &&func) {
@@ -243,12 +239,12 @@ public:
 
     /** @brief Creates a generator using the scheduler's stack allocator.
      *
-     * Using ostd::make_generator<T>(F &&) will do the same thing, but
-     * without the need to explicitly pass the scheduler around.
+     * Using ostd::make_generator() will do the same thing, but without
+     * the need to explicitly pass the scheduler around.
      *
      * @tparam T The value type of the generator.
      *
-     * @see make_coroutine<T>(F &&), ostd::make_generator<T>(F &&)
+     * @see make_coroutine(), ostd::make_generator()
      */
     template<typename T, typename F>
     generator<T> make_generator(F &&func) {
@@ -305,7 +301,7 @@ struct basic_thread_scheduler: scheduler {
      * just calls. Then it waits for all threads (tasks) it spawned to finish
      * and returns the value returned from the given function, if any.
      *
-     * @returns The result of @p func.
+     * @returns The result of `func`.
      */
     template<typename F, typename ...A>
     auto start(F func, A &&...args) -> std::result_of_t<F(A...)> {
@@ -320,7 +316,7 @@ struct basic_thread_scheduler: scheduler {
         }
     }
 
-    void spawn(std::function<void()> func) {
+    void do_spawn(std::function<void()> func) {
         std::lock_guard<std::mutex> l{p_lock};
         p_threads.emplace_front();
         auto it = p_threads.begin();
@@ -518,9 +514,7 @@ public:
      * After creating the task, starts the dispatcher on the thread. Returns
      * the return value of the provided main task function once it finishes.
      *
-     * @returns The result of @p func.
-     *
-     * @see start(F, A &&...)
+     * @returns The result of `func`.
      */
     template<typename TSA, typename F, typename ...A>
     auto start(std::allocator_arg_t, TSA &&sa, F func, A &&...args)
@@ -559,14 +553,12 @@ public:
 
     /** @brief Starts the scheduler given a set of arguments.
      *
-     * Like start(std::allocator_arg_t, TSA &&, F, A &&...) but uses a
-     * fixed size stack that has the same size as the main thread stack.
+     * Like start() but uses a fixed size stack that has the same size as
+     * the main thread stack.
      *
-     * The stack traits type is inherited from @p SA.
+     * The stack traits type is inherited from `SA`.
      *
-     * @returns The result of @p func.
-     *
-     * @see start(std::allocator_arg_t, TSA &&, F, A &&...)
+     * @returns The result of `func`.
      */
     template<typename F, typename ...A>
     auto start(F func, A &&...args) -> std::result_of_t<F(A...)> {
@@ -578,7 +570,7 @@ public:
         );
     }
 
-    void spawn(std::function<void()> func) {
+    void do_spawn(std::function<void()> func) {
         p_coros.emplace_back(std::move(func), p_stacks.get_allocator());
     }
 
@@ -743,9 +735,7 @@ public:
      * starts the dispatcher on each. Then it waits for all threads to finish
      * and returns the return value of the provided main task function.
      *
-     * @returns The result of @p func.
-     *
-     * @see start(F, A &&...)
+     * @returns The result of `func`.
      */
     template<typename TSA, typename F, typename ...A>
     auto start(std::allocator_arg_t, TSA &&sa, F func, A &&...args)
@@ -781,14 +771,12 @@ public:
 
     /** @brief Starts the scheduler given a set of arguments.
      *
-     * Like start(std::allocator_arg_t, TSA &&, F, A &&...) but uses a
-     * fixed size stack that has the same size as the main thread stack.
+     * Like start() but uses a fixed size stack that has the same size as
+     * the main thread stack.
      *
-     * The stack traits type is inherited from @p SA.
+     * The stack traits type is inherited from `SA`.
      *
-     * @returns The result of @p func.
-     *
-     * @see start(std::allocator_arg_t, TSA &&, F, A &&...)
+     * @returns The result of `func`.
      */
     template<typename F, typename ...A>
     auto start(F func, A &&...args) -> std::result_of_t<F(A...)> {
@@ -803,7 +791,7 @@ public:
         );
     }
 
-    void spawn(std::function<void()> func) {
+    void do_spawn(std::function<void()> func) {
         {
             std::lock_guard<std::mutex> l{p_lock};
             spawn_add(p_stacks.get_allocator(), std::move(func));
@@ -975,7 +963,7 @@ using coroutine_scheduler = basic_coroutine_scheduler<stack_pool>;
 /** @brief Spawns a task on the currently in use scheduler.
  *
  * The arguments are passed to the function. Effectively just calls
- * scheduler::spawn(F &&, A &&...).
+ * scheduler::spawn().
  */
 template<typename F, typename ...A>
 inline void spawn(F &&func, A &&...args) {
@@ -994,7 +982,7 @@ inline void yield() noexcept {
 
 /** @brief Creates a channel with the currently in use scheduler.
  *
- * Effectively calls scheduler::make_channel<T>().
+ * Effectively calls scheduler::make_channel().
  *
  * @tparam T The type of the channel value.
  *
@@ -1006,7 +994,7 @@ inline channel<T> make_channel() {
 
 /** @brief Creates a coroutine with the currently in use scheduler.
  *
- * Effectively calls scheduler::make_coroutine<T>(F &&).
+ * Effectively calls scheduler::make_coroutine().
  *
  * @tparam T The type passed to the coroutine, `Result(Args...)`.
  *
@@ -1018,7 +1006,7 @@ inline coroutine<T> make_coroutine(F &&func) {
 
 /** @brief Creates a generator with the currently in use scheduler.
  *
- * Effectively calls scheduler::make_generator<T>(F &&).
+ * Effectively calls scheduler::make_generator().
  *
  * @tparam T The value type of the generator.
  *

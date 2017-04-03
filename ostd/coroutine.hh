@@ -259,7 +259,7 @@ protected:
      * and saved as an `std::exception_ptr`. This is then rethrown by a call
      * to rethrow().
      *
-     * It's therefore necessary for @p C to give the context access to its
+     * It's therefore necessary for `C` to give the context access to its
      * `resume_call()` method, typically by making coroutine_context a friend.
      *
      * @param[in] sa The stack allocator used to allocate the stack.
@@ -742,7 +742,7 @@ public:
      * @param[in] func The function to use.
      * @param[in] sa The stack allocator, defaults to a default_stack.
      *
-     * @throws Whatever an `std::function` constructor could throw.
+     * @throws Whatever an std::function constructor could throw.
      */
     template<typename F, typename SA = default_stack>
     coroutine(F func, SA sa = SA{}): base_t(), p_stor(std::move(func)) {
@@ -806,7 +806,7 @@ public:
      *
      * @throws ostd::coroutine_error if the coroutine is dead.
      *
-     * @see operator()(A...)
+     * @see operator()()
      */
     R resume(A ...args) {
         if (this->is_dead()) {
@@ -821,7 +821,7 @@ public:
      *
      * Exactly the same as calling resume(A...), with function syntax.
      *
-     * @see resume(A...)
+     * @see resume()
      */
     R operator()(A ...args) {
         /* duplicate the logic so we don't copy/move the args */
