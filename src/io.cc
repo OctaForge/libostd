@@ -84,10 +84,15 @@ void file_stream::flush() {
     }
 }
 
-void file_stream::read_bytes(void *buf, size_t count) {
-    if (std::fread(buf, 1, count, p_f) != count) {
+size_t file_stream::read_bytes(void *buf, size_t count) {
+    size_t readn = std::fread(buf, 1, count, p_f);
+    if (readn != count) {
+        if (std::feof(p_f) != 0) {
+            return readn;
+        }
         throw stream_error{EIO, std::generic_category()};
     }
+    return readn;
 }
 
 void file_stream::write_bytes(void const *buf, size_t count) {

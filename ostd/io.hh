@@ -61,7 +61,7 @@ struct OSTD_EXPORT file_stream: stream {
 
     void flush();
 
-    void read_bytes(void *buf, size_t count);
+    size_t read_bytes(void *buf, size_t count);
     void write_bytes(void const *buf, size_t count);
 
     int get_char();

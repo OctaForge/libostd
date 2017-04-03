@@ -6,6 +6,7 @@
 #ifndef OSTD_STREAM_HH
 #define OSTD_STREAM_HH
 
+#include <cerrno>
 #include <cstdlib>
 #include <type_traits>
 #include <locale>
@@ -66,18 +67,30 @@ struct stream {
         return e;
     }
 
-    virtual void seek(offset_type, stream_seek = stream_seek::SET) {}
+    virtual void seek(offset_type, stream_seek = stream_seek::SET) {
+        throw stream_error{EINVAL, std::generic_category()};
+    }
 
-    virtual offset_type tell() const { return -1; }
+    virtual offset_type tell() const {
+        throw stream_error{EINVAL, std::generic_category()};
+    }
 
-    virtual void flush() {}
+    virtual void flush() {
+        throw stream_error{EINVAL, std::generic_category()};
+    }
 
-    virtual void read_bytes(void *, size_t) {}
-    virtual void write_bytes(void const *, size_t) {}
+    virtual size_t read_bytes(void *, size_t) {
+        throw stream_error{EINVAL, std::generic_category()};
+    }
+    virtual void write_bytes(void const *, size_t) {
+        throw stream_error{EINVAL, std::generic_category()};
+    }
 
     virtual int get_char() {
         unsigned char c;
-        read_bytes(&c, 1);
+        if (!read_bytes(&c, 1)) {
+            throw stream_error{EIO, std::generic_category()};
+        }
         return c;
     }
 
@@ -150,13 +163,16 @@ struct stream {
     }
 
     template<typename T>
-    void get(T *v, size_t count) {
-        read_bytes(v, count * sizeof(T));
+    size_t get(T *v, size_t count) {
+        /* if eof was reached, at least return how many values succeeded */
+        return read_bytes(v, count * sizeof(T)) / sizeof(T);
     }
 
     template<typename T>
     void get(T &v) {
-        read_bytes(&v, sizeof(T));
+        if (read_bytes(&v, sizeof(T)) != sizeof(T)) {
+            throw stream_error{EIO, std::generic_category()};
+        }
     }
 
     template<typename T>
