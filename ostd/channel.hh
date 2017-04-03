@@ -53,10 +53,10 @@ template<typename T>
 struct channel {
     /** @brief Constructs a default channel.
      *
-     * This uses `std::condition_variable` as its internal condition type,
+     * This uses std::condition_variable as its internal condition type,
      * so it will work with standard threads (raw or when used with C++'s
      * async APIs). You can also use channels with ostd's concurrency system
-     * though - see make_channel<T>() and channel(F).
+     * though - see ostd::make_channel() and channel(F).
      */
     channel(): p_state(new impl) {}
 
@@ -72,7 +72,7 @@ struct channel {
      *
      * However, typically you won't be using this directly, as you're meant
      * to use the higher level concurrency system, which lready provides the
-     * make_channel<T>() function.
+     * ostd::make_channel() function.
      *
      * @param[in] func A function that returns the desired condvar.
      */
@@ -117,7 +117,7 @@ struct channel {
      *
      * @param[in] val The value to insert.
      *
-     * @throws #ostd::channel_error when the channel is closed.
+     * @throws ostd::channel_error when the channel is closed.
      *
      * @see put(T &&), get(), try_get(), close(), is_closed()
      */
@@ -131,7 +131,7 @@ struct channel {
      *
      * @param[in] val The value to insert.
      *
-     * @throws #ostd::channel_error when the channel is closed.
+     * @throws ostd::channel_error when the channel is closed.
      *
      * @see put(T const &)
      */
@@ -151,7 +151,7 @@ struct channel {
      *
      * @returns The first inserted value in the queue.
      *
-     * @throws #ostd::channel_error when the channel is closed.
+     * @throws ostd::channel_error when the channel is closed.
      *
      * @see try_get(T &), put(T const &), close(), is_closed()
      */
@@ -169,7 +169,7 @@ struct channel {
      *
      * @returns `true` if a value was retrieved and `false` otherwise.
      *
-     * @throws #ostd::channel_error when the channel is closed.
+     * @throws ostd::channel_error when the channel is closed.
      *
      * @see try_get(T &), put(T const &), close(), is_closed()
      */

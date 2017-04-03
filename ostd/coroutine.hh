@@ -158,8 +158,6 @@ protected:
      *
      * Additionally, propagates any uncaught exception that was thrown inside
      * of the coroutine function by calling rethrow().
-     *
-     * @throws Whatever the coroutine function throws.
      */
     void call() {
         set_exec();
@@ -739,10 +737,10 @@ public:
      *
      * Otherwise creates a context using the provided stack allocator.
      *
+     * Throws whatever an std::function constructor might throw.
+     *
      * @param[in] func The function to use.
      * @param[in] sa The stack allocator, defaults to a default_stack.
-     *
-     * @throws Whatever an std::function constructor could throw.
      */
     template<typename F, typename SA = default_stack>
     coroutine(F func, SA sa = SA{}): base_t(), p_stor(std::move(func)) {
@@ -988,10 +986,10 @@ public:
      * Otherwise creates a context using the provided stack allocator
      * and then resumes the generator, making it get a value (or die).
      *
+     * Throws whatever an std::function constructor might throw.
+     *
      * @param[in] func The function to use.
      * @param[in] sa The stack allocator, defaults to a default_stack.
-     *
-     * @throws Whatever an `std::function` constructor could throw.
      */
     template<typename F, typename SA = default_stack>
     generator(F func, SA sa = SA{}):
