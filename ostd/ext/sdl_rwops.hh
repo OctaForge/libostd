@@ -1,6 +1,23 @@
-/* SDL RWops integration.
+/** @addtogroup Extensions
  *
- * This file is part of OctaSTD. See COPYING.md for futher information.
+ * @brief Various extensions including integration of OctaSTD with other libs.
+ *
+ * @{
+ */
+
+/** @file sdl_rwops.hh
+ *
+ * @brief Integration of OctaSTD streams with SDL RWops.
+ *
+ * This provides integration of OctaSTD streams with SDL RWops so that
+ * various APIs that provide a generic RWops interface to deal with
+ * files can use OctaSTD streams.
+ *
+ * Supports both SDL1 and SDL2, with SDL2 being default. If you want to
+ * use SDL1 compatibility, define `OSTD_EXT_SDL_USE_SDL1` at build time
+ * or before including this header.
+ *
+ * @copyright See COPYING.md in the project tree for further information.
  */
 
 #ifndef OSTD_EXT_SDL_RWOPS_HH
@@ -17,13 +34,27 @@
 namespace ostd {
 namespace sdl {
 
+/** @addtogroup Extensions
+ * @{
+ */
+
+/** @brief Create an `SDL_RWops` using an OctaSTD stream.
+ *
+ * The resulting RWops object is created using `SDL_AllocRW()`.
+ *
+ * The `size`, `seek`, `read`, `write` and `close` callbacks are set up,
+ * but `close` will not actually close the stream, as the RWops object
+ * does not take ownership.
+ *
+ * @returns The RWops object or `nullptr` on failure.
+ */
+inline SDL_RWops *stream_to_rwops(stream &s) noexcept {
 #ifdef OSTD_EXT_SDL_USE_SDL1
-using sdl_rwops_off_t = int;
+    using sdl_rwops_off_t = int;
 #else
-using sdl_rwops_off_t = int64_t;
+    using sdl_rwops_off_t = int64_t;
 #endif
 
-inline SDL_RWops *stream_to_rwops(stream &s) {
     SDL_RWops *rwr = SDL_AllocRW();
     if (!rwr) {
         return nullptr;
@@ -46,7 +77,7 @@ inline SDL_RWops *stream_to_rwops(stream &s) {
         auto &is = *static_cast<stream *>(rw->hidden.unknown.data1);
         try {
             if (!pos && whence == SEEK_CUR) {
-                return static_cast<sdl_rwops_off_t(is.tell());
+                return static_cast<sdl_rwops_off_t>(is.tell());
             }
             if (is->seek((stream_off_t(pos), stream_seek(whence)))) {
                 return static_cast<sdl_rwops_off_t>(is.tell());
@@ -89,4 +120,8 @@ inline SDL_RWops *stream_to_rwops(stream &s) {
 }
 }
 
+/** @} */
+
 #endif
+
+/** @} */

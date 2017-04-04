@@ -354,13 +354,10 @@ template<
 inline std::basic_string<T, TR, A> make_string(R range, A const &alloc = A{}) {
     std::basic_string<T, TR, A> ret{alloc};
     using C = range_category_t<R>;
-    if constexpr(std::is_convertible_v<C, finite_random_access_range_tag>) {
-        /* finite random access or contiguous */
-        auto h = range.half();
+    if constexpr(std::is_convertible_v<C, contiguous_range_tag>) {
         ret.reserve(range.size());
-        ret.insert(ret.end(), h, h + range.size());
+        ret.insert(ret.end(), range.data(), range.data() + range.size());
     } else {
-        /* infinite random access and below */
         for (; !range.empty(); range.pop_front()) {
             ret.push_back(range.front());
         }

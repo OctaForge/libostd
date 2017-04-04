@@ -1,6 +1,14 @@
-/* OctaSTD extensions for std::unordered_map.
+/** @addtogroup Containers
+ * @{
+ */
+
+/** @file unordered_map.hh
  *
- * This file is part of OctaSTD. See COPYING.md for futher information.
+ * @brief Extensions for std::unordered_map.
+ *
+ * This file provides extensions for the standard std::unordered_map container.
+ *
+ * @copyright See COPYING.md in the project tree for further information.
  */
 
 #ifndef OSTD_UNORDERED_MAP_HH
@@ -12,6 +20,10 @@
 #include "ostd/range.hh"
 
 namespace ostd {
+
+/** @addtogroup Containers
+ * @{
+ */
 
 namespace detail {
     template<typename T>
@@ -26,6 +38,23 @@ namespace detail {
     constexpr bool is_2tuple_like = decltype(tuple2_like_test<T>(0))::value;
 }
 
+/** @brief Creates an unordered map using a range.
+ *
+ * The range's value type must be either an std::pair or an std::tuple
+ * with 2 elements, additionally the key and value types must be constructible
+ * using the tuple or pair's first and second element respectively.
+ *
+ * You need to manually specify the key and value types for this overload.
+ *
+ * @param[in] range The range.
+ * @param[in] bcount The initial bucket count.
+ * @param[in] hash The hash function.
+ * @param[in] kequal The key equality comparison function.
+ * @param[in] alloc The allocator.
+ *
+ * @tparam K The key type.
+ * @tparam V The value type.
+ */
 template<
     typename K, typename T, typename H = std::hash<K>,
     typename E = std::equal_to<K>,
@@ -72,6 +101,11 @@ inline std::unordered_map<K, T, H, E, A> make_unordered_map(
     return ret;
 }
 
+/** @brief Creates an unordered map using a range.
+ *
+ * Calls into make_unordered_map() using the range value type's first and
+ * second element types as key and value respectively.
+ */
 template<
     typename R,
     typename H = std::hash<typename range_value_t<R>::first_type>,
@@ -98,6 +132,10 @@ inline std::unordered_map<
     >(std::forward<R>(range), bcount, hash, kequal, alloc);
 }
 
+/** @} */
+
 } /* namespace ostd */
 
 #endif
+
+/** @} */
