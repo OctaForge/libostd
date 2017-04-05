@@ -1,6 +1,20 @@
-/* Filesystem API for OctaSTD. Currently POSIX only.
+/** @addtogroup Utilities
+ * @{
+ */
+
+/** @file filesystem.hh
  *
- * This file is part of OctaSTD. See COPYING.md for futher information.
+ * @brief Filesystem abstraction module.
+ *
+ * This module defines the namespace ostd::filesystem, which is either
+ * std::experimental::filesystem or std::filesystem depending on which
+ * is available. For portable applications, only use the subset of the
+ * module covered by both versions.
+ *
+ * It also provides range integration for directory iterators and
+ * ostd::format_traits specialization for std::filesystem::path.
+ *
+ * @copyright See COPYING.md in the project tree for further information.
  */
 
 #ifndef OSTD_FILESYSTEM_HH
@@ -25,26 +39,59 @@ namespace ostd {
 
 namespace ostd {
 
+/** @addtogroup Utilities
+ * @{
+ */
+
+/** @brief Range integration for std::filesystem::directory_iterator.
+ *
+ * Allows directory iterators to be made into ranges via ostd::iter().
+ *
+ * @see ostd::ranged_traits<filesystem::recursive_directory_iterator>
+ */
 template<>
 struct ranged_traits<filesystem::directory_iterator> {
+    /** @brief The range type for the iterator. */
     using range = iterator_range<filesystem::directory_iterator>;
 
+    /** @brief Creates a range for the iterator. */
     static range iter(filesystem::directory_iterator const &r) {
         return range{filesystem::begin(r), filesystem::end(r)};
     }
 };
 
+/** @brief Range integration for std::filesystem::recursive_directory_iterator.
+ *
+ * Allows recursive directory iterators to be made into ranges via ostd::iter().
+ *
+ * @see ostd::ranged_traits<filesystem::directory_iterator>
+ */
 template<>
 struct ranged_traits<filesystem::recursive_directory_iterator> {
+    /** @brief The range type for the iterator. */
     using range = iterator_range<filesystem::recursive_directory_iterator>;
 
+    /** @brief Creates a range for the iterator. */
     static range iter(filesystem::recursive_directory_iterator const &r) {
         return range{filesystem::begin(r), filesystem::end(r)};
     }
 };
 
+/** @brief ostd::format_traits specialization for std::filesystem::path.
+ *
+ * This allows paths to be formatted as strings. The value is formatted
+ * as if `path.string()` was formatted, using the exact ostd::format_spec.
+ */
 template<>
 struct format_traits<filesystem::path> {
+    /** @brief Formats the path's string value.
+     *
+     * This calls exactly
+     *
+     * ~~~{.cc}
+     * fs.format_value(writer, p.string());
+     * ~~~
+     */
     template<typename R>
     static void to_format(
         filesystem::path const &p, R &writer, format_spec const &fs
@@ -53,6 +100,10 @@ struct format_traits<filesystem::path> {
     }
 };
 
+/** @} */
+
 } /* namespace ostd */
 
 #endif
+
+/** @} */
