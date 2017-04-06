@@ -1,6 +1,6 @@
-/* Vector math for OctaSTD.
+/* Vector math for libostd.
  *
- * This file is part of OctaSTD. See COPYING.md for futher information.
+ * This file is part of libostd. See COPYING.md for futher information.
  */
 
 #ifndef OSTD_VECMATH_HH

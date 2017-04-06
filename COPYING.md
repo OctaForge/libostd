@@ -1,4 +1,4 @@
-OctaSTD is licensed under the University of Illinois/NCSA Open Source License,
+Libostd is licensed under the University of Illinois/NCSA Open Source License,
 a permissive, non-copyleft, BSD style license. The license text goes as follows:
 
 Copyright (c) 2015 Daniel "q66" Kolesa. All rights reserved.
@@ -17,7 +17,7 @@ so, subject to the following conditions:
       this list of conditions and the following disclaimers in the
       documentation and/or other materials provided with the distribution.
 
-* Neither the names of OctaSTD developers nor any contributors may be
+* Neither the names of libostd developers nor any contributors may be
       used to endorse or promote products derived from this Software without
       specific prior written permission.
 

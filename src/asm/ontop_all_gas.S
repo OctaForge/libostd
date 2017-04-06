@@ -1,7 +1,7 @@
 /* A stub file that includes the right assembly according to the target
  * architecture and operating system, for gas only.
  *
- * This file is a part of OctaSTD, provided to you under the NCSA license.
+ * This file is a part of libostd, provided to you under the NCSA license.
  * See the COPYING.md file in the main distribution for further information.
  */
 

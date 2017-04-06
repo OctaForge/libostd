@@ -1,17 +1,17 @@
 /** @addtogroup Extensions
  *
- * @brief Various extensions including integration of OctaSTD with other libs.
+ * @brief Various extensions including integration of libostd with other libs.
  *
  * @{
  */
 
 /** @file sdl_rwops.hh
  *
- * @brief Integration of OctaSTD streams with SDL RWops.
+ * @brief Integration of libostd streams with SDL RWops.
  *
- * This provides integration of OctaSTD streams with SDL RWops so that
+ * This provides integration of libostd streams with SDL RWops so that
  * various APIs that provide a generic RWops interface to deal with
- * files can use OctaSTD streams.
+ * files can use libostd streams.
  *
  * Supports both SDL1 and SDL2, with SDL2 being default. If you want to
  * use SDL1 compatibility, define `OSTD_EXT_SDL_USE_SDL1` at build time
@@ -38,7 +38,7 @@ namespace sdl {
  * @{
  */
 
-/** @brief Create an `SDL_RWops` using an OctaSTD stream.
+/** @brief Create an `SDL_RWops` using an libostd stream.
  *
  * The resulting RWops object is created using `SDL_AllocRW()`.
  *

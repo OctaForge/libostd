@@ -1,6 +1,6 @@
-/* Ranges for OctaSTD.
+/* Ranges for libostd.
  *
- * This file is part of OctaSTD. See COPYING.md for futher information.
+ * This file is part of libostd. See COPYING.md for futher information.
  */
 
 #ifndef OSTD_RANGE_HH

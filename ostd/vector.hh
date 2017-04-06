@@ -2,7 +2,7 @@
  *
  * @brief New containers and extensions to standard containers.
  *
- * OctaSTD adds various new utilities for standard containers that allow
+ * libostd adds various new utilities for standard containers that allow
  * besides other things construction of those containers from ranges.
  *
  * Integration of ranges for iteration is however not necessary because

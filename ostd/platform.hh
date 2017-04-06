@@ -2,7 +2,7 @@
  *
  * @brief Abstractions for platform (OS, toolchain) specific code.
  *
- * OctaSTD is not only a simple utility library, it also aims to make writing
+ * libostd is not only a simple utility library, it also aims to make writing
  * cross-platform code as simple as possible (while sticking to native features
  * and therefore not making your code feel foreign on the platform). This
  * module represents the base layer to achieve this.

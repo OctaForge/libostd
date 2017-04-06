@@ -6,7 +6,7 @@
  *
  * @brief APIs for type safe formatting using C-style format strings.
  *
- * OctaSTD provides a powerful formatting system that lets you format into
+ * libostd provides a powerful formatting system that lets you format into
  * arbitrary output ranges using C-style format strings. It's type safe
  * and supports custom object formatting without heap allocations as well
  * as formatting of ranges, tuples and more.
@@ -88,7 +88,7 @@ struct format_spec;
  * so for example when someone is formatting into an ostd::appender_range,
  * it will be just that.
  *
- * This may be specialized in other OctaSTD modules as well.
+ * This may be specialized in other libostd modules as well.
  */
 template<typename>
 struct format_traits {};

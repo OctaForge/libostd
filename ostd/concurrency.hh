@@ -2,7 +2,7 @@
  *
  * @brief Concurrent/parallel task execution support and related APIs.
  *
- * OctaSTD provides an elaborate concurrency system that covers multiple
+ * libostd provides an elaborate concurrency system that covers multiple
  * schedulers with different characteristics as well as different ways to
  * pass data between tasks.
  *

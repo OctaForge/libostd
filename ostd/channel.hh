@@ -39,7 +39,7 @@ struct channel_error: std::logic_error {
 /** @brief A thread-safe message queue.
  *
  * A channel is a kind of message queue (FIFO) that is properly synchronized.
- * It can be used standalone or it can be used as a part of OctaSTD's
+ * It can be used standalone or it can be used as a part of libostd's
  * concurrency system.
  *
  * It stores its internal state in a reference counted manner, so multiple

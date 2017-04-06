@@ -1,8 +1,8 @@
-# OctaSTD Documentation {#index}
+# Libostd Documentation {#index}
 
-## What is OctaSTD?
+## What is libostd?
 
-OctaSTD is an extension library for C++17. It enhances the standard library
+Libostd is an extension library for C++17. It enhances the standard library
 to make the language easier and more convenient to use. It's based on the
 idea is that everything should do what one would expect it to; it strives
 to aid programmers in writing clean and readable code.
@@ -21,20 +21,20 @@ to aid programmers in writing clean and readable code.
 
 ### Ranges
 
-OctaSTD started as a range library. Ranges replace iterators; you no longer
+Libostd started as a range library. Ranges replace iterators; you no longer
 need two objects to represent a range and ranges themselves have a clean
 interface that is easy to adapt for your own thing. Additionally, there is
 backwards compatibility with iterators, so you can create ranges out of
 iterator pairs and even turn a range into an iterator! However, the primary
 way of creating ranges is using native range types. The compatibility stuff
-is there mostly so that OctaSTD can work with existing libraries. Additionally,
+is there mostly so that libostd can work with existing libraries. Additionally,
 a large library of generic range algorithms is provided.
 
 For more on ranges, see [Ranges](@ref ranges).
 
 ### Concurrency
 
-OctaSTD is a complete concurrency framework, implementing a clean and
+Libostd is a complete concurrency framework, implementing a clean and
 extensible system for working with logical tasks. It allows for custom
 schedulers and by default implements several scheduling approaches (1:1,
 N:1, M:N). It also implements stackful coroutines (on which the latter
@@ -55,9 +55,9 @@ things.
 
 ### Strings and formatting
 
-Thanks to ranges, OctaSTD provides very lightweight string slices. The
+Thanks to ranges, libostd provides very lightweight string slices. The
 slices are not zero terminated, so creating sub-slices is fast and avoids
-tons of potential heap allocations. None of the OctaSTD string APIs ever
+tons of potential heap allocations. None of the libostd string APIs ever
 assumes termination.
 
 Additionally, a completely type-safe string formatting system with C-like
@@ -72,7 +72,7 @@ All of this is zero-allocation, it lets the output range take care of that.
 
 There are other APIs, too, including environment variable handling, simple
 platform specific checks, a signal-slot event system or vector math. The
-amount is expected to grow in the future, as OctaSTD is still a work in
+amount is expected to grow in the future, as libostd is still a work in
 progress.
 
 ## Why C++17?
@@ -80,7 +80,7 @@ progress.
 C++17 includes several things that remove previous blockers, such as being
 able to hash string range types sanely. Additionally, there are several
 language features (such as `if constexpr`) that greatly simplify the code.
-OctaSTD does not make full use of the standard, so it works with current
+Libostd does not make full use of the standard, so it works with current
 compilers.
 
 ## Supported compilers
@@ -103,7 +103,7 @@ use GCC/Clang, if you need Visual Studio, LLVM integration exists.
 
 ## Supported operating systems and architectures
 
-OctaSTD targets POSIX compliant operating systems and Windows. Features are
+Libostd targets POSIX compliant operating systems and Windows. Features are
 written with those in mind, and other targets are currently not supported.
 
 Tier 1 targets are regularly tested. Tier 2 targets are irregularly tested.

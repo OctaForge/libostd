@@ -1,6 +1,6 @@
 # Ranges {#ranges}
 
-@brief Ranges are the backbone of OctaSTD iterable objects and algorithms.
+@brief Ranges are the backbone of libostd iterable objects and algorithms.
 
 ## What are ranges?
 
@@ -11,7 +11,7 @@ two iterators as an argument.
 
 However, a system like this can be both hard to use and hard to deal with in
 custom objects, because you suddenly have your state split into two things.
-That's why OctaSTD introduces ranges, inspired by D's range system but largely
+That's why libostd introduces ranges, inspired by D's range system but largely
 designed from scratch for C++.
 
 A range is a type that represents an interval of values. Just like with C++
@@ -19,7 +19,7 @@ iterators, there are several categories of ranges, with each enhancing the
 previous in some way.
 
 You can use ranges with custom algorithms or standard algorithms that are
-implemented by OctaSTD. You can also iterate any input-type range directly
+implemented by libostd. You can also iterate any input-type range directly
 using the range-based for loop:
 
 ~~~{.cc}

@@ -1,7 +1,7 @@
 *Last sync: 82293a2c03ac2571aafa181ea58a67375a13ceb9.*
 
 This directory contains assembly context switching code for different platforms,
-taken from the Boost.Context library and adapted to OctaSTD' needs. The files
+taken from the Boost.Context library and adapted to libostd's needs. The files
 are licensed under the Boost Software License, version 1.0, unless specified
 otherwise.
 

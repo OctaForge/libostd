@@ -1,6 +1,6 @@
 /* Concurrency C implementation bits.
  *
- * This file is part of OctaSTD. See COPYING.md for futher information.
+ * This file is part of libostd. See COPYING.md for futher information.
  */
 
 #include "ostd/concurrency.hh"

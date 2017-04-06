@@ -1,6 +1,6 @@
 /* Windows includes.
  *
- * This file is part of OctaSTD. See COPYING.md for futher information.
+ * This file is part of libostd. See COPYING.md for futher information.
  */
 
 #ifndef OSTD_INTERNAL_WIN32_HH
