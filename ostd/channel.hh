@@ -16,6 +16,7 @@
 #define OSTD_CHANNEL_HH
 
 #include <type_traits>
+#include <optional>
 #include <algorithm>
 #include <list>
 #include <mutex>
@@ -119,7 +120,7 @@ struct channel {
      *
      * @throws ostd::channel_error when the channel is closed.
      *
-     * @see put(T &&), get(), try_get(), close(), is_closed()
+     * @see put(T &&), get(), try_get(), close(), cloed()
      */
     void put(T const &val) {
         p_state->put(val);
@@ -147,13 +148,13 @@ struct channel {
      * moved out of the queue.
      *
      * If you don't want to wait and want to just check if there is something
-     * in the queue already, use try_get(T &).
+     * in the queue already, use try_get().
      *
      * @returns The first inserted value in the queue.
      *
      * @throws ostd::channel_error when the channel is closed.
      *
-     * @see try_get(T &), put(T const &), close(), is_closed()
+     * @see try_get(), put(T const &), close(), closed()
      */
     T get() {
         T ret;
@@ -164,17 +165,34 @@ struct channel {
 
     /** @brief Gets a value from the queue if there is one.
      *
-     * If a value is present in the queue, writes it into @p val and returns
-     * `true`. Otherwise returns `false`. See get() for a waiting version.
+     * If a value is present in the queue, returns the value.
+     * Otherwise returns std::nullopt. See get() for a waiting
+     * version.
      *
-     * @returns `true` if a value was retrieved and `false` otherwise.
+     * @returns The value or std::nullopt if there isn't one.
      *
      * @throws ostd::channel_error when the channel is closed.
      *
-     * @see try_get(T &), put(T const &), close(), is_closed()
+     * @see get(), put(T const &), close(), closed()
      */
-    bool try_get(T &val) {
-        return p_state->get(val, false);
+    std::optional<T> try_get() {
+        T ret;
+        if (!p_state->get(ret, false)) {
+            return std::nullopt;
+        }
+        return std::move(ret);
+    }
+
+    /** @brief Checks if the channel is empty.
+     *
+     * A channel is empty if there are no values in the queue. It's also
+     * considered empty if it's closed() (even if there are items left in
+     * the queue).
+     *
+     * @returns `true` if empty, `false` otherwise.
+     */
+    bool empty() const noexcept {
+        return p_state->empty();
     }
 
     /** @brief Checks if the channel is closed.
@@ -183,8 +201,8 @@ struct channel {
      *
      * @returns `true` if closed, `false` otherwise.
      */
-    bool is_closed() const noexcept {
-        return p_state->is_closed();
+    bool closed() const noexcept {
+        return p_state->closed();
     }
 
     /** Closes the channel. No effect if already closed. */
@@ -230,7 +248,12 @@ private:
             return true;
         }
 
-        bool is_closed() const noexcept {
+        bool empty() const noexcept {
+            std::lock_guard<std::mutex> l{p_lock};
+            return p_closed || p_messages.empty();
+        }
+
+        bool closed() const noexcept {
             std::lock_guard<std::mutex> l{p_lock};
             return p_closed;
         }
