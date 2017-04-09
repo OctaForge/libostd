@@ -3,6 +3,7 @@
  * This file is part of libostd. See COPYING.md for futher information.
  */
 
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cerrno>
@@ -24,9 +25,9 @@ bool file_stream::open(string_range path, stream_mode mode) {
     buf[path.size()] = '\0';
     p_owned = false;
 #ifndef OSTD_PLATFORM_WIN32
-    p_f = std::fopen(buf, filemodes[size_t(mode)]);
+    p_f = std::fopen(buf, filemodes[std::size_t(mode)]);
 #else
-    if (fopen_s(&p_f, buf, filemodes[size_t(mode)]) != 0) {
+    if (fopen_s(&p_f, buf, filemodes[std::size_t(mode)]) != 0) {
         return false;
     }
 #endif
@@ -84,8 +85,8 @@ void file_stream::flush() {
     }
 }
 
-size_t file_stream::read_bytes(void *buf, size_t count) {
-    size_t readn = std::fread(buf, 1, count, p_f);
+std::size_t file_stream::read_bytes(void *buf, std::size_t count) {
+    std::size_t readn = std::fread(buf, 1, count, p_f);
     if (readn != count) {
         if (std::feof(p_f) != 0) {
             return readn;
@@ -95,7 +96,7 @@ size_t file_stream::read_bytes(void *buf, size_t count) {
     return readn;
 }
 
-void file_stream::write_bytes(void const *buf, size_t count) {
+void file_stream::write_bytes(void const *buf, std::size_t count) {
     if (std::fwrite(buf, 1, count, p_f) != count) {
         throw stream_error{EIO, std::generic_category()};
     }

@@ -23,7 +23,7 @@
 #ifndef OSTD_PLATFORM_HH
 #define OSTD_PLATFORM_HH
 
-#include <stdlib.h>
+#include <cstddef>
 #include <cstdint>
 
 #include <type_traits>
@@ -278,7 +278,10 @@ inline std::uint64_t endian_swap64(std::uint64_t x) noexcept {
 
 /* endian swap */
 
-template<typename T, size_t N = sizeof(T), bool IsNum = std::is_arithmetic_v<T>>
+template<
+    typename T, std::size_t N = sizeof(T),
+    bool IsNum = std::is_arithmetic_v<T>
+>
 struct endian_swap;
 
 template<typename T>

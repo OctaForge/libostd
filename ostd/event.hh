@@ -6,6 +6,7 @@
 #ifndef OSTD_EVENT_HH
 #define OSTD_EVENT_HH
 
+#include <cstddef>
 #include <functional>
 #include <utility>
 
@@ -22,7 +23,7 @@ namespace detail {
             using func_t = std::function<void(C &, A...)>;
             auto *bufp = new unsigned char[sizeof(func_t) * p_nfuncs];
             func_t *nbuf = reinterpret_cast<func_t *>(bufp);
-            for (size_t i = 0; i < p_nfuncs; ++i)
+            for (std::size_t i = 0; i < p_nfuncs; ++i)
                 new (&nbuf[i]) func_t(ev.p_funcs[i]);
             p_funcs = nbuf;
         }
@@ -39,7 +40,7 @@ namespace detail {
             p_nfuncs = ev.p_nfuncs;
            auto *bufp = new unsigned char[sizeof(func_t) * p_nfuncs];
             func_t *nbuf = reinterpret_cast<func_t *>(bufp);
-            for (size_t i = 0; i < p_nfuncs; ++i) {
+            for (std::size_t i = 0; i < p_nfuncs; ++i) {
                 new (&nbuf[i]) func_t(ev.p_funcs[i]);
             }
             p_funcs = nbuf;
@@ -54,7 +55,7 @@ namespace detail {
         ~signal_base() { clear(); }
 
         void clear() {
-            for (size_t i = 0; i < p_nfuncs; ++i) {
+            for (std::size_t i = 0; i < p_nfuncs; ++i) {
                 using func = std::function<void(C &, A...)>;
                 p_funcs[i].~func();
             }
@@ -64,9 +65,9 @@ namespace detail {
         }
 
         template<typename F>
-        size_t connect(F &&func) {
+        std::size_t connect(F &&func) {
             using func_t = std::function<void(C &, A...)>;
-            for (size_t i = 0; i < p_nfuncs; ++i) {
+            for (std::size_t i = 0; i < p_nfuncs; ++i) {
                 if (!p_funcs[i]) {
                     p_funcs[i] = std::forward<F>(func);
                     return i;
@@ -74,7 +75,7 @@ namespace detail {
             }
             auto *bufp = new unsigned char[sizeof(func_t) * (p_nfuncs + 1)];
             func_t *nbuf = reinterpret_cast<func_t *>(bufp);
-            for (size_t i = 0; i < p_nfuncs; ++i) {
+            for (std::size_t i = 0; i < p_nfuncs; ++i) {
                 new (&nbuf[i]) func_t(std::move(p_funcs[i]));
                 p_funcs[i].~func_t();
             }
@@ -84,7 +85,7 @@ namespace detail {
             return p_nfuncs++;
         }
 
-        bool disconnect(size_t idx) {
+        bool disconnect(std::size_t idx) {
             if ((idx >= p_nfuncs) || !p_funcs[idx]) {
                 return false;
             }
@@ -97,7 +98,7 @@ namespace detail {
             if (!p_class) {
                 return;
             }
-            for (size_t i = 0; i < p_nfuncs; ++i) {
+            for (std::size_t i = 0; i < p_nfuncs; ++i) {
                 if (p_funcs[i]) {
                     p_funcs[i](*p_class, args...);
                 }
@@ -124,7 +125,7 @@ namespace detail {
     private:
         C *p_class;
         std::function<void(C &, A...)> *p_funcs;
-        size_t p_nfuncs;
+        std::size_t p_nfuncs;
     };
 } /* namespace detail */
 
@@ -151,9 +152,9 @@ public:
     void clear() { p_base.clear(); }
 
     template<typename F>
-    size_t connect(F &&func) { return p_base.connect(std::forward<F>(func)); }
+    std::size_t connect(F &&func) { return p_base.connect(std::forward<F>(func)); }
 
-    bool disconnect(size_t idx) { return p_base.disconnect(idx); }
+    bool disconnect(std::size_t idx) { return p_base.disconnect(idx); }
 
     template<typename ...Args>
     void emit(Args &&...args) { p_base.emit(std::forward<Args>(args)...); }
@@ -190,9 +191,9 @@ public:
     void clear() { p_base.clear(); }
 
     template<typename F>
-    size_t connect(F &&func) { return p_base.connect(std::forward<F>(func)); }
+    std::size_t connect(F &&func) { return p_base.connect(std::forward<F>(func)); }
 
-    bool disconnect(size_t idx) { return p_base.disconnect(idx); }
+    bool disconnect(std::size_t idx) { return p_base.disconnect(idx); }
 
     template<typename ...Args>
     void emit(Args &&...args) const { p_base.emit(std::forward<Args>(args)...); }

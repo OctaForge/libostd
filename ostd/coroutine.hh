@@ -20,6 +20,7 @@
 #ifndef OSTD_COROUTINE_HH
 #define OSTD_COROUTINE_HH
 
+#include <cstddef>
 #include <exception>
 #include <stdexcept>
 #include <typeinfo>
@@ -65,7 +66,7 @@ namespace detail {
 
     extern "C" OSTD_EXPORT
     fcontext_t OSTD_CDECL ostd_make_fcontext(
-        void *sp, size_t size, void (*fn)(transfer_t)
+        void *sp, std::size_t size, void (*fn)(transfer_t)
     );
 
     extern "C" OSTD_EXPORT
@@ -267,7 +268,7 @@ protected:
         p_stack = sa.allocate();
 
         void *sp = get_stack_ptr<SA>();
-        size_t asize = p_stack.size - (
+        std::size_t asize = p_stack.size - (
             static_cast<unsigned char *>(p_stack.ptr) -
             static_cast<unsigned char *>(sp)
         );
@@ -282,14 +283,14 @@ private:
     template<typename SA>
     void *get_stack_ptr() {
         /* 16 byte stack pointer alignment */
-        constexpr size_t salign = 16;
+        constexpr std::size_t salign = 16;
         /* makes enough space so that we can store the allocator at
          * stack pointer location (we'll need it for dealloc later)
          */
-        constexpr size_t sasize = sizeof(SA);
+        constexpr std::size_t sasize = sizeof(SA);
 
         void *sp = static_cast<unsigned char *>(p_stack.ptr) - sasize - salign;
-        size_t space = sasize + salign;
+        std::size_t space = sasize + salign;
         sp = std::align(salign, sasize, sp, space);
 
         return sp;
@@ -1203,8 +1204,8 @@ struct generator_range: input_range<generator_range<T>> {
     using range_category  = input_range_tag;
     using value_type      = T;
     using reference       = T &;
-    using size_type       = size_t;
-    using difference_type = ptrdiff_t;
+    using size_type       = std::size_t;
+    using difference_type = std::ptrdiff_t;
 
     /** Generator ranges are not default constructible. */
     generator_range() = delete;

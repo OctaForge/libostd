@@ -17,11 +17,8 @@
 #ifndef OSTD_FORMAT_HH
 #define OSTD_FORMAT_HH
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <cmath>
-
+#include <cstddef>
+#include <climits>
 #include <utility>
 #include <stdexcept>
 #include <locale>
@@ -111,8 +108,8 @@ namespace detail {
         return ret;
     }
 
-    inline size_t read_digits(string_range &fmt, char *buf) {
-        size_t ret = 0;
+    inline std::size_t read_digits(string_range &fmt, char *buf) {
+        std::size_t ret = 0;
         for (; !fmt.empty() && isdigit(fmt.front()); ++ret) {
             *buf++ = fmt.front();
             fmt.pop_front();
@@ -176,7 +173,7 @@ namespace detail {
 
     inline char const *escape_fmt_char(char v, char quote) {
         if ((v >= 0 && v < 0x20) || (v == quote)) {
-            return fmt_escapes[size_t(v)];
+            return fmt_escapes[std::size_t(v)];
         } else if (v == 0x7F) {
             return "\\x7F";
         }
@@ -185,7 +182,7 @@ namespace detail {
 
     /* retrieve width/precision */
     template<typename T, typename ...A>
-    inline int get_arg_param(size_t idx, T const &val, A const &...args) {
+    inline int get_arg_param(std::size_t idx, T const &val, A const &...args) {
         if (idx) {
             if constexpr(!sizeof...(A)) {
                 throw format_error{"not enough format args"};
@@ -414,8 +411,8 @@ namespace detail {
  *   allowed.
  * * Pointers are formatted then. If the `s` specifier is used, the pointer
  *   will be formatted as hex with the `0x` prefix. Otherwise it's converted
- *   to `size_t` and formatted with the specifier (might error depending on
- *   the specifier).
+ *   to `std::size_t` and formatted with the specifier (might error depending
+ *   on the specifier).
  * * Then integers are formatted. Using the `s` specifier is like using the
  *   `d` specifier.
  * * Floats follow. Using `s` is like using `g`.
@@ -623,7 +620,7 @@ struct format_spec {
      * @see set_width(), set_precision_arg();
      */
     template<typename ...A>
-    void set_width_arg(size_t idx, A const &...args) {
+    void set_width_arg(std::size_t idx, A const &...args) {
         p_width = detail::get_arg_param(idx, args...);
         p_has_width = p_arg_width = true;
     }
@@ -656,7 +653,7 @@ struct format_spec {
      * @see set_precision(), set_width_arg();
      */
     template<typename ...A>
-    void set_precision_arg(size_t idx, A const &...args) {
+    void set_precision_arg(std::size_t idx, A const &...args) {
         p_precision = detail::get_arg_param(idx, args...);
         p_has_precision = p_arg_precision = true;
     }
@@ -861,7 +858,7 @@ private:
     }
 
     bool read_spec() {
-        size_t ndig = detail::read_digits(p_fmt, p_buf);
+        std::size_t ndig = detail::read_digits(p_fmt, p_buf);
 
         bool havepos = false;
         p_index = 0;
@@ -877,11 +874,11 @@ private:
 
         /* parse flags */
         p_flags = p_gflags;
-        size_t skipd = 0;
+        std::size_t skipd = 0;
         if (havepos || !ndig) {
             p_flags |= detail::parse_fmt_flags(p_fmt, 0);
         } else {
-            for (size_t i = 0; i < ndig; ++i) {
+            for (std::size_t i = 0; i < ndig; ++i) {
                 if (p_buf[i] != '0') {
                     break;
                 }
@@ -944,7 +941,9 @@ private:
     }
 
     template<typename R>
-    void write_spaces(R &writer, size_t n, bool left, char c = ' ') const {
+    void write_spaces(
+        R &writer, std::size_t n, bool left, char c = ' '
+    ) const {
         if (left == bool(p_flags & FMT_FLAG_DASH)) {
             return;
         }
@@ -954,14 +953,14 @@ private:
     /* string base writer */
     template<typename R>
     void write_str(R &writer, bool escape, string_range val) const {
-        size_t n = val.size();
+        std::size_t n = val.size();
         if (has_precision()) {
-            n = std::min(n, size_t(precision()));
+            n = std::min(n, std::size_t(precision()));
         }
         write_spaces(writer, n, true);
         if (escape) {
             writer.put('"');
-            for (size_t i = 0; i < n; ++i) {
+            for (std::size_t i = 0; i < n; ++i) {
                 if (val.empty()) {
                     break;
                 }
@@ -989,7 +988,7 @@ private:
             if (esc) {
                 char buf[6];
                 buf[0] = '\'';
-                size_t elen = strlen(esc);
+                std::size_t elen = strlen(esc);
                 memcpy(buf + 1, esc, elen);
                 buf[elen + 1] = '\'';
                 write_val(writer, false, ostd::string_range{
@@ -1013,7 +1012,7 @@ private:
     void write_int(R &writer, bool ptr, bool neg, T val) const {
         /* binary representation is the biggest, assume grouping */
         char buf[sizeof(T) * CHAR_BIT * 2];
-        size_t n = 0;
+        std::size_t n = 0;
 
         char isp = spec();
         if (isp == 's') {
@@ -1053,11 +1052,11 @@ private:
             T vb = val % base;
             buf[n++] = (vb + "70"[vb < 10]) | cmask;
         }
-        size_t tn = n;
+        std::size_t tn = n;
         if (has_precision()) {
             int prec = precision();
-            if (size_t(prec) > tn) {
-                tn = size_t(prec);
+            if (std::size_t(prec) > tn) {
+                tn = std::size_t(prec);
             } else if (!prec && zval) {
                 tn = 0;
             }
@@ -1088,10 +1087,10 @@ private:
             write_spaces(writer, tn + (!!pfx * 2) + sign, true, '0');
         }
         if (tn) {
-            for (size_t i = 0; i < (tn - n); ++i) {
+            for (std::size_t i = 0; i < (tn - n); ++i) {
                 writer.put('0');
             }
-            for (size_t i = 0; i < n; ++i) {
+            for (std::size_t i = 0; i < n; ++i) {
                 writer.put(buf[n - i - 1]);
             }
         }
@@ -1209,7 +1208,7 @@ private:
          * char pointers are handled by the string case above
          */
         if constexpr(std::is_pointer_v<T>) {
-            write_int(writer, (spec() == 's'), false, size_t(val));
+            write_int(writer, (spec() == 's'), false, std::size_t(val));
             return;
         }
         /* integers */
@@ -1239,7 +1238,7 @@ private:
     /* actual writer */
     template<typename R, typename T, typename ...A>
     void write_arg(
-        R &writer, size_t idx, T const &val, A const &...args
+        R &writer, std::size_t idx, T const &val, A const &...args
     ) const {
         if (idx) {
             if constexpr(!sizeof...(A)) {
@@ -1302,7 +1301,7 @@ private:
     /* range writer */
     template<typename R, typename T, typename ...A>
     void write_range(
-        R &writer, size_t idx, bool expandval, string_range sep,
+        R &writer, std::size_t idx, bool expandval, string_range sep,
         T const &val, A const &...args
     ) const {
         if (idx) {
@@ -1323,7 +1322,7 @@ private:
         }
     }
 
-    template<size_t I, size_t N, typename R, typename T>
+    template<std::size_t I, std::size_t N, typename R, typename T>
     void write_tuple_val(
         R &writer, bool escape, string_range sep, T const &tup
     ) const {
@@ -1337,7 +1336,7 @@ private:
 
     template<typename R, typename T, typename ...A>
     void write_tuple(
-        R &writer, size_t idx, T const &val, A const &...args
+        R &writer, std::size_t idx, T const &val, A const &...args
     ) {
         if (idx) {
             if constexpr(!sizeof...(A)) {
@@ -1358,9 +1357,9 @@ private:
 
     template<typename R, typename ...A>
     void write_fmt(R &writer, A const &...args) {
-        size_t argidx = 1;
+        std::size_t argidx = 1;
         while (read_until_spec(writer)) {
-            size_t argpos = index();
+            std::size_t argpos = index();
             if (is_nested()) {
                 if (!argpos) {
                     argpos = argidx++;
@@ -1398,7 +1397,7 @@ private:
                     set_precision_arg(argpos - 2, args...);
                 }
                 if (arg_width()) {
-                    if (argpos <= (size_t(argprec) + 1)) {
+                    if (argpos <= (std::size_t(argprec) + 1)) {
                         throw format_error{"argument width not given"};
                     }
                     set_width_arg(argpos - 2 - argprec, args...);
@@ -1440,7 +1439,9 @@ private:
 
     template<typename R>
     struct fmt_num_put final: std::num_put<char, fmt_out<R>> {
-        fmt_num_put(size_t refs = 0): std::num_put<char, fmt_out<R>>(refs) {}
+        fmt_num_put(std::size_t refs = 0):
+            std::num_put<char, fmt_out<R>>(refs)
+        {}
         ~fmt_num_put() {}
     };
 

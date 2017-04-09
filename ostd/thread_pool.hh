@@ -15,6 +15,7 @@
 #ifndef OSTD_THREAD_POOL_HH
 #define OSTD_THREAD_POOL_HH
 
+#include <cstddef>
 #include <type_traits>
 #include <functional>
 #include <utility>
@@ -115,12 +116,12 @@ struct thread_pool {
      *
      * @param[in] size The number of threads to use.
      */
-    void start(size_t size = std::thread::hardware_concurrency()) {
+    void start(std::size_t size = std::thread::hardware_concurrency()) {
         p_running = true;
         auto tf = [this]() {
             thread_run();
         };
-        for (size_t i = 0; i < size; ++i) {
+        for (std::size_t i = 0; i < size; ++i) {
             p_thrs.push_back(std::thread{tf});
         }
     }

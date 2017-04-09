@@ -6,8 +6,7 @@
 #ifndef OSTD_ALGORITHM_HH
 #define OSTD_ALGORITHM_HH
 
-#include <math.h>
-
+#include <cmath>
 #include <utility>
 #include <functional>
 #include <type_traits>
@@ -148,10 +147,9 @@ namespace detail {
 
     template<typename R, typename C>
     inline void introsort(R range, C &compare) {
-        detail::introloop(
-            range, compare,
-            static_cast<range_size_t<R>>(2 * (log(range.size()) / log(2)))
-        );
+        detail::introloop(range, compare, static_cast<range_size_t<R>>(
+            2 * (std::log(range.size()) / std::log(2))
+        ));
     }
 } /* namespace detail */
 

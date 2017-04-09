@@ -38,6 +38,7 @@
 #ifndef OSTD_STREAM_HH
 #define OSTD_STREAM_HH
 
+#include <cstddef>
 #include <cerrno>
 #include <cstdlib>
 #include <type_traits>
@@ -223,7 +224,7 @@ struct stream {
      *
      * @see write_bytes(), get_char(), get(), get_line()
      */
-    virtual size_t read_bytes(void *, size_t) {
+    virtual std::size_t read_bytes(void *, std::size_t) {
         throw stream_error{EINVAL, std::generic_category()};
     }
 
@@ -244,7 +245,7 @@ struct stream {
      *
      * @see read_bytes(), put_char(), put(), write()
      */
-    virtual void write_bytes(void const *, size_t) {
+    virtual void write_bytes(void const *, std::size_t) {
         throw stream_error{EINVAL, std::generic_category()};
     }
 
@@ -429,7 +430,7 @@ struct stream {
      * @throws ostd::stream_error on write failure.
      */
     template<typename T>
-    void put(T const *v, size_t count) {
+    void put(T const *v, std::size_t count) {
         write_bytes(v, count * sizeof(T));
     }
 
@@ -456,7 +457,7 @@ struct stream {
      * @throws ostd::stream_error on read failure.
      */
     template<typename T>
-    size_t get(T *v, size_t count) {
+    std::size_t get(T *v, std::size_t count) {
         /* if eof was reached, at least return how many values succeeded */
         return read_bytes(v, count * sizeof(T)) / sizeof(T);
     }
@@ -556,7 +557,7 @@ struct stream_range<T, true>: input_range<stream_range<T>> {
     using range_category  = input_range_tag;
     using value_type      = T;
     using reference       = T;
-    using size_type       = size_t;
+    using size_type       = std::size_t;
     using difference_type = stream_off_t;
 
     /** @brief Stream ranges are not default constructible. */
@@ -670,7 +671,7 @@ struct stream_line_range: input_range<stream_line_range<T, TC>> {
     using range_category  = input_range_tag;
     using value_type      = TC;
     using reference       = TC &;
-    using size_type       = size_t;
+    using size_type       = std::size_t;
     using difference_type = stream_off_t;
 
     /** @brief Stream line ranges are not default constructible. */

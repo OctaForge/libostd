@@ -18,6 +18,7 @@
 #ifndef OSTD_CONTEXT_STACK_HH
 #define OSTD_CONTEXT_STACK_HH
 
+#include <cstddef>
 #include <new>
 #include <algorithm>
 
@@ -48,7 +49,7 @@ namespace ostd {
  */
 struct stack_context {
     void *ptr = nullptr; ///< The stack pointer.
-    size_t size = 0; ///< The stack size.
+    std::size_t size = 0; ///< The stack size.
 #ifdef OSTD_USE_VALGRIND
     int valgrind_id = 0;
 #endif
@@ -75,7 +76,7 @@ struct OSTD_EXPORT stack_traits {
      * some other value too. Stack sizes are typically a multiple of page
      * size.
      */
-    static size_t page_size() noexcept;
+    static std::size_t page_size() noexcept;
 
     /** @brief Gets the minimum size a stack can have.
      *
@@ -85,7 +86,7 @@ struct OSTD_EXPORT stack_traits {
      *
      * @see maximum_size(), default_size()
      */
-    static size_t minimum_size() noexcept;
+    static std::size_t minimum_size() noexcept;
 
     /** @brief Gets the maximum size a stack can have.
      *
@@ -95,7 +96,7 @@ struct OSTD_EXPORT stack_traits {
      *
      * @see minimum_size(), default_size()
      */
-    static size_t maximum_size() noexcept;
+    static std::size_t maximum_size() noexcept;
 
     /** @brief Gets the default size for stacks.
      *
@@ -105,14 +106,14 @@ struct OSTD_EXPORT stack_traits {
      *
      * @see minimum_size(), maximum_size()
      */
-    static size_t default_size() noexcept;
+    static std::size_t default_size() noexcept;
 };
 
 namespace detail {
-    OSTD_EXPORT void *stack_alloc(size_t sz);
-    OSTD_EXPORT void stack_free(void *p, size_t sz) noexcept;
-    OSTD_EXPORT void stack_protect(void *p, size_t sz) noexcept;
-    OSTD_EXPORT size_t stack_main_size() noexcept;
+    OSTD_EXPORT void *stack_alloc(std::size_t sz);
+    OSTD_EXPORT void stack_free(void *p, std::size_t sz) noexcept;
+    OSTD_EXPORT void stack_protect(void *p, std::size_t sz) noexcept;
+    OSTD_EXPORT std::size_t stack_main_size() noexcept;
 }
 
 /** @brief A fixed size stack.
@@ -159,7 +160,7 @@ struct basic_fixedsize_stack {
      * The provided argument is the size used for the stacks. It defaults
      * to the default size used for the stacks according to the traits.
      */
-    basic_fixedsize_stack(size_t ss = Traits::default_size()) noexcept:
+    basic_fixedsize_stack(std::size_t ss = Traits::default_size()) noexcept:
         p_size(
             Traits::is_unbounded()
                 ? std::max(ss, Traits::minimum_size())
@@ -169,10 +170,10 @@ struct basic_fixedsize_stack {
 
     /** @brief Allocates a stack. */
     stack_context allocate() {
-        size_t ss = p_size;
+        std::size_t ss = p_size;
 
-        size_t pgs = Traits::page_size();
-        size_t asize = ss + pgs - 1 - (ss - 1) % pgs + (pgs * Protected);
+        std::size_t pgs = Traits::page_size();
+        std::size_t asize = ss + pgs - 1 - (ss - 1) % pgs + (pgs * Protected);
 
         void *p = detail::stack_alloc(asize);
         if constexpr(Protected) {
@@ -207,7 +208,7 @@ struct basic_fixedsize_stack {
      * stacks can be reserved ahead of time. This allocates only one stack
      * at a time, so this function does nothing.
      */
-    void reserve(size_t) {}
+    void reserve(std::size_t) {}
 
     /** @brief Gets the allocator for stack pool uses.
      *
@@ -220,7 +221,7 @@ struct basic_fixedsize_stack {
     }
 
 private:
-    size_t p_size;
+    std::size_t p_size;
 };
 
 /** @brief An unprotected fixed size stack using ostd::stack_traits. */
@@ -270,7 +271,7 @@ private:
 
 public:
     /** @brief The default number of stacks to store in each chunk. */
-    static constexpr size_t DEFAULT_CHUNK_SIZE = 32;
+    static constexpr std::size_t DEFAULT_CHUNK_SIZE = 32;
 
     /** @brief The traits type used for the stacks. */
     using traits_type = Traits;
@@ -303,11 +304,12 @@ public:
      * @param cs The number of stacks in each chunk.
      */
     basic_stack_pool(
-        size_t ss = Traits::default_size(), size_t cs = DEFAULT_CHUNK_SIZE
+        std::size_t ss = Traits::default_size(),
+        std::size_t cs = DEFAULT_CHUNK_SIZE
     ) {
         /* precalculate the sizes */
-        size_t pgs = Traits::page_size();
-        size_t asize = ss + pgs - 1 - (ss - 1) % pgs + (pgs * Protected);
+        std::size_t pgs = Traits::page_size();
+        std::size_t asize = ss + pgs - 1 - (ss - 1) % pgs + (pgs * Protected);
         p_stacksize = asize;
         p_chunksize = cs * asize;
     }
@@ -347,8 +349,8 @@ public:
 
     /** @brief Destroys the stack pool and all memory managed by it. */
     ~basic_stack_pool() {
-        size_t ss = p_stacksize;
-        size_t cs = p_chunksize;
+        std::size_t ss = p_stacksize;
+        std::size_t cs = p_chunksize;
         void *pc = p_chunk;
         while (pc) {
             void *p = pc;
@@ -363,12 +365,12 @@ public:
      * to contain. If it already contains that number or more, this function
      * does nothing. Otherwise it potentially reserves some extra chunks.
      */
-    void reserve(size_t n) {
-        size_t cap = p_capacity;
+    void reserve(std::size_t n) {
+        std::size_t cap = p_capacity;
         if (n <= cap) {
             return;
         }
-        size_t cnum = p_chunksize / p_stacksize;
+        std::size_t cnum = p_chunksize / p_stacksize;
         p_unused = alloc_chunks(p_unused, (n - cap + cnum - 1) / cnum);
     }
 
@@ -380,7 +382,7 @@ public:
      */
     stack_context allocate() {
         stack_node *nd = request();
-        size_t ss = p_stacksize - sizeof(stack_node);
+        std::size_t ss = p_stacksize - sizeof(stack_node);
         auto *p = reinterpret_cast<unsigned char *>(nd) - ss;
         if constexpr(Protected) {
             detail::stack_protect(p, Traits::page_size());
@@ -436,15 +438,15 @@ private:
         stack_node *next;
     };
 
-    stack_node *alloc_chunks(stack_node *un, size_t n) {
-        size_t ss = p_stacksize;
-        size_t cs = p_chunksize;
-        size_t cnum = cs / ss;
+    stack_node *alloc_chunks(stack_node *un, std::size_t n) {
+        std::size_t ss = p_stacksize;
+        std::size_t cs = p_chunksize;
+        std::size_t cnum = cs / ss;
 
-        for (size_t ci = 0; ci < n; ++ci) {
+        for (std::size_t ci = 0; ci < n; ++ci) {
             void *chunk = detail::stack_alloc(cs);
             stack_node *prevn = un;
-            for (size_t i = cnum; i >= 2; --i) {
+            for (std::size_t i = cnum; i >= 2; --i) {
                 auto nd = get_node(chunk, ss, i);
                 nd->next_chunk = nullptr;
                 nd->next = prevn;
@@ -473,7 +475,7 @@ private:
         return r;
     }
 
-    stack_node *get_node(void *chunk, size_t ssize, size_t n) {
+    stack_node *get_node(void *chunk, std::size_t ssize, std::size_t n) {
         return reinterpret_cast<stack_node *>(
             static_cast<unsigned char *>(chunk) + (ssize * n) - sizeof(stack_node)
         );
@@ -482,9 +484,9 @@ private:
     void *p_chunk = nullptr;
     stack_node *p_unused = nullptr;
 
-    size_t p_chunksize;
-    size_t p_stacksize;
-    size_t p_capacity = 0;
+    std::size_t p_chunksize;
+    std::size_t p_stacksize;
+    std::size_t p_capacity = 0;
 };
 
 /** @brief Swaps two stack pools. */

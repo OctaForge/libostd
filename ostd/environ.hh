@@ -21,9 +21,8 @@
 #include "ostd/platform.hh"
 #include "ostd/internal/win32.hh"
 
-#include <stdlib.h>
-#include <string.h>
-
+#include <cstdlib>
+#include <cstring>
 #include <vector>
 #include <optional>
 
@@ -50,27 +49,11 @@ namespace ostd {
 inline std::optional<std::string> env_get(string_range name) {
     char buf[256];
     auto tbuf = to_temp_cstr(name, buf, sizeof(buf));
-#ifndef OSTD_PLATFORM_WIN32
-    char const *ret = getenv(tbuf.get());
+    char const *ret = std::getenv(tbuf.get());
     if (!ret) {
         return std::nullopt;
     }
     return std::string{ret};
-#else
-    std::vector<char> rbuf;
-    DWORD sz;
-    for (;;) {
-        sz = GetEnvironmentVariable(tbuf.get(), rbuf.data(), rbuf.capacity());
-        if (!sz) {
-            return std::nullopt;
-        }
-        if (sz < rbuf.capacity()) {
-            break;
-        }
-        rbuf.reserve(sz);
-    }
-    return std::string{rbuf.data(), sz};
-#endif
 }
 
 /** @brief Sets an environment variable.

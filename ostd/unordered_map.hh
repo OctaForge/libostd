@@ -14,6 +14,7 @@
 #ifndef OSTD_UNORDERED_MAP_HH
 #define OSTD_UNORDERED_MAP_HH
 
+#include <cstddef>
 #include <unordered_map>
 #include <type_traits>
 
@@ -61,7 +62,7 @@ template<
     typename A = std::allocator<std::pair<K const, T>>, typename R
 >
 inline std::unordered_map<K, T, H, E, A> make_unordered_map(
-    R range, size_t bcount = 1, H const &hash = H{},
+    R range, std::size_t bcount = 1, H const &hash = H{},
     E const &kequal = E{}, A const &alloc = A{}
 ) {
     static_assert(
@@ -119,7 +120,7 @@ inline std::unordered_map<
     std::tuple_element_t<0, range_value_t<R>>,
     std::tuple_element_t<1, range_value_t<R>>, H, E, A
 > make_unordered_map(
-    R &&range, size_t bcount = 1, H const &hash = H{},
+    R &&range, std::size_t bcount = 1, H const &hash = H{},
     E const &kequal = E{}, A const &alloc = A{}
 ) {
     static_assert(

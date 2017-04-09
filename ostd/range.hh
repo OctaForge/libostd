@@ -6,9 +6,7 @@
 #ifndef OSTD_RANGE_HH
 #define OSTD_RANGE_HH
 
-#include <stddef.h>
-#include <string.h>
-
+#include <cstddef>
 #include <new>
 #include <tuple>
 #include <utility>
@@ -273,7 +271,7 @@ inline range_size_t<IR> range_pop_front_n(IR &range, range_size_t<IR> n) {
         range = range.slice(n, rs);
         return n;
     } else {
-        size_t r = 0;
+        range_size_t<IR> r = 0;
         while (n-- && !range.empty()) {
             range.pop_front();
             ++r;
@@ -292,7 +290,7 @@ inline range_size_t<IR> range_pop_back_n(IR &range, range_size_t<IR> n) {
         range = range.slice(0, rs - n);
         return n;
     } else {
-        size_t r = 0;
+        range_size_t<IR> r = 0;
         while (n-- && !range.empty()) {
             range.pop_back();
             ++r;
@@ -404,8 +402,8 @@ template<typename T>
 struct noop_output_range: output_range<noop_output_range<T>> {
     using value_type      = T;
     using reference       = T &;
-    using size_type       = size_t;
-    using difference_type = ptrdiff_t;
+    using size_type       = std::size_t;
+    using difference_type = std::ptrdiff_t;
 
     void put(T const &) {}
 };
@@ -694,8 +692,8 @@ struct number_range: input_range<number_range<T>> {
     using range_category  = forward_range_tag;
     using value_type      = T;
     using reference       = T;
-    using size_type       = size_t;
-    using difference_type = ptrdiff_t;
+    using size_type       = std::size_t;
+    using difference_type = std::ptrdiff_t;
 
     number_range() = delete;
     number_range(T a, T b, T step = T(1)):
@@ -882,7 +880,7 @@ public:
 };
 
 namespace detail {
-    template<size_t I, size_t N, typename T>
+    template<std::size_t I, std::size_t N, typename T>
     inline void join_range_pop(T &tup) {
         if constexpr(I != N) {
             if (!std::get<I>(tup).empty()) {
@@ -893,7 +891,7 @@ namespace detail {
         }
     }
 
-    template<size_t I, size_t N, typename T>
+    template<std::size_t I, std::size_t N, typename T>
     inline auto join_range_front(T &tup) {
         if constexpr(I != N) {
             if (!std::get<I>(tup).empty()) {
@@ -1051,8 +1049,8 @@ struct appender_range: output_range<appender_range<T>> {
     void clear() { p_data.clear(); }
     bool empty() const { return p_data.empty(); }
 
-    void reserve(typename T::size_type cap) { p_data.reserve(cap); }
-    void resize(typename T::size_type len) { p_data.resize(len); }
+    void reserve(size_type cap) { p_data.reserve(cap); }
+    void resize(size_type len) { p_data.resize(len); }
 
     size_type size() const { return p_data.size(); }
     size_type capacity() const { return p_data.capacity(); }
@@ -1245,7 +1243,7 @@ iterator_range<T const *> citer(std::initializer_list<T> init) noexcept {
     return iterator_range<T const *>(init.begin(), init.end());
 }
 
-template<typename T, size_t N>
+template<typename T, std::size_t N>
 struct ranged_traits<T[N]> {
     using range = iterator_range<T *>;
 

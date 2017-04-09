@@ -3,6 +3,7 @@
  * This file is part of libostd. See COPYING.md for futher information.
  */
 
+#include <cstddef>
 #include <cstdlib>
 #include <new>
 #include <mutex>
@@ -35,7 +36,7 @@ namespace detail {
 #  endif
 #endif
 
-    OSTD_EXPORT void *stack_alloc(size_t sz) {
+    OSTD_EXPORT void *stack_alloc(std::size_t sz) {
 #if defined(OSTD_PLATFORM_WIN32)
         void *p = VirtualAlloc(0, sz, MEM_COMMIT, PAGE_READWRITE);
         if (!p) {
@@ -61,7 +62,7 @@ namespace detail {
 #endif
     }
 
-    OSTD_EXPORT void stack_free(void *p, size_t sz) noexcept {
+    OSTD_EXPORT void stack_free(void *p, std::size_t sz) noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
         (void)sz;
         VirtualFree(p, 0, MEM_RELEASE);
@@ -74,18 +75,18 @@ namespace detail {
 #endif
     }
 
-    OSTD_EXPORT size_t stack_main_size() noexcept {
+    OSTD_EXPORT std::size_t stack_main_size() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
         /* 4 MiB for windows... */
         return 4 * 1024 * 1024;
 #else
         struct rlimit l;
         getrlimit(RLIMIT_STACK, &l);
-        return size_t(l.rlim_cur);
+        return std::size_t(l.rlim_cur);
 #endif
     }
 
-    OSTD_EXPORT void stack_protect(void *p, size_t sz) noexcept {
+    OSTD_EXPORT void stack_protect(void *p, std::size_t sz) noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
         DWORD oo;
         VirtualProtect(p, sz, PAGE_READWRITE | PAGE_GUARD, &oo);
@@ -95,13 +96,13 @@ namespace detail {
     }
 
     /* used by stack traits */
-    inline void ctx_pagesize(size_t *s) noexcept {
+    inline void ctx_pagesize(std::size_t *s) noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
         SYSTEM_INFO si;
         GetSystemInfo(&si);
-        *s = size_t(si.dwPageSize);
+        *s = std::size_t(si.dwPageSize);
 #elif defined(OSTD_PLATFORM_POSIX)
-        *s = size_t(sysconf(_SC_PAGESIZE));
+        *s = std::size_t(sysconf(_SC_PAGESIZE));
 #endif
     }
 
@@ -127,14 +128,14 @@ bool stack_traits::is_unbounded() noexcept {
 #endif
 }
 
-size_t stack_traits::page_size() noexcept {
-    static size_t size = 0;
+std::size_t stack_traits::page_size() noexcept {
+    static std::size_t size = 0;
     static std::once_flag fl;
     std::call_once(fl, detail::ctx_pagesize, &size);
     return size;
 }
 
-size_t stack_traits::minimum_size() noexcept {
+std::size_t stack_traits::minimum_size() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
     /* no func on windows, sane default of 8 KiB */
     return 8 * 1024;
@@ -144,7 +145,7 @@ size_t stack_traits::minimum_size() noexcept {
 #endif
 }
 
-size_t stack_traits::maximum_size() noexcept {
+std::size_t stack_traits::maximum_size() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
     /* value is technically undefined when is_unbounded() is
      * true, just default to 1 GiB so we actually return something
@@ -152,21 +153,21 @@ size_t stack_traits::maximum_size() noexcept {
     return 1024 * 1024 * 1024;
 #elif defined(OSTD_PLATFORM_POSIX)
     /* can be RLIM_INFINITY, but that's ok, see above */
-    return size_t(detail::ctx_rlimit().rlim_max);
+    return std::size_t(detail::ctx_rlimit().rlim_max);
 #endif
 }
 
-size_t stack_traits::default_size() noexcept {
+std::size_t stack_traits::default_size() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
     /* no func on windows either, default to 64 KiB */
     return 8 * 8 * 1024;
 #elif defined(OSTD_PLATFORM_POSIX)
     /* default to at least 64 KiB (see minimum_size comment) */
-    constexpr size_t r = std::max(8 * 8 * 1024, SIGSTKSZ);
+    constexpr std::size_t r = std::max(8 * 8 * 1024, SIGSTKSZ);
     if (is_unbounded()) {
         return r;
     }
-    size_t m = maximum_size();
+    std::size_t m = maximum_size();
     if (r > m) {
         return m;
     }

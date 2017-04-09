@@ -46,6 +46,7 @@
 #ifndef OSTD_CONCURRENCY_HH
 #define OSTD_CONCURRENCY_HH
 
+#include <cstddef>
 #include <vector>
 #include <list>
 #include <thread>
@@ -162,7 +163,7 @@ public:
 
     /** @brief Deallocates a stack allocated with allocate_stack().
      *
-     * @see allocate_stack(), reserve_stacks(size_t), get_stack_allocator()
+     * @see allocate_stack(), reserve_stacks(), get_stack_allocator()
      */
     virtual void deallocate_stack(stack_context &st) noexcept = 0;
 
@@ -174,7 +175,7 @@ public:
      *
      * @see allocate_stack(), deallocate_stack(), get_stack_allocator()
      */
-    virtual void reserve_stacks(size_t n) = 0;
+    virtual void reserve_stacks(std::size_t n) = 0;
 
     /** @brief Gets a stack allocator using the scheduler's stack allocation.
      *
@@ -355,7 +356,7 @@ struct basic_thread_scheduler: scheduler {
         }
     }
 
-    void reserve_stacks(size_t n) {
+    void reserve_stacks(std::size_t n) {
         if constexpr(!SA::is_thread_safe) {
             std::lock_guard<std::mutex> l{p_lock};
             p_stacks.reserve(n);
@@ -595,7 +596,7 @@ public:
         p_stacks.deallocate(st);
     }
 
-    void reserve_stacks(size_t n) {
+    void reserve_stacks(std::size_t n) {
         p_stacks.reserve(n);
     }
 
@@ -720,7 +721,7 @@ public:
      * @param[in] sa The provided stack allocator.
      */
     basic_coroutine_scheduler(
-        size_t thrs = std::thread::hardware_concurrency(), SA &&sa = SA{}
+        std::size_t thrs = std::thread::hardware_concurrency(), SA &&sa = SA{}
     ):
         p_threads(thrs), p_stacks(std::move(sa))
     {}
@@ -830,7 +831,7 @@ public:
         }
     }
 
-    void reserve_stacks(size_t n) {
+    void reserve_stacks(std::size_t n) {
         if constexpr(!SA::is_thread_safe) {
             std::lock_guard<std::mutex> l{p_lock};
             p_stacks.reserve(n);
@@ -862,13 +863,13 @@ private:
     }
 
     void init() {
-        size_t size = p_threads;
+        std::size_t size = p_threads;
         std::vector<std::thread> thrs;
         thrs.reserve(size);
-        for (size_t i = 0; i < size; ++i) {
+        for (std::size_t i = 0; i < size; ++i) {
             thrs.emplace_back([this]() { thread_run(); });
         }
-        for (size_t i = 0; i < size; ++i) {
+        for (std::size_t i = 0; i < size; ++i) {
             if (thrs[i].joinable()) {
                 thrs[i].join();
             }
@@ -951,7 +952,7 @@ private:
         }
     }
 
-    size_t p_threads;
+    std::size_t p_threads;
     std::condition_variable p_cond;
     std::mutex p_lock;
     SA p_stacks;
@@ -1019,7 +1020,7 @@ inline generator<T> make_generator(F &&func) {
     return detail::current_scheduler->make_generator<T>(std::forward<F>(func));
 }
 
-inline void reserve_stacks(size_t n) {
+inline void reserve_stacks(std::size_t n) {
     detail::current_scheduler->reserve_stacks(n);
 }
 

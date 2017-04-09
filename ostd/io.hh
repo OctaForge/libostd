@@ -16,6 +16,7 @@
 #ifndef OSTD_IO_HH
 #define OSTD_IO_HH
 
+#include <cstddef>
 #include <cstdio>
 #include <cerrno>
 
@@ -203,7 +204,7 @@ struct OSTD_EXPORT file_stream: stream {
      *
      * @see write_bytes()
      */
-    size_t read_bytes(void *buf, size_t count);
+    std::size_t read_bytes(void *buf, std::size_t count);
 
     /** @brief Writes `count` bytes into the stream.
      *
@@ -211,7 +212,7 @@ struct OSTD_EXPORT file_stream: stream {
      *
      * @see read_bytes()
      */
-    void write_bytes(void const *buf, size_t count);
+    void write_bytes(void const *buf, std::size_t count);
 
     /** @brief Reads a single character from the stream.
      *
@@ -280,8 +281,8 @@ namespace detail {
     struct stdout_range: output_range<stdout_range> {
         using value_type      = char;
         using reference       = char &;
-        using size_type       = size_t;
-        using difference_type = ptrdiff_t;
+        using size_type       = std::size_t;
+        using difference_type = std::ptrdiff_t;
 
         stdout_range() {}
         void put(char c) {

@@ -6,6 +6,8 @@
 #ifndef OSTD_VECMATH_HH
 #define OSTD_VECMATH_HH
 
+#include <cstddef>
+
 namespace ostd {
 
 template<typename T>
@@ -20,8 +22,8 @@ struct vec2 {
     vec2(T v): x(v), y(v) {}
     vec2(T x, T y): x(x), y(y) {}
 
-    T &operator[](size_t idx)       { return value[idx]; }
-    T  operator[](size_t idx) const { return value[idx]; }
+    T &operator[](std::size_t idx)       { return value[idx]; }
+    T  operator[](std::size_t idx) const { return value[idx]; }
 
     vec2 &add(T v) {
         x += v; y += v;
@@ -146,8 +148,8 @@ struct vec3 {
     vec3(T v): x(v), y(v), z(v) {}
     vec3(T x, T y, T z): x(x), y(y), z(z) {}
 
-    T &operator[](size_t idx)       { return value[idx]; }
-    T  operator[](size_t idx) const { return value[idx]; }
+    T &operator[](std::size_t idx)       { return value[idx]; }
+    T  operator[](std::size_t idx) const { return value[idx]; }
 
     vec3 &add(T v) {
         x += v; y += v; z += v;
@@ -272,8 +274,8 @@ struct vec4 {
     vec4(T v): x(v), y(v), z(v), w(v) {}
     vec4(T x, T y, T z, T w): x(x), y(y), z(z), w(w) {}
 
-    T &operator[](size_t idx)       { return value[idx]; }
-    T  operator[](size_t idx) const { return value[idx]; }
+    T &operator[](std::size_t idx)       { return value[idx]; }
+    T  operator[](std::size_t idx) const { return value[idx]; }
 
     vec4 &add(T v) {
         x += v; y += v; z += v; w += v;

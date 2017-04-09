@@ -6,10 +6,8 @@
 #ifndef OSTD_STRING_HH
 #define OSTD_STRING_HH
 
-#include <stdio.h>
-#include <stddef.h>
-#include <ctype.h>
-
+#include <cstddef>
+#include <cctype>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -27,8 +25,8 @@ struct basic_char_range: input_range<basic_char_range<T>> {
     using range_category  = contiguous_range_tag;
     using value_type      = T;
     using reference       = T &;
-    using size_type       = size_t;
-    using difference_type = ptrdiff_t;
+    using size_type       = std::size_t;
+    using difference_type = std::ptrdiff_t;
 
 private:
     struct nat {};
@@ -43,7 +41,7 @@ public:
         std::is_convertible_v<U, T *>, nat
     > = nat{}): p_beg(beg) {
         if constexpr(std::is_array_v<std::remove_reference_t<U>>) {
-            size_t N = std::extent_v<std::remove_reference_t<U>>;
+            std::size_t N = std::extent_v<std::remove_reference_t<U>>;
             p_end = beg + N - (beg[N - 1] == '\0');
         } else {
             p_end = beg + (beg ? TR::length(beg) : 0);
@@ -95,16 +93,16 @@ public:
 
     T &back() const { return *(p_end - 1); }
 
-    size_t size() const { return p_end - p_beg; }
+    size_type size() const { return p_end - p_beg; }
 
-    basic_char_range slice(size_t start, size_t end) const {
+    basic_char_range slice(size_type start, size_type end) const {
         return basic_char_range(p_beg + start, p_beg + end);
     }
-    basic_char_range slice(size_t start) const {
+    basic_char_range slice(size_type start) const {
         return slice(start, size());
     }
 
-    T &operator[](size_t i) const { return p_beg[i]; }
+    T &operator[](size_type i) const { return p_beg[i]; }
 
     void put(T v) {
         if (p_beg == p_end) {
@@ -118,7 +116,7 @@ public:
 
     /* non-range */
     int compare(basic_char_range<T const> s) const {
-        size_t s1 = size(), s2 = s.size();
+        size_type s1 = size(), s2 = s.size();
         int ret;
         if (!s1 || !s2) {
             goto diffsize;
@@ -131,9 +129,9 @@ diffsize:
     }
 
     int case_compare(basic_char_range<T const> s) const {
-        size_t s1 = size(), s2 = s.size();
-        for (size_t i = 0, ms = std::min(s1, s2); i < ms; ++i) {
-            int d = toupper(p_beg[i]) - toupper(s[i]);
+        size_type s1 = size(), s2 = s.size();
+        for (size_type i = 0, ms = std::min(s1, s2); i < ms; ++i) {
+            int d = std::toupper(p_beg[i]) - std::toupper(s[i]);
             if (d) {
                 return d;
             }
@@ -381,7 +379,7 @@ inline std::basic_string<std::remove_cv_t<range_value_t<R>>, TR, A> make_string(
 
 inline namespace literals {
 inline namespace string_literals {
-    inline string_range operator "" _sr(char const *str, size_t len) {
+    inline string_range operator "" _sr(char const *str, std::size_t len) {
         return string_range(str, str + len);
     }
 }
@@ -396,12 +394,15 @@ private:
 public:
     temp_c_string() = delete;
     temp_c_string(temp_c_string const &) = delete;
-    temp_c_string(temp_c_string &&s): p_buf(s.p_buf), p_allocated(s.p_allocated) {
+    temp_c_string(temp_c_string &&s):
+        p_buf(s.p_buf), p_allocated(s.p_allocated)
+    {
         s.p_buf = nullptr;
         s.p_allocated = false;
     }
-    temp_c_string(R input, std::remove_cv_t<range_value_t<R>> *sbuf, size_t bufsize)
-    : p_buf(nullptr), p_allocated(false) {
+    temp_c_string(
+        R input, std::remove_cv_t<range_value_t<R>> *sbuf, std::size_t bufsize
+    ): p_buf(nullptr), p_allocated(false) {
         if (input.empty()) {
             return;
         }
@@ -427,8 +428,12 @@ public:
         return *this;
     }
 
-    operator std::remove_cv_t<range_value_t<R>> const *() const { return p_buf; }
-    std::remove_cv_t<range_value_t<R>> const *get() const { return p_buf; }
+    operator std::remove_cv_t<range_value_t<R>> const *() const {
+        return p_buf;
+    }
+    std::remove_cv_t<range_value_t<R>> const *get() const {
+        return p_buf;
+    }
 
     void swap(temp_c_string &s) {
         using std::swap;
@@ -444,7 +449,7 @@ inline void swap(temp_c_string<R> &a, temp_c_string<R> &b) {
 
 template<typename R>
 inline temp_c_string<R> to_temp_cstr(
-    R input, std::remove_cv_t<range_value_t<R>> *buf, size_t bufsize
+    R input, std::remove_cv_t<range_value_t<R>> *buf, std::size_t bufsize
 ) {
     return temp_c_string<R>(input, buf, bufsize);
 }
@@ -455,7 +460,7 @@ namespace std {
 
 template<typename T, typename TR>
 struct hash<ostd::basic_char_range<T, TR>> {
-    size_t operator()(ostd::basic_char_range<T, TR> const &v) const {
+    std::size_t operator()(ostd::basic_char_range<T, TR> const &v) const {
         return hash<std::basic_string_view<std::remove_const_t<T>, TR>>{}(v);
     }
 };

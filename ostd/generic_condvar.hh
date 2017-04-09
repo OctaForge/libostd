@@ -145,8 +145,8 @@ struct generic_condvar {
     }
 
 private:
-    static constexpr size_t cvars = sizeof(std::condition_variable);
-    static constexpr size_t icvars =
+    static constexpr auto cvars = sizeof(std::condition_variable);
+    static constexpr auto icvars =
         sizeof(detail::cond_impl<std::condition_variable>);
     std::aligned_storage_t<std::max(
         6 * sizeof(void *) + (icvars - cvars), icvars
