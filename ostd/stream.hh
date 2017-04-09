@@ -192,6 +192,9 @@ struct stream {
      * If this is a writeable stream which has a buffer and any unwritten
      * data in it, this will make sure the data is actually written. By
      * default this does nothing, but other impls will want to override it.
+     *
+     * If the flush of a buffered stream fails, this should actually throw
+     * an appropriate ostd::stream_error.
      */
     virtual void flush() {}
 
