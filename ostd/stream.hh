@@ -467,7 +467,7 @@ struct stream {
      * If the value couldn't be read (reading failed or end-of-stream
      * occured), this throws ostd::stream_error. The type must be POD.
      *
-     * @thorws ostd::stream_error on read failure or end-of-stream.
+     * @throws ostd::stream_error on read failure or end-of-stream.
      */
     template<typename T>
     void get(T &v) {
@@ -483,7 +483,7 @@ struct stream {
      *
      * @returns The read value.
      *
-     * @thorws ostd::stream_error on read failure or end-of-stream.
+     * @throws ostd::stream_error on read failure or end-of-stream.
      */
     template<typename T>
     T get() {
