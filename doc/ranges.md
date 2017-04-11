@@ -493,11 +493,8 @@ returning a lambda:
 ~~~{.cc}
     template<typename T>
     void my_generic_algorithm(T &&arg) {
-        return [arg = std::forward<T>(arg)](auto &&range) {
-            my_generic_algorithm(
-                std::forward<decltype(range)>(range),
-                std::forward<T>(arg)
-            );
+        return [arg = std::forward<T>(arg)](auto &range) {
+            my_generic_algorithm(range, std::forward<T>(arg));
         };
     }
 ~~~

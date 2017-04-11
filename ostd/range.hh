@@ -708,26 +708,14 @@ struct input_range {
 
     /** @brief A necessary overload for pipeable algorithm support. */
     template<typename F>
-    auto operator|(F &&func) & {
+    auto operator|(F &&func) {
         return func(*static_cast<B *>(this));
     }
 
     /** @brief A necessary overload for pipeable algorithm support. */
     template<typename F>
-    auto operator|(F &&func) const & {
+    auto operator|(F &&func) const {
         return func(*static_cast<B const *>(this));
-    }
-
-    /** @brief A necessary overload for pipeable algorithm support. */
-    template<typename F>
-    auto operator|(F &&func) && {
-        return func(std::move(*static_cast<B *>(this)));
-    }
-
-    /** @brief A necessary overload for pipeable algorithm support. */
-    template<typename F>
-    auto operator|(F &&func) const && {
-        return func(std::move(*static_cast<B const *>(this)));
     }
 
     /* universal bool operator */
@@ -826,35 +814,35 @@ inline counting_output_range<R> range_counter(R const &range) {
 
 /** @brief A pipeable version of ostd::input_range::reverse(). */
 inline auto reverse() {
-    return [](auto &&obj) { return obj.reverse(); };
+    return [](auto &obj) { return obj.reverse(); };
 }
 
 /** @brief A pipeable version of ostd::input_range::movable(). */
 inline auto movable() {
-    return [](auto &&obj) { return obj.movable(); };
+    return [](auto &obj) { return obj.movable(); };
 }
 
 /** @brief A pipeable version of ostd::input_range::enumerate(). */
 inline auto enumerate() {
-    return [](auto &&obj) { return obj.enumerate(); };
+    return [](auto &obj) { return obj.enumerate(); };
 }
 
 /** @brief A pipeable version of ostd::input_range::take(). */
 template<typename T>
 inline auto take(T n) {
-    return [n](auto &&obj) { return obj.take(n); };
+    return [n](auto &obj) { return obj.take(n); };
 }
 
 /** @brief A pipeable version of ostd::input_range::chunks(). */
 template<typename T>
 inline auto chunks(T n) {
-    return [n](auto &&obj) { return obj.chunks(n); };
+    return [n](auto &obj) { return obj.chunks(n); };
 }
 
 /** @brief A pipeable version of ostd::input_range::join(). */
 template<typename R>
 inline auto join(R &&range) {
-    return [range = std::forward<R>(range)](auto &&obj) mutable {
+    return [range = std::forward<R>(range)](auto &obj) mutable {
         return obj.join(std::forward<R>(range));
     };
 }
@@ -866,7 +854,7 @@ inline auto join(R1 &&r1, R &&...rr) {
         ranges = std::forward_as_tuple(
             std::forward<R1>(r1), std::forward<R>(rr)...
         )
-    ] (auto &&obj) mutable {
+    ] (auto &obj) mutable {
         return std::apply([&obj](auto &&...args) mutable {
             return obj.join(std::forward<decltype(args)>(args)...);
         }, std::move(ranges));
@@ -876,7 +864,7 @@ inline auto join(R1 &&r1, R &&...rr) {
 /** @brief A pipeable version of ostd::input_range::zip(). */
 template<typename R>
 inline auto zip(R &&range) {
-    return [range = std::forward<R>(range)](auto &&obj) mutable {
+    return [range = std::forward<R>(range)](auto &obj) mutable {
         return obj.zip(std::forward<R>(range));
     };
 }
@@ -888,7 +876,7 @@ inline auto zip(R1 &&r1, R &&...rr) {
         ranges = std::forward_as_tuple(
             std::forward<R1>(r1), std::forward<R>(rr)...
         )
-    ] (auto &&obj) mutable {
+    ] (auto &obj) mutable {
         return std::apply([&obj](auto &&...args) mutable {
             return obj.zip(std::forward<decltype(args)>(args)...);
         }, std::move(ranges));
