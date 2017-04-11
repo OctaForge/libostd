@@ -699,21 +699,6 @@ public:
     template<typename FF>
     map_range(T const &range, FF &&func):
         p_range(range), p_func(std::forward<FF>(func)) {}
-    map_range(map_range const &it):
-        p_range(it.p_range), p_func(it.p_func) {}
-    map_range(map_range &&it):
-        p_range(std::move(it.p_range)), p_func(std::move(it.p_func)) {}
-
-    map_range &operator=(map_range const &v) {
-        p_range = v.p_range;
-        p_func  = v.p_func;
-        return *this;
-    }
-    map_range &operator=(map_range &&v) {
-        p_range = std::move(v.p_range);
-        p_func  = std::move(v.p_func);
-        return *this;
-    }
 
     bool empty() const { return p_range.empty(); }
     size_type size() const { return p_range.size(); }
@@ -782,29 +767,6 @@ public:
         p_range(range), p_pred(std::forward<P>(pred))
     {
         advance_valid();
-    }
-    filter_range(filter_range const &it):
-        p_range(it.p_range), p_pred(it.p_pred)
-    {
-        advance_valid();
-    }
-    filter_range(filter_range &&it):
-        p_range(std::move(it.p_range)), p_pred(std::move(it.p_pred))
-    {
-        advance_valid();
-    }
-
-    filter_range &operator=(filter_range const &v) {
-        p_range = v.p_range;
-        p_pred  = v.p_pred;
-        advance_valid();
-        return *this;
-    }
-    filter_range &operator=(filter_range &&v) {
-        p_range = std::move(v.p_range);
-        p_pred  = std::move(v.p_pred);
-        advance_valid();
-        return *this;
     }
 
     bool empty() const { return p_range.empty(); }
