@@ -65,7 +65,7 @@ namespace detail {
  * space is the size of that).
  */
 struct generic_condvar {
-    /** Constructs the condvar using std::condition_variable. */
+    /** @brief Constructs the condvar using std::condition_variable. */
     generic_condvar() {
         new (reinterpret_cast<void *>(&p_condbuf))
             detail::cond_impl<std::condition_variable>();
@@ -86,19 +86,12 @@ struct generic_condvar {
             detail::cond_impl<std::result_of_t<F()>>(func);
     }
 
-    /** Condvars are not copy constructible. */
     generic_condvar(generic_condvar const &) = delete;
-
-    /** Condvars are not move constructible. */
     generic_condvar(generic_condvar &&) = delete;
-
-    /** Condvars are not copy assignable. */
     generic_condvar &operator=(generic_condvar const &) = delete;
-
-    /** Condvars are not move assignable. */
     generic_condvar &operator=(generic_condvar &&) = delete;
 
-    /** Destroys the stored condvar. */
+    /** @brief Destroys the stored condvar. */
     ~generic_condvar() {
         reinterpret_cast<detail::cond_iface *>(&p_condbuf)->~cond_iface();
     }

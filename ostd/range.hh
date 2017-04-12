@@ -782,7 +782,6 @@ private:
     size_type p_written = 0;
 
 public:
-    /** @brief A range to wrap is needed. */
     counting_output_range() = delete;
 
     /** @brief Constructs the range from an existing range. */
@@ -1017,7 +1016,6 @@ private:
     T p_range;
 
 public:
-    /** @brief Not default constructible. */
     reverse_range() = delete;
 
     /** @brief Constructs a reverse range from a range. */
@@ -1099,7 +1097,6 @@ private:
     T p_range;
 
 public:
-    /** @brief Not default constructible. */
     move_range() = delete;
 
     /** @brief Constructs a move range from a range. */
@@ -1139,7 +1136,6 @@ struct number_range: input_range<number_range<T>> {
     using size_type       = std::size_t;
     using difference_type = std::ptrdiff_t;
 
-    /** @brief Not default constructible. */
     number_range() = delete;
 
     /** @brief Constructs the range from inputs.
@@ -1240,7 +1236,6 @@ private:
     size_type p_index;
 
 public:
-    /** @brief Not default constructible. */
     enumerated_range() = delete;
 
     /** @brief Constructs an enumerated range from a range. */
@@ -1296,7 +1291,6 @@ private:
     size_type p_remaining;
 
 public:
-    /** @brief Not default constructible. */
     take_range() = delete;
 
     /** @brief Constructs the range with some number of elements. */
@@ -1347,7 +1341,6 @@ private:
     size_type p_chunksize;
 
 public:
-    /** @brief Not default constructible. */
     chunks_range() = delete;
 
     /** @brief Constructs the range with some number of elements per chunk. */
@@ -1416,7 +1409,6 @@ private:
     std::tuple<R...> p_ranges;
 
 public:
-    /** @brief Not default constructible. */
     join_range() = delete;
 
     /** @brief Constructs the range from some ranges. */
@@ -1484,7 +1476,6 @@ private:
     std::tuple<R...> p_ranges;
 
 public:
-    /** @brief Not default constructible. */
     zip_range() = delete;
 
     /** @brief Constructs the range from some ranges. */

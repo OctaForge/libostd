@@ -32,7 +32,7 @@ namespace ostd {
  * @{
  */
 
-/** Thrown when manipulating a channel that has been closed. */
+/** @brief Thrown when manipulating a channel that has been closed. */
 struct channel_error: std::logic_error {
     using std::logic_error::logic_error;
 };
@@ -47,6 +47,12 @@ struct channel_error: std::logic_error {
  * channel instances can reference the same internal state. The internal
  * state is freed as soon as the last channel instance referencing it is
  * destroyed.
+ *
+ * Channels are move constructible. Moving a channel transfers the state
+ * into another channel and leaves the original state in an unusable
+ * state, with no reference count change. Copying a channel increases
+ * the reference count, so both instances point to the ssame state and
+ * both are valid.
  *
  * @tparam T The type of the values in the queue.
  */
@@ -80,34 +86,9 @@ struct channel {
     template<typename F>
     channel(F func): p_state(new impl{func}) {}
 
-    /** @brief Creates a new reference to the channel.
-     *
-     * This does not copy per se, as channels store a refcounted internal
-     * state. It increments the reference count on the state and creates
-     * a new channel instance that references this state.
-     *
-     * If you don't want to increment and instead you want to transfer the
-     * reference to a new instance, use channel(channel &&).
-     *
-     * @see channel(channel &&), operator=(channel const &)
-     */
     channel(channel const &) = default;
-
-    /** @brief Moves the internal state reference to a new channel instance.
-     *
-     * This is like channel(channel const &) except it does not increment
-     * the reference; it moves the reference to a new container instead,
-     * leaving the other one uninitialized. You cannot use the channel
-     * the reference was moved from anymore afterwards.
-     *
-     * @see channel(channel const &), operator=(channel &&)
-     */
     channel(channel &&) = default;
-
-    /** @see channel(channel const &) */
     channel &operator=(channel const &) = default;
-
-    /** @see channel(channel &&) */
     channel &operator=(channel &&) = default;
 
     /** @brief Inserts a copy of a value into the queue.
@@ -205,7 +186,7 @@ struct channel {
         return p_state->closed();
     }
 
-    /** Closes the channel. No effect if already closed. */
+    /** @brief Closes the channel. No effect if already closed. */
     void close() noexcept {
         p_state->close();
     }

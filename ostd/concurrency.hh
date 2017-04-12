@@ -97,23 +97,16 @@ private:
     };
 
 protected:
-    /** Does nothing, this base class is empty. */
+    /** @brief Does nothing, this base class is empty. */
     scheduler() {}
 
 public:
-    /** Does nothing, this base class is empty. */
+    /** @brief Does nothing, this base class is empty. */
     virtual ~scheduler() {}
 
-    /** A scheduler is not copy constructible. */
     scheduler(scheduler const &) = delete;
-
-    /** A scheduler is not move constructible. */
     scheduler(scheduler &&) = delete;
-
-    /** A scheduler is not copy assignable. */
     scheduler &operator=(scheduler const &) = delete;
-
-    /** A scheduler is not move assignable. */
     scheduler &operator=(scheduler &&) = delete;
 
     /** @brief Spawns a task.
@@ -128,7 +121,7 @@ public:
 
     /** @brief Tells the scheduler to re-schedule the current task.
      *
-     * In #ostd::thread_scheduler, this is just a hint, as it uses OS threading
+     * In ostd::thread_scheduler, this is just a hint, as it uses OS threading
      * facilities. In coroutine based schedulers, this will typically suspend
      * the currently running task and re-schedule it for later.
      *
@@ -136,7 +129,7 @@ public:
      */
     virtual void yield() noexcept = 0;
 
-    /** @brief Creates a condition variable using #ostd::generic_condvar.
+    /** @brief Creates a condition variable using ostd::generic_condvar.
      *
      * A scheduler might be using a custom condition variable type depending
      * on how its tasks are implemented. Other data structures might want to
@@ -292,7 +285,10 @@ namespace detail {
  */
 template<typename SA>
 struct basic_thread_scheduler: scheduler {
-    /* @brief Creates the scheduler.
+    /** @brief The stack allocator type. */
+    using allocator_type = SA;
+
+    /** @brief Creates the scheduler.
      *
      * @param[in] sa The provided stack allocator.
      */
@@ -393,7 +389,7 @@ private:
     std::mutex p_lock;
 };
 
-/** An #ostd::basic_thread_scheduler using #ostd::stack_pool. */
+/** @brief An ostd::basic_thread_scheduler using ostd::stack_pool. */
 using thread_scheduler = basic_thread_scheduler<stack_pool>;
 
 namespace detail {
@@ -464,6 +460,9 @@ namespace detail {
  */
 template<typename SA>
 struct basic_simple_coroutine_scheduler: scheduler {
+    /** @brief The stack allocator type. */
+    using allocator_type = SA;
+
 private:
     /* simple one just for channels */
     struct coro_cond {
@@ -620,7 +619,7 @@ private:
     typename std::list<detail::csched_task>::iterator p_idx = p_coros.end();
 };
 
-/** An #ostd::basic_simple_coroutine_scheduler using #ostd::stack_pool. */
+/** @brief An ostd::basic_simple_coroutine_scheduler using ostd::stack_pool. */
 using simple_coroutine_scheduler = basic_simple_coroutine_scheduler<stack_pool>;
 
 /** @brief A scheduler that uses a coroutine type for tasks on several threads.
@@ -636,6 +635,9 @@ using simple_coroutine_scheduler = basic_simple_coroutine_scheduler<stack_pool>;
  */
 template<typename SA>
 struct basic_coroutine_scheduler: scheduler {
+    /** @brief The stack allocator type. */
+    using allocator_type = SA;
+
 private:
     struct task_cond;
     struct task;
@@ -961,7 +963,7 @@ private:
     tlist p_running;
 };
 
-/** An #ostd::basic_coroutine_scheduler using #ostd::stack_pool. */
+/** @brief An ostd::basic_coroutine_scheduler using ostd::stack_pool. */
 using coroutine_scheduler = basic_coroutine_scheduler<stack_pool>;
 
 /** @brief Spawns a task on the currently in use scheduler.

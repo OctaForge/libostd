@@ -231,7 +231,7 @@ namespace ostd {
  * @{
  */
 
-#if defined(OSTD_TOOLCHAIN_GNU)
+#if defined(OSTD_TOOLCHAIN_GNU) && !defined(OSTD_GENERATING_DOC)
 
 /* using gcc/clang builtins */
 inline std::uint16_t endian_swap16(std::uint16_t x) noexcept {
@@ -244,7 +244,7 @@ inline std::uint64_t endian_swap64(std::uint64_t x) noexcept {
     return __builtin_bswap64(x);
 }
 
-#elif defined(OSTD_TOOLCHAIN_MSVC)
+#elif defined(OSTD_TOOLCHAIN_MSVC) && !defined(OSTD_GENERATING_DOC)
 
 /* using msvc builtins */
 inline std::uint16_t endian_swap16(std::uint16_t x) noexcept {
@@ -261,12 +261,18 @@ inline std::uint64_t endian_swap64(std::uint64_t x) noexcept {
 #else
 
 /* fallback */
+
+/** @brief 16-bit byte swap. */
 inline std::uint16_t endian_swap16(std::uint16_t x) noexcept {
     return (x << 8) | (x >> 8);
 }
+
+/** @brief 32-bit byte swap. */
 inline std::uint32_t endian_swap32(std::uint32_t x) noexcept {
     return (x << 24) | (x >> 24) | ((x >> 8) & 0xFF00) | ((x << 8) & 0xFF0000);
 }
+
+/** @brief 64-bit byte swap. */
 inline std::uint64_t endian_swap64(std::uint64_t x) noexcept {
     return endian_swap32(
         std::uint32_t(x >> 32)) |

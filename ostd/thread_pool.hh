@@ -126,7 +126,7 @@ struct thread_pool {
         }
     }
 
-    /** Calls destroy(). */
+    /** @brief Calls destroy(). */
     ~thread_pool() {
         destroy();
     }

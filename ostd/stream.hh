@@ -560,7 +560,6 @@ struct stream_range<T, true>: input_range<stream_range<T>> {
     using size_type       = std::size_t;
     using difference_type = stream_off_t;
 
-    /** @brief Stream ranges are not default constructible. */
     stream_range() = delete;
 
     /** @brief Creates a stream range using a stream. */
@@ -674,7 +673,6 @@ struct stream_line_range: input_range<stream_line_range<T, TC>> {
     using size_type       = std::size_t;
     using difference_type = stream_off_t;
 
-    /** @brief Stream line ranges are not default constructible. */
     stream_line_range() = delete;
 
     /** @brief Creates a stream line range using a stream.

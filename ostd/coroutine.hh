@@ -99,7 +99,7 @@ struct coroutine_context {
     }
 
 protected:
-    /** Does nothing, just default-initializes the members. */
+    /** @brief Does nothing, just default-initializes the members. */
     coroutine_context() {}
 
     /** @brief Unwinds the stack and frees it.
@@ -115,7 +115,6 @@ protected:
         free_stack();
     }
 
-    /** Coroutine contexts are not copy constructible. */
     coroutine_context(coroutine_context const &) = delete;
 
     /** @brief Moves the given context into this one.
@@ -134,7 +133,6 @@ protected:
         c.set_dead();
     }
 
-    /** Coroutine contexts are not copy assignable. */
     coroutine_context &operator=(coroutine_context const &) = delete;
 
     /** @brief Moves the given context into this one.
@@ -203,22 +201,22 @@ protected:
         p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
     }
 
-    /** Checks if the coroutine is suspended. */
+    /** @brief Checks if the coroutine is suspended. */
     bool is_hold() const {
         return (p_state == state::HOLD);
     }
 
-    /** Checks if the coroutine is dead. */
+    /** @brief Checks if the coroutine is dead. */
     bool is_dead() const {
         return (p_state == state::TERM);
     }
 
-    /** Marks the coroutine as dead. Only valid without an active context. */
+    /** @brief Marks the coroutine as dead. Only valid without an active context. */
     void set_dead() {
         p_state = state::TERM;
     }
 
-    /** Marks the coroutine as executing. Only valid before coro_jump(). */
+    /** @brief Marks the coroutine as executing. Only valid before coro_jump(). */
     void set_exec() {
         p_state = state::EXEC;
     }
@@ -235,7 +233,7 @@ protected:
         }
     }
 
-    /** Swaps the current context with another. */
+    /** @brief Swaps the current context with another. */
     void swap(coroutine_context &other) noexcept {
         using std::swap;
         swap(p_stack, other.p_stack);
@@ -725,10 +723,9 @@ private:
     };
 
 public:
-    /** The yielder type for the coroutine. Not opaque, but internal. */
+    /** @brief The yielder type for the coroutine. Not opaque, but internal. */
     using yield_type = yielder<R, A...>;
 
-    /** Coroutines are not default constructible. */
     coroutine() = delete;
 
     /** @brief Creates a coroutine using the given function.
@@ -763,7 +760,6 @@ public:
         this->set_dead();
     }
 
-    /** Coroutines are not copy constructible. */
     coroutine(coroutine const &) = delete;
 
     /** @brief Moves a coroutine.
@@ -779,7 +775,6 @@ public:
         c.p_stor.p_func = nullptr;
     }
 
-    /** Coroutines are not copy assignable. */
     coroutine &operator=(coroutine const &) = delete;
 
     /** @brief Moves a coroutine.
@@ -791,7 +786,7 @@ public:
         p_stor.swap(c.p_stor);
     }
 
-    /** Checks if the coroutine is alive, returning `true` if it is. */
+    /** @brief Checks if the coroutine is alive. */
     explicit operator bool() const noexcept {
         return !this->is_dead();
     }
@@ -833,13 +828,13 @@ public:
         return p_stor.get_result();
     }
 
-    /** Swaps two coroutines' states. */
+    /** @brief Swaps two coroutines' states. */
     void swap(coroutine &other) noexcept {
         p_stor.swap(other.p_stor);
         base_t::swap(other);
     }
 
-    /** Returns the RTTI of the function stored in the coroutine. */
+    /** @brief Returns the RTTI of the function stored in the coroutine. */
     std::type_info const &target_type() const {
         return p_stor.p_func.target_type();
     }
@@ -868,7 +863,7 @@ private:
     detail::coro_stor<yield_type, R, A...> p_stor;
 };
 
-/** Swaps two coroutines' states. */
+/** @brief Swaps two coroutines' states. */
 template<typename R, typename ...A>
 inline void swap(coroutine<R(A...)> &a, coroutine<R(A...)> &b) noexcept {
     a.swap(b);
@@ -970,13 +965,12 @@ private:
     };
 
 public:
-    /** As generators can be used with ranges, this is defined. */
+    /** @brief As generators can be used with ranges, this is defined. */
     using range = generator_range<T>;
 
-    /** The yielder type for the generator. Not opaque, but internal. */
+    /** @brief The yielder type for the generator. Not opaque, but internal. */
     using yield_type = yielder<T>;
 
-    /** Generators are not default constructible. */
     generator() = delete;
 
     /** @brief Creates a generator using the given function.
@@ -1018,7 +1012,6 @@ public:
         this->set_dead();
     }
 
-    /** Generators are not copy constructible. */
     generator(generator const &) = delete;
 
     /** @brief Moves a generator.
@@ -1035,7 +1028,6 @@ public:
         c.p_result = nullptr;
     }
 
-    /** Generators are not copy assignable. */
     generator &operator=(generator const &) = delete;
 
     /** @brief Moves a generator.
@@ -1050,7 +1042,7 @@ public:
         c.p_result = nullptr;
     }
 
-    /** Checks if the generator is alive, returning `true` if it is. */
+    /** @brief Checks if the generator is alive. */
     explicit operator bool() const noexcept {
         return !this->is_dead();
     }
@@ -1100,7 +1092,7 @@ public:
         return *p_result;
     }
 
-    /** Checks if the generator is has a value, returning `false` if it does. */
+    /** @brief Checks if the generator has no value. */
     bool empty() const noexcept {
         return !p_result;
     }
@@ -1113,19 +1105,19 @@ public:
      */
     generator_range<T> iter() noexcept;
 
-    /** Implements a minimal iterator just for range-based for loop.
-      * Do not use directly.
+    /** @brief Implements a minimal iterator just for range-based for loop.
+      *        Do not use directly.
       */
     detail::generator_iterator<T> begin() noexcept;
 
-    /** Implements a minimal iterator just for range-based for loop.
-      * Do not use directly.
+    /** @brief Implements a minimal iterator just for range-based for loop.
+      *        Do not use directly.
       */
     std::nullptr_t end() noexcept {
         return nullptr;
     }
 
-    /** Swaps two generators' states. */
+    /** @brief Swaps two generators' states. */
     void swap(generator &other) noexcept {
         using std::swap;
         swap(p_func, other.p_func);
@@ -1133,7 +1125,7 @@ public:
         coroutine_context::swap(other);
     }
 
-    /** Returns the RTTI of the function stored in the generator. */
+    /** @brief Returns the RTTI of the function stored in the generator. */
     std::type_info const &target_type() const {
         return p_func.target_type();
     }
@@ -1168,7 +1160,7 @@ private:
     std::remove_reference_t<T> *p_result = nullptr;
 };
 
-/** Swaps two generators' states. */
+/** @brief Swaps two generators' states. */
 template<typename T>
 inline void swap(generator<T> &a, generator<T> &b) noexcept {
     a.swap(b);
@@ -1207,34 +1199,33 @@ struct generator_range: input_range<generator_range<T>> {
     using size_type       = std::size_t;
     using difference_type = std::ptrdiff_t;
 
-    /** Generator ranges are not default constructible. */
     generator_range() = delete;
 
-    /** Generator ranges are constructed using a reference to a generator. */
+    /** @brief Generator ranges are constructed using a generator reference. */
     generator_range(generator<T> &g): p_gen(&g) {}
 
-    /** Like ostd::generator<T>::empty(). */
+    /** @brief Like ostd::generator<T>::empty(). */
     bool empty() const noexcept {
         return p_gen->empty();
     }
 
-    /** Like ostd::generator<T>::resume(). */
+    /** @brief Like ostd::generator<T>::resume(). */
     void pop_front() {
         p_gen->resume();
     }
 
-    /** Like ostd::generator<T>::value(). */
+    /** @brief Like ostd::generator<T>::value(). */
     reference front() const {
         return p_gen->value();
     }
 
-    /** Implements a minimal iterator just for range-based for loop.
-      * Do not use directly.
+    /** @brief Implements a minimal iterator just for range-based for loop.
+      *        Do not use directly.
       */
     detail::generator_iterator<T> begin() noexcept;
 
-    /** Implements a minimal iterator just for range-based for loop.
-      * Do not use directly.
+    /** @brief Implements a minimal iterator just for range-based for loop.
+      *        Do not use directly.
       */
     std::nullptr_t end() noexcept {
         return nullptr;

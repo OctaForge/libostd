@@ -66,7 +66,6 @@ struct OSTD_EXPORT file_stream: stream {
      */
     file_stream(): p_f(), p_owned(false) {}
 
-    /** @brief File streams are not copy constructible. */
     file_stream(file_stream const &) = delete;
 
     /** @brief Creates a file stream by moving.
@@ -107,7 +106,6 @@ struct OSTD_EXPORT file_stream: stream {
     /** @brief Calls close() on the stream. */
     ~file_stream() { close(); }
 
-    /** @brief File streams are not copy assignable. */
     file_stream &operator=(file_stream const &) = delete;
 
     /** @brief Assigns another stream to this one by move.
