@@ -100,7 +100,7 @@ struct output_range_tag {};
  *
  * You can learn more about the characteristics [here](@ref ranges).
  *
- * @see ostd::input_range_tag, ostd::bidirectional_rnage_tag
+ * @see ostd::input_range_tag, ostd::bidirectional_range_tag
  */
 struct forward_range_tag: input_range_tag {};
 
@@ -113,7 +113,7 @@ struct forward_range_tag: input_range_tag {};
  *
  * You can learn more about the characteristics [here](@ref ranges).
  *
- * @see ostd::forward_rnage_tag, ostd::random_access_range_tag
+ * @see ostd::forward_range_tag, ostd::random_access_range_tag
  */
 struct bidirectional_range_tag: forward_range_tag {};
 
@@ -883,12 +883,6 @@ inline auto noop_sink() {
     return detail::noop_output_range<T>{};
 }
 
-/** @brief A wrapper range that counts the elements put in the range.
- *
- * Takes any output range and increments a counter each time a value is
- * put into it. This is useful if you need to check how many elements
- * were actaully written into an output range from the inside of a call.
- */
 namespace detail {
     template<typename R>
     struct counting_output_range: output_range<counting_output_range<R>> {
@@ -904,22 +898,18 @@ namespace detail {
     public:
         counting_output_range() = delete;
 
-        /** @brief Constructs the range from an existing range. */
         counting_output_range(R const &range): p_range(range) {}
 
-        /** @brief Copies a value into the wrapped range and increments. */
         void put(value_type const &v) {
             p_range.put(v);
             ++p_written;
         }
 
-        /** @brief Moves a vallue into the wrapped range and increments. */
         void put(value_type &&v) {
             p_range.put(std::move(v));
             ++p_written;
         }
 
-        /** @brief Gets the number of written values. */
         size_type get_written() const {
             return p_written;
         }

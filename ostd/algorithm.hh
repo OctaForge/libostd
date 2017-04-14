@@ -732,6 +732,11 @@ inline R1 find_one_of(R1 range, R2 values) {
     }
     return range;
 }
+
+/** @brief A pipeable version of ostd::find_one_of().
+ *
+ * The `values` range is forwarded.
+ */
 template<typename R>
 inline auto find_one_of(R &&values) {
     return [values = std::forward<R>(values)](auto &obj) mutable {
