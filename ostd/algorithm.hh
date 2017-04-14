@@ -239,8 +239,8 @@ inline auto sort() {
 
 /** @brief Finds the smallest element in the range.
  *
- * It works like std::min_element. The range must be at least
- * std::forward_range_tag. The `<` operator is used for comparisons.
+ * It works like std::min_element(). The range must be at least
+ * ostd::forward_range_tag. The `<` operator is used for comparisons.
  *
  * @see ostd::min_element_cmp(), ostd::max_element()
  */
@@ -258,7 +258,7 @@ inline R min_element(R range) {
 /** @brief Finds the smallest element in the range.
  *
  * It works like std::min_element. The range must be at least
- * std::forward_range_tag. The `compare` function is used for comparisons.
+ * ostd::forward_range_tag. The `compare` function is used for comparisons.
  *
  * @see ostd::min_element(), ostd::max_element_cmp()
  */
@@ -293,8 +293,8 @@ inline auto min_element_cmp(C &&compare) {
 
 /** @brief Finds the largest element in the range.
  *
- * It works like std::max_element. The range must be at least
- * std::forward_range_tag. The `<` operator is used for comparisons.
+ * It works like std::max_element(). The range must be at least
+ * ostd::forward_range_tag. The `<` operator is used for comparisons.
  *
  * @see ostd::max_element_cmp(), ostd::min_element()
  */
@@ -312,7 +312,7 @@ inline R max_element(R range) {
 /** @brief Finds the largest element in the range.
  *
  * It works like std::max_element. The range must be at least
- * std::forward_range_tag. The `compare` function is used for comparisons.
+ * ostd::forward_range_tag. The `compare` function is used for comparisons.
  *
  * @see ostd::max_element(), ostd::min_element_cmp()
  */
@@ -347,6 +347,13 @@ inline auto max_element_cmp(C &&compare) {
 
 /* lexicographical compare */
 
+/** @brief Like std::lexicographical_compare(), but for ranges.
+ *
+ * This version uses the `<` operator for comparisons. This algorithm
+ * is not multi-pass, so an ostd::input_range_tag is perfectly fine here.
+ *
+ * @see ostd::lexicographical_compare_cmp()
+ */
 template<typename R1, typename R2>
 inline bool lexicographical_compare(R1 range1, R2 range2) {
     while (!range1.empty() && !range2.empty()) {
@@ -361,6 +368,11 @@ inline bool lexicographical_compare(R1 range1, R2 range2) {
     }
     return (range1.empty() && !range2.empty());
 }
+
+/** @brief A pipeable version of ostd::lexicographical_compare().
+ *
+ * The range is forwarded.
+ */
 template<typename R>
 inline auto lexicographical_compare(R &&range) {
     return [range = std::forward<R>(range)](auto &obj) mutable {
@@ -368,6 +380,13 @@ inline auto lexicographical_compare(R &&range) {
     };
 }
 
+/** @brief Like std::lexicographical_compare(), but for ranges.
+ *
+ * This version uses the `compare` function for comparisons. This algorithm
+ * is not multi-pass, so an ostd::input_range_tag is perfectly fine here.
+ *
+ * @see ostd::lexicographical_compare()
+ */
 template<typename R1, typename R2, typename C>
 inline bool lexicographical_compare_cmp(R1 range1, R2 range2, C compare) {
     while (!range1.empty() && !range2.empty()) {
@@ -382,6 +401,11 @@ inline bool lexicographical_compare_cmp(R1 range1, R2 range2, C compare) {
     }
     return (range1.empty() && !range2.empty());
 }
+
+/** @brief A pipeable version of ostd::lexicographical_compare_cmp().
+ *
+ * The range and comparison function are forwarded.
+ */
 template<typename R, typename C>
 inline auto lexicographical_compare_cmp(R &&range, C &&compare) {
     return [
@@ -395,6 +419,13 @@ inline auto lexicographical_compare_cmp(R &&range, C &&compare) {
 
 /* algos that don't change the range */
 
+/** @brief Executes `func` on each element of `range`.
+ *
+ * The `func` is called like `func(range.front())`. The algorithm is
+ * not multi-pass, so an ostd::input_range_tag is perfectly fine.
+ *
+ * @returns The `func` by move.
+ */
 template<typename R, typename F>
 inline F for_each(R range, F func) {
     for (; !range.empty(); range.pop_front()) {
@@ -403,6 +434,10 @@ inline F for_each(R range, F func) {
     return std::move(func);
 }
 
+/** @brief A pipeable version of ostd::for_each().
+ *
+ * The function is forwarded.
+ */
 template<typename F>
 inline auto for_each(F &&func) {
     return [func = std::forward<F>(func)](auto &obj) mutable {
@@ -410,6 +445,16 @@ inline auto for_each(F &&func) {
     };
 }
 
+/** @brief Checks if every element of `range` matches `pred`.
+ *
+ * The `pred` has to return true when called like `pred(range.front())`.
+ * If it doesn't, `false` is returned.
+ *
+ * The predicate is called at most `N` times, where `N` is the range length.
+ * The range is an ostd::input_range_tag or better.
+ *
+ * @see ostd::any_of(), ostd::none_of()
+ */
 template<typename R, typename P>
 inline bool all_of(R range, P pred) {
     for (; !range.empty(); range.pop_front()) {
@@ -420,6 +465,10 @@ inline bool all_of(R range, P pred) {
     return true;
 }
 
+/** @brief A pipeable version of ostd::all_of().
+ *
+ * The function is forwarded.
+ */
 template<typename F>
 inline auto all_of(F &&func) {
     return [func = std::forward<F>(func)](auto &obj) mutable {
@@ -427,6 +476,16 @@ inline auto all_of(F &&func) {
     };
 }
 
+/** @brief Checks if any element of `range` matches `pred`.
+ *
+ * As soon as `pred` returns true when called like `pred(range.front())`,
+ * this returns true. Otherwise it returns false.
+ *
+ * The predicate is called at most `N` times, where `N` is the range length.
+ * The range is an ostd::input_range_tag or better.
+ *
+ * @see ostd::all_of(), ostd::none_of()
+ */
 template<typename R, typename P>
 inline bool any_of(R range, P pred) {
     for (; !range.empty(); range.pop_front())
@@ -434,6 +493,10 @@ inline bool any_of(R range, P pred) {
     return false;
 }
 
+/** @brief A pipeable version of ostd::any_of().
+ *
+ * The function is forwarded.
+ */
 template<typename F>
 inline auto any_of(F &&func) {
     return [func = std::forward<F>(func)](auto &obj) mutable {
@@ -441,6 +504,16 @@ inline auto any_of(F &&func) {
     };
 }
 
+/** @brief Checks if no element of `range` matches `pred`.
+ *
+ * As soon as `pred` returns true when called like `pred(range.front())`,
+ * this returns false. Otherwise it returns true.
+ *
+ * The predicate is called at most `N` times, where `N` is the range length.
+ * The range is an ostd::input_range_tag or better.
+ *
+ * @see ostd::all_of(), ostd::any_of()
+ */
 template<typename R, typename P>
 inline bool none_of(R range, P pred) {
     for (; !range.empty(); range.pop_front())
@@ -448,6 +521,10 @@ inline bool none_of(R range, P pred) {
     return true;
 }
 
+/** @brief A pipeable version of ostd::none_of().
+ *
+ * The function is forwarded.
+ */
 template<typename F>
 inline auto none_of(F &&func) {
     return [func = std::forward<F>(func)](auto &obj) mutable {
@@ -796,7 +873,7 @@ namespace detail {
         using range_category  = std::common_type_t<
             range_category_t<T>, finite_random_access_range_tag
         >;
-        using value_type      = R;
+        using value_type      = std::remove_reference_t<R>;
         using reference       = R;
         using size_type       = range_size_t<T>;
         using difference_type = range_difference_t<T>;
@@ -838,6 +915,33 @@ namespace detail {
     );
 } /* namespace detail */
 
+/** @brief Gets a wrapper range that maps each item by `func`.
+ *
+ * The resulting range is at most ostd::finite_random_access_range_tag.
+ * There are no restrictions on the input range. The resulting range is
+ * not mutable, it's purely input-type.
+ *
+ * The `reference` member type of the range is `R` where `R` is the return
+ * value of `func`. The `value_type` is `std::remove_reference_t<R>`. The
+ * size and difference types are preserved.
+ *
+ * On each access of a range item (front, back, indexing), the `func` is
+ * called with the actual wrapped range's item and the result is returned.
+ *
+ * An example:
+ *
+ * ~~~{.cc}
+ * auto r = ostd::map(ostd::range(5), [](auto v) { return v + 5; });
+ * for (auto i: r) {
+ *     ostd::writeln(i); // 5, 6, 7, 8, 9
+ * }
+ * ~~~
+ *
+ * Because the range is lazy, a new value is computed on each access, but
+ * the wrapper range also needs no memory of its own.
+ *
+ * @see ostd::filter()
+ */
 template<typename R, typename F>
 inline auto map(R range, F func) {
     return detail::map_range<R, F, detail::MapReturnType<R, F>>(
@@ -845,6 +949,10 @@ inline auto map(R range, F func) {
     );
 }
 
+/** @brief A pipeable version of ostd::map().
+ *
+ * The `func` is forwarded.
+ */
 template<typename F>
 inline auto map(F &&func) {
     return [func = std::forward<F>(func)](auto &obj) mutable {
@@ -898,15 +1006,53 @@ namespace detail {
     >, P>;
 } /* namespace detail */
 
+/** @brief Gets a wrapper range that filters items by `pred`.
+ *
+ * The resulting range is ostd::forward_range_tag at most. The range will
+ * only contains items for which `pred` returns true. What this means is
+ * that upon creation, the given range is stored and all iterated until
+ * an item matching `pred` is reached. On `pop_front()`, this item is
+ * popped out and the same is done, i.e. again iterated until a new
+ * item matching `pred` is reached.
+ *
+ * In other words, this is done:
+ *
+ * ~~~{.cc}
+ * void advance(R &range, P &pred) {
+ *     while (!range.empty() && !pred()) {
+ *         range.pop_front();
+ *     }
+ * }
+ *
+ * constructor(R range, P pred) {
+ *     store_range_and_pred(range, pred);
+ *     advance(stored_range, stored_pred);
+ * }
+ *
+ * void pop_front() {
+ *     stored_range.pop_front();
+ *     advance(stored_range, stored_pred);
+ * }
+ * ~~~
+ *
+ * The value, reference, size and difference types are preserved, as are
+ * calls to `front()` and `empty()`.
+ *
+ * @see ostd::map()
+ */
 template<typename R, typename P>
 inline auto filter(R range, P pred) {
     return detail::filter_range<R, P>(range, std::move(pred));
 }
 
-template<typename F>
-inline auto filter(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return filter(obj, std::forward<F>(func));
+/** @brief A pipeable version of ostd::filter().
+ *
+ * The `pred` is forwarded.
+ */
+template<typename P>
+inline auto filter(P &&pred) {
+    return [pred = std::forward<P>(pred)](auto &obj) mutable {
+        return filter(obj, std::forward<P>(pred));
     };
 }
 
