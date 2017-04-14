@@ -1,6 +1,18 @@
-/* Algorithms for libostd.
+/** @addtogroup Ranges
+ * @{
+ */
+
+/** @file algorithm.hh
  *
- * This file is part of libostd. See COPYING.md for futher information.
+ * @brief Generic algorithms for working with ranges.
+ *
+ * This file provides various algorithms that work with ranges, including
+ * partitioning, sorting, comparison, iteration, finding, filling, folding,
+ * mapping, filtering and others. It's roughly equivalent to the C++ header
+ * `algorithm`, with many of the algorithms being just range-based versions
+ * of the iterator ones, but it also provides different custom algorithms.
+ *
+ * @copyright See COPYING.md in the project tree for further information.
  */
 
 #ifndef OSTD_ALGORITHM_HH
@@ -15,6 +27,10 @@
 #include "ostd/range.hh"
 
 namespace ostd {
+
+/** @addtogroup Ranges
+ * @{
+ */
 
 /* partitioning */
 
@@ -744,6 +760,15 @@ inline auto find_one_of(R &&values) {
     };
 }
 
+/** @brief Counts the number of occurences of `v` in `range`.
+ *
+ * Iterates the range and each time `v` is encountered (using the `==`
+ * operator) a counter is incremented. This counter is then returned.
+ *
+ * The `range` is at least ostd::input_range_tag.
+ *
+ * @see ostd::count_if(), ostd::count_if_not()
+ */
 template<typename R, typename T>
 inline range_size_t<R> count(R range, T const &v) {
     range_size_t<R> ret = 0;
@@ -755,6 +780,10 @@ inline range_size_t<R> count(R range, T const &v) {
     return ret;
 }
 
+/** @brief A pipeable version of ostd::count().
+ *
+ * The `v` is forwarded.
+ */
 template<typename T>
 inline auto count(T &&v) {
     return [v = std::forward<T>(v)](auto &obj) mutable {
@@ -762,6 +791,15 @@ inline auto count(T &&v) {
     };
 }
 
+/** @brief Counts the number of elements matching `pred` in `range.
+ *
+ * Iterates the range and each time `pred(range.front())` returns true,
+ * a counter is incremented. This counter is then returned.
+ *
+ * The `range` is at least ostd::input_range_tag.
+ *
+ * @see ostd::count(), ostd::count_if_not()
+ */
 template<typename R, typename P>
 inline range_size_t<R> count_if(R range, P pred) {
     range_size_t<R> ret = 0;
@@ -773,13 +811,26 @@ inline range_size_t<R> count_if(R range, P pred) {
     return ret;
 }
 
-template<typename F>
-inline auto count_if(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return count_if(obj, std::forward<F>(func));
+/** @brief A pipeable version of ostd::count_if().
+ *
+ * The `pred` is forwarded.
+ */
+template<typename P>
+inline auto count_if(P &&pred) {
+    return [pred = std::forward<P>(pred)](auto &obj) mutable {
+        return count_if(obj, std::forward<P>(pred));
     };
 }
 
+/** @brief Counts the number of elements not matching `pred` in `range.
+ *
+ * Iterates the range and each time `!pred(range.front())` returns true,
+ * a counter is incremented. This counter is then returned.
+ *
+ * The `range` is at least ostd::input_range_tag.
+ *
+ * @see ostd::count(), ostd::count_if()
+ */
 template<typename R, typename P>
 inline range_size_t<R> count_if_not(R range, P pred) {
     range_size_t<R> ret = 0;
@@ -791,17 +842,28 @@ inline range_size_t<R> count_if_not(R range, P pred) {
     return ret;
 }
 
-template<typename F>
-inline auto count_if_not(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return count_if_not(obj, std::forward<F>(func));
+/** @brief A pipeable version of ostd::count_if_not().
+ *
+ * The `pred` is forwarded.
+ */
+template<typename P>
+inline auto count_if_not(P &&pred) {
+    return [pred = std::forward<P>(pred)](auto &obj) mutable {
+        return count_if_not(obj, std::forward<P>(pred));
     };
 }
 
+/** @brief Checks if two ranges have equal contents.
+ *
+ * Both ranges are at least ostd::input_range_tag. If one range becomes
+ * empty before the other does, false is returned. If the expression
+ * `!(range1.front() == range2.front())` is true in any iteration,
+ * false is also returned. Otherwise true is returned.
+ */
 template<typename R>
 inline bool equal(R range1, R range2) {
     for (; !range1.empty(); range1.pop_front()) {
-        if (range2.empty() || (range1.front() != range2.front())) {
+        if (range2.empty() || !(range1.front() == range2.front())) {
             return false;
         }
         range2.pop_front();
@@ -809,6 +871,10 @@ inline bool equal(R range1, R range2) {
     return range2.empty();
 }
 
+/** @brief A pipeable version of ostd::equal().
+ *
+ * The `range` is forwarded as the second range.
+ */
 template<typename R>
 inline auto equal(R &&range) {
     return [range = std::forward<R>(range)](auto &obj) mutable {
@@ -818,12 +884,29 @@ inline auto equal(R &&range) {
 
 /* algos that modify ranges or work with output ranges */
 
+/** @brief Copies all elements from `irange` to `orange`.
+ *
+ * The `irange` is at least ostd::input_range_tag. The `orange` is
+ * an output range. The ostd::range_put_all() function is used to
+ * perform the copy. it respects ADL and therefore any per-type
+ * overloads of ostd::range_put_all.
+ *
+ * @see ostd::copy_if(), ostd::copy_if_not()
+ */
 template<typename R1, typename R2>
 inline R2 copy(R1 irange, R2 orange) {
     range_put_all(orange, irange);
     return orange;
 }
 
+/** @brief Copies elements of `irange` matching `pred` into `orange`.
+ *
+ * The `irange` (at least ostd::input_range_tag) is iterated and if
+ * the expression `pred(irange.front())` is true, the element is
+ * inserted (like `orange.put(irange.front())`).
+ *
+ * @see ostd::copy(), ostd::copy_if_not()
+ */
 template<typename R1, typename R2, typename P>
 inline R2 copy_if(R1 irange, R2 orange, P pred) {
     for (; !irange.empty(); irange.pop_front()) {
@@ -834,6 +917,14 @@ inline R2 copy_if(R1 irange, R2 orange, P pred) {
     return orange;
 }
 
+/** @brief Copies elements of `irange` not matching `pred` into `orange`.
+ *
+ * The `irange` (at least ostd::input_range_tag) is iterated and if
+ * the expression `!pred(irange.front())` is true, the element is
+ * inserted (like `orange.put(irange.front())`).
+ *
+ * @see ostd::copy(), ostd::copy_if()
+ */
 template<typename R1, typename R2, typename P>
 inline R2 copy_if_not(R1 irange, R2 orange, P pred) {
     for (; !irange.empty(); irange.pop_front()) {
@@ -844,16 +935,30 @@ inline R2 copy_if_not(R1 irange, R2 orange, P pred) {
     return orange;
 }
 
-template<typename R1, typename R2>
-inline R2 move(R1 irange, R2 orange) {
-    for (; !irange.empty(); irange.pop_front()) {
-        orange.put(std::move(irange.front()));
-    }
-    return orange;
-}
-
+/** @brief Reverses the order of the given range in-place.
+ *
+ * The range must be at least ostd::bidirectional_range_tag. The range
+ * must also meet the conditions of ostd::is_range_element_swappable.
+ *
+ * Equivalent to the following:
+ *
+ * ~~~{.cc}
+ * while (!range.empty()) {
+ *     using std::swap;
+ *     swap(range.front(), range.back());
+ *     range.pop_front();
+ *     range.pop_back();
+ * }
+ * ~~~
+ *
+ * @see ostd::reverse_copy()
+ */
 template<typename R>
 inline void reverse(R range) {
+    static_assert(
+        is_range_element_swappable<R>,
+        "The range element accessors must allow swapping"
+    );
     while (!range.empty()) {
         using std::swap;
         swap(range.front(), range.back());
@@ -862,6 +967,24 @@ inline void reverse(R range) {
     }
 }
 
+/** @brief Reverses the order of the given range into `orange`.
+ *
+ * Iterates `irange` backwards, putting each item into `orange`. The
+ * `irange` has to be at least ostd::bidirectional_range_tag.
+ *
+ * Equivalent to the following:
+ *
+ * ~~~{.cc}
+ * while (!irange.empty()) {
+ *     orange.put(irange.back());
+ *     irange.pop_back();
+ * }
+ *
+ * return orange;
+ * ~~~
+ *
+ * @see ostd::reverse()
+ */
 template<typename R1, typename R2>
 inline R2 reverse_copy(R1 irange, R2 orange) {
     for (; !irange.empty(); irange.pop_back()) {
@@ -870,6 +993,13 @@ inline R2 reverse_copy(R1 irange, R2 orange) {
     return orange;
 }
 
+/** @brief Fills the given input range with `v`.
+ *
+ * Iterates over `range` and assigns `v` to each element. The elements
+ * must therefore be actual lvalue references so they can be assigned to.
+ *
+ * @see ostd::generate(), ostd::iota()
+ */
 template<typename R, typename T>
 inline void fill(R range, T const &v) {
     for (; !range.empty(); range.pop_front()) {
@@ -877,6 +1007,13 @@ inline void fill(R range, T const &v) {
     }
 }
 
+/** @brief Fills the given input range with calls to `gen`.
+ *
+ * Iterates over `range` and assigns `gen()` to each element. The elements
+ * must therefore be actual lvalue references so they can be assigned to.
+ *
+ * @see ostd::fill(), ostd::iota()
+ */
 template<typename R, typename F>
 inline void generate(R range, F gen) {
     for (; !range.empty(); range.pop_front()) {
@@ -884,8 +1021,29 @@ inline void generate(R range, F gen) {
     }
 }
 
+/** @brief Swaps the contents of two input ranges.
+ *
+ * Both ranges must meet the conditions of ostd::is_range_element_swappable
+ * and the value types of both ranges must also be the same. The ranges must
+ * be at least ostd::input_range_tag. The swapping stops as soon as any of
+ * the ranges becomes empty.
+ *
+ * @returns The `range1` and `range2` in a pair after swapping is done.
+ */
 template<typename R1, typename R2>
 inline std::pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
+    static_assert(
+        is_range_element_swappable<R1>,
+        "The range element accessors must allow swapping"
+    );
+    static_assert(
+        is_range_element_swappable<R2>,
+        "The range element accessors must allow swapping"
+    );
+    static_assert(
+        std::is_same_v<range_value_t<R1>, range_value_t<R2>>,
+        "The range value types must be the same"
+    );
     while (!range1.empty() && !range2.empty()) {
         using std::swap;
         swap(range1.front(), range2.front());
@@ -895,6 +1053,13 @@ inline std::pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
     return std::make_pair(range1, range2);
 }
 
+/** @brief Fills the given input range with `value++`.
+ *
+ * Iterates over `range` and assigns `value++` to each element. The elements
+ * must therefore be actual lvalue references so they can be assigned to.
+ *
+ * @see ostd::fill(), ostd::generate()
+ */
 template<typename R, typename T>
 inline void iota(R range, T value) {
     for (; !range.empty(); range.pop_front()) {
@@ -902,6 +1067,18 @@ inline void iota(R range, T value) {
     }
 }
 
+/** @brief Left-folds the `range` into `init`.
+ *
+ * The `init` is an initial value. The `range` is iterated and each
+ * element is added to `init` using the `+` operator. Once that is
+ * done, `init` is returned.
+ *
+ * The `range` must be at least ostd::input_range_tag.
+ *
+ * A function-based version as well as right-folds are provided as well.
+ *
+ * @see ostd::foldl_f(), ostd::foldr()
+ */
 template<typename R, typename T>
 inline T foldl(R range, T init) {
     for (; !range.empty(); range.pop_front()) {
@@ -910,6 +1087,18 @@ inline T foldl(R range, T init) {
     return init;
 }
 
+/** @brief Left-folds the `range` into `init`.
+ *
+ * The `init` is an initial value. The `range` is iterated and `init`
+ * is assigned as `init = func(init, range.front())`. Once that is
+ * done, `init` is returned.
+ *
+ * The `range` must be at least ostd::input_range_tag.
+ *
+ * A `+` operator-based version as well as right-folds are provided as well.
+ *
+ * @see ostd::foldl(), ostd::foldr_f()
+ */
 template<typename R, typename T, typename F>
 inline T foldl_f(R range, T init, F func) {
     for (; !range.empty(); range.pop_front()) {
@@ -918,12 +1107,21 @@ inline T foldl_f(R range, T init, F func) {
     return init;
 }
 
+/** @brief A pipeable version of ostd::foldl().
+ *
+ * The `init` is forwarded.
+ */
 template<typename T>
 inline auto foldl(T &&init) {
     return [init = std::forward<T>(init)](auto &obj) mutable {
         return foldl(obj, std::forward<T>(init));
     };
 }
+
+/** @brief A pipeable version of ostd::foldl_f().
+ *
+ * The `init` and `func` are forwarded.
+ */
 template<typename T, typename F>
 inline auto foldl_f(T &&init, F &&func) {
     return [
@@ -933,6 +1131,18 @@ inline auto foldl_f(T &&init, F &&func) {
     };
 }
 
+/** @brief Right-folds the `range` into `init`.
+ *
+ * The `init` is an initial value. The `range` is iterated backwards
+ * and each element is added to `init` using the `+` operator. Once
+ * that is done, `init` is returned.
+ *
+ * The `range` must be at least ostd::bidirectional_range_tag.
+ *
+ * A function-based version as well as left-folds are provided as well.
+ *
+ * @see ostd::foldr_f(), ostd::foldl()
+ */
 template<typename R, typename T>
 inline T foldr(R range, T init) {
     for (; !range.empty(); range.pop_back()) {
@@ -941,6 +1151,18 @@ inline T foldr(R range, T init) {
     return init;
 }
 
+/** @brief Right-folds the `range` into `init`.
+ *
+ * The `init` is an initial value. The `range` is iterated backwards
+ * and `init` is assigned as `init = func(init, range.back())`. Once
+ * that is done, `init` is returned.
+ *
+ * The `range` must be at least ostd::bidirectional_range_tag.
+ *
+ * A `+` operator-based version as well as left-folds are provided as well.
+ *
+ * @see ostd::foldr(), ostd::foldl_f()
+ */
 template<typename R, typename T, typename F>
 inline T foldr_f(R range, T init, F func) {
     for (; !range.empty(); range.pop_back()) {
@@ -949,12 +1171,21 @@ inline T foldr_f(R range, T init, F func) {
     return init;
 }
 
+/** @brief A pipeable version of ostd::foldr().
+ *
+ * The `init` is forwarded.
+ */
 template<typename T>
 inline auto foldr(T &&init) {
     return [init = std::forward<T>(init)](auto &obj) mutable {
         return foldr(obj, std::forward<T>(init));
     };
 }
+
+/** @brief A pipeable version of ostd::foldr_f().
+ *
+ * The `init` and `func` are forwarded.
+ */
 template<typename T, typename F>
 inline auto foldr_f(T &&init, F &&func) {
     return [
@@ -1153,6 +1384,10 @@ inline auto filter(P &&pred) {
     };
 }
 
+/** @} */
+
 } /* namespace ostd */
 
 #endif
+
+/** @} */
