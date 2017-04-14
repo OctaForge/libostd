@@ -18,6 +18,18 @@ namespace ostd {
 
 /* partitioning */
 
+/** @brief Partitions a range.
+ *
+ * Given a predicate `pred`, this rearranges the range so that items for
+ * which the predicate returns true are in the first part of the range.
+ *
+ * The range must be at least ostd::forward_range_tag. The items are swapped,
+ * which means the range's reference type must be swappable.
+ *
+ * The predicate is applied `N` times and the swap is done at most `N` times.
+ *
+ * @returns The second part of the range.
+ */
 template<typename R, typename U>
 inline R partition(R range, U pred) {
     R ret = range;
@@ -31,6 +43,10 @@ inline R partition(R range, U pred) {
     return ret;
 }
 
+/** @brief A pipeable version of ostd::partition().
+ *
+ * The predicate is forwarded.
+ */
 template<typename F>
 inline auto partition(F &&func) {
     return [func = std::forward<F>(func)](auto &obj) mutable {
@@ -38,6 +54,14 @@ inline auto partition(F &&func) {
     };
 }
 
+/** @brief Checks if a range is partitioned as in ostd::partition().
+ *
+ * First, all elements matching `pred` are skipped and then if any of
+ * the elements following that match `pred`, false is returned. Otherwise,
+ * true is returned.
+ *
+ * The predicate is applied at most `N` times.
+ */
 template<typename R, typename P>
 inline bool is_partitioned(R range, P pred) {
     for (; !range.empty() && pred(range.front()); range.pop_front());
@@ -49,6 +73,10 @@ inline bool is_partitioned(R range, P pred) {
     return true;
 }
 
+/** @brief A pipeable version of ostd::is_partitioned().
+ *
+ * The predicate is forwarded.
+ */
 template<typename F>
 inline auto is_partitioned(F &&func) {
     return [func = std::forward<F>(func)](auto &obj) mutable {
@@ -149,11 +177,34 @@ namespace detail {
     }
 } /* namespace detail */
 
+/** @brief Sorts a range given a comparison function.
+ *
+ * The range must be at least ostd::finite_random_access_range_tag. The
+ * comparison function takes two `ostd::range_reference_t<R>` and must
+ * return a boolean equivalent to `a < b` for ascending order.
+ *
+ * The items are swapped in the range, which means the range's reference
+ * type must be swappable.
+ *
+ * The worst-case and average performance of this algorithm os `O(n log n)`.
+ * The best-case performance is `O(n)`. This happens when the range is small
+ * enough and already sorted (insertion sort is used for small ranges).
+ *
+ * The actual algorithm used is a hybrid algorithm between quicksort and
+ * heapsort (intosort) with insertion sort for small ranges.
+ *
+ * @see ostd::sort()
+ */
 template<typename R, typename C>
 inline R sort_cmp(R range, C compare) {
     detail::introsort(range, compare);
     return range;
 }
+
+/** @brief A pipeable version of ostd::sort_cmp().
+ *
+ * The comparison function is forwarded.
+ */
 template<typename C>
 inline auto sort_cmp(C &&compare) {
     return [compare = std::forward<C>(compare)](auto &obj) mutable {
@@ -161,16 +212,26 @@ inline auto sort_cmp(C &&compare) {
     };
 }
 
+/** @brief Like ostd::sort_cmp() using `std::less<ostd::range_value_t<R>>{}`. */
 template<typename R>
 inline R sort(R range) {
-    return sort_cmp(range, std::less<range_value_t<R>>());
+    return sort_cmp(range, std::less<range_value_t<R>>{});
 }
+
+/** @brief A pipeable version of ostd::sort(). */
 inline auto sort() {
     return [](auto &obj) { return sort(obj); };
 }
 
 /* min/max(_element) */
 
+/** @brief Finds the smallest element in the range.
+ *
+ * It works like std::min_element. The range must be at least
+ * std::forward_range_tag. The `<` operator is used for comparisons.
+ *
+ * @see ostd::min_element_cmp(), ostd::max_element()
+ */
 template<typename R>
 inline R min_element(R range) {
     R r = range;
@@ -181,6 +242,14 @@ inline R min_element(R range) {
     }
     return r;
 }
+
+/** @brief Finds the smallest element in the range.
+ *
+ * It works like std::min_element. The range must be at least
+ * std::forward_range_tag. The `compare` function is used for comparisons.
+ *
+ * @see ostd::min_element(), ostd::max_element_cmp()
+ */
 template<typename R, typename C>
 inline R min_element_cmp(R range, C compare) {
     R r = range;
@@ -191,11 +260,18 @@ inline R min_element_cmp(R range, C compare) {
     }
     return r;
 }
+
+/** @brief A pipeable version of ostd::min_element(). */
 inline auto min_element() {
     return [](auto &obj) {
         return min_element(obj);
     };
 }
+
+/** @brief A pipeable version of ostd::min_element_cmp().
+ *
+ * The comparison function is forwarded.
+ */
 template<typename C>
 inline auto min_element_cmp(C &&compare) {
     return [compare = std::forward<C>(compare)](auto &obj) mutable {
@@ -203,6 +279,13 @@ inline auto min_element_cmp(C &&compare) {
     };
 }
 
+/** @brief Finds the largest element in the range.
+ *
+ * It works like std::max_element. The range must be at least
+ * std::forward_range_tag. The `<` operator is used for comparisons.
+ *
+ * @see ostd::max_element_cmp(), ostd::min_element()
+ */
 template<typename R>
 inline R max_element(R range) {
     R r = range;
@@ -213,6 +296,14 @@ inline R max_element(R range) {
     }
     return r;
 }
+
+/** @brief Finds the largest element in the range.
+ *
+ * It works like std::max_element. The range must be at least
+ * std::forward_range_tag. The `compare` function is used for comparisons.
+ *
+ * @see ostd::max_element(), ostd::min_element_cmp()
+ */
 template<typename R, typename C>
 inline R max_element_cmp(R range, C compare) {
     R r = range;
@@ -223,11 +314,18 @@ inline R max_element_cmp(R range, C compare) {
     }
     return r;
 }
+
+/** @brief A pipeable version of ostd::max_element(). */
 inline auto max_element() {
     return [](auto &obj) {
         return max_element(obj);
     };
 }
+
+/** @brief A pipeable version of ostd::max_element_cmp().
+ *
+ * The comparison function is forwarded.
+ */
 template<typename C>
 inline auto max_element_cmp(C &&compare) {
     return [compare = std::forward<C>(compare)](auto &obj) mutable {
