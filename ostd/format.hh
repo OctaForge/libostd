@@ -1150,7 +1150,7 @@ private:
     template<typename R, typename T>
     void write_val(R &writer, bool escape, T const &val) const {
         /* stuff fhat can be custom-formatted goes first */
-        if constexpr(detail::fmt_tofmt_test<T, noop_output_range<char>>) {
+        if constexpr(detail::fmt_tofmt_test<T, decltype(noop_sink<char>())>) {
             format_traits<T>::to_format(val, writer, *this);
             return;
         }

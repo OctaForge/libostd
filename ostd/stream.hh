@@ -736,7 +736,7 @@ struct stream_line_range: input_range<stream_line_range<T, TC>> {
             p_item.clear();
             p_has_item = false;
         } else {
-            p_stream->get_line(noop_output_range<T>{});
+            p_stream->get_line(noop_sink<T>());
         }
     }
 

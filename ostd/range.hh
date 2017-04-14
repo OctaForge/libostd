@@ -494,20 +494,22 @@ namespace detail {
     };
 }
 
-template<typename>
-struct reverse_range;
-template<typename>
-struct move_range;
-template<typename>
-struct enumerated_range;
-template<typename>
-struct take_range;
-template<typename>
-struct chunks_range;
-template<typename ...>
-struct join_range;
-template<typename ...>
-struct zip_range;
+namespace detail {
+    template<typename>
+    struct reverse_range;
+    template<typename>
+    struct move_range;
+    template<typename>
+    struct enumerated_range;
+    template<typename>
+    struct take_range;
+    template<typename>
+    struct chunks_range;
+    template<typename ...>
+    struct join_range;
+    template<typename ...>
+    struct zip_range;
+}
 
 /** @brief Pops out at most `n` elements from the front of the given range.
  *
@@ -600,7 +602,7 @@ struct input_range {
      * the necessary functionality for iteration and has no end iterator,
      * see end().
      */
-    detail::range_iterator<B> begin() const {
+    auto begin() const {
         return detail::range_iterator<B>(*static_cast<B const *>(this));
     }
 
@@ -619,66 +621,138 @@ struct input_range {
 
     /** @brief Gets a reverse range to the current range.
      *
-     * The current range must be at least bidirectional.
+     * A reverse range is a wrapper range that lazily reveses the direction.
+     * Only defined for ranges that are at least bidirectional. It re-routes
+     * the access so that front accesses back and vice versa.
+     *
+     * If this range is at least ostd::finite_ranodm_access_range_tag, the
+     * wrapped range will be always ostd::finite_random_access_range_tag.
+     * Otherwise, it will be ostd::bidirectional_range_tag.
+     *
+     * The value, reference, size and difference types are the same.
      */
-    reverse_range<B> reverse() const {
-        return reverse_range<B>(iter());
+    auto reverse() const {
+        static_assert(
+            is_bidirectional_range<B>,
+            "Wrapped range must be bidirectional or better"
+        );
+        return detail::reverse_range<B>(iter());
     }
 
     /** @brief Gets a wrapper range that moves all the elements.
      *
-     * Any range type works as long as its ostd::range_reference_t is
-     * a proper reference type for its ostd::range_value_t.
+     * The range is an ostd::input_range_tag. The base range is required to
+     * have real references for its reference type and those references must
+     * be references to the range's value type, i.e.
+     *
+     * ~~~{.cc}
+     * std::is_reference_v<ostd::range_reference_t<R>> == true
+     * std::is_same_v<
+     *     ostd::range_value_t<T>,
+     *     std::remove_reference_t<ostd::range_reference_t<T>
+     * > == true
+     * ~~~
+     *
+     * The value, size and difference types remain the same. The new reference
+     * type becomes `ostd::range_value_t<R> &&`.
+     *
+     * Accesses to the front member result in the element being moved.
      */
-    move_range<B> movable() const {
-        return move_range<B>(iter());
+    auto movable() const {
+        return detail::move_range<B>(iter());
     }
 
     /** @brief Gets an enumerated range for the range.
      *
-     * This one allows you to iterate over ranges using the range-based
-     * for loop and still have access to current index of the element.
+     * An enumerated range wraps the original range in a way where the accesses
+     * remain mostly the same, but an index counter is kept and incremented on
+     * each pop.
+     *
+     * It's always at most ostd::forward_range_tag. The value, size and
+     * difference types stay the same, the new reference type is like this:
+     *
+     * ~~~{.cc}
+     * struct enumerated_value_t {
+     *     range_size_t<R> index;
+     *     range_reference_t<R> value;
+     * };
+     * ~~~
+     *
+     * This is useful when you need to iterate over a range using the range
+     * based for loop but still need a numerical index. An example:
+     *
+     * ~~~{.cc}
+     * auto il = { 5, 10, 15};
+     * // prints "0: 5", "1: 10", "2: 15"
+     * for (auto v: ostd::iter(il).enumerate()) {
+     *     ostd::writefln("%s: %s", v.index, v.value);
+     * }
+     * ~~~
      */
-    enumerated_range<B> enumerate() const {
-        return enumerated_range<B>(iter());
+    auto enumerate() const {
+        return detail::enumerated_range<B>(iter());
     }
 
     /** @brief Gets a range representing several elements of the range.
      *
-     * Wraps the range but only at most `n` elements.
+     * Wraps the range in a way where at most `n` elements are considered
+     * when manipulating the range. The result is at always at most
+     * ostd::forward_range_tag.
+     *
+     * It is undefined behavior to try to `pop_front()` past the internal
+     * counter (i.e. `empty()` must not be true when calling it).
      */
     template<typename Size>
-    take_range<B> take(Size n) const {
-        return take_range<B>(iter(), n);
+    auto take(Size n) const {
+        return detail::take_range<B>(iter(), n);
     }
 
     /** @brief Splits the range into range of chunks.
      *
-     * Each element of the range will be like take() with `n`.
+     * The resulting range is at most ostd::forward_range_tag. Each element
+     * of it is the result of take() on the current stored range. Each call
+     * to `pop_front()` pops out at most `n` elements from the wrapped range.
+     *
+     * If the wrapped range's length is not a multiple of `n`, the last chunk
+     * will have fewer elements than `n`.
      */
     template<typename Size>
-    chunks_range<B> chunks(Size n) const {
-        return chunks_range<B>(iter(), n);
+    auto chunks(Size n) const {
+        return detail::chunks_range<B>(iter(), n);
     }
 
     /** @brief Joins multiple ranges together.
      *
      * The ranges don't have to be the same. The types of ostd::range_traits
-     * will be std::common_type_t of all ranges' trait types.
+     * will be std::common_type_t of all ranges' trait types. The range itself
+     * is at most ostd::forward_range_tag, but can be ostd::input_range_tag
+     * if any of the joined ranges are.
+     *
+     * The range is empty when all joined ranges are empty. Access to front
+     * is undefined if all joined ranges are empty.
      */
     template<typename R1, typename ...RR>
-    join_range<B, R1, RR...> join(R1 r1, RR ...rr) const {
-        return join_range<B, R1, RR...>(iter(), std::move(r1), std::move(rr)...);
+    auto join(R1 r1, RR ...rr) const {
+        return detail::join_range<B, R1, RR...>(
+            iter(), std::move(r1), std::move(rr)...
+        );
     }
 
     /** @brief Zips multiple ranges together.
      *
      * The ranges will all be iterated at the same time up until the shortest
-     * range's length.
+     * range's length. The wrapper range is at most ostd::forward_range_tag.
+     *
+     * The value type can be a pair (for two ranges) or a tuple (for more) of
+     * the value types. The reference type is also a pair or a tuple, but of
+     * the reference types. The size and difference types are common types
+     * between the zipped ranges.
      */
     template<typename R1, typename ...RR>
-    zip_range<B, R1, RR...> zip(R1 r1, RR ...rr) const {
-        return zip_range<B, R1, RR...>(iter(), std::move(r1), std::move(rr)...);
+    auto zip(R1 r1, RR ...rr) const {
+        return detail::zip_range<B, R1, RR...>(
+            iter(), std::move(r1), std::move(rr)...
+        );
     }
 
     /** @brief Simpler syntax for accessing the front element. */
@@ -747,22 +821,29 @@ inline void range_put_all(OR &orange, IR range) {
     }
 }
 
-/** @brief An output range type that does nothing.
+namespace detail {
+    template<typename T>
+    struct noop_output_range: output_range<noop_output_range<T>> {
+        using value_type      = T;
+        using reference       = T &;
+        using size_type       = std::size_t;
+        using difference_type = std::ptrdiff_t;
+
+        /** @brief Has no effect. */
+        void put(T const &) {}
+    };
+}
+
+/** @brief Creates an output range that does nothing.
  *
- * Represents a generic sink that doesn't store the values anywhere. Can
- * be used in metaprogramming and you need to just get rid of a portion
- * of some range.
+ * This is a complete output range, but it doesn't actually store the given
+ * values, instead it simply does nothing. Useful in metaprogramming and
+ * when you need to go over a portion of something that uses sinks.
  */
 template<typename T>
-struct noop_output_range: output_range<noop_output_range<T>> {
-    using value_type      = T;
-    using reference       = T &;
-    using size_type       = std::size_t;
-    using difference_type = std::ptrdiff_t;
-
-    /** @brief Has no effect. */
-    void put(T const &) {}
-};
+inline auto noop_sink() {
+    return detail::noop_output_range<T>{};
+}
 
 /** @brief A wrapper range that counts the elements put in the range.
  *
@@ -770,45 +851,58 @@ struct noop_output_range: output_range<noop_output_range<T>> {
  * put into it. This is useful if you need to check how many elements
  * were actaully written into an output range from the inside of a call.
  */
+namespace detail {
+    template<typename R>
+    struct counting_output_range: output_range<counting_output_range<R>> {
+        using value_type      = range_value_t<R>;
+        using reference       = range_reference_t<R>;
+        using size_type       = range_size_t<R>;
+        using difference_type = range_difference_t<R>;
+
+    private:
+        R p_range;
+        size_type p_written = 0;
+
+    public:
+        counting_output_range() = delete;
+
+        /** @brief Constructs the range from an existing range. */
+        counting_output_range(R const &range): p_range(range) {}
+
+        /** @brief Copies a value into the wrapped range and increments. */
+        void put(value_type const &v) {
+            p_range.put(v);
+            ++p_written;
+        }
+
+        /** @brief Moves a vallue into the wrapped range and increments. */
+        void put(value_type &&v) {
+            p_range.put(std::move(v));
+            ++p_written;
+        }
+
+        /** @brief Gets the number of written values. */
+        size_type get_written() const {
+            return p_written;
+        }
+    };
+}
+
+/** @brief Creates an output range that counts items put into it.
+ *
+ * Takes an output range and creates a wrapper output range around it that
+ * counts each item put into it. A copy of the range is stored. The types
+ * are inherited from the wrapped range.
+ *
+ * This method is provided to retrieve the number of values put into the range:
+ *
+ * ~~~{.cc}
+ * range_size_t<R> get_written() const;
+ * ~~~
+ */
 template<typename R>
-struct counting_output_range: output_range<counting_output_range<R>> {
-    using value_type      = range_value_t<R>;
-    using reference       = range_reference_t<R>;
-    using size_type       = range_size_t<R>;
-    using difference_type = range_difference_t<R>;
-
-private:
-    R p_range;
-    size_type p_written = 0;
-
-public:
-    counting_output_range() = delete;
-
-    /** @brief Constructs the range from an existing range. */
-    counting_output_range(R const &range): p_range(range) {}
-
-    /** @brief Copies a value into the wrapped range and increments. */
-    void put(value_type const &v) {
-        p_range.put(v);
-        ++p_written;
-    }
-
-    /** @brief Moves a vallue into the wrapped range and increments. */
-    void put(value_type &&v) {
-        p_range.put(std::move(v));
-        ++p_written;
-    }
-
-    /** @brief Gets the number of written values. */
-    size_type get_written() const {
-        return p_written;
-    }
-};
-
-/** @brief A simple constructor function for ostd::counting_output_range. */
-template<typename R>
-inline counting_output_range<R> range_counter(R const &range) {
-    return counting_output_range<R>{range};
+inline auto counting_sink(R const &range) {
+    return detail::counting_output_range<R>{range};
 }
 
 /** @brief A pipeable version of ostd::input_range::reverse(). */
@@ -983,189 +1077,45 @@ namespace detail {
     constexpr bool iterable_test = decltype(test_iterable<T>(0))::value;
 }
 
-/** @brief A wrapper range that lazily reverses direction.
+namespace detail {
+    template<typename T>
+    struct number_range: input_range<number_range<T>> {
+        using range_category  = forward_range_tag;
+        using value_type      = T;
+        using reference       = T;
+        using size_type       = std::size_t;
+        using difference_type = std::ptrdiff_t;
+
+        number_range() = delete;
+
+        number_range(T a, T b, std::make_signed_t<T> step = 1):
+            p_a(a), p_b(b), p_step(step)
+        {}
+
+        number_range(T v): p_a(0), p_b(v), p_step(1) {}
+
+        bool empty() const { return p_a * p_step >= p_b * p_step; }
+
+        void pop_front() { p_a += p_step; }
+
+        reference front() const { return p_a; }
+
+    private:
+        T p_a, p_b;
+        std::make_signed_t<T> p_step;
+    };
+} /* namespace detail */
+
+/** @brief Creates an integer interval between `a` and `b`.
  *
- * The range it wraps must be at least bidirectional. It re-routes the
- * calls so that accessors to the back access the front and vice versa.
+ * The result is an ostd::forward_range_tag range with `T` for value
+ * and reference types. If `T` is unsigned, `step` is a signed version of
+ * it. If it's signed, `step` is the same type.
  *
- * The category depends on the range it wraps, it can be either
- * ostd::bidirectional_range_tag or ostd::finite_random_access_range_tag.
- * Infinite random access ranges become bidirectional because there is no
- * way to index from the other side if the size is unknown.
- *
- * It will fail to compile of the wrapped type is not at least bidirectional.
- */
-template<typename T>
-struct reverse_range: input_range<reverse_range<T>> {
-    static_assert(
-        is_bidirectional_range<T>,
-        "Wrapped range must be bidirectional or better"
-    );
-
-    using range_category  = std::conditional_t<
-        is_finite_random_access_range<T>,
-        finite_random_access_range_tag,
-        bidirectional_range_tag
-    >;
-    using value_type      = range_value_t     <T>;
-    using reference       = range_reference_t <T>;
-    using size_type       = range_size_t      <T>;
-    using difference_type = range_difference_t<T>;
-
-private:
-    T p_range;
-
-public:
-    reverse_range() = delete;
-
-    /** @brief Constructs a reverse range from a range. */
-    reverse_range(T const &v): p_range(v) {}
-
-    /** @brief Assignss a reverse range from a wrapped range type. */
-    reverse_range &operator=(T const &v) {
-        p_range = v;
-        return *this;
-    }
-
-    /** @brief Checks for emptiness of the wrapped range. */
-    bool empty() const { return p_range.empty(); }
-
-    /** @brief Checks for size of the wrapped range. */
-    size_type size() const { return p_range.size(); }
-
-    /** @brief Pops out the back element of the wrapped range. */
-    void pop_front() { p_range.pop_back(); }
-
-    /** @brief Pops out the front element of the wrapped range. */
-    void pop_back() { p_range.pop_front(); }
-
-    /** @brief Accesses the back of the wrapped range. */
-    reference front() const { return p_range.back(); }
-
-    /** @brief Accesses the front of the wrapped range. */
-    reference back() const { return p_range.front(); }
-
-    /** @brief Accesses the elements starting from the back. */
-    reference operator[](size_type i) const { return p_range[size() - i - 1]; }
-
-    /** @brief Slices the range starting from the back.
-     *
-     * The indexes must be within bounds or the behavior is undefined.
-     */
-    reverse_range slice(size_type start, size_type end) const {
-        size_type len = p_range.size();
-        return reverse_range{p_range.slice(len - end, len - start)};
-    }
-
-    /** @brief Like slice() with size() for the second argument. */
-    reverse_range slice(size_type start) const {
-        return slice(start, size());
-    }
-};
-
-/** @brief A wrapper range that moves the elements on access.
- *
- * The range is an input range and each element is safe to access exactly
- * once, as the range will move the elements on access. This type is not
- * useful for use in algorithms but rather when you need to move elements
- * of some range into a container or something similar.
- *
- * The ostd::range_reference_t of `T` must be a proper reference (lvalue or
- * rvalue kind) to `T`'s ostd::range_value_t. This is ensured at compile time
- * so compilation will fail if it's not.
- */
-template<typename T>
-struct move_range: input_range<move_range<T>> {
-    static_assert(
-        std::is_reference_v<range_reference_t<T>>,
-        "Wrapped range must return proper references for accessors"
-    );
-    static_assert( 
-        std::is_same_v<
-            range_value_t<T>, std::remove_reference_t<range_reference_t<T>>
-        >,
-        "Wrapped range references must be proper references to the value type"
-    );
-
-    using range_category  = input_range_tag;
-    using value_type      = range_value_t     <T>;
-    using reference       = range_value_t     <T> &&;
-    using size_type       = range_size_t      <T>;
-    using difference_type = range_difference_t<T>;
-
-private:
-    T p_range;
-
-public:
-    move_range() = delete;
-
-    /** @brief Constructs a move range from a range. */
-    move_range(T const &range): p_range(range) {}
-
-    /** @brief Assignss a reverse range from a wrapped range type. */
-    move_range &operator=(T const &v) {
-        p_range = v;
-        return *this;
-    }
-
-    /** @brief Checks for emptiness of the wrapped range. */
-    bool empty() const { return p_range.empty(); }
-
-    /** @brief Pops out the front value of the wrapped range. */
-    void pop_front() { p_range.pop_front(); }
-
-    /** @brief Moves the front element of the wrapped range. */
-    reference front() const { return std::move(p_range.front()); }
-};
-
-/** @brief A simple forward range to count between a range of integers.
- *
- * This type exists mostly to allow using range-based for loop to count
- * between two integer values. The interval it represents is half open
- * and it supports step. Negative numbers and interation are also supported.
- *
- * This is also an example of how values can be used as reference type for
- * a range. This will threfore not work with all algorithms but it doesn't
- * need to, it mostly has a single purpose anyway.
- */
-template<typename T>
-struct number_range: input_range<number_range<T>> {
-    using range_category  = forward_range_tag;
-    using value_type      = T;
-    using reference       = T;
-    using size_type       = std::size_t;
-    using difference_type = std::ptrdiff_t;
-
-    number_range() = delete;
-
-    /** @brief Constructs the range from inputs.
-     *
-     * @param[in] a The starting value.
-     * @param[in] b The ending value plus 1.
-     * @param[in] step By how much to increment each time.
-     */
-    number_range(T a, T b, std::make_signed_t<T> step = 1):
-        p_a(a), p_b(b), p_step(step)
-    {}
-
-    /** @brief Uses 0 as a start, `v` as the end and `1` as the step. */
-    number_range(T v): p_a(0), p_b(v), p_step(1) {}
-
-    /** @brief Checks if the range has reached its end. */
-    bool empty() const { return p_a * p_step >= p_b * p_step; }
-
-    /** @brief Increments the current state by step. */
-    void pop_front() { p_a += p_step; }
-
-    /** @brief Gets the current state. */
-    reference front() const { return p_a; }
-
-private:
-    T p_a, p_b;
-    std::make_signed_t<T> p_step;
-};
-
-/** @brief A simple constructing function for ostd::number_range.
+ * The range goes from `a` until `b`, incrementing by `step` with each
+ * pop. The `b` boudnary is not included in the range (it's half open).
+ * It's considered empty once `(current * step) >= (b * step)`, with
+ * `current` being `a` at first, increased by `step` on each pop.
  *
  * This allows writing nice code such as
  *
@@ -1176,194 +1126,205 @@ private:
  * ~~~
  */
 template<typename T>
-inline number_range<T> range(T a, T b, std::make_signed_t<T> step = 1) {
-    return number_range<T>(a, b, step);
+inline auto range(T a, T b, std::make_signed_t<T> step = 1) {
+    return detail::number_range<T>(a, b, step);
 }
 
-/** @brief A simple constructing function for ostd::number_range.
+/** @brief Creates an integer interval between `0` and `v`.
  *
+ * Equivalent to ostd::range() with 0 and `v` for arguments.
  * This allows writing nice code such as
  *
  * ~~~{.cc}
- * for (int i: ostd::range(10)) { //from 0 to 10, not including 10
+ * for (int i: ostd::range(10)) { // from 0 to 10, not including 10
  *     ...
  * }
  * ~~~
  */
 template<typename T>
-inline number_range<T> range(T v) {
-    return number_range<T>(v);
+inline auto range(T v) {
+    return detail::number_range<T>(v);
 }
 
-/** @brief A wrapper range that allows access to current iterating index.
- *
- * The range is input or forward depending on what it wraps. There reference
- * type here is a structure which wraps the actual reference from the range
- * (as the `value` member) and the index of the value (as the `index` member,
- * which is of type `ostd::range_size_t<T>`). The main use for this is to
- * be able to use range-based for loop with ranges and still have access
- * to the index, starting with 0.
- *
- * A simple example would be:
- *
- * ~~~{.cc}
- * auto il = { 5, 10, 15};
- * // prints "0: 5", "1: 10", "2: 15"
- * for (auto v: ostd::iter(il).enumerate()) {
- *     ostd::writefln("%s: %s", v.index, v.value);
- * }
- * ~~~
- */
-template<typename T>
-struct enumerated_range: input_range<enumerated_range<T>> {
-private:
-    struct enumerated_value_t {
-        range_size_t<T> index;
-        range_reference_t<T> value;
+namespace detail {
+    template<typename T>
+    struct reverse_range: input_range<reverse_range<T>> {
+        using range_category  = std::conditional_t<
+            is_finite_random_access_range<T>,
+            finite_random_access_range_tag,
+            bidirectional_range_tag
+        >;
+        using value_type      = range_value_t     <T>;
+        using reference       = range_reference_t <T>;
+        using size_type       = range_size_t      <T>;
+        using difference_type = range_difference_t<T>;
+
+    private:
+        T p_range;
+
+    public:
+        reverse_range() = delete;
+
+        reverse_range(T const &v): p_range(v) {}
+
+        bool empty() const { return p_range.empty(); }
+
+        size_type size() const { return p_range.size(); }
+
+        void pop_front() { p_range.pop_back(); }
+        void pop_back() { p_range.pop_front(); }
+
+        reference front() const { return p_range.back(); }
+        reference back() const { return p_range.front(); }
+
+        reference operator[](size_type i) const {
+            return p_range[size() - i - 1];
+        }
+
+        reverse_range slice(size_type start, size_type end) const {
+            size_type len = p_range.size();
+            return reverse_range{p_range.slice(len - end, len - start)};
+        }
+
+        reverse_range slice(size_type start) const {
+            return slice(start, size());
+        }
     };
 
-public:
-    using range_category  = std::common_type_t<
-        range_category_t<T>, forward_range_tag
-    >;
-    using value_type      = range_value_t<T>;
-    using reference       = enumerated_value_t;
-    using size_type       = range_size_t      <T>;
-    using difference_type = range_difference_t<T>;
+    template<typename T>
+    struct move_range: input_range<move_range<T>> {
+        static_assert(
+            std::is_reference_v<range_reference_t<T>>,
+            "Wrapped range must return proper references for accessors"
+        );
+        static_assert( 
+            std::is_same_v<
+                range_value_t<T>, std::remove_reference_t<range_reference_t<T>>
+            >,
+            "Wrapped range references must be proper references to the value type"
+        );
 
-private:
-    T p_range;
-    size_type p_index;
+        using range_category  = input_range_tag;
+        using value_type      = range_value_t     <T>;
+        using reference       = range_value_t     <T> &&;
+        using size_type       = range_size_t      <T>;
+        using difference_type = range_difference_t<T>;
 
-public:
-    enumerated_range() = delete;
+    private:
+        T p_range;
 
-    /** @brief Constructs an enumerated range from a range. */
-    enumerated_range(T const &range): p_range(range), p_index(0) {}
+    public:
+        move_range() = delete;
 
-    /** @brief Assignss an enumerated range from a wrapped range type.
-     *
-     * The index is reset to 0.
-     */
-    enumerated_range &operator=(T const &v) {
-        p_range = v;
-        p_index = 0;
-        return *this;
-    }
+        move_range(T const &range): p_range(range) {}
 
-    /** @brief Checks the underlying range for emptiness. */
-    bool empty() const { return p_range.empty(); }
+        bool empty() const { return p_range.empty(); }
 
-    /** @brief Pops out the front element of the range and increments. */
-    void pop_front() {
-        p_range.pop_front();
-        ++p_index;
-    }
+        void pop_front() { p_range.pop_front(); }
 
-    /** @brief Returns the wrapped reference with an index. */
-    reference front() const {
-        return reference{p_index, p_range.front()};
-    }
-};
+        reference front() const { return std::move(p_range.front()); }
+    };
 
-/** @brief A wrapper range that allows access to some number of elements.
- *
- * The range is input or forward depending on what it wraps. The accesses
- * go through the wrapped range, but it also keeps a counter of how many
- * elements are remaining in the range and when it runs out it stops allowing
- * any more accesses.
- *
- * If the wrapped range runs out sooner than the number of allowed elements,
- * it will be considered empty anyway.
- */
-template<typename T>
-struct take_range: input_range<take_range<T>> {
-    using range_category  = std::common_type_t<
-        range_category_t<T>, forward_range_tag
-    >;
-    using value_type      = range_value_t     <T>;
-    using reference       = range_reference_t <T>;
-    using size_type       = range_size_t      <T>;
-    using difference_type = range_difference_t<T>;
+    template<typename T>
+    struct enumerated_range: input_range<enumerated_range<T>> {
+    private:
+        struct enumerated_value_t {
+            range_size_t<T> index;
+            range_reference_t<T> value;
+        };
 
-private:
-    T p_range;
-    size_type p_remaining;
+    public:
+        using range_category  = std::common_type_t<
+            range_category_t<T>, forward_range_tag
+        >;
+        using value_type      = range_value_t<T>;
+        using reference       = enumerated_value_t;
+        using size_type       = range_size_t      <T>;
+        using difference_type = range_difference_t<T>;
 
-public:
-    take_range() = delete;
+    private:
+        T p_range;
+        size_type p_index;
 
-    /** @brief Constructs the range with some number of elements. */
-    take_range(T const &range, size_type rem):
-        p_range(range), p_remaining(rem)
-    {}
+    public:
+        enumerated_range() = delete;
+        enumerated_range(T const &range): p_range(range), p_index(0) {}
 
-    /** @brief Checks if there are any no more elements left.
-     *
-     * The range is not considered empty when the internal remaining counter
-     * is larger than zero and the underlying range is not empty.
-     */
-    bool empty() const { return (p_remaining <= 0) || p_range.empty(); }
+        bool empty() const { return p_range.empty(); }
 
-    /** @brief Pops out the front element.
-     *
-     * The behavior is undefined when empty() is true.
-     */
-    void pop_front() {
-        p_range.pop_front();
-        if (p_remaining >= 1) {
-            --p_remaining;
+        void pop_front() {
+            p_range.pop_front();
+            ++p_index;
         }
-    }
 
-    /** @brief Accesses the front element. */
-    reference front() const { return p_range.front(); }
-};
+        reference front() const {
+            return reference{p_index, p_range.front()};
+        }
+    };
 
-/** @brief A wrapper range that splits a range into evenly sized chunks.
- *
- * The resulting range is either input or forward. Each element of the range
- * is an ostd::take_range with at most the given number of elements. If the
- * wrapped range's size is not a multiple, the last chunk will be smaller.
- */
-template<typename T>
-struct chunks_range: input_range<chunks_range<T>> {
-    using range_category   = std::common_type_t<
-        range_category_t<T>, forward_range_tag
-    >;
-    using value_type      = take_range        <T>;
-    using reference       = take_range        <T>;
-    using size_type       = range_size_t      <T>;
-    using difference_type = range_difference_t<T>;
+    template<typename T>
+    struct take_range: input_range<take_range<T>> {
+        using range_category  = std::common_type_t<
+            range_category_t<T>, forward_range_tag
+        >;
+        using value_type      = range_value_t     <T>;
+        using reference       = range_reference_t <T>;
+        using size_type       = range_size_t      <T>;
+        using difference_type = range_difference_t<T>;
 
-private:
-    T p_range;
-    size_type p_chunksize;
+    private:
+        T p_range;
+        size_type p_remaining;
 
-public:
-    chunks_range() = delete;
+    public:
+        take_range() = delete;
 
-    /** @brief Constructs the range with some number of elements per chunk. */
-    chunks_range(T const &range, range_size_t<T> chs):
-        p_range(range), p_chunksize(chs)
-    {}
+        take_range(T const &range, size_type rem):
+            p_range(range), p_remaining(rem)
+        {}
 
-    /** @brief Checks if the underlying range is empty. */
-    bool empty() const { return p_range.empty(); }
+        bool empty() const { return (p_remaining <= 0) || p_range.empty(); }
 
-    /** @brief Pops out some elements from the underlying range.
-     *
-     * The number is up to the chunk size.
-     */
-    void pop_front() {
-        range_pop_front_n(p_range, p_chunksize);
-    }
+        void pop_front() {
+            p_range.pop_front();
+            if (p_remaining >= 1) {
+                --p_remaining;
+            }
+        }
 
-    /** @brief Creates a chunk from the front elements. */
-    reference front() const { return p_range.take(p_chunksize); }
-};
+        reference front() const { return p_range.front(); }
+    };
 
-namespace detail {
+    template<typename T>
+    struct chunks_range: input_range<chunks_range<T>> {
+        using range_category   = std::common_type_t<
+            range_category_t<T>, forward_range_tag
+        >;
+        using value_type      = take_range        <T>;
+        using reference       = take_range        <T>;
+        using size_type       = range_size_t      <T>;
+        using difference_type = range_difference_t<T>;
+
+    private:
+        T p_range;
+        size_type p_chunksize;
+
+    public:
+        chunks_range() = delete;
+
+        chunks_range(T const &range, range_size_t<T> chs):
+            p_range(range), p_chunksize(chs)
+        {}
+
+        bool empty() const { return p_range.empty(); }
+
+        void pop_front() {
+            range_pop_front_n(p_range, p_chunksize);
+        }
+
+        reference front() const { return p_range.take(p_chunksize); }
+    };
+
     template<std::size_t I, std::size_t N, typename T>
     inline void join_range_pop(T &tup) {
         if constexpr(I != N) {
@@ -1386,56 +1347,40 @@ namespace detail {
         /* fallback, will probably throw */
         return std::get<0>(tup).front();
     }
-}
 
-/** @brief A wrapper range that joins multiple ranges together.
- *
- * The ranges don't have to be the same. However, their types must be
- * compatible. The vlaue type, reference, size type and difference type
- * are all common types between all the ranges; the category is at most
- * forward range but can be input if any of the ranges is input.
- */
-template<typename ...R>
-struct join_range: input_range<join_range<R...>> {
-    using range_category  = std::common_type_t<
-        forward_range_tag, range_category_t<R>...
-    >;
-    using value_type      = std::common_type_t<range_value_t<R>...>;
-    using reference       = std::common_type_t<range_reference_t<R>...>;
-    using size_type       = std::common_type_t<range_size_t<R>...>;
-    using difference_type = std::common_type_t<range_difference_t<R>...>;
+    template<typename ...R>
+    struct join_range: input_range<join_range<R...>> {
+        using range_category  = std::common_type_t<
+            forward_range_tag, range_category_t<R>...
+        >;
+        using value_type      = std::common_type_t<range_value_t<R>...>;
+        using reference       = std::common_type_t<range_reference_t<R>...>;
+        using size_type       = std::common_type_t<range_size_t<R>...>;
+        using difference_type = std::common_type_t<range_difference_t<R>...>;
 
-private:
-    std::tuple<R...> p_ranges;
+    private:
+        std::tuple<R...> p_ranges;
 
-public:
-    join_range() = delete;
+    public:
+        join_range() = delete;
 
-    /** @brief Constructs the range from some ranges. */
-    join_range(R const &...ranges): p_ranges(ranges...) {}
+        join_range(R const &...ranges): p_ranges(ranges...) {}
 
-    /** @brief The range is empty if all inner ranges are empty. */
-    bool empty() const {
-        return std::apply([](auto const &...args) {
-            return (... && args.empty());
-        }, p_ranges);
-    }
+        bool empty() const {
+            return std::apply([](auto const &...args) {
+                return (... && args.empty());
+            }, p_ranges);
+        }
 
-    /** @brief Pops out the front element from the first non-empty range. */
-    void pop_front() {
-        detail::join_range_pop<0, sizeof...(R)>(p_ranges);
-    }
+        void pop_front() {
+            join_range_pop<0, sizeof...(R)>(p_ranges);
+        }
 
-    /** @brief Accesses the front element of the first non-empty range.
-     *
-     * The behavior is undefined if the range is empty().
-     */
-    reference front() const {
-        return detail::join_range_front<0, sizeof...(R)>(p_ranges);
-    }
-};
+        reference front() const {
+            return join_range_front<0, sizeof...(R)>(p_ranges);
+        }
+    };
 
-namespace detail {
     template<typename ...T>
     struct zip_value_type {
         using type = std::tuple<T...>;
@@ -1448,60 +1393,44 @@ namespace detail {
 
     template<typename ...T>
     using zip_value_t = typename detail::zip_value_type<T...>::type;
-}
 
-/** @brief A wrapper range that zips multiple ranges together.
- *
- * This allows iteration of multiple ranges at once. The range will be
- * considered empty once any of the ranges is empty (i.e. the shortest
- * range is effectively the one that determines length). The resulting
- * range is forward or input, depending on if any of the ranges is input.
- *
- * The value type is a pair (for two ranges) or a tuple (for more ranges)
- * of the value types. The reference type is a pair or a tuple of the
- * reference types. The size and difference types are common types between
- * size and difference types of all contained ranges.
- */
-template<typename ...R>
-struct zip_range: input_range<zip_range<R...>> {
-    using range_category  = std::common_type_t<
-        forward_range_tag, range_category_t<R>...
-    >;
-    using value_type      = detail::zip_value_t<range_value_t<R>...>;
-    using reference       = detail::zip_value_t<range_reference_t<R>...>;
-    using size_type       = std::common_type_t<range_size_t<R>...>;
-    using difference_type = std::common_type_t<range_difference_t<R>...>;
+    template<typename ...R>
+    struct zip_range: input_range<zip_range<R...>> {
+        using range_category  = std::common_type_t<
+            forward_range_tag, range_category_t<R>...
+        >;
+        using value_type      = zip_value_t<range_value_t<R>...>;
+        using reference       = zip_value_t<range_reference_t<R>...>;
+        using size_type       = std::common_type_t<range_size_t<R>...>;
+        using difference_type = std::common_type_t<range_difference_t<R>...>;
 
-private:
-    std::tuple<R...> p_ranges;
+    private:
+        std::tuple<R...> p_ranges;
 
-public:
-    zip_range() = delete;
+    public:
+        zip_range() = delete;
 
-    /** @brief Constructs the range from some ranges. */
-    zip_range(R const &...ranges): p_ranges(ranges...) {}
+        zip_range(R const &...ranges): p_ranges(ranges...) {}
 
-    /** @brief The range is empty once any of the ranges is empty. */
-    bool empty() const {
-        return std::apply([](auto const &...args) {
-            return (... || args.empty());
-        }, p_ranges);
-    }
+        bool empty() const {
+            return std::apply([](auto const &...args) {
+                return (... || args.empty());
+            }, p_ranges);
+        }
 
-    /** @brief Pops out the front element from all ranges. */
-    void pop_front() {
-        std::apply([](auto &...args) {
-            (args.pop_front(), ...);
-        }, p_ranges);
-    }
+        void pop_front() {
+            std::apply([](auto &...args) {
+                (args.pop_front(), ...);
+            }, p_ranges);
+        }
 
-    /** @brief Accesses the front element of all ranges. */
-    reference front() const {
-        return std::apply([](auto &&...args) {
-            return reference{args.front()...};
-        }, p_ranges);
-    }
-};
+        reference front() const {
+            return std::apply([](auto &&...args) {
+                return reference{args.front()...};
+            }, p_ranges);
+        }
+    };
+} /* namespace detail */
 
 /** @brief An appender range is an output range over a standard container.
  *
