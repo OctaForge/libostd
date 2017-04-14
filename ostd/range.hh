@@ -168,7 +168,9 @@ namespace detail {
     constexpr bool test_range_category = range_category_test<R>::value;
 
     template<typename R, bool>
-    struct range_traits_base {};
+    struct range_traits_base {
+        static constexpr bool is_element_swappable = false;
+    };
 
     template<typename R>
     struct range_traits_base<R, true> {
@@ -177,10 +179,18 @@ namespace detail {
         using value_type      = typename R::value_type;
         using reference       = typename R::reference;
         using difference_type = typename R::difference_type;
+
+        static constexpr bool is_element_swappable =
+            std::is_convertible_v<range_category, input_range_tag> &&
+            std::is_lvalue_reference_v<reference> &&
+            std::is_same_v<value_type, std::remove_reference_t<reference>> &&
+            std::is_swappable_v<value_type>;
     };
 
     template<typename R, bool>
-    struct range_traits_impl {};
+    struct range_traits_impl {
+        static constexpr bool is_element_swappable = false;
+    };
 
     template<typename R>
     struct range_traits_impl<R, true>: range_traits_base<
@@ -194,13 +204,29 @@ namespace detail {
  *
  * Using range traits, you can for check various properties of the range.
  * If the provided `R` type is not a range type, the traits struct will
- * be empty. Otherwise, it will contain the following:
+ * be empty. Otherwise, it will contain the following member types:
  *
  * * `range_category` - one of the category tags (see ostd::input_range_tag)
  * * `size_type` - can contain the range's length (typically `size_t`)
  * * `value_type` - the type of the range's elements
  * * `reference` - the type returned from value accessors
  * * `difference_type` - the type used for distances (typically `ptrdiff_t`)
+ *
+ * It will always contain the following member as well:
+ *
+ * ~~~{.cc}
+ * static constexpr bool is_element_swappable = ...;
+ * ~~~
+ *
+ * This member will be false for non-range types and otherwise true when
+ * the following conditions are met:
+ *
+ * * The range is an ostd::input_range_tag or better (not an output range).
+ * * The `reference` member type is an lvalue reference.
+ * * The `value_type` is the same as `std::remove_reference_t<reference>`.
+ * * The `value_type` member is swappable (`std::is_swappable_v<value_type>`).
+ *
+ * If any of these four is not met, the member will also be false.
  *
  * You can read about more details [here](@ref ranges).
  *
@@ -279,6 +305,18 @@ using range_reference_t = typename range_traits<R>::reference;
  */
 template<typename R>
 using range_difference_t = typename range_traits<R>::difference_type;
+
+/** @brief Checks whether the range's element accessors allow swapping.
+ *
+ * It's the same as doing
+ *
+ * ~~~{.cc}
+ * ostd::range_traits<R>::is_element_swappable
+ * ~~~
+ *
+ */
+template<typename R>
+constexpr bool is_range_element_swappable = range_traits<R>::is_element_swappable;
 
 // is input range
 

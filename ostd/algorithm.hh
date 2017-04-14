@@ -23,8 +23,8 @@ namespace ostd {
  * Given a predicate `pred`, this rearranges the range so that items for
  * which the predicate returns true are in the first part of the range.
  *
- * The range must be at least ostd::forward_range_tag. The items are swapped,
- * which means the range's reference type must be swappable.
+ * The range must be at least ostd::forward_range_tag. The range must also
+ * meet the conditions of ostd::is_range_element_swappable.
  *
  * The predicate is applied `N` times and the swap is done at most `N` times.
  *
@@ -32,6 +32,10 @@ namespace ostd {
  */
 template<typename R, typename U>
 inline R partition(R range, U pred) {
+    static_assert(
+        is_range_element_swappable<R>,
+        "The range element accessors must allow swapping"
+    );
     R ret = range;
     for (; !range.empty(); range.pop_front()) {
         if (pred(range.front())) {
@@ -183,8 +187,8 @@ namespace detail {
  * comparison function takes two `ostd::range_reference_t<R>` and must
  * return a boolean equivalent to `a < b` for ascending order.
  *
- * The items are swapped in the range, which means the range's reference
- * type must be swappable.
+ * The items are swapped in the range, which means the range must also
+ * meet the conditions of ostd::is_range_element_swappable.
  *
  * The worst-case and average performance of this algorithm os `O(n log n)`.
  * The best-case performance is `O(n)`. This happens when the range is small
@@ -197,6 +201,10 @@ namespace detail {
  */
 template<typename R, typename C>
 inline R sort_cmp(R range, C compare) {
+    static_assert(
+        is_range_element_swappable<R>,
+        "The range element accessors must allow swapping"
+    );
     detail::introsort(range, compare);
     return range;
 }
@@ -215,6 +223,10 @@ inline auto sort_cmp(C &&compare) {
 /** @brief Like ostd::sort_cmp() using `std::less<ostd::range_value_t<R>>{}`. */
 template<typename R>
 inline R sort(R range) {
+    static_assert(
+        is_range_element_swappable<R>,
+        "The range element accessors must allow swapping"
+    );
     return sort_cmp(range, std::less<range_value_t<R>>{});
 }
 
