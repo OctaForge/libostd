@@ -869,9 +869,8 @@ inline void swap(coroutine<R(A...)> &a, coroutine<R(A...)> &b) noexcept {
     a.swap(b);
 }
 
-template<typename T> struct generator_range;
-
 namespace detail {
+    template<typename T> struct generator_range;
     template<typename T> struct generator_iterator;
 }
 
@@ -965,8 +964,8 @@ private:
     };
 
 public:
-    /** @brief As generators can be used with ranges, this is defined. */
-    using range = generator_range<T>;
+    /** @brief Generators are iterable, see iter(). */
+    using range = detail::generator_range<T>;
 
     /** @brief The yielder type for the generator. Not opaque, but internal. */
     using yield_type = yielder<T>;
@@ -1099,16 +1098,16 @@ public:
 
     /** @brief Gets a range to the generator.
      *
-     * The range is an ostd::generator_range<T>. It's an input range, so all
-     * of its copies point to the same generator instance, reflecting the same
-     * internal state.
+     * The range is an ostd::input_range_tag. It calls to empty() to check
+     * for emptiness and to resume() to pop. A call to value() is used
+     * to get the front element reference. 
      */
-    generator_range<T> iter() noexcept;
+    range iter() noexcept;
 
     /** @brief Implements a minimal iterator just for range-based for loop.
       *        Do not use directly.
       */
-    detail::generator_iterator<T> begin() noexcept;
+    auto begin() noexcept;
 
     /** @brief Implements a minimal iterator just for range-based for loop.
       *        Do not use directly.
@@ -1186,58 +1185,45 @@ namespace detail {
 template<typename T>
 using yield_type = typename detail::yield_type_base<T>::type;
 
-/** @brief A range type over a generator.
- *
- * This range type is a simple input range type (ostd::input_range_tag)
- * that wraps around a generator.
- */
-template<typename T>
-struct generator_range: input_range<generator_range<T>> {
-    using range_category  = input_range_tag;
-    using value_type      = T;
-    using reference       = T &;
-    using size_type       = std::size_t;
-    using difference_type = std::ptrdiff_t;
+namespace detail {
+    template<typename T>
+    struct generator_range: input_range<generator_range<T>> {
+        using range_category  = input_range_tag;
+        using value_type      = T;
+        using reference       = T &;
+        using size_type       = std::size_t;
+        using difference_type = std::ptrdiff_t;
 
-    generator_range() = delete;
+        generator_range() = delete;
 
-    /** @brief Generator ranges are constructed using a generator reference. */
-    generator_range(generator<T> &g): p_gen(&g) {}
+        generator_range(generator<T> &g): p_gen(&g) {}
 
-    /** @brief Like ostd::generator<T>::empty(). */
-    bool empty() const noexcept {
-        return p_gen->empty();
-    }
+        bool empty() const noexcept {
+            return p_gen->empty();
+        }
 
-    /** @brief Like ostd::generator<T>::resume(). */
-    void pop_front() {
-        p_gen->resume();
-    }
+        void pop_front() {
+            p_gen->resume();
+        }
 
-    /** @brief Like ostd::generator<T>::value(). */
-    reference front() const {
-        return p_gen->value();
-    }
+        reference front() const {
+            return p_gen->value();
+        }
 
-    /** @brief Implements a minimal iterator just for range-based for loop.
-      *        Do not use directly.
-      */
-    detail::generator_iterator<T> begin() noexcept;
+        generator_iterator<T> begin() noexcept;
 
-    /** @brief Implements a minimal iterator just for range-based for loop.
-      *        Do not use directly.
-      */
-    std::nullptr_t end() noexcept {
-        return nullptr;
-    }
+        std::nullptr_t end() noexcept {
+            return nullptr;
+        }
 
-private:
-    generator<T> *p_gen;
-};
+    private:
+        generator<T> *p_gen;
+    };
+} /* namespace detail */
 
 template<typename T>
-generator_range<T> generator<T>::iter() noexcept {
-    return generator_range<T>{*this};
+typename generator<T>::range generator<T>::iter() noexcept {
+    return detail::generator_range<T>{*this};
 }
 
 namespace detail {
@@ -1266,14 +1252,16 @@ namespace detail {
 } /* namespace detail */
 
 template<typename T>
-detail::generator_iterator<T> generator<T>::begin() noexcept {
+auto generator<T>::begin() noexcept {
     return detail::generator_iterator<T>{*this};
 }
 
-template<typename T>
-detail::generator_iterator<T> generator_range<T>::begin() noexcept {
-    return detail::generator_iterator<T>{*p_gen};
-}
+namespace detail {
+    template<typename T>
+    generator_iterator<T> generator_range<T>::begin() noexcept {
+        return generator_iterator<T>{*p_gen};
+    }
+} /* namespace detail */
 
 /** @} */
 
