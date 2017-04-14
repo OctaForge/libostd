@@ -532,6 +532,14 @@ inline auto none_of(F &&func) {
     };
 }
 
+/** @brief Finds `v` in `range`.
+ *
+ * Iterates the range and as soon as `range.front()` is equal to `v`,
+ * returns `range`. The `range` is at least ostd::input_range_tag.
+ *
+ * @sse ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
+ *      ostd::find_one_of()
+ */
 template<typename R, typename T>
 inline R find(R range, T const &v) {
     for (; !range.empty(); range.pop_front()) {
@@ -542,6 +550,10 @@ inline R find(R range, T const &v) {
     return range;
 }
 
+/** @brief A pipeable version of ostd::find().
+ *
+ * The `v` is forwarded.
+ */
 template<typename T>
 inline auto find(T &&v) {
     return [v = std::forward<T>(v)](auto &obj) mutable {
@@ -549,6 +561,16 @@ inline auto find(T &&v) {
     };
 }
 
+/** @brief Finds the last occurence of `v` in `range`.
+ *
+ * Keeps attempting ostd::find() from the point of previous ostd::find()
+ * until no next matching element is found. As this algorithm has to save
+ * the previous result of ostd::find() in case nothing is found next, this
+ * algortihm requires `range` to be at least ostd::forward_range_tag.
+ *
+ * @sse ostd::find(), ostd::find_if(), ostd::find_if_not(),
+ *      ostd::find_one_of()
+ */
 template<typename R, typename T>
 inline R find_last(R range, T const &v) {
     range = find(range, v);
@@ -566,6 +588,10 @@ inline R find_last(R range, T const &v) {
     return range;
 }
 
+/** @brief A pipeable version of ostd::find_last().
+ *
+ * The `v` is forwarded.
+ */
 template<typename T>
 inline auto find_last(T &&v) {
     return [v = std::forward<T>(v)](auto &obj) mutable {
@@ -573,6 +599,14 @@ inline auto find_last(T &&v) {
     };
 }
 
+/** @brief Finds an element matching `pred` in `range`.
+ *
+ * Iterates the range and as soon as `pred(range.front())` is true,
+ * returns `range`. The `range` is at least ostd::input_range_tag.
+ *
+ * @sse ostd::find(), ostd::find_last(), ostd::find_if_not(),
+ *      ostd::find_one_of()
+ */
 template<typename R, typename P>
 inline R find_if(R range, P pred) {
     for (; !range.empty(); range.pop_front()) {
@@ -583,13 +617,24 @@ inline R find_if(R range, P pred) {
     return range;
 }
 
-template<typename F>
-inline auto find_if(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return find_if(obj, std::forward<F>(func));
+/** @brief A pipeable version of ostd::find_if().
+ *
+ * The `pred` is forwarded.
+ */
+template<typename P>
+inline auto find_if(P &&pred) {
+    return [pred = std::forward<P>(pred)](auto &obj) mutable {
+        return find_if(obj, std::forward<P>(pred));
     };
 }
 
+/** @brief Finds an element not matching `pred` in `range`.
+ *
+ * Iterates the range and as soon as `!pred(range.front())` is true,
+ * returns `range`. The `range` is at least ostd::input_range_tag.
+ *
+ * @sse ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_one_of()
+ */
 template<typename R, typename P>
 inline R find_if_not(R range, P pred) {
     for (; !range.empty(); range.pop_front()) {
@@ -600,13 +645,36 @@ inline R find_if_not(R range, P pred) {
     return range;
 }
 
-template<typename F>
-inline auto find_if_not(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return find_if_not(obj, std::forward<F>(func));
+/** @brief A pipeable version of ostd::find_if_not().
+ *
+ * The `pred` is forwarded.
+ */
+template<typename P>
+inline auto find_if_not(P &&pred) {
+    return [pred = std::forward<P>(pred)](auto &obj) mutable {
+        return find_if_not(obj, std::forward<P>(pred));
     };
 }
 
+/** @brief Finds the first element matching any element in `values`.
+ *
+ * The `compare` function is used to compare the values. The `range`
+ * is iterated and each item is compared with each item in `values`
+ * and once a match is found, `range` is returned.
+ *
+ * The `range` has to be at least ostd::input_iterator_tag as it's
+ * iterated only once, `values` has to be ostd::forward_range_tag or
+ * better.
+ *
+ * The time complexity is up to `N * M` where `N` is the length of
+ * `range` and `M` is the length of `values`.
+ *
+ * Use ostd::find_one_of() if you want to use the `==` operator
+ * instead of calling `compare`.
+ *
+ * @sse ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
+ *      ostd::find_one_of()
+ */
 template<typename R1, typename R2, typename C>
 inline R1 find_one_of_cmp(R1 range, R2 values, C compare) {
     for (; !range.empty(); range.pop_front()) {
@@ -618,6 +686,11 @@ inline R1 find_one_of_cmp(R1 range, R2 values, C compare) {
     }
     return range;
 }
+
+/** @brief A pipeable version of ostd::find_one_of_cmp().
+ *
+ * The `values` and `compare` are forwarded.
+ */
 template<typename R, typename C>
 inline auto find_one_of_cmp(R &&values, C &&compare) {
     return [
@@ -629,6 +702,25 @@ inline auto find_one_of_cmp(R &&values, C &&compare) {
     };
 }
 
+/** @brief Finds the first element matching any element in `values`.
+ *
+ * The `==` operator is used to compare the values. The `range`
+ * is iterated and each item is compared with each item in `values`
+ * and once a match is found, `range` is returned.
+ *
+ * The `range` has to be at least ostd::input_iterator_tag as it's
+ * iterated only once, `values` has to be ostd::forward_range_tag or
+ * better.
+ *
+ * The time complexity is up to `N * M` where `N` is the length of
+ * `range` and `M` is the length of `values`.
+ *
+ * Use ostd::find_one_of_cmp() if you want to use a comparison
+ * function instead of the `==` operator.
+ *
+ * @sse ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
+ *      ostd::find_one_of_cmp()
+ */
 template<typename R1, typename R2>
 inline R1 find_one_of(R1 range, R2 values) {
     for (; !range.empty(); range.pop_front()) {
