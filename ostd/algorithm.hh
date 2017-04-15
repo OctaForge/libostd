@@ -39,20 +39,19 @@ namespace ostd {
  * Given a predicate `pred`, this rearranges the range so that items for
  * which the predicate returns true are in the first part of the range.
  *
- * The range must be at least ostd::forward_range_tag. The range must also
- * meet the conditions of ostd::is_range_element_swappable.
+ * The range must meet the conditions of ostd::is_range_element_swappable.
  *
  * The predicate is applied `N` times and the swap is done at most `N` times.
  *
  * @returns The second part of the range.
  */
-template<typename R, typename U>
-inline R partition(R range, U pred) {
+template<typename ForwardRange, typename Predicate>
+inline ForwardRange partition(ForwardRange range, Predicate pred) {
     static_assert(
-        is_range_element_swappable<R>,
+        is_range_element_swappable<ForwardRange>,
         "The range element accessors must allow swapping"
     );
-    R ret = range;
+    auto ret = range;
     for (; !range.empty(); range.pop_front()) {
         if (pred(range.front())) {
             using std::swap;
@@ -67,10 +66,10 @@ inline R partition(R range, U pred) {
  *
  * The predicate is forwarded.
  */
-template<typename F>
-inline auto partition(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return partition(obj, std::forward<F>(func));
+template<typename Predicate>
+inline auto partition(Predicate &&pred) {
+    return [pred = std::forward<Predicate>(pred)](auto &obj) mutable {
+        return partition(obj, std::forward<Predicate>(pred));
     };
 }
 
@@ -82,8 +81,8 @@ inline auto partition(F &&func) {
  *
  * The predicate is applied at most `N` times.
  */
-template<typename R, typename P>
-inline bool is_partitioned(R range, P pred) {
+template<typename InputRange, typename Predicate>
+inline bool is_partitioned(InputRange range, Predicate pred) {
     for (; !range.empty() && pred(range.front()); range.pop_front());
     for (; !range.empty(); range.pop_front()) {
         if (pred(range.front())) {
@@ -97,10 +96,10 @@ inline bool is_partitioned(R range, P pred) {
  *
  * The predicate is forwarded.
  */
-template<typename F>
-inline auto is_partitioned(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return is_partitioned(obj, std::forward<F>(func));
+template<typename Predicate>
+inline auto is_partitioned(Predicate &&pred) {
+    return [pred = std::forward<Predicate>(pred)](auto &obj) mutable {
+        return is_partitioned(obj, std::forward<Predicate>(pred));
     };
 }
 
@@ -215,10 +214,10 @@ namespace detail {
  *
  * @see ostd::sort()
  */
-template<typename R, typename C>
-inline R sort_cmp(R range, C compare) {
+template<typename FiniteRandomRange, typename Compare>
+inline FiniteRandomRange sort_cmp(FiniteRandomRange range, Compare compare) {
     static_assert(
-        is_range_element_swappable<R>,
+        is_range_element_swappable<FiniteRandomRange>,
         "The range element accessors must allow swapping"
     );
     detail::introsort(range, compare);
@@ -229,21 +228,21 @@ inline R sort_cmp(R range, C compare) {
  *
  * The comparison function is forwarded.
  */
-template<typename C>
-inline auto sort_cmp(C &&compare) {
-    return [compare = std::forward<C>(compare)](auto &obj) mutable {
-        return sort_cmp(obj, std::forward<C>(compare));
+template<typename Compare>
+inline auto sort_cmp(Compare &&compare) {
+    return [compare = std::forward<Compare>(compare)](auto &obj) mutable {
+        return sort_cmp(obj, std::forward<Compare>(compare));
     };
 }
 
 /** @brief Like ostd::sort_cmp() using `std::less<ostd::range_value_t<R>>{}`. */
-template<typename R>
-inline R sort(R range) {
+template<typename FiniteRandomRange>
+inline FiniteRandomRange sort(FiniteRandomRange range) {
     static_assert(
-        is_range_element_swappable<R>,
+        is_range_element_swappable<FiniteRandomRange>,
         "The range element accessors must allow swapping"
     );
-    return sort_cmp(range, std::less<range_value_t<R>>{});
+    return sort_cmp(range, std::less<range_value_t<FiniteRandomRange>>{});
 }
 
 /** @brief A pipeable version of ostd::sort(). */
@@ -260,9 +259,9 @@ inline auto sort() {
  *
  * @see ostd::min_element_cmp(), ostd::max_element()
  */
-template<typename R>
-inline R min_element(R range) {
-    R r = range;
+template<typename ForwardRange>
+inline ForwardRange min_element(ForwardRange range) {
+    ForwardRange r = range;
     for (; !range.empty(); range.pop_front()) {
         if (std::min(r.front(), range.front()) == range.front()) {
             r = range;
@@ -278,9 +277,9 @@ inline R min_element(R range) {
  *
  * @see ostd::min_element(), ostd::max_element_cmp()
  */
-template<typename R, typename C>
-inline R min_element_cmp(R range, C compare) {
-    R r = range;
+template<typename ForwardRange, typename Compare>
+inline ForwardRange min_element_cmp(ForwardRange range, Compare compare) {
+    ForwardRange r = range;
     for (; !range.empty(); range.pop_front()) {
         if (std::min(r.front(), range.front(), compare) == range.front()) {
             r = range;
@@ -300,10 +299,10 @@ inline auto min_element() {
  *
  * The comparison function is forwarded.
  */
-template<typename C>
-inline auto min_element_cmp(C &&compare) {
-    return [compare = std::forward<C>(compare)](auto &obj) mutable {
-        return min_element_cmp(obj, std::forward<C>(compare));
+template<typename Compare>
+inline auto min_element_cmp(Compare &&compare) {
+    return [compare = std::forward<Compare>(compare)](auto &obj) mutable {
+        return min_element_cmp(obj, std::forward<Compare>(compare));
     };
 }
 
@@ -314,9 +313,9 @@ inline auto min_element_cmp(C &&compare) {
  *
  * @see ostd::max_element_cmp(), ostd::min_element()
  */
-template<typename R>
-inline R max_element(R range) {
-    R r = range;
+template<typename ForwardRange>
+inline ForwardRange max_element(ForwardRange range) {
+    ForwardRange r = range;
     for (; !range.empty(); range.pop_front()) {
         if (std::max(r.front(), range.front()) == range.front()) {
             r = range;
@@ -332,9 +331,9 @@ inline R max_element(R range) {
  *
  * @see ostd::max_element(), ostd::min_element_cmp()
  */
-template<typename R, typename C>
-inline R max_element_cmp(R range, C compare) {
-    R r = range;
+template<typename ForwardRange, typename Compare>
+inline ForwardRange max_element_cmp(ForwardRange range, Compare compare) {
+    ForwardRange r = range;
     for (; !range.empty(); range.pop_front()) {
         if (std::max(r.front(), range.front(), compare) == range.front()) {
             r = range;
@@ -354,10 +353,10 @@ inline auto max_element() {
  *
  * The comparison function is forwarded.
  */
-template<typename C>
-inline auto max_element_cmp(C &&compare) {
-    return [compare = std::forward<C>(compare)](auto &obj) mutable {
-        return max_element_cmp(obj, std::forward<C>(compare));
+template<typename Compare>
+inline auto max_element_cmp(Compare &&compare) {
+    return [compare = std::forward<Compare>(compare)](auto &obj) mutable {
+        return max_element_cmp(obj, std::forward<Compare>(compare));
     };
 }
 
@@ -370,8 +369,8 @@ inline auto max_element_cmp(C &&compare) {
  *
  * @see ostd::lexicographical_compare_cmp()
  */
-template<typename R1, typename R2>
-inline bool lexicographical_compare(R1 range1, R2 range2) {
+template<typename InputRange1, typename InputRange2>
+inline bool lexicographical_compare(InputRange1 range1, InputRange2 range2) {
     while (!range1.empty() && !range2.empty()) {
         if (range1.front() < range2.front()) {
             return true;
@@ -389,10 +388,10 @@ inline bool lexicographical_compare(R1 range1, R2 range2) {
  *
  * The range is forwarded.
  */
-template<typename R>
-inline auto lexicographical_compare(R &&range) {
-    return [range = std::forward<R>(range)](auto &obj) mutable {
-        return lexicographical_compare(obj, std::forward<R>(range));
+template<typename InputRange>
+inline auto lexicographical_compare(InputRange &&range) {
+    return [range = std::forward<InputRange>(range)](auto &obj) mutable {
+        return lexicographical_compare(obj, std::forward<InputRange>(range));
     };
 }
 
@@ -403,8 +402,10 @@ inline auto lexicographical_compare(R &&range) {
  *
  * @see ostd::lexicographical_compare()
  */
-template<typename R1, typename R2, typename C>
-inline bool lexicographical_compare_cmp(R1 range1, R2 range2, C compare) {
+template<typename InputRange1, typename InputRange2, typename Compare>
+inline bool lexicographical_compare_cmp(
+    InputRange1 range1, InputRange2 range2, Compare compare
+) {
     while (!range1.empty() && !range2.empty()) {
         if (compare(range1.front(), range2.front())) {
             return true;
@@ -422,13 +423,14 @@ inline bool lexicographical_compare_cmp(R1 range1, R2 range2, C compare) {
  *
  * The range and comparison function are forwarded.
  */
-template<typename R, typename C>
-inline auto lexicographical_compare_cmp(R &&range, C &&compare) {
+template<typename InputRange, typename Compare>
+inline auto lexicographical_compare_cmp(InputRange &&range, Compare &&compare) {
     return [
-        range = std::forward<R>(range), compare = std::forward<C>(compare)
+        range = std::forward<InputRange>(range),
+        compare = std::forward<Compare>(compare)
     ](auto &obj) mutable {
         return lexicographical_compare_cmp(
-            obj, std::forward<R>(range), std::forward<C>(compare)
+            obj, std::forward<InputRange>(range), std::forward<Compare>(compare)
         );
     };
 }
@@ -442,8 +444,8 @@ inline auto lexicographical_compare_cmp(R &&range, C &&compare) {
  *
  * @returns The `func` by move.
  */
-template<typename R, typename F>
-inline F for_each(R range, F func) {
+template<typename InputRange, typename UnaryFunction>
+inline UnaryFunction for_each(InputRange range, UnaryFunction func) {
     for (; !range.empty(); range.pop_front()) {
         func(range.front());
     }
@@ -454,10 +456,10 @@ inline F for_each(R range, F func) {
  *
  * The function is forwarded.
  */
-template<typename F>
-inline auto for_each(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return for_each(obj, std::forward<F>(func));
+template<typename UnaryFunction>
+inline auto for_each(UnaryFunction &&func) {
+    return [func = std::forward<UnaryFunction>(func)](auto &obj) mutable {
+        return for_each(obj, std::forward<UnaryFunction>(func));
     };
 }
 
@@ -471,8 +473,8 @@ inline auto for_each(F &&func) {
  *
  * @see ostd::any_of(), ostd::none_of()
  */
-template<typename R, typename P>
-inline bool all_of(R range, P pred) {
+template<typename InputRange, typename Predicate>
+inline bool all_of(InputRange range, Predicate pred) {
     for (; !range.empty(); range.pop_front()) {
         if (!pred(range.front())) {
             return false;
@@ -485,10 +487,10 @@ inline bool all_of(R range, P pred) {
  *
  * The function is forwarded.
  */
-template<typename F>
-inline auto all_of(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return all_of(obj, std::forward<F>(func));
+template<typename Predicate>
+inline auto all_of(Predicate &&pred) {
+    return [pred = std::forward<Predicate>(pred)](auto &obj) mutable {
+        return all_of(obj, std::forward<Predicate>(pred));
     };
 }
 
@@ -502,8 +504,8 @@ inline auto all_of(F &&func) {
  *
  * @see ostd::all_of(), ostd::none_of()
  */
-template<typename R, typename P>
-inline bool any_of(R range, P pred) {
+template<typename InputRange, typename Predicate>
+inline bool any_of(InputRange range, Predicate pred) {
     for (; !range.empty(); range.pop_front())
         if (pred(range.front())) return true;
     return false;
@@ -513,10 +515,10 @@ inline bool any_of(R range, P pred) {
  *
  * The function is forwarded.
  */
-template<typename F>
-inline auto any_of(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return any_of(obj, std::forward<F>(func));
+template<typename Predicate>
+inline auto any_of(Predicate &&pred) {
+    return [pred = std::forward<Predicate>(pred)](auto &obj) mutable {
+        return any_of(obj, std::forward<Predicate>(pred));
     };
 }
 
@@ -530,8 +532,8 @@ inline auto any_of(F &&func) {
  *
  * @see ostd::all_of(), ostd::any_of()
  */
-template<typename R, typename P>
-inline bool none_of(R range, P pred) {
+template<typename InputRange, typename Predicate>
+inline bool none_of(InputRange range, Predicate pred) {
     for (; !range.empty(); range.pop_front())
         if (pred(range.front())) return false;
     return true;
@@ -541,10 +543,10 @@ inline bool none_of(R range, P pred) {
  *
  * The function is forwarded.
  */
-template<typename F>
-inline auto none_of(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return none_of(obj, std::forward<F>(func));
+template<typename Predicate>
+inline auto none_of(Predicate &&pred) {
+    return [pred = std::forward<Predicate>(pred)](auto &obj) mutable {
+        return none_of(obj, std::forward<Predicate>(pred));
     };
 }
 
@@ -556,8 +558,8 @@ inline auto none_of(F &&func) {
  * @sse ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
  *      ostd::find_one_of()
  */
-template<typename R, typename T>
-inline R find(R range, T const &v) {
+template<typename InputRange, typename Value>
+inline InputRange find(InputRange range, Value const &v) {
     for (; !range.empty(); range.pop_front()) {
         if (range.front() == v) {
             break;
@@ -570,10 +572,10 @@ inline R find(R range, T const &v) {
  *
  * The `v` is forwarded.
  */
-template<typename T>
-inline auto find(T &&v) {
-    return [v = std::forward<T>(v)](auto &obj) mutable {
-        return find(obj, std::forward<T>(v));
+template<typename Value>
+inline auto find(Value &&v) {
+    return [v = std::forward<Value>(v)](auto &obj) mutable {
+        return find(obj, std::forward<Value>(v));
     };
 }
 
@@ -587,14 +589,14 @@ inline auto find(T &&v) {
  * @sse ostd::find(), ostd::find_if(), ostd::find_if_not(),
  *      ostd::find_one_of()
  */
-template<typename R, typename T>
-inline R find_last(R range, T const &v) {
+template<typename ForwardRange, typename Value>
+inline ForwardRange find_last(ForwardRange range, Value const &v) {
     range = find(range, v);
     if (!range.empty()) {
         for (;;) {
-            R prev = range;
+            auto prev = range;
             prev.pop_front();
-            R r = find(prev, v);
+            auto r = find(prev, v);
             if (r.empty()) {
                 break;
             }
@@ -608,10 +610,10 @@ inline R find_last(R range, T const &v) {
  *
  * The `v` is forwarded.
  */
-template<typename T>
-inline auto find_last(T &&v) {
-    return [v = std::forward<T>(v)](auto &obj) mutable {
-        return find_last(obj, std::forward<T>(v));
+template<typename Value>
+inline auto find_last(Value &&v) {
+    return [v = std::forward<Value>(v)](auto &obj) mutable {
+        return find_last(obj, std::forward<Value>(v));
     };
 }
 
@@ -623,8 +625,8 @@ inline auto find_last(T &&v) {
  * @sse ostd::find(), ostd::find_last(), ostd::find_if_not(),
  *      ostd::find_one_of()
  */
-template<typename R, typename P>
-inline R find_if(R range, P pred) {
+template<typename InputRange, typename Predicate>
+inline InputRange find_if(InputRange range, Predicate pred) {
     for (; !range.empty(); range.pop_front()) {
         if (pred(range.front())) {
             break;
@@ -637,10 +639,10 @@ inline R find_if(R range, P pred) {
  *
  * The `pred` is forwarded.
  */
-template<typename P>
-inline auto find_if(P &&pred) {
-    return [pred = std::forward<P>(pred)](auto &obj) mutable {
-        return find_if(obj, std::forward<P>(pred));
+template<typename Predicate>
+inline auto find_if(Predicate &&pred) {
+    return [pred = std::forward<Predicate>(pred)](auto &obj) mutable {
+        return find_if(obj, std::forward<Predicate>(pred));
     };
 }
 
@@ -651,8 +653,8 @@ inline auto find_if(P &&pred) {
  *
  * @sse ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_one_of()
  */
-template<typename R, typename P>
-inline R find_if_not(R range, P pred) {
+template<typename InputRange, typename Predicate>
+inline InputRange find_if_not(InputRange range, Predicate pred) {
     for (; !range.empty(); range.pop_front()) {
         if (!pred(range.front())) {
             break;
@@ -665,10 +667,10 @@ inline R find_if_not(R range, P pred) {
  *
  * The `pred` is forwarded.
  */
-template<typename P>
-inline auto find_if_not(P &&pred) {
-    return [pred = std::forward<P>(pred)](auto &obj) mutable {
-        return find_if_not(obj, std::forward<P>(pred));
+template<typename Predicate>
+inline auto find_if_not(Predicate &&pred) {
+    return [pred = std::forward<Predicate>(pred)](auto &obj) mutable {
+        return find_if_not(obj, std::forward<Predicate>(pred));
     };
 }
 
@@ -678,7 +680,7 @@ inline auto find_if_not(P &&pred) {
  * is iterated and each item is compared with each item in `values`
  * and once a match is found, `range` is returned.
  *
- * The `range` has to be at least ostd::input_iterator_tag as it's
+ * The `range` has to be at least ostd::input_range_tag as it's
  * iterated only once, `values` has to be ostd::forward_range_tag or
  * better.
  *
@@ -691,10 +693,12 @@ inline auto find_if_not(P &&pred) {
  * @sse ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
  *      ostd::find_one_of()
  */
-template<typename R1, typename R2, typename C>
-inline R1 find_one_of_cmp(R1 range, R2 values, C compare) {
+template<typename InputRange, typename ForwardRange, typename Compare>
+inline InputRange find_one_of_cmp(
+    InputRange range, ForwardRange values, Compare compare
+) {
     for (; !range.empty(); range.pop_front()) {
-        for (R2 rv = values; !rv.empty(); rv.pop_front()) {
+        for (auto rv = values; !rv.empty(); rv.pop_front()) {
             if (compare(range.front(), rv.front())) {
                 return range;
             }
@@ -707,13 +711,15 @@ inline R1 find_one_of_cmp(R1 range, R2 values, C compare) {
  *
  * The `values` and `compare` are forwarded.
  */
-template<typename R, typename C>
-inline auto find_one_of_cmp(R &&values, C &&compare) {
+template<typename ForwardRange, typename Compare>
+inline auto find_one_of_cmp(ForwardRange &&values, Compare &&compare) {
     return [
-        values = std::forward<R>(values), compare = std::forward<C>(compare)
+        values = std::forward<ForwardRange>(values),
+        compare = std::forward<Compare>(compare)
     ](auto &obj) mutable {
         return find_one_of_cmp(
-            obj, std::forward<R>(values), std::forward<C>(compare)
+            obj, std::forward<ForwardRange>(values),
+            std::forward<Compare>(compare)
         );
     };
 }
@@ -724,7 +730,7 @@ inline auto find_one_of_cmp(R &&values, C &&compare) {
  * is iterated and each item is compared with each item in `values`
  * and once a match is found, `range` is returned.
  *
- * The `range` has to be at least ostd::input_iterator_tag as it's
+ * The `range` has to be at least ostd::input_range_tag as it's
  * iterated only once, `values` has to be ostd::forward_range_tag or
  * better.
  *
@@ -737,10 +743,10 @@ inline auto find_one_of_cmp(R &&values, C &&compare) {
  * @sse ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
  *      ostd::find_one_of_cmp()
  */
-template<typename R1, typename R2>
-inline R1 find_one_of(R1 range, R2 values) {
+template<typename InputRange, typename ForwardRange>
+inline InputRange find_one_of(InputRange range, ForwardRange values) {
     for (; !range.empty(); range.pop_front()) {
-        for (R2 rv = values; !rv.empty(); rv.pop_front()) {
+        for (auto rv = values; !rv.empty(); rv.pop_front()) {
             if (range.front() == rv.front()) {
                 return range;
             }
@@ -753,10 +759,10 @@ inline R1 find_one_of(R1 range, R2 values) {
  *
  * The `values` range is forwarded.
  */
-template<typename R>
-inline auto find_one_of(R &&values) {
-    return [values = std::forward<R>(values)](auto &obj) mutable {
-        return find_one_of(obj, std::forward<R>(values));
+template<typename ForwardRange>
+inline auto find_one_of(ForwardRange &&values) {
+    return [values = std::forward<ForwardRange>(values)](auto &obj) mutable {
+        return find_one_of(obj, std::forward<ForwardRange>(values));
     };
 }
 
@@ -769,9 +775,9 @@ inline auto find_one_of(R &&values) {
  *
  * @see ostd::count_if(), ostd::count_if_not()
  */
-template<typename R, typename T>
-inline range_size_t<R> count(R range, T const &v) {
-    range_size_t<R> ret = 0;
+template<typename InputRange, typename Value>
+inline range_size_t<InputRange> count(InputRange range, Value const &v) {
+    range_size_t<InputRange> ret = 0;
     for (; !range.empty(); range.pop_front()) {
         if (range.front() == v) {
             ++ret;
@@ -784,10 +790,10 @@ inline range_size_t<R> count(R range, T const &v) {
  *
  * The `v` is forwarded.
  */
-template<typename T>
-inline auto count(T &&v) {
-    return [v = std::forward<T>(v)](auto &obj) mutable {
-        return count(obj, std::forward<T>(v));
+template<typename Value>
+inline auto count(Value &&v) {
+    return [v = std::forward<Value>(v)](auto &obj) mutable {
+        return count(obj, std::forward<Value>(v));
     };
 }
 
@@ -800,9 +806,9 @@ inline auto count(T &&v) {
  *
  * @see ostd::count(), ostd::count_if_not()
  */
-template<typename R, typename P>
-inline range_size_t<R> count_if(R range, P pred) {
-    range_size_t<R> ret = 0;
+template<typename InputRange, typename Predicate>
+inline range_size_t<InputRange> count_if(InputRange range, Predicate pred) {
+    range_size_t<InputRange> ret = 0;
     for (; !range.empty(); range.pop_front()) {
         if (pred(range.front())) {
             ++ret;
@@ -815,10 +821,10 @@ inline range_size_t<R> count_if(R range, P pred) {
  *
  * The `pred` is forwarded.
  */
-template<typename P>
-inline auto count_if(P &&pred) {
-    return [pred = std::forward<P>(pred)](auto &obj) mutable {
-        return count_if(obj, std::forward<P>(pred));
+template<typename Predicate>
+inline auto count_if(Predicate &&pred) {
+    return [pred = std::forward<Predicate>(pred)](auto &obj) mutable {
+        return count_if(obj, std::forward<Predicate>(pred));
     };
 }
 
@@ -831,9 +837,9 @@ inline auto count_if(P &&pred) {
  *
  * @see ostd::count(), ostd::count_if()
  */
-template<typename R, typename P>
-inline range_size_t<R> count_if_not(R range, P pred) {
-    range_size_t<R> ret = 0;
+template<typename InputRange, typename Predicate>
+inline range_size_t<InputRange> count_if_not(InputRange range, Predicate pred) {
+    range_size_t<InputRange> ret = 0;
     for (; !range.empty(); range.pop_front()) {
         if (!pred(range.front())) {
             ++ret;
@@ -846,10 +852,10 @@ inline range_size_t<R> count_if_not(R range, P pred) {
  *
  * The `pred` is forwarded.
  */
-template<typename P>
-inline auto count_if_not(P &&pred) {
-    return [pred = std::forward<P>(pred)](auto &obj) mutable {
-        return count_if_not(obj, std::forward<P>(pred));
+template<typename Predicate>
+inline auto count_if_not(Predicate &&pred) {
+    return [pred = std::forward<Predicate>(pred)](auto &obj) mutable {
+        return count_if_not(obj, std::forward<Predicate>(pred));
     };
 }
 
@@ -860,8 +866,8 @@ inline auto count_if_not(P &&pred) {
  * `!(range1.front() == range2.front())` is true in any iteration,
  * false is also returned. Otherwise true is returned.
  */
-template<typename R>
-inline bool equal(R range1, R range2) {
+template<typename InputRange>
+inline bool equal(InputRange range1, InputRange range2) {
     for (; !range1.empty(); range1.pop_front()) {
         if (range2.empty() || !(range1.front() == range2.front())) {
             return false;
@@ -875,10 +881,10 @@ inline bool equal(R range1, R range2) {
  *
  * The `range` is forwarded as the second range.
  */
-template<typename R>
-inline auto equal(R &&range) {
-    return [range = std::forward<R>(range)](auto &obj) mutable {
-        return equal(obj, std::forward<R>(range));
+template<typename InputRange>
+inline auto equal(InputRange &&range) {
+    return [range = std::forward<InputRange>(range)](auto &obj) mutable {
+        return equal(obj, std::forward<InputRange>(range));
     };
 }
 
@@ -893,8 +899,8 @@ inline auto equal(R &&range) {
  *
  * @see ostd::copy_if(), ostd::copy_if_not()
  */
-template<typename R1, typename R2>
-inline R2 copy(R1 irange, R2 orange) {
+template<typename InputRange, typename OutputRange>
+inline OutputRange copy(InputRange irange, OutputRange orange) {
     range_put_all(orange, irange);
     return orange;
 }
@@ -907,8 +913,10 @@ inline R2 copy(R1 irange, R2 orange) {
  *
  * @see ostd::copy(), ostd::copy_if_not()
  */
-template<typename R1, typename R2, typename P>
-inline R2 copy_if(R1 irange, R2 orange, P pred) {
+template<typename InputRange, typename OutputRange, typename Predicate>
+inline OutputRange copy_if(
+    InputRange irange, OutputRange orange, Predicate pred
+) {
     for (; !irange.empty(); irange.pop_front()) {
         if (pred(irange.front())) {
             orange.put(irange.front());
@@ -925,8 +933,10 @@ inline R2 copy_if(R1 irange, R2 orange, P pred) {
  *
  * @see ostd::copy(), ostd::copy_if()
  */
-template<typename R1, typename R2, typename P>
-inline R2 copy_if_not(R1 irange, R2 orange, P pred) {
+template<typename InputRange, typename OutputRange, typename Predicate>
+inline OutputRange copy_if_not(
+    InputRange irange, OutputRange orange, Predicate pred
+) {
     for (; !irange.empty(); irange.pop_front()) {
         if (!pred(irange.front())) {
             orange.put(irange.front());
@@ -953,10 +963,10 @@ inline R2 copy_if_not(R1 irange, R2 orange, P pred) {
  *
  * @see ostd::reverse_copy()
  */
-template<typename R>
-inline void reverse(R range) {
+template<typename BidirRange>
+inline void reverse(BidirRange range) {
     static_assert(
-        is_range_element_swappable<R>,
+        is_range_element_swappable<BidirRange>,
         "The range element accessors must allow swapping"
     );
     while (!range.empty()) {
@@ -985,8 +995,8 @@ inline void reverse(R range) {
  *
  * @see ostd::reverse()
  */
-template<typename R1, typename R2>
-inline R2 reverse_copy(R1 irange, R2 orange) {
+template<typename BidirRange, typename OutputRange>
+inline OutputRange reverse_copy(BidirRange irange, OutputRange orange) {
     for (; !irange.empty(); irange.pop_back()) {
         orange.put(irange.back());
     }
@@ -1000,8 +1010,8 @@ inline R2 reverse_copy(R1 irange, R2 orange) {
  *
  * @see ostd::generate(), ostd::iota()
  */
-template<typename R, typename T>
-inline void fill(R range, T const &v) {
+template<typename InputRange, typename Value>
+inline void fill(InputRange range, Value const &v) {
     for (; !range.empty(); range.pop_front()) {
         range.front() = v;
     }
@@ -1014,8 +1024,8 @@ inline void fill(R range, T const &v) {
  *
  * @see ostd::fill(), ostd::iota()
  */
-template<typename R, typename F>
-inline void generate(R range, F gen) {
+template<typename InputRange, typename UnaryFunction>
+inline void generate(InputRange range, UnaryFunction gen) {
     for (; !range.empty(); range.pop_front()) {
         range.front() = gen();
     }
@@ -1029,10 +1039,12 @@ inline void generate(R range, F gen) {
  *
  * @returns The `range1` and `range2` in a pair after swapping is done.
  */
-template<typename R1, typename R2>
-inline std::pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
+template<typename InputRange1, typename InputRange2>
+inline std::pair<InputRange1, InputRange2> swap_ranges(
+    InputRange1 range1, InputRange2 range2
+) {
     static_assert(
-        is_range_element_swappable_with<R1, R2>,
+        is_range_element_swappable_with<InputRange1, InputRange2>,
         "The range element accessors must allow swapping"
     );
     while (!range1.empty() && !range2.empty()) {
@@ -1051,8 +1063,8 @@ inline std::pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
  *
  * @see ostd::fill(), ostd::generate()
  */
-template<typename R, typename T>
-inline void iota(R range, T value) {
+template<typename InputRange, typename Value>
+inline void iota(InputRange range, Value value) {
     for (; !range.empty(); range.pop_front()) {
         range.front() = value++;
     }
@@ -1070,8 +1082,8 @@ inline void iota(R range, T value) {
  *
  * @see ostd::foldl_f(), ostd::foldr()
  */
-template<typename R, typename T>
-inline T foldl(R range, T init) {
+template<typename InputRange, typename Value>
+inline Value foldl(InputRange range, Value init) {
     for (; !range.empty(); range.pop_front()) {
         init = init + range.front();
     }
@@ -1090,8 +1102,8 @@ inline T foldl(R range, T init) {
  *
  * @see ostd::foldl(), ostd::foldr_f()
  */
-template<typename R, typename T, typename F>
-inline T foldl_f(R range, T init, F func) {
+template<typename InputRange, typename Value, typename BinaryFunction>
+inline Value foldl_f(InputRange range, Value init, BinaryFunction func) {
     for (; !range.empty(); range.pop_front()) {
         init = func(init, range.front());
     }
@@ -1102,10 +1114,10 @@ inline T foldl_f(R range, T init, F func) {
  *
  * The `init` is forwarded.
  */
-template<typename T>
-inline auto foldl(T &&init) {
-    return [init = std::forward<T>(init)](auto &obj) mutable {
-        return foldl(obj, std::forward<T>(init));
+template<typename Value>
+inline auto foldl(Value &&init) {
+    return [init = std::forward<Value>(init)](auto &obj) mutable {
+        return foldl(obj, std::forward<Value>(init));
     };
 }
 
@@ -1113,12 +1125,15 @@ inline auto foldl(T &&init) {
  *
  * The `init` and `func` are forwarded.
  */
-template<typename T, typename F>
-inline auto foldl_f(T &&init, F &&func) {
+template<typename Value, typename BinaryFunction>
+inline auto foldl_f(Value &&init, BinaryFunction &&func) {
     return [
-        init = std::forward<T>(init), func = std::forward<F>(func)
+        init = std::forward<Value>(init),
+        func = std::forward<BinaryFunction>(func)
     ](auto &obj) mutable {
-        return foldl_f(obj, std::forward<T>(init), std::forward<F>(func));
+        return foldl_f(
+            obj, std::forward<Value>(init), std::forward<BinaryFunction>(func)
+        );
     };
 }
 
@@ -1134,8 +1149,8 @@ inline auto foldl_f(T &&init, F &&func) {
  *
  * @see ostd::foldr_f(), ostd::foldl()
  */
-template<typename R, typename T>
-inline T foldr(R range, T init) {
+template<typename InputRange, typename Value>
+inline Value foldr(InputRange range, Value init) {
     for (; !range.empty(); range.pop_back()) {
         init = init + range.back();
     }
@@ -1154,8 +1169,8 @@ inline T foldr(R range, T init) {
  *
  * @see ostd::foldr(), ostd::foldl_f()
  */
-template<typename R, typename T, typename F>
-inline T foldr_f(R range, T init, F func) {
+template<typename InputRange, typename Value, typename BinaryFunction>
+inline Value foldr_f(InputRange range, Value init, BinaryFunction func) {
     for (; !range.empty(); range.pop_back()) {
         init = func(init, range.back());
     }
@@ -1166,10 +1181,10 @@ inline T foldr_f(R range, T init, F func) {
  *
  * The `init` is forwarded.
  */
-template<typename T>
-inline auto foldr(T &&init) {
-    return [init = std::forward<T>(init)](auto &obj) mutable {
-        return foldr(obj, std::forward<T>(init));
+template<typename Value>
+inline auto foldr(Value &&init) {
+    return [init = std::forward<Value>(init)](auto &obj) mutable {
+        return foldr(obj, std::forward<Value>(init));
     };
 }
 
@@ -1177,12 +1192,15 @@ inline auto foldr(T &&init) {
  *
  * The `init` and `func` are forwarded.
  */
-template<typename T, typename F>
-inline auto foldr_f(T &&init, F &&func) {
+template<typename Value, typename BinaryFunction>
+inline auto foldr_f(Value &&init, BinaryFunction &&func) {
     return [
-        init = std::forward<T>(init), func = std::forward<F>(func)
+        init = std::forward<Value>(init),
+        func = std::forward<BinaryFunction>(func)
     ](auto &obj) mutable {
-        return foldr_f(obj, std::forward<T>(init), std::forward<F>(func));
+        return foldr_f(
+            obj, std::forward<Value>(init), std::forward<BinaryFunction>(func)
+        );
     };
 }
 
@@ -1261,21 +1279,22 @@ namespace detail {
  *
  * @see ostd::filter()
  */
-template<typename R, typename F>
-inline auto map(R range, F func) {
-    return detail::map_range<R, F, detail::MapReturnType<R, F>>(
-        range, std::move(func)
-    );
+template<typename InputRange, typename UnaryFunction>
+inline auto map(InputRange range, UnaryFunction func) {
+    return detail::map_range<
+        InputRange, UnaryFunction,
+        detail::MapReturnType<InputRange, UnaryFunction>
+    >(range, std::move(func));
 }
 
 /** @brief A pipeable version of ostd::map().
  *
  * The `func` is forwarded.
  */
-template<typename F>
-inline auto map(F &&func) {
-    return [func = std::forward<F>(func)](auto &obj) mutable {
-        return map(obj, std::forward<F>(func));
+template<typename UnaryFunction>
+inline auto map(UnaryFunction &&func) {
+    return [func = std::forward<UnaryFunction>(func)](auto &obj) mutable {
+        return map(obj, std::forward<UnaryFunction>(func));
     };
 }
 
@@ -1359,19 +1378,19 @@ namespace detail {
  *
  * @see ostd::map()
  */
-template<typename R, typename P>
-inline auto filter(R range, P pred) {
-    return detail::filter_range<R, P>(range, std::move(pred));
+template<typename InputRange, typename Predicate>
+inline auto filter(InputRange range, Predicate pred) {
+    return detail::filter_range<InputRange, Predicate>(range, std::move(pred));
 }
 
 /** @brief A pipeable version of ostd::filter().
  *
  * The `pred` is forwarded.
  */
-template<typename P>
-inline auto filter(P &&pred) {
-    return [pred = std::forward<P>(pred)](auto &obj) mutable {
-        return filter(obj, std::forward<P>(pred));
+template<typename Predicate>
+inline auto filter(Predicate &&pred) {
+    return [pred = std::forward<Predicate>(pred)](auto &obj) mutable {
+        return filter(obj, std::forward<Predicate>(pred));
     };
 }
 
