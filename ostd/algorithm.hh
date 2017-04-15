@@ -1023,26 +1023,17 @@ inline void generate(R range, F gen) {
 
 /** @brief Swaps the contents of two input ranges.
  *
- * Both ranges must meet the conditions of ostd::is_range_element_swappable
- * and the value types of both ranges must also be the same. The ranges must
- * be at least ostd::input_range_tag. The swapping stops as soon as any of
- * the ranges becomes empty.
+ * Testing ostd::is_range_element_swappable_with must be true with the given
+ * ranges. The ranges must be at least ostd::input_range_tag. The swapping
+ * stops as soon as any of the ranges becomes empty.
  *
  * @returns The `range1` and `range2` in a pair after swapping is done.
  */
 template<typename R1, typename R2>
 inline std::pair<R1, R2> swap_ranges(R1 range1, R2 range2) {
     static_assert(
-        is_range_element_swappable<R1>,
+        is_range_element_swappable_with<R1, R2>,
         "The range element accessors must allow swapping"
-    );
-    static_assert(
-        is_range_element_swappable<R2>,
-        "The range element accessors must allow swapping"
-    );
-    static_assert(
-        std::is_same_v<range_value_t<R1>, range_value_t<R2>>,
-        "The range value types must be the same"
     );
     while (!range1.empty() && !range2.empty()) {
         using std::swap;

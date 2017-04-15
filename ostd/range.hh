@@ -169,8 +169,22 @@ namespace detail {
 
     template<typename R, bool>
     struct range_traits_base {
+        template<typename>
+        static constexpr bool is_element_swappable_with = false;
         static constexpr bool is_element_swappable = false;
+        template<typename>
+        static constexpr bool is_element_nothrow_swappable_with = false;
+        static constexpr bool is_element_nothrow_swappable = false;
     };
+
+    template<typename R>
+    constexpr bool test_elem_reference =
+        std::is_convertible_v<typename R::range_category, input_range_tag> &&
+        std::is_lvalue_reference_v<typename R::reference> &&
+        std::is_same_v<
+            typename R::value_type,
+            std::remove_reference_t<typename R::reference>
+        >;
 
     template<typename R>
     struct range_traits_base<R, true> {
@@ -180,16 +194,31 @@ namespace detail {
         using reference       = typename R::reference;
         using difference_type = typename R::difference_type;
 
+        template<typename R2>
+        static constexpr bool is_element_swappable_with =
+            test_elem_reference<R> && test_elem_reference<R2> &&
+            std::is_swappable_with_v<reference, typename R2::reference>;
+
         static constexpr bool is_element_swappable =
-            std::is_convertible_v<range_category, input_range_tag> &&
-            std::is_lvalue_reference_v<reference> &&
-            std::is_same_v<value_type, std::remove_reference_t<reference>> &&
-            std::is_swappable_v<value_type>;
+            is_element_swappable_with<R>;
+
+        template<typename R2>
+        static constexpr bool is_element_nothrow_swappable_with =
+            test_elem_reference<R> && test_elem_reference<R2> &&
+            std::is_nothrow_swappable_with_v<reference, typename R2::reference>;
+
+        static constexpr bool is_element_nothrow_swappable =
+            is_element_nothrow_swappable_with<R>;
     };
 
     template<typename R, bool>
     struct range_traits_impl {
+        template<typename>
+        static constexpr bool is_element_swappable_with = false;
         static constexpr bool is_element_swappable = false;
+        template<typename>
+        static constexpr bool is_element_nothrow_swappable_with = false;
+        static constexpr bool is_element_nothrow_swappable = false;
     };
 
     template<typename R>
@@ -212,21 +241,38 @@ namespace detail {
  * * `reference` - the type returned from value accessors
  * * `difference_type` - the type used for distances (typically `ptrdiff_t`)
  *
- * It will always contain the following member as well:
+ * It will always contain the following members as well:
  *
  * ~~~{.cc}
- * static constexpr bool is_element_swappable = ...;
+ * template<typename R2>
+ * static constexpr bool is_element_swappable_with = ...;
+ * static constexpr bool is_element_swappable = is_element_swappable_with<R, R2>;
+ * template<typename R2>
+ * static constexpr bool is_element_nothrow_swappable_with = ...;
+ * static constexpr bool is_element_nothrow_swappable = is_element_swappable_with<R, R2>;
  * ~~~
  *
- * This member will be false for non-range types and otherwise true when
- * the following conditions are met:
+ * These members will be false for non-range types. Otherwise, the first
+ * member tests for the following:
  *
- * * The range is an ostd::input_range_tag or better (not an output range).
- * * The `reference` member type is an lvalue reference.
+ * * Both ranges are an ostd::input_range_tag or better (not an output range).
+ * * The `reference` member type of both ranges is an lvalue reference.
  * * The `value_type` is the same as `std::remove_reference_t<reference>`.
- * * The `value_type` member is swappable (`std::is_swappable_v<value_type>`).
+ * * The `reference` types of both ranges are swappable with each other.
  *
- * If any of these four is not met, the member will also be false.
+ * The references are swappable when the following is true:
+ *
+ * ~~~{.cc}
+ * std::is_swappable_with_v<reference, ostd::range_reference_t<R2>>
+ * ~~~
+ *
+ * The second member simply tests if the range's own references are swappable
+ * with each other. without there being another range to swap with.
+ *
+ * The nothrow versions are equivalent, except they use the nothrow versions
+ * of standard swappable test traits (std::is_nothrow_swappable_with_v).
+ *
+ * If any of these conditions fail, the members will be false.
  *
  * You can read about more details [here](@ref ranges).
  *
@@ -306,7 +352,20 @@ using range_reference_t = typename range_traits<R>::reference;
 template<typename R>
 using range_difference_t = typename range_traits<R>::difference_type;
 
-/** @brief Checks whether the range's element accessors allow swapping.
+/** @brief Checks whether two ranges can swap elements with each other.
+ *
+ * It's the same as doing
+ *
+ * ~~~{.cc}
+ * ostd::range_traits<R1>::template is_element_swappable_with<R2>
+ * ~~~
+ *
+ */
+template<typename R1, typename R2>
+constexpr bool is_range_element_swappable_with =
+    range_traits<R1>::template is_element_swappable_with<R2>;
+
+/** @brief Checks whether a range can swap elements within itself.
  *
  * It's the same as doing
  *
@@ -316,7 +375,34 @@ using range_difference_t = typename range_traits<R>::difference_type;
  *
  */
 template<typename R>
-constexpr bool is_range_element_swappable = range_traits<R>::is_element_swappable;
+constexpr bool is_range_element_swappable =
+    range_traits<R>::is_element_swappable;
+
+/** @brief Checks whether two ranges can nothrow swap elements with each other.
+ *
+ * It's the same as doing
+ *
+ * ~~~{.cc}
+ * ostd::range_traits<R1>::template is_element_nothrow_swappable_with<R2>
+ * ~~~
+ *
+ */
+template<typename R1, typename R2>
+constexpr bool is_range_element_nothrow_swappable_with =
+    range_traits<R1>::template is_element_nothrow_swappable_with<R2>;
+
+/** @brief Checks whether a range can nothrow swap elements within itself.
+ *
+ * It's the same as doing
+ *
+ * ~~~{.cc}
+ * ostd::range_traits<R>::is_element_nothrow_swappable
+ * ~~~
+ *
+ */
+template<typename R>
+constexpr bool is_range_element_nothrow_swappable =
+    range_traits<R>::is_element_nothrow_swappable;
 
 // is input range
 
