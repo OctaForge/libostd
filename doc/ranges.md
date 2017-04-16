@@ -46,11 +46,10 @@ input range meet the requirements for an output range. These are called
     #include <ostd/range.hh>
 
     struct my_range: ostd::input_range<my_range> {
-        using range_category  = ostd::input_range_tag;
-        using value_type      = T;
-        using reference       = T &;
-        using size_type       = size_t;
-        using difference_type = ptrdiff_t;
+        using range_category = ostd::input_range_tag;
+        using value_type     = T;
+        using reference      = T &;
+        using size_type      = size_t;
 
         my_range(my_range const &);
         my_range &operator=(my_range const &);
@@ -93,11 +92,10 @@ that none of the provided methods are `virtual`, so it's not safe to call
 them while expecting the overridden variants to be called.
 
 ~~~{.cc}
-    using range_category  = ostd::input_range_tag;
-    using value_type      = T;
-    using reference       = T &;
-    using size_type       = size_t;
-    using difference_type = ptrdiff_t;
+    using range_category = ostd::input_range_tag;
+    using value_type     = T;
+    using reference      = T &;
+    using size_type      = size_t;
 ~~~
 
 Any input range is required to have a series of types that define its traits.
@@ -119,10 +117,7 @@ really is just a type that is returned by accesses to the range, as accesses
 are typically not meant to be copy the contents (but they totally can).
 
 The `size_type` alias represents the type typically used for sizes of the
-range the object represents. It's typically `size_t`. Similarly, the
-`difference_type` alias is used for a distance within the range. Usually
-it's `ptrdiff_t`, but for example for I/O stream range types it can be the
-stream's offset type.
+range the object represents. It's typically `size_t`.
 
 Now let's take a look at the methods.
 
@@ -191,10 +186,7 @@ an output range:
     #include <ostd/range.hh>
 
     struct my_range: ostd::output_range<my_range> {
-        using value_type      = T;
-        using reference       = T &;
-        using size_type       = size_t;
-        using difference_type = ptrdiff_t;
+        using value_type = T;
 
         my_range(my_range const &);
         my_range &operator=(my_range const &);
@@ -211,16 +203,14 @@ an output range:
 As you can see, they're much simpler than input ranges.
 
 ~~~{.cc}
-    using value_type      = T;
-    using reference       = T &;
-    using size_type       = size_t;
-    using difference_type = ptrdiff_t;
+    using value_type = T;
 ~~~
 
 Why is there no `range_category` here? Well, it's already defined by the
 ostd::output\_range it derives (and has to derive) from. We already know that
 it will always be ostd::output\_range\_tag. Might as well avoid specifying it
-always.
+always. The size and reference types are not relevant for output ranges, so
+they're not here either.
 
 Output ranges are always copyable, just like input ranges. There are no rules
 on state preservation.
@@ -581,14 +571,13 @@ It will satisfy a forward range but won't have a writable reference type.
         using reference = int;
 
         // unused
-        using size_type       = size_t;
-        using difference_type = ptrdiff_t;
+        using size_type = size_t;
 
         // only allow construction with specific args
         num_range() = delete;
 
         // our interval constructor
-        num_range(int beg, int end): p_a(beg), p_b(end) {}
+        num_range(value_type beg, value_type end): p_a(beg), p_b(end) {}
 
         bool empty() const {
             // we're empty once the beginning has reached the end
@@ -604,7 +593,7 @@ It will satisfy a forward range but won't have a writable reference type.
         }
 
     private:
-        int p_a, p_b;
+        value_type p_a, p_b;
     };
 ~~~
 
@@ -630,12 +619,9 @@ into stdout, each on a new line.
     #include <ostd/io.hh>
 
     struct strout_range: ostd::output_range<strout_range> {
-        using value_type      = ostd::string_range;
-        using reference       = ostd::string_range &;
-        using size_type       = size_t;
-        using difference_type = ptrdiff_t;
+        using value_type = ostd::string_range;
 
-        void put(ostd::string_range v) {
+        void put(value_type v) {
             ostd::writeln(v);
         }
     };

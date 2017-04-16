@@ -167,7 +167,7 @@ namespace detail {
     template<typename R>
     constexpr bool test_range_category = range_category_test<R>::value;
 
-    template<typename R, bool>
+    template<typename R, bool, bool>
     struct range_traits_base {
         template<typename>
         static constexpr bool is_element_swappable_with = false;
@@ -186,8 +186,8 @@ namespace detail {
             std::remove_reference_t<typename R::reference>
         >;
 
-    template<typename R>
-    struct range_traits_base<R, true> {
+    template<typename R, bool B>
+    struct range_traits_base<R, true, B> {
         using range_category = typename R::range_category;
         using size_type      = typename R::size_type;
         using value_type     = typename R::value_type;
@@ -210,6 +210,19 @@ namespace detail {
             is_element_nothrow_swappable_with<R>;
     };
 
+    template<typename R>
+    struct range_traits_base<R, false, true> {
+        using range_category = typename R::range_category;
+        using value_type     = typename R::value_type;
+
+        template<typename>
+        static constexpr bool is_element_swappable_with = false;
+        static constexpr bool is_element_swappable = false;
+        template<typename R2>
+        static constexpr bool is_element_nothrow_swappable_with = false;
+        static constexpr bool is_element_nothrow_swappable = false;
+    };
+
     template<typename R, bool>
     struct range_traits_impl {
         template<typename>
@@ -223,7 +236,7 @@ namespace detail {
     template<typename R>
     struct range_traits_impl<R, true>: range_traits_base<
         R,
-        std::is_convertible_v<typename R::range_category, input_range_tag> ||
+        std::is_convertible_v<typename R::range_category, input_range_tag>,
         std::is_convertible_v<typename R::range_category, output_range_tag>
     > {};
 }
@@ -239,6 +252,10 @@ namespace detail {
  * * `value_type` - the type of the range's elements
  * * `reference` - the type returned from value accessors
  *
+ * The `size_type` and `reference` types will only be available for
+ * input-type ranges. Purely output ranges will only have the category
+ * and value type.
+ *
  * It will always contain the following members as well:
  *
  * ~~~{.cc}
@@ -250,8 +267,8 @@ namespace detail {
  * static constexpr bool is_element_nothrow_swappable = is_element_swappable_with<R, R2>;
  * ~~~
  *
- * These members will be false for non-range types. Otherwise, the first
- * member tests for the following:
+ * These members will be false for non-range types as well as purely output
+ * range types. Otherwise, the first member tests for the following:
  *
  * * Both ranges are an ostd::input_range_tag or better (not an output range).
  * * The `reference` member type of both ranges is an lvalue reference.
@@ -288,6 +305,8 @@ struct range_traits: detail::range_traits_impl<R, detail::test_range_category<R>
  * typename ostd::range_traits<R>::range_category
  * ~~~
  *
+ * Works for all types of ranges.
+ *
  * @see ostd::range_size_t, ostd::range_value_t, ostd::range_reference_t
  */
 template<typename R>
@@ -300,6 +319,8 @@ using range_category_t = typename range_traits<R>::range_category;
  * ~~~{.cc}
  * typename ostd::range_traits<R>::size_type
  * ~~~
+ *
+ * Works only for input-type ranges.
  *
  * @see ostd::range_category_t, ostd::range_value_t, ostd::range_reference_t
  */
@@ -314,6 +335,8 @@ using range_size_t = typename range_traits<R>::size_type;
  * typename ostd::range_traits<R>::value_type
  * ~~~
  *
+ * Works for all types of ranges.
+ *
  * @see ostd::range_category_t, ostd::range_size_t, ostd::range_reference_t
  */
 template<typename R>
@@ -326,6 +349,8 @@ using range_value_t = typename range_traits<R>::value_type;
  * ~~~{.cc}
  * typename ostd::range_traits<R>::reference
  * ~~~
+ *
+ * Works only for input-type ranges.
  *
  * @see ostd::range_category_t, ostd::range_size_t, ostd::range_value_t
  */
@@ -929,8 +954,6 @@ namespace detail {
     template<typename T>
     struct noop_output_range: output_range<noop_output_range<T>> {
         using value_type = T;
-        using reference  = T &;
-        using size_type  = std::size_t;
 
         /** @brief Has no effect. */
         void put(T const &) {}
@@ -952,12 +975,10 @@ namespace detail {
     template<typename R>
     struct counting_output_range: output_range<counting_output_range<R>> {
         using value_type = range_value_t<R>;
-        using reference  = range_reference_t<R>;
-        using size_type  = range_size_t<R>;
 
     private:
         R p_range;
-        size_type p_written = 0;
+        size_t p_written = 0;
 
     public:
         counting_output_range() = delete;
@@ -974,7 +995,7 @@ namespace detail {
             ++p_written;
         }
 
-        size_type get_written() const {
+        size_t get_written() const {
             return p_written;
         }
     };
@@ -1529,8 +1550,6 @@ namespace detail {
 template<typename T>
 struct appender_range: output_range<appender_range<T>> {
     using value_type = typename T::value_type;
-    using reference  = typename T::reference;
-    using size_type  = typename T::size_type;
 
     /** @brief Default constructs the container inside. */
     appender_range(): p_data() {}
@@ -1560,16 +1579,16 @@ struct appender_range: output_range<appender_range<T>> {
     bool empty() const { return p_data.empty(); }
 
     /** @brief Reserves some capacity in the container. */
-    void reserve(size_type cap) { p_data.reserve(cap); }
+    void reserve(typename T::size_type cap) { p_data.reserve(cap); }
 
     /** @brief Resizes the container. */
-    void resize(size_type len) { p_data.resize(len); }
+    void resize(typename T::size_type len) { p_data.resize(len); }
 
     /** @brief Gets the container size. */
-    size_type size() const { return p_data.size(); }
+    typename T::size_type size() const { return p_data.size(); }
 
     /** @brief Gets the container capacity. */
-    size_type capacity() const { return p_data.capacity(); }
+    typename T::size_type capacity() const { return p_data.capacity(); }
 
     /** @brief Appends a copy of a value to the end of the container. */
     void put(typename T::const_reference v) {
