@@ -1210,10 +1210,9 @@ namespace detail {
         using range_category  = std::common_type_t<
             range_category_t<T>, finite_random_access_range_tag
         >;
-        using value_type      = std::remove_reference_t<R>;
-        using reference       = R;
-        using size_type       = range_size_t<T>;
-        using difference_type = range_difference_t<T>;
+        using value_type = std::remove_reference_t<R>;
+        using reference  = R;
+        using size_type  = range_size_t<T>;
 
     private:
         T p_range;
@@ -1260,7 +1259,7 @@ namespace detail {
  *
  * The `reference` member type of the range is `R` where `R` is the return
  * value of `func`. The `value_type` is `std::remove_reference_t<R>`. The
- * size and difference types are preserved.
+ * size type is preserved.
  *
  * On each access of a range item (front, back, indexing), the `func` is
  * called with the actual wrapped range's item and the result is returned.
@@ -1304,10 +1303,9 @@ namespace detail {
         using range_category  = std::common_type_t<
             range_category_t<T>, forward_range_tag
         >;
-        using value_type      = range_value_t<T>;
-        using reference       = range_reference_t<T>;
-        using size_type       = range_size_t<T>;
-        using difference_type = range_difference_t<T>;
+        using value_type = range_value_t<T>;
+        using reference  = range_reference_t<T>;
+        using size_type  = range_size_t<T>;
 
     private:
         T p_range;
@@ -1373,7 +1371,7 @@ namespace detail {
  * }
  * ~~~
  *
- * The value, reference, size and difference types are preserved, as are
+ * The value, reference and size types are preserved, as are
  * calls to `front()` and `empty()`.
  *
  * @see ostd::map()

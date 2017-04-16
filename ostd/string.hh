@@ -76,11 +76,10 @@ namespace ostd {
  */
 template<typename T, typename TR = std::char_traits<std::remove_const_t<T>>>
 struct basic_char_range: input_range<basic_char_range<T>> {
-    using range_category  = contiguous_range_tag;
-    using value_type      = T;
-    using reference       = T &;
-    using size_type       = std::size_t;
-    using difference_type = std::ptrdiff_t;
+    using range_category = contiguous_range_tag;
+    using value_type     = T;
+    using reference      = T &;
+    using size_type      = std::size_t;
 
     using traits_type = TR;
 

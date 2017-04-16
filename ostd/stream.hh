@@ -554,11 +554,10 @@ private:
  */
 template<typename T>
 struct stream_range<T, true>: input_range<stream_range<T>> {
-    using range_category  = input_range_tag;
-    using value_type      = T;
-    using reference       = T;
-    using size_type       = std::size_t;
-    using difference_type = stream_off_t;
+    using range_category = input_range_tag;
+    using value_type     = T;
+    using reference      = T;
+    using size_type      = std::size_t;
 
     stream_range() = delete;
 
@@ -667,11 +666,10 @@ inline stream_range<T> stream::iter() {
  */
 template<typename T, typename TC>
 struct stream_line_range: input_range<stream_line_range<T, TC>> {
-    using range_category  = input_range_tag;
-    using value_type      = TC;
-    using reference       = TC &;
-    using size_type       = std::size_t;
-    using difference_type = stream_off_t;
+    using range_category = input_range_tag;
+    using value_type     = TC;
+    using reference      = TC &;
+    using size_type      = std::size_t;
 
     stream_line_range() = delete;
 

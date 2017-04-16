@@ -188,11 +188,10 @@ namespace detail {
 
     template<typename R>
     struct range_traits_base<R, true> {
-        using range_category  = typename R::range_category;
-        using size_type       = typename R::size_type;
-        using value_type      = typename R::value_type;
-        using reference       = typename R::reference;
-        using difference_type = typename R::difference_type;
+        using range_category = typename R::range_category;
+        using size_type      = typename R::size_type;
+        using value_type     = typename R::value_type;
+        using reference      = typename R::reference;
 
         template<typename R2>
         static constexpr bool is_element_swappable_with =
@@ -239,7 +238,6 @@ namespace detail {
  * * `size_type` - can contain the range's length (typically `size_t`)
  * * `value_type` - the type of the range's elements
  * * `reference` - the type returned from value accessors
- * * `difference_type` - the type used for distances (typically `ptrdiff_t`)
  *
  * It will always contain the following members as well:
  *
@@ -277,7 +275,7 @@ namespace detail {
  * You can read about more details [here](@ref ranges).
  *
  * @see ostd::range_category_t, ostd::range_size_t, ostd::range_value_t,
- *      ostd::range_reference_t, ostd::range_difference_t
+ *      ostd::range_reference_t
  */
 template<typename R>
 struct range_traits: detail::range_traits_impl<R, detail::test_range_category<R>> {};
@@ -290,8 +288,7 @@ struct range_traits: detail::range_traits_impl<R, detail::test_range_category<R>
  * typename ostd::range_traits<R>::range_category
  * ~~~
  *
- * @see ostd::range_size_t, ostd::range_value_t, ostd::range_reference_t,
- *      ostd::range_difference_t
+ * @see ostd::range_size_t, ostd::range_value_t, ostd::range_reference_t
  */
 template<typename R>
 using range_category_t = typename range_traits<R>::range_category;
@@ -304,8 +301,7 @@ using range_category_t = typename range_traits<R>::range_category;
  * typename ostd::range_traits<R>::size_type
  * ~~~
  *
- * @see ostd::range_category_t, ostd::range_value_t, ostd::range_reference_t,
- *      ostd::range_difference_t
+ * @see ostd::range_category_t, ostd::range_value_t, ostd::range_reference_t
  */
 template<typename R>
 using range_size_t = typename range_traits<R>::size_type;
@@ -318,8 +314,7 @@ using range_size_t = typename range_traits<R>::size_type;
  * typename ostd::range_traits<R>::value_type
  * ~~~
  *
- * @see ostd::range_category_t, ostd::range_size_t, ostd::range_reference_t,
- *      ostd::range_difference_t
+ * @see ostd::range_category_t, ostd::range_size_t, ostd::range_reference_t
  */
 template<typename R>
 using range_value_t = typename range_traits<R>::value_type;
@@ -332,25 +327,10 @@ using range_value_t = typename range_traits<R>::value_type;
  * typename ostd::range_traits<R>::reference
  * ~~~
  *
- * @see ostd::range_category_t, ostd::range_size_t, ostd::range_value_t,
- *      ostd::range_difference_t
+ * @see ostd::range_category_t, ostd::range_size_t, ostd::range_value_t
  */
 template<typename R>
 using range_reference_t = typename range_traits<R>::reference;
-
-/** @brief The difference type of a range type.
- *
- * It's the same as doing
- *
- * ~~~{.cc}
- * typename ostd::range_traits<R>::difference_type
- * ~~~
- *
- * @see ostd::range_category_t, ostd::range_size_t, ostd::range_value_t,
- *      ostd::range_reference_t
- */
-template<typename R>
-using range_difference_t = typename range_traits<R>::difference_type;
 
 /** @brief Checks whether two ranges can swap elements with each other.
  *
@@ -753,7 +733,7 @@ struct input_range {
      * wrapped range will be always ostd::finite_random_access_range_tag.
      * Otherwise, it will be ostd::bidirectional_range_tag.
      *
-     * The value, reference, size and difference types are the same.
+     * The value, reference and size types are the same.
      */
     auto reverse() const {
         static_assert(
@@ -777,7 +757,7 @@ struct input_range {
      * > == true
      * ~~~
      *
-     * The value, size and difference types remain the same. The new reference
+     * The value and size types remain the same. The new reference
      * type becomes `ostd::range_value_t<R> &&`.
      *
      * Accesses to the front member result in the element being moved.
@@ -792,8 +772,8 @@ struct input_range {
      * remain mostly the same, but an index counter is kept and incremented on
      * each pop.
      *
-     * It's always at most ostd::forward_range_tag. The value, size and
-     * difference types stay the same, the new reference type is like this:
+     * It's always at most ostd::forward_range_tag. The value and size types
+     * stay the same, the new reference type is like this:
      *
      * ~~~{.cc}
      * struct enumerated_value_t {
@@ -869,8 +849,8 @@ struct input_range {
      *
      * The value type can be a pair (for two ranges) or a tuple (for more) of
      * the value types. The reference type is also a pair or a tuple, but of
-     * the reference types. The size and difference types are common types
-     * between the zipped ranges.
+     * the reference types. The size type is the common type between the
+     * zipped ranges.
      */
     template<typename R1, typename ...RR>
     auto zip(R1 r1, RR ...rr) const {
@@ -948,10 +928,9 @@ inline void range_put_all(OR &orange, IR range) {
 namespace detail {
     template<typename T>
     struct noop_output_range: output_range<noop_output_range<T>> {
-        using value_type      = T;
-        using reference       = T &;
-        using size_type       = std::size_t;
-        using difference_type = std::ptrdiff_t;
+        using value_type = T;
+        using reference  = T &;
+        using size_type  = std::size_t;
 
         /** @brief Has no effect. */
         void put(T const &) {}
@@ -972,10 +951,9 @@ inline auto noop_sink() {
 namespace detail {
     template<typename R>
     struct counting_output_range: output_range<counting_output_range<R>> {
-        using value_type      = range_value_t<R>;
-        using reference       = range_reference_t<R>;
-        using size_type       = range_size_t<R>;
-        using difference_type = range_difference_t<R>;
+        using value_type = range_value_t<R>;
+        using reference  = range_reference_t<R>;
+        using size_type  = range_size_t<R>;
 
     private:
         R p_range;
@@ -1194,11 +1172,10 @@ namespace detail {
 namespace detail {
     template<typename T>
     struct number_range: input_range<number_range<T>> {
-        using range_category  = forward_range_tag;
-        using value_type      = T;
-        using reference       = T;
-        using size_type       = std::size_t;
-        using difference_type = std::ptrdiff_t;
+        using range_category = forward_range_tag;
+        using value_type     = T;
+        using reference      = T;
+        using size_type      = std::size_t;
 
         number_range() = delete;
 
@@ -1263,15 +1240,14 @@ inline auto range(T v) {
 namespace detail {
     template<typename T>
     struct reverse_range: input_range<reverse_range<T>> {
-        using range_category  = std::conditional_t<
+        using range_category = std::conditional_t<
             is_finite_random_access_range<T>,
             finite_random_access_range_tag,
             bidirectional_range_tag
         >;
-        using value_type      = range_value_t     <T>;
-        using reference       = range_reference_t <T>;
-        using size_type       = range_size_t      <T>;
-        using difference_type = range_difference_t<T>;
+        using value_type = range_value_t    <T>;
+        using reference  = range_reference_t<T>;
+        using size_type  = range_size_t     <T>;
 
     private:
         T p_range;
@@ -1318,11 +1294,10 @@ namespace detail {
             "Wrapped range references must be proper references to the value type"
         );
 
-        using range_category  = input_range_tag;
-        using value_type      = range_value_t     <T>;
-        using reference       = range_value_t     <T> &&;
-        using size_type       = range_size_t      <T>;
-        using difference_type = range_difference_t<T>;
+        using range_category = input_range_tag;
+        using value_type     = range_value_t<T>;
+        using reference      = range_value_t<T> &&;
+        using size_type      = range_size_t<T>;
 
     private:
         T p_range;
@@ -1348,13 +1323,12 @@ namespace detail {
         };
 
     public:
-        using range_category  = std::common_type_t<
+        using range_category = std::common_type_t<
             range_category_t<T>, forward_range_tag
         >;
-        using value_type      = range_value_t<T>;
-        using reference       = enumerated_value_t;
-        using size_type       = range_size_t      <T>;
-        using difference_type = range_difference_t<T>;
+        using value_type = range_value_t<T>;
+        using reference  = enumerated_value_t;
+        using size_type  = range_size_t<T>;
 
     private:
         T p_range;
@@ -1378,13 +1352,12 @@ namespace detail {
 
     template<typename T>
     struct take_range: input_range<take_range<T>> {
-        using range_category  = std::common_type_t<
+        using range_category = std::common_type_t<
             range_category_t<T>, forward_range_tag
         >;
-        using value_type      = range_value_t     <T>;
-        using reference       = range_reference_t <T>;
-        using size_type       = range_size_t      <T>;
-        using difference_type = range_difference_t<T>;
+        using value_type = range_value_t<T>;
+        using reference  = range_reference_t<T>;
+        using size_type  = range_size_t<T>;
 
     private:
         T p_range;
@@ -1411,13 +1384,12 @@ namespace detail {
 
     template<typename T>
     struct chunks_range: input_range<chunks_range<T>> {
-        using range_category   = std::common_type_t<
+        using range_category = std::common_type_t<
             range_category_t<T>, forward_range_tag
         >;
-        using value_type      = take_range        <T>;
-        using reference       = take_range        <T>;
-        using size_type       = range_size_t      <T>;
-        using difference_type = range_difference_t<T>;
+        using value_type = take_range<T>;
+        using reference  = take_range<T>;
+        using size_type  = range_size_t<T>;
 
     private:
         T p_range;
@@ -1464,13 +1436,12 @@ namespace detail {
 
     template<typename ...R>
     struct join_range: input_range<join_range<R...>> {
-        using range_category  = std::common_type_t<
+        using range_category = std::common_type_t<
             forward_range_tag, range_category_t<R>...
         >;
-        using value_type      = std::common_type_t<range_value_t<R>...>;
-        using reference       = std::common_type_t<range_reference_t<R>...>;
-        using size_type       = std::common_type_t<range_size_t<R>...>;
-        using difference_type = std::common_type_t<range_difference_t<R>...>;
+        using value_type = std::common_type_t<range_value_t<R>...>;
+        using reference  = std::common_type_t<range_reference_t<R>...>;
+        using size_type  = std::common_type_t<range_size_t<R>...>;
 
     private:
         std::tuple<R...> p_ranges;
@@ -1510,13 +1481,12 @@ namespace detail {
 
     template<typename ...R>
     struct zip_range: input_range<zip_range<R...>> {
-        using range_category  = std::common_type_t<
+        using range_category = std::common_type_t<
             forward_range_tag, range_category_t<R>...
         >;
-        using value_type      = zip_value_t<range_value_t<R>...>;
-        using reference       = zip_value_t<range_reference_t<R>...>;
-        using size_type       = std::common_type_t<range_size_t<R>...>;
-        using difference_type = std::common_type_t<range_difference_t<R>...>;
+        using value_type = zip_value_t<range_value_t<R>...>;
+        using reference  = zip_value_t<range_reference_t<R>...>;
+        using size_type  = std::common_type_t<range_size_t<R>...>;
 
     private:
         std::tuple<R...> p_ranges;
@@ -1558,10 +1528,9 @@ namespace detail {
  */
 template<typename T>
 struct appender_range: output_range<appender_range<T>> {
-    using value_type      = typename T::value_type;
-    using reference       = typename T::reference;
-    using size_type       = typename T::size_type;
-    using difference_type = typename T::difference_type;
+    using value_type = typename T::value_type;
+    using reference  = typename T::reference;
+    using size_type  = typename T::size_type;
 
     /** @brief Default constructs the container inside. */
     appender_range(): p_data() {}
@@ -1682,17 +1651,16 @@ using iterator_range_tag = typename detail::iterator_range_tag_base<T>::type;
  */
 template<typename T>
 struct iterator_range: input_range<iterator_range<T>> {
-    using range_category  = std::conditional_t<
+    using range_category = std::conditional_t<
         std::is_pointer_v<T>,
         contiguous_range_tag,
         iterator_range_tag<typename std::iterator_traits<T>::iterator_category>
     >;
-    using value_type      = typename std::iterator_traits<T>::value_type;
-    using reference       = typename std::iterator_traits<T>::reference;
-    using size_type       = std::make_unsigned_t<
+    using value_type = typename std::iterator_traits<T>::value_type;
+    using reference  = typename std::iterator_traits<T>::reference;
+    using size_type  = std::make_unsigned_t<
         typename std::iterator_traits<T>::difference_type
     >;
-    using difference_type = typename std::iterator_traits<T>::difference_type;
 
     /** @brief Creates an iterator range.
      *

@@ -1188,11 +1188,10 @@ using yield_type = typename detail::yield_type_base<T>::type;
 namespace detail {
     template<typename T>
     struct generator_range: input_range<generator_range<T>> {
-        using range_category  = input_range_tag;
-        using value_type      = T;
-        using reference       = T &;
-        using size_type       = std::size_t;
-        using difference_type = std::ptrdiff_t;
+        using range_category = input_range_tag;
+        using value_type     = T;
+        using reference      = T &;
+        using size_type      = std::size_t;
 
         generator_range() = delete;
 

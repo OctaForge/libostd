@@ -277,10 +277,9 @@ OSTD_EXPORT extern file_stream cerr;
 namespace detail {
     /* lightweight output range for direct stdout */
     struct stdout_range: output_range<stdout_range> {
-        using value_type      = char;
-        using reference       = char &;
-        using size_type       = std::size_t;
-        using difference_type = std::ptrdiff_t;
+        using value_type = char;
+        using reference  = char &;
+        using size_type  = std::size_t;
 
         stdout_range() {}
         void put(char c) {
