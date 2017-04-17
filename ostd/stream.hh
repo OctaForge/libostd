@@ -660,7 +660,7 @@ inline stream_range<T> stream::iter() {
  * it's an std::basic_string over `T`.
  *
  * @tparam T The type used for individual characters.
- * @tparam TC The type used to hold the line (in an ostd::appender_range).
+ * @tparam TC The type used to hold the line (in an ostd::appender()).
  *
  * @see stream_range
  */
@@ -755,7 +755,7 @@ struct stream_line_range: input_range<stream_line_range<T, TC>> {
 
 private:
     stream *p_stream;
-    mutable appender_range<TC> p_item;
+    mutable decltype(appender<TC>()) p_item;
     mutable bool p_has_item;
     bool p_keep_nl;
 };

@@ -82,7 +82,7 @@ struct format_spec;
  *
  * Anything that writes into the output range will do. The output range is
  * exactly the same output range the outer format call is formatting into,
- * so for example when someone is formatting into an ostd::appender_range,
+ * so for example when someone is formatting into an ostd::appender(),
  * it will be just that.
  *
  * This may be specialized in other libostd modules as well.

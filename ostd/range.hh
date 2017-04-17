@@ -1535,93 +1535,91 @@ namespace detail {
             }, p_ranges);
         }
     };
+
+    template<typename T>
+    struct appender_range: output_range<appender_range<T>> {
+        using value_type = typename T::value_type;
+
+        appender_range(): p_data() {}
+
+        appender_range(T const &v): p_data(v) {}
+        appender_range(T &&v): p_data(std::move(v)) {}
+
+        appender_range &operator=(T const &v) {
+            p_data = v;
+            return *this;
+        }
+
+        appender_range &operator=(T &&v) {
+            p_data = std::move(v);
+            return *this;
+        }
+
+        void clear() { p_data.clear(); }
+        bool empty() const { return p_data.empty(); }
+
+        void reserve(typename T::size_type cap) { p_data.reserve(cap); }
+        void resize(typename T::size_type len) { p_data.resize(len); }
+
+        typename T::size_type size() const { return p_data.size(); }
+        typename T::size_type capacity() const { return p_data.capacity(); }
+
+        void put(typename T::const_reference v) {
+            p_data.push_back(v);
+        }
+
+        void put(typename T::value_type &&v) {
+            p_data.push_back(std::move(v));
+        }
+
+        T &get() { return p_data; }
+        T const &get() const { return p_data; }
+
+    private:
+        T p_data;
+    };
 } /* namespace detail */
 
-/** @brief An appender range is an output range over a standard container.
+/** @brief Creates am appender output range for a container.
  *
- * It will effectively `push_back(v)` into the container every time a `put(v)`
- * is called on the appender. It works with any container that implements the
- * `push_back(v)` method.
+ * An appender is a kind of output range which wraps a standard container
+ * that supports `push_back(v)` and appends to it on every `put(v)`. The
+ * value type of the range is the value type of the container.
  *
- * It also implements some methods to manipulate the container itself which
- * are not part of the output range interface. Not all of them might work,
- * depending on the container stored.
+ * It's posssible to assign a new container to it by copy or move, as long
+ * as the container is of the same type. It's also possible to create a new
+ * appender from an existing container by copy or move, using
+ * ostd::appender(Container &&).
+ *
+ * Besides implementing a standard output range, appenders also implement
+ * an interface to the container, particularly the `clear()`, `empty()`,
+ * `reserve(capacity)`, `resize(length)`, `size()` and `capacity()` methods.
+ * These are available depending on if they're also available in the wrapped
+ * container and have identical signatures.
+ *
+ * The `get()` method returns a reference to the wrapped container.
+ * The `put(v)` method is overloaded for both by-copy and by-move put.
+ *
+ * @see ostd::appender(Container &&)
  */
-template<typename T>
-struct appender_range: output_range<appender_range<T>> {
-    using value_type = typename T::value_type;
-
-    /** @brief Default constructs the container inside. */
-    appender_range(): p_data() {}
-
-    /** @brief Constructs from a copy of a container. */
-    appender_range(T const &v): p_data(v) {}
-
-    /** @brief Constructs an appender by moving a container into it. */
-    appender_range(T &&v): p_data(std::move(v)) {}
-
-    /** @brief Assigns a copy of a container to the appender. */
-    appender_range &operator=(T const &v) {
-        p_data = v;
-        return *this;
-    }
-
-    /** @brief Assigns a container to the appender by move. */
-    appender_range &operator=(T &&v) {
-        p_data = std::move(v);
-        return *this;
-    }
-
-    /** @brief Clears the underlying container's contents. */
-    void clear() { p_data.clear(); }
-
-    /** @brief Checks if the underlying container is empty. */
-    bool empty() const { return p_data.empty(); }
-
-    /** @brief Reserves some capacity in the container. */
-    void reserve(typename T::size_type cap) { p_data.reserve(cap); }
-
-    /** @brief Resizes the container. */
-    void resize(typename T::size_type len) { p_data.resize(len); }
-
-    /** @brief Gets the container size. */
-    typename T::size_type size() const { return p_data.size(); }
-
-    /** @brief Gets the container capacity. */
-    typename T::size_type capacity() const { return p_data.capacity(); }
-
-    /** @brief Appends a copy of a value to the end of the container. */
-    void put(typename T::const_reference v) {
-        p_data.push_back(v);
-    }
-
-    /** @brief Appends a value to the end of the container by move */
-    void put(typename T::value_type &&v) {
-        p_data.push_back(std::move(v));
-    }
-
-    /** @brief Gets a reference to the underlying container. */
-    T &get() { return p_data; }
-private:
-    T p_data;
-};
-
-/** @brief A convenience method to create an appender. */
-template<typename T>
-inline appender_range<T> appender() {
-    return appender_range<T>();
+template<typename Container>
+inline auto appender() {
+    return detail::appender_range<Container>();
 }
 
-/** @brief A convenience method to create an appender. */
-template<typename T>
-inline appender_range<T> appender(T const &v) {
-    return appender_range<T>(v);
-}
-
-/** @brief A convenience method to create an appender. */
-template<typename T>
-inline appender_range<T> appender(T &&v) {
-    return appender_range<T>(std::forward<T>(v));
+/** @brief Creates an appender from an existing container.
+ *
+ * Like ostd::appender(), except uses an existing container to create the
+ * range. The container is passed by universal reference, so it will work
+ * for lvalues and rvalues and appropriately copy or move the container.
+ *
+ * @see ostd::appender()
+ */
+template<typename Container>
+inline auto appender(Container &&v) {
+    return detail::appender_range<
+        std::remove_cv_t<std::remove_reference_t<Container>>
+    >(std::forward<Container>(v));
 }
 
 namespace detail {

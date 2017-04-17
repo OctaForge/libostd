@@ -123,7 +123,7 @@ int main() {
     writefln("%@s", Foo{});
     writefln("%@i", Foo{});
 
-    auto s = appender_range<std::string>{};
+    auto s = appender<std::string>();
     /* formatting into a string sink (can be any output range, but
      * appender makes sure the capacity is unlimited so it's safe)
      */
