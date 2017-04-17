@@ -1209,12 +1209,6 @@ namespace detail {
             return p_gen->value();
         }
 
-        generator_iterator<T> begin() noexcept;
-
-        std::nullptr_t end() noexcept {
-            return nullptr;
-        }
-
     private:
         generator<T> *p_gen;
     };
@@ -1254,13 +1248,6 @@ template<typename T>
 auto generator<T>::begin() noexcept {
     return detail::generator_iterator<T>{*this};
 }
-
-namespace detail {
-    template<typename T>
-    generator_iterator<T> generator_range<T>::begin() noexcept {
-        return generator_iterator<T>{*p_gen};
-    }
-} /* namespace detail */
 
 /** @} */
 
