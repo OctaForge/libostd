@@ -45,6 +45,7 @@
 #include <type_traits>
 #include <initializer_list>
 #include <algorithm>
+#include <optional>
 
 namespace ostd {
 
@@ -619,7 +620,49 @@ namespace detail {
             return !p_range.empty();
         }
     private:
-        std::decay_t<T> p_range;
+        T p_range;
+    };
+
+    // complete range iterator
+    template<typename T>
+    struct full_range_iterator {
+        using iterator_category = std::input_iterator_tag;
+        using value_type = range_value_t<T>;
+        using reference = range_reference_t<T>;
+        using pointer = value_type *;
+        using difference_type = std::make_signed_t<range_size_t<T>>;
+
+        full_range_iterator(): p_range(std::nullopt) {}
+        full_range_iterator(T const &range): p_range(range) {}
+
+        bool operator==(full_range_iterator const &v) const {
+            if (!p_range) {
+                if (v.p_range) {
+                    return (*v.p_range).empty();
+                }
+                return true;
+            }
+            return (*p_range).empty();
+        }
+        bool operator!=(full_range_iterator const &v) const {
+            return !((*this) == v);
+        }
+
+        reference operator*() const {
+            return (*p_range).front();
+        }
+
+        full_range_iterator &operator++() {
+            p_range.value().pop_front();
+            return *this;
+        }
+        full_range_iterator operator++(int) {
+            full_range_iterator ret{p_range.value()};
+            (*p_range).pop_front();
+            return ret;
+        }
+    private:
+        std::optional<T> p_range;
     };
 }
 
@@ -724,6 +767,23 @@ inline range_size_t<IR> range_pop_back_n(IR &range, range_size_t<IR> n) {
  */
 template<typename B>
 struct input_range {
+    /** @brief A complete input iterator type for the range.
+     *
+     * This is a complete iterator type that you can create with
+     * iter_begin(). This iterator can only be used to represent
+     * the full range sequence - i.e. from the beginning to the
+     * end of the range, with the end always being iter_end().
+     *
+     * Using an incremented version of iter_begin() as an ending is
+     * undefined as the ending iterator is not used by itself, this
+     * is why it's an input iterator type (if the function this is
+     * used with tried to use a temporary copy of the iterator as
+     * an end, it'd result in incorrect behavior). Thus, this is
+     * mostly meant to insert ranges into data structures that
+     * take input iterators in their insertion methods.
+     */
+    using full_iterator = detail::full_range_iterator<B>;
+
     /** @brief Creates a very simple iterator for range-based for loop.
      *
      * Thanks to this, you can use the range-based for loop with ranges
@@ -738,6 +798,16 @@ struct input_range {
     /** @brief Gets a sentinel for begin(). */
     std::nullptr_t end() const {
         return nullptr;
+    }
+
+    /** @brief Constructs a full_iterator for the range. */
+    full_iterator iter_begin() const {
+        return full_iterator{*static_cast<B const *>(this)};
+    }
+
+    /** @brief Constructs a full_iterator end. */
+    full_iterator iter_end() const {
+        return full_iterator{};
     }
 
     /** @brief Creates a copy of the range.

@@ -1,6 +1,7 @@
 #include <ostd/range.hh>
 #include <ostd/io.hh>
 #include <ostd/algorithm.hh>
+#include <ostd/vector.hh>
 
 using namespace ostd;
 
@@ -66,4 +67,12 @@ int main() {
     for (auto v: iter({ 5, 10, 15, 20 }).zip(iter({ 6, 11, 16, 21 }))) {
         writeln(v.first, ", ", v.second);
     }
+
+    /* insertion into containers with full_iterator */
+    writeln("vector range insert");
+    std::vector<int> foo = { 5, 10, 35, 40 };
+    writeln("before insert: ", foo);
+    auto r = range(15, 35, 5);
+    foo.insert(foo.cbegin() + 2, r.iter_begin(), r.iter_end());
+    writeln("after insert: ", foo);
 }
