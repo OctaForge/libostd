@@ -36,17 +36,12 @@ int main() {
     /* do not change past this point */
 
     int nsuccess = 0, nfailed = 0;
-    std::string modname = nullptr;
+    std::string modname;
 
-    auto print_result = [&](string_range fmsg = nullptr) {
+    auto print_error = [&](string_range fmsg) {
         write(modname, "...\t");
-        if (!fmsg.empty()) {
-            writeln(COLOR_RED, COLOR_BOLD, '(', fmsg, ')', COLOR_END);
-            ++nfailed;
-        } else {
-            writeln(COLOR_GREEN, COLOR_BOLD, "(success)", COLOR_END);
-            ++nsuccess;
-        }
+        writeln(COLOR_RED, COLOR_BOLD, '(', fmsg, ')', COLOR_END);
+        ++nfailed;
     };
 
     filesystem::directory_iterator ds{testdir};
@@ -70,7 +65,7 @@ int main() {
 
         auto cxxcmd = appender<std::string>();
         format(
-            cxxcmd, "%s %s%s%s -o %s %s", compiler, testdir,
+            cxxcmd, "%s %s%s%s -o %s %s ", compiler, testdir,
             char(filesystem::path::preferred_separator),
             p.filename(), exepath, cxxflags
         );
@@ -78,20 +73,24 @@ int main() {
             cxxcmd.get() += ' ';
             cxxcmd.get() += userflags;
         }
+        cxxcmd.get() += ' ';
+        cxxcmd.get() += "-DOSTD_BUILD_TESTS=";
+        cxxcmd.get() += modname;
+
         int ret = system(cxxcmd.get().data());
         if (ret) {
-            print_result("compile errror");
+            print_error("compile errror");
             continue;
         }
 
         ret = system(exepath.data());
         if (ret) {
-            print_result("runtime error");
+            print_error("runtime error");
             continue;
         }
 
         remove(exepath.data());
-        print_result();
+        ++nsuccess;
     }
 
     writeln("\n", COLOR_BLUE, COLOR_BOLD, "testing done:", COLOR_END);

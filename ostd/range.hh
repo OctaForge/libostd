@@ -37,6 +37,8 @@
 #ifndef OSTD_RANGE_HH
 #define OSTD_RANGE_HH
 
+#include "ostd/unit_test.hh"
+
 #include <cstddef>
 #include <new>
 #include <tuple>
@@ -1327,6 +1329,17 @@ template<typename T>
 inline auto range(T v) {
     return detail::number_range<T>(v);
 }
+
+OSTD_UNIT_TEST(range, {
+    auto r = range(5, 10, 2);
+    fail_if(r.empty() || (r.front() != 5));
+    r.pop_front();
+    fail_if(r.empty() || (r.front() != 7));
+    r.pop_front();
+    fail_if(r.empty() || (r.front() != 9));
+    r.pop_front();
+    fail_if(!r.empty());
+});
 
 namespace detail {
     template<typename T>
