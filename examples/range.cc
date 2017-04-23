@@ -1,7 +1,8 @@
+#include <vector>
+
 #include <ostd/range.hh>
 #include <ostd/io.hh>
 #include <ostd/algorithm.hh>
-#include <ostd/vector.hh>
 
 using namespace ostd;
 
@@ -27,7 +28,8 @@ int main() {
 
     /* prints ABCDEF (ASCII 65, 66, 67, 68, 69, 70) */
     writeln("string gen test");
-    auto s = make_string(map(range(6), [](int v) -> char { return v + 65; }));
+    auto mr = map(range(6), [](int v) -> char { return v + 65; });
+    std::string s{mr.iter_begin(), mr.iter_end()};
     writeln(s);
 
     /* join a few ranges together - prints 11, 22, 33 ... 99 each on new line */

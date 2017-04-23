@@ -23,7 +23,8 @@ int main() {
 
     /* prints ABCDEF (ASCII 65, 66, 67, 68, 69, 70) */
     writeln("string gen test");
-    auto s = make_string(range(6) | map([](int v) -> char { return v + 65; }));
+    auto mr = range(6) | map([](int v) -> char { return v + 65; });
+    std::string s{mr.iter_begin(), mr.iter_end()};
     writeln(s);
 
     /* join a few ranges together - prints 11, 22, 33 ... 99 each on new line */
@@ -76,15 +77,15 @@ int main() {
         | filter([](auto v) { return v >= 65 && v <= 90; })
         | map   ([](auto v) { return char(v); });
 
-    writeln(make_string(r));
+    writeln(std::string{r.iter_begin(), r.iter_end()});
 
     /* "list comprehensions" */
     writeln("list initialization");
 
-    auto test = make_vector(
-        range(20)
-            | filter([](int v) { return v % 2 == 0; })
-            | map   ([](int v) { return v * 2; })
-    );
+    auto vr = range(20)
+        | filter([](int v) { return v % 2 == 0; })
+        | map   ([](int v) { return v * 2; });
+
+    std::vector<int> test{vr.iter_begin(), vr.iter_end()};
     writeln(test);
 }

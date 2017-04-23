@@ -53,9 +53,9 @@
 #include <type_traits>
 #include <functional>
 #include <utility>
+#include <vector>
 
 #include "ostd/range.hh"
-#include "ostd/vector.hh"
 #include "ostd/algorithm.hh"
 
 namespace ostd {
@@ -617,46 +617,6 @@ struct ranged_traits<std::basic_string<T, TR, A> const> {
         return range{v.data(), v.data() + v.size()};
     }
 };
-
-/** @brief Creates a string out of any generic range type.
- *
- * The character type of the string must be explicitly specified here.
- * You can also optionally specify the character traits used for the string.
- */
-template<
-    typename T, typename TR = std::char_traits<T>,
-    typename A = std::allocator<T>, typename R
->
-inline std::basic_string<T, TR, A> make_string(R range, A const &alloc = A{}) {
-    std::basic_string<T, TR, A> ret{alloc};
-    using C = range_category_t<R>;
-    if constexpr(std::is_convertible_v<C, contiguous_range_tag>) {
-        ret.reserve(range.size());
-        ret.insert(ret.end(), range.data(), range.data() + range.size());
-    } else {
-        for (; !range.empty(); range.pop_front()) {
-            ret.push_back(range.front());
-        }
-    }
-    return ret;
-}
-
-/** @brief Creates a string out of any generic range type.
- *
- * The character type of the string is guessed from the range type itself.
- * You can also optionally specify the character traits used for the string.
- */
-template<
-    typename R, typename TR = std::char_traits<std::remove_cv_t<range_value_t<R>>>,
-    typename A = std::allocator<std::remove_cv_t<range_value_t<R>>>
->
-inline std::basic_string<std::remove_cv_t<range_value_t<R>>, TR, A> make_string(
-    R range, A const &alloc = A{}
-) {
-    return make_string<std::remove_cv_t<range_value_t<R>>, TR, A>(
-        std::move(range), alloc
-    );
-}
 
 /* string literals */
 
