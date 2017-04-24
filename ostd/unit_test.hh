@@ -26,6 +26,7 @@
 #ifdef OSTD_BUILD_TESTS
 #include <cstdio>
 #include <cstddef>
+#include <utility>
 #include <vector>
 #include <string>
 #include <functional>
@@ -72,7 +73,7 @@ void fail_if_not(bool b) {
     }
 }
 
-void run() {
+std::pair<int, int> run() {
     int succ = 0, fail = 0;
     for (auto &f: test_cases) {
         try {
@@ -83,18 +84,7 @@ void run() {
         }
         ++succ;
     }
-#if defined(_WIN32) || defined(WIN32)
-    printf(
-        "%s...\t%d out of %d (%d failures)\n",
-        OSTD_TEST_MODULE, succ, succ + fail, fail
-    );
-#else
-    printf(
-        "%s...\t%s\033[1m%d out of %d\033[0m (%d failures)\n",
-        OSTD_TEST_MODULE, fail ? "\033[91m" : "\033[92m",
-        succ, succ + fail, fail
-    );
-#endif
+    return std::make_pair(succ, fail);
 }
 
 #else /* OSTD_BUILD_TESTS */

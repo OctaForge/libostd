@@ -236,6 +236,7 @@ build_example() {
 
 # build test runner
 build_test_runner() {
+    OSTD_CXXFLAGS="${OSTD_CXXFLAGS} -DOSTD_DEFAULT_LIB='\"${OSTD_DEFAULT_LIB}\"'"
     call_cxx test_runner.cc test_runner.o
     call_ld test_runner test_runner.o "$OSTD_DEFAULT_LIB"
     rm -f test_runner.o
