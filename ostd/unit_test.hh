@@ -30,7 +30,6 @@
 #include <vector>
 #include <string>
 #include <functional>
-#include <stdexcept>
 #endif
 
 namespace ostd {
@@ -46,39 +45,71 @@ namespace test {
 #define OSTD_TEST_MODULE_STR(x) OSTD_TEST_MODULE_STRINGIFY(x)
 #define OSTD_TEST_MODULE OSTD_TEST_MODULE_STR(OSTD_BUILD_TESTS)
 
-static std::vector<void (*)()> test_cases;
+namespace detail {
+    static std::vector<void (*)()> test_cases;
 
-static bool add_test(std::string testn, void (*func)()) {
-    if (testn == OSTD_TEST_MODULE) {
-        test_cases.push_back(func);
+    static bool add_test(std::string testn, void (*func)()) {
+        if (testn == OSTD_TEST_MODULE) {
+            test_cases.push_back(func);
+        }
+        return true;
     }
-    return true;
+
+    struct test_error {};
 }
 
+/** @brief Defines a unit test.
+ *
+ * The first argument is the name of a module this individual test will
+ * belong to. The second argument is the actual body of the test.
+ *
+ * The test is only enabled if the module name matches the value of the
+ * `OSTD_BUILD_TESTS` macro, defined before inclusion of this header. The
+ * macro also has to be defined for this to be available at all.
+ */
 #define OSTD_UNIT_TEST(module, body) \
 static bool test_case_##module##_##__LINE__ = \
-    ostd::test::add_test(#module, []() { using namespace ostd::test; body });
+    ostd::test::detail::add_test(#module, []() { \
+        using namespace ostd::test; \
+        body \
+    });
 
-struct test_error {};
-
+/** @brief Makes the test fail if the given value is true.
+ *
+ * Fail in this case means that the test will exit there. Other tests
+ * within the same module will still run, and in the end the user will
+ * be able to see how many tests of the module succeeded and how many
+ * failed.
+ *
+ * @see ostd::test::fail_if_not()
+ */
 void fail_if(bool b) {
     if (b) {
-        throw test_error{};
+        throw detail::test_error{};
     }
 }
 
+/** @brief Like ostd::test::fail_if(), but inverse.
+ *
+ * The test will fail if the given value is false.
+ */
 void fail_if_not(bool b) {
     if (!b) {
-        throw test_error{};
+        throw detail::test_error{};
     }
 }
 
-std::pair<int, int> run() {
-    int succ = 0, fail = 0;
-    for (auto &f: test_cases) {
+/** @brief Runs all enabled test cases.
+ *
+ * @returns An std::pair containing the number of tests that succeeded
+ *          as the first value and failed as the second value.
+ */
+std::pair<std::size_t, std::size_t> run() {
+    std::size_t succ = 0, fail = 0;
+    for (auto &f: detail::test_cases) {
         try {
             f();
-        } catch (test_error) {
+        } catch (detail::test_error) {
             ++fail;
             continue;
         }
