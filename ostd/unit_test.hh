@@ -81,7 +81,7 @@ static bool test_case_##module##_##__LINE__ = \
  * be able to see how many tests of the module succeeded and how many
  * failed.
  *
- * @see ostd::test::fail_if_not()
+ * @see ostd::test::fail(), ostd::test::fail_if_not()
  */
 void fail_if(bool b) {
     if (b) {
@@ -99,6 +99,16 @@ void fail_if_not(bool b) {
     }
 }
 
+/** @brief Makes the test fail.
+ *
+ * The current test will exit.
+ *
+ * @see ostd::test::fail_if()
+ */
+void fail() {
+    throw detail::test_error{};
+}
+
 /** @brief Runs all enabled test cases.
  *
  * @returns An std::pair containing the number of tests that succeeded
@@ -110,6 +120,10 @@ std::pair<std::size_t, std::size_t> run() {
         try {
             f();
         } catch (detail::test_error) {
+            ++fail;
+            continue;
+        } catch (...) {
+            std::printf("warning: uncaught exception");
             ++fail;
             continue;
         }
