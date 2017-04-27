@@ -33,7 +33,7 @@ constexpr auto COLOR_END = "";
 
 static void write_test_src(file_stream &s, string_range modname) {
     s.writefln(
-        "#define OSTD_BUILD_TESTS %s\n"
+        "#define OSTD_BUILD_TESTS libostd_%s\n"
         "\n"
         "#include <ostd/unit_test.hh>\n"
         "#include <ostd/%s.hh>\n"

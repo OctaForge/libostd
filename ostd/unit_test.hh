@@ -43,13 +43,13 @@ namespace test {
 
 #define OSTD_TEST_MODULE_STRINGIFY(x) #x
 #define OSTD_TEST_MODULE_STR(x) OSTD_TEST_MODULE_STRINGIFY(x)
-#define OSTD_TEST_MODULE OSTD_TEST_MODULE_STR(OSTD_BUILD_TESTS)
+#define OSTD_TEST_MODULE_CURRENT OSTD_TEST_MODULE_STR(OSTD_BUILD_TESTS)
 
 namespace detail {
     static std::vector<void (*)()> test_cases;
 
     static bool add_test(std::string testn, void (*func)()) {
-        if (testn == OSTD_TEST_MODULE) {
+        if (testn == OSTD_TEST_MODULE_CURRENT) {
             test_cases.push_back(func);
         }
         return true;
@@ -60,19 +60,20 @@ namespace detail {
 
 /** @brief Defines a unit test.
  *
- * The first argument is the name of a module this individual test will
- * belong to. The second argument is the actual body of the test.
- *
  * The test is only enabled if the module name matches the value of the
  * `OSTD_BUILD_TESTS` macro, defined before inclusion of this header. The
- * macro also has to be defined for this to be available at all.
+ * macro also has to be defined for this to be available at all. The module
+ * name is defined using the `OSTD_TEST_MODULE` macro, which should be defined
+ * after including any headers and undefined at the end of the file.
  */
-#define OSTD_UNIT_TEST(module, body) \
-static bool test_case_##module##_##__LINE__ = \
-    ostd::test::detail::add_test(#module, []() { \
-        using namespace ostd::test; \
-        body \
-    });
+#define OSTD_UNIT_TEST(body) \
+static bool test_case_##OSTD_TEST_MODULE##_##__LINE__ = \
+    ostd::test::detail::add_test(
+        OSTD_TEST_MODULE_STR(OSTD_TEST_MODULE), []() { \
+            using namespace ostd::test; \
+            body \
+        } \
+    );
 
 /** @brief Makes the test fail if the given value is true.
  *
@@ -134,7 +135,7 @@ std::pair<std::size_t, std::size_t> run() {
 
 #else /* OSTD_BUILD_TESTS */
 
-#define OSTD_UNIT_TEST(module, body)
+#define OSTD_UNIT_TEST(body)
 
 #endif /* OSTD_BUILD_TESTS */
 

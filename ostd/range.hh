@@ -49,6 +49,8 @@
 #include <algorithm>
 #include <optional>
 
+#define OSTD_TEST_MODULE libostd_range
+
 namespace ostd {
 
 /** @addtogroup Ranges
@@ -1330,7 +1332,7 @@ inline auto range(T v) {
     return detail::number_range<T>(v);
 }
 
-OSTD_UNIT_TEST(range, {
+OSTD_UNIT_TEST({
     auto r = range(5, 10, 2);
     fail_if(r.empty() || (r.front() != 5));
     r.pop_front();
@@ -1983,6 +1985,8 @@ namespace detail {
 /** @} */
 
 } /* namespace ostd */
+
+#undef OSTD_TEST_MODULE
 
 #endif
 
