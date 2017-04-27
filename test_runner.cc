@@ -148,7 +148,11 @@ int main() {
             );
 
             remove(exepath.data());
-            ++nsuccess;
+            if (fail) {
+                ++nfailed;
+            } else {
+                ++nsuccess;
+            }
         });
     }
 

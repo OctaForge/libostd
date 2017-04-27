@@ -1332,7 +1332,9 @@ inline auto range(T v) {
     return detail::number_range<T>(v);
 }
 
-OSTD_UNIT_TEST({
+#ifdef OSTD_BUILD_TESTS
+OSTD_UNIT_TEST {
+    using ostd::test::fail_if;
     auto r = range(5, 10, 2);
     fail_if(r.empty() || (r.front() != 5));
     r.pop_front();
@@ -1341,7 +1343,8 @@ OSTD_UNIT_TEST({
     fail_if(r.empty() || (r.front() != 9));
     r.pop_front();
     fail_if(!r.empty());
-});
+};
+#endif
 
 namespace detail {
     template<typename T>

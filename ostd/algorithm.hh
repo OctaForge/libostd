@@ -24,7 +24,15 @@
 #include <type_traits>
 #include <algorithm>
 
+#ifdef OSTD_BUILD_TESTS
+#include <vector>
+#endif
+
+#include "ostd/unit_test.hh"
+
 #include "ostd/range.hh"
+
+#define OSTD_TEST_MODULE libostd_algorithm
 
 namespace ostd {
 
@@ -102,6 +110,37 @@ inline auto is_partitioned(Predicate &&pred) {
         return is_partitioned(obj, std::forward<Predicate>(pred));
     };
 }
+
+#ifdef OSTD_BUILD_TESTS
+OSTD_UNIT_TEST {
+    using ostd::test::fail_if;
+    using ostd::test::fail_if_not;
+    /* test with two vectors for pipeable and non-pipeable */
+    std::vector<int> v1 = { 5, 15, 10, 8, 36, 24 };
+    std::vector<int> v2 = v1;
+    auto try_test = [](auto &v, auto h) {
+        for (auto i: h) {
+            fail_if(i < 15);
+        }
+        for (auto i: iter(v).take(v.size() - h.size())) {
+            fail_if(i >= 15);
+        }
+    };
+    /* assume they're not partitioned */
+    fail_if(is_partitioned(iter(v1), [](int &i) { return i < 15; }));
+    fail_if(iter(v1) | is_partitioned([](int &i) { return i < 15; }));
+    fail_if(is_partitioned(iter(v2), [](int &i) { return i < 15; }));
+    fail_if(iter(v2) | is_partitioned([](int &i) { return i < 15; }));
+    /* partition now */
+    try_test(v1, partition(iter(v1), [](int &i) { return i < 15; }));
+    try_test(v2, iter(v2) | partition([](int &i) { return i < 15; }));
+    /* assume partitioned */
+    fail_if_not(is_partitioned(iter(v1), [](int &i) { return i < 15; }));
+    fail_if_not(iter(v1) | is_partitioned([](int &i) { return i < 15; }));
+    fail_if_not(is_partitioned(iter(v2), [](int &i) { return i < 15; }));
+    fail_if_not(iter(v2) | is_partitioned([](int &i) { return i < 15; }));
+}
+#endif
 
 /* sorting */
 
@@ -1395,6 +1434,8 @@ inline auto filter(Predicate &&pred) {
 /** @} */
 
 } /* namespace ostd */
+
+#undef OSTD_TEST_MODULE
 
 #endif
 

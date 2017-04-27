@@ -47,6 +47,7 @@ namespace test {
 
 namespace detail {
     static std::vector<void (*)()> test_cases;
+    static void (*test_dummy)() = nullptr;
 
     static bool add_test(std::string testn, void (*func)()) {
         if (testn == OSTD_TEST_MODULE_CURRENT) {
@@ -58,7 +59,13 @@ namespace detail {
     struct test_error {};
 }
 
+#define OSTD_TEST_FUNC_CONCAT(p, m, l) p##_##m##_##line
+#define OSTD_TEST_FUNC_NAME(p, m, l) OSTD_TEST_FUNC_CONCAT(p, m, l)
+
 /** @brief Defines a unit test.
+ *
+ * The body of the test follows the expansion of this macro like a
+ * normal function body.
  *
  * The test is only enabled if the module name matches the value of the
  * `OSTD_BUILD_TESTS` macro, defined before inclusion of this header. The
@@ -66,14 +73,14 @@ namespace detail {
  * name is defined using the `OSTD_TEST_MODULE` macro, which should be defined
  * after including any headers and undefined at the end of the file.
  */
-#define OSTD_UNIT_TEST(body) \
-static bool test_case_##OSTD_TEST_MODULE##_##__LINE__ = \
-    ostd::test::detail::add_test(
-        OSTD_TEST_MODULE_STR(OSTD_TEST_MODULE), []() { \
-            using namespace ostd::test; \
-            body \
-        } \
-    );
+#define OSTD_UNIT_TEST \
+static void OSTD_TEST_FUNC_NAME(test_func, OSTD_TEST_MODULE, __LINE__)(); \
+static bool OSTD_TEST_FUNC_NAME(test_case, OSTD_TEST_MODULE, __LINE__) = \
+    ostd::test::detail::add_test( \
+        OSTD_TEST_MODULE_STR(OSTD_TEST_MODULE), \
+        &OSTD_TEST_FUNC_NAME(test_func, OSTD_TEST_MODULE, __LINE__) \
+    ); \
+static void OSTD_TEST_FUNC_NAME(test_func, OSTD_TEST_MODULE, __LINE__)()
 
 /** @brief Makes the test fail if the given value is true.
  *
@@ -132,10 +139,6 @@ std::pair<std::size_t, std::size_t> run() {
     }
     return std::make_pair(succ, fail);
 }
-
-#else /* OSTD_BUILD_TESTS */
-
-#define OSTD_UNIT_TEST(body)
 
 #endif /* OSTD_BUILD_TESTS */
 
