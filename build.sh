@@ -15,6 +15,10 @@ ASM_SOURCES="jump_all_gas make_all_gas ontop_all_gas"
 CXX_SOURCE_DIR="src"
 CXX_SOURCES="context_stack io concurrency"
 
+# tests
+TEST_DIR="tests"
+TEST_CASES="algorithm range"
+
 # output lib
 OSTD_LIB="libostd"
 
@@ -184,6 +188,7 @@ clean() {
     evalv "rm -f \"$OSTD_STATIC_LIB\""
     evalv "rm -f \"$OSTD_SHARED_LIB\""
     evalv "rm -f test_runner.o test_runner"
+    evalv "rm -rf \"${TEST_DIR}\""
 }
 
 # call_cxx input output [shared]
@@ -234,9 +239,28 @@ build_example() {
     rm -f "examples/${1}.o"
 }
 
+# build _test name
+build_test() {
+    cat << EOF > "${TEST_DIR}/${1}.cc"
+#define OSTD_BUILD_TESTS libostd_${1}
+
+#include <ostd/unit_test.hh>
+#include <ostd/${1}.hh>
+#include <ostd/io.hh>
+
+int main() {
+    auto [ succ, fail ] = ostd::test::run();
+    ostd::writeln(succ, " ", fail);
+    return 0;
+}
+EOF
+    call_cxx "${TEST_DIR}/${1}.cc" "${TEST_DIR}/${1}.o"
+    call_ld "${TEST_DIR}/${1}" "${TEST_DIR}/${1}.o" "$OSTD_DEFAULT_LIB"
+    rm -f "${TEST_DIR}/${1}.o"
+}
+
 # build test runner
 build_test_runner() {
-    OSTD_CXXFLAGS="${OSTD_CXXFLAGS} -DOSTD_DEFAULT_LIB='\"${OSTD_DEFAULT_LIB}\"'"
     call_cxx test_runner.cc test_runner.o
     call_ld test_runner test_runner.o "$OSTD_DEFAULT_LIB"
     rm -f test_runner.o
@@ -283,12 +307,6 @@ if [ "$BUILD_SHARED" = "yes" ]; then
 fi
 evalv "rm -f $ASM_OBJ"
 
-# build test runner
-if [ "$BUILD_TESTSUITE" = "yes" ]; then
-    echo "Building test runner..."
-    build_test_runner &
-fi
-
 # build examples
 if [ "$BUILD_EXAMPLES" = "yes" ]; then
     echo "Building examples..."
@@ -297,8 +315,25 @@ if [ "$BUILD_EXAMPLES" = "yes" ]; then
     done
 fi
 
+# build test runner and tests
+if [ "$BUILD_TESTSUITE" = "yes" ]; then
+    echo "Building tests..."
+    build_test_runner &
+    if [ ! -d "$TEST_DIR" ]; then
+        mkdir -p "$TEST_DIR"
+    fi
+    for test in $TEST_CASES; do
+        build_test "$test" &
+    done
+fi
+
 # wait for remaining tasks
 wait
+
+# run tests if meant to
+if [ "$BUILD_TESTSUITE" = "yes" ]; then
+    ./test_runner "$TEST_DIR"
+fi
 
 # done
 exit 0
