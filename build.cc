@@ -7,6 +7,9 @@
 #include <string>
 #include <stdexcept>
 
+/* no dependency on the rest of ostd or the built library, so it's fine */
+#include "ostd/thread_pool.hh"
+
 #if __has_include(<filesystem>)
 #  include <filesystem>
 namespace fs = std::filesystem;
@@ -332,7 +335,7 @@ int main(int argc, char **argv) {
         auto f = std::fopen(ccf.data(), "w");
         if (!f) {
             std::printf("cannot open '%s' for writing\n", ccf.data());
-            throw std::runtime_error{"test write failure"};
+            std::exit(1);
         }
         fprintf(
             f,
@@ -364,6 +367,9 @@ int main(int argc, char **argv) {
 
     std::string asm_obj, cxx_obj, cxx_dynobj;
 
+    ostd::thread_pool tp;
+    tp.start();
+
     std::printf("Building the library...\n");
     for (auto aso: ASM_SOURCES) {
         std::string base = ASM_SOURCE_DIR;
@@ -371,7 +377,9 @@ int main(int argc, char **argv) {
         base += aso;
         auto ass = base + ".S";
         auto asob = base + ".o";
-        call_as(ass.data(), asob.data());
+        tp.push([&call_as, ass, asob]() {
+            call_as(ass.data(), asob.data());
+        });
         asm_obj += ' ';
         asm_obj += asob;
     }
@@ -382,17 +390,26 @@ int main(int argc, char **argv) {
         auto css = base + ".cc";
         if (build_static) {
             auto csob = base + ".o";
-            call_cxx(css.data(), csob.data(), false);
+            tp.push([&call_cxx, css, csob]() {
+                call_cxx(css.data(), csob.data(), false);
+            });
             cxx_obj += ' ';
             cxx_obj += csob;
         }
         if (build_shared) {
             auto csob = base + "_dyn.o";
-            call_cxx(css.data(), csob.data(), true);
+            tp.push([&call_cxx, css, csob]() {
+                call_cxx(css.data(), csob.data(), true);
+            });
             cxx_dynobj += ' ';
             cxx_dynobj += csob;
         }
     }
+
+    /* excessive, but whatever... maybe add better
+     * sync later without restarting all the threads
+     */
+    tp.destroy();
 
     if (build_static) {
         std::string all_obj = asm_obj;
@@ -407,10 +424,15 @@ int main(int argc, char **argv) {
         call_ldlib(OSTD_SHARED_LIB, all_obj.data(), true);
     }
 
+    /* examples are parallel */
+    tp.start();
+
     if (build_examples) {
         std::printf("Building examples...\n");
         for (auto ex: EXAMPLES) {
-            build_example(ex);
+            tp.push([&build_example, ex]() {
+                build_example(ex);
+            });
         }
     }
 
@@ -424,12 +446,16 @@ int main(int argc, char **argv) {
             }
         }
         for (auto test: TEST_CASES) {
-            try {
+            tp.push([&build_test, test]() {
                 build_test(test);
-            } catch (std::runtime_error const &) {
-                return 1;
-            }
+            });
         }
+    }
+
+    /* wait for tests and examples to be done */
+    tp.destroy();
+
+    if (build_testsuite) {
         std::string cmd = "./test_runner ";
         cmd += TEST_DIR;
         system_v(cmd.data());

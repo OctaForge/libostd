@@ -151,6 +151,7 @@ struct thread_pool {
             tid.join();
             p_cond.notify_all();
         }
+        p_thrs.clear();
     }
 
     /** @brief Queues a new task for execution.
