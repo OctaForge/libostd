@@ -7,24 +7,24 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <utility>
 #include <memory>
 
 #include <unistd.h>
 #include <wordexp.h>
 #include <sys/wait.h>
 
-/* no dependency on the rest of ostd or the built library, so it's fine */
+#include "ostd/io.hh"
+#include "ostd/range.hh"
+#include "ostd/format.hh"
+#include "ostd/string.hh"
+#include "ostd/filesystem.hh"
 #include "ostd/thread_pool.hh"
 
-#if __has_include(<filesystem>)
-#  include <filesystem>
-namespace fs = std::filesystem;
-#elif __has_include(<experimental/filesystem>)
-#  include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
-#else
-#  error "Unsupported platform"
-#endif
+namespace fs = ostd::filesystem;
+
+/* ugly, but do not explicitly compile */
+#include "src/io.cc"
 
 /* THESE VARIABLES CAN BE ALTERED */
 
@@ -89,8 +89,8 @@ static void add_env(std::string &val, char const *evar) {
     val += varv;
 }
 
-static void print_help(char const *arg0) {
-    std::printf(
+static void print_help(ostd::string_range arg0) {
+    ostd::writef(
         "%s [options]\n"
         "Available options:\n"
         "  [no-]examples   - (do not) build examples (default: yes)\n"
@@ -118,9 +118,7 @@ static void exec_command(
 
     auto pid = fork();
     if (pid == -1) {
-        std::printf("command failed\n");
-        argp.reset();
-        std::exit(1);
+        throw std::runtime_error{"command failed"};
     } else if (!pid) {
         if (!execvp(argp[0], argp.get())) {
             argp.reset();
@@ -128,9 +126,9 @@ static void exec_command(
         }
     } else {
         if (int retc = -1; (waitpid(pid, &retc, 0) == -1) || retc) {
-            std::printf("command failed with code %d\n", retc);
-            argp.reset();
-            std::exit(1);
+            auto app = ostd::appender<std::string>();
+            ostd::format(app, "command failed with code %d", retc);
+            throw std::runtime_error{app.get()};
         }
     }
 }
@@ -138,11 +136,11 @@ static void exec_command(
 static void print_command(
     std::string const &cmd, std::vector<std::string> const &args
 ) {
-    std::printf("%s", cmd.data());
+    ostd::write(cmd);
     for (auto &s: args) {
-        std::printf(" %s", s.data());
+        ostd::writef(" %s", s);
     }
-    std::printf("\n");
+    ostd::writeln();
 }
 
 static void add_args(std::vector<std::string> &args, std::string const &cmdl) {
@@ -174,9 +172,9 @@ static void try_remove(fs::path const &path, bool all = false) {
 static bool verbose = false;
 
 template<typename ...A>
-static void echo_q(A const &...args) {
+static void echo_q(ostd::string_range fmt, A const &...args) {
     if (!verbose) {
-        std::printf(args...);
+        ostd::writefln(fmt, args...);
     }
 }
 
@@ -229,7 +227,7 @@ int main(int argc, char **argv) {
             print_help(argv[0]);
             return 0;
         }
-        printf("unknown argument: %s\n", arg.data());
+        ostd::writefln("unknown argument: %s", arg.data());
         return 1;
     }
 
@@ -260,7 +258,7 @@ int main(int argc, char **argv) {
     add_env(asflags, "ASFLAGS");
 
     if (clean) {
-        std::printf("Cleaning...\n");
+        ostd::writeln("Cleaning...");
 
         for (auto ex: EXAMPLES) {
             auto rp = fs::path{"examples"} / ex;
@@ -296,10 +294,10 @@ int main(int argc, char **argv) {
         add_args(args, cxxflags);
 
         if (shared) {
-            echo_q("CXX (shared): %s\n", input.data());
+            echo_q("CXX (shared): %s", input);
             add_args(args, SHARED_CXXFLAGS);
         } else {
-            echo_q("CXX: %s\n", input.data());
+            echo_q("CXX: %s", input);
         }
 
         args.push_back("-c");
@@ -320,10 +318,10 @@ int main(int argc, char **argv) {
         add_args(args, asflags);
 
         if (shared) {
-            echo_q("AS (shared): %s\n", input.data());
+            echo_q("AS (shared): %s", input);
             add_args(args, SHARED_ASFLAGS);
         } else {
-            echo_q("AS: %s\n", input.data());
+            echo_q("AS: %s", input);
         }
 
         args.push_back("-c");
@@ -339,7 +337,7 @@ int main(int argc, char **argv) {
         std::vector<std::string> const &files,
         std::vector<std::string> const &flags
     ) {
-        echo_q("LD: %s\n", output.data());
+        echo_q("LD: %s", output);
 
         std::vector<std::string> args;
         add_args(args, cxxflags);
@@ -370,7 +368,7 @@ int main(int argc, char **argv) {
             add_args(args, SHARED_LDFLAGS);
             call_ld(output, files, args);
         } else {
-            echo_q("AR: %s\n", output.data());
+            echo_q("AR: %s", output);
 
             args.push_back("rcs");
             args.push_back(output);
@@ -397,13 +395,13 @@ int main(int argc, char **argv) {
         auto obf = path_with_ext(base, ".o");
 
         try_remove(ccf);
-        auto f = std::fopen(ccf.string().data(), "w");
-        if (!f) {
-            std::printf("cannot open '%s' for writing\n", ccf.string().data());
-            std::exit(1);
+        ostd::file_stream f{ccf.string(), ostd::stream_mode::WRITE};
+        if (!f.is_open()) {
+            auto app = ostd::appender<std::string>();
+            ostd::format(app, "cannot open '%s' for writing", ccf);
+            throw std::runtime_error{app.get()};
         }
-        fprintf(
-            f,
+        f.writef(
             "#define OSTD_BUILD_TESTS libostd_%s\n"
             "\n"
             "#include <ostd/unit_test.hh>\n"
@@ -415,9 +413,9 @@ int main(int argc, char **argv) {
             "    ostd::writeln(succ, \" \", fail);\n"
             "    return 0;\n"
             "}\n",
-            name.data(), name.data()
+            name, name
         );
-        std::fclose(f);
+        f.close();
 
         call_cxx(ccf.string(), obf.string(), false);
         call_ld(base.string(), { obf.string() }, { default_lib });
@@ -435,31 +433,33 @@ int main(int argc, char **argv) {
     ostd::thread_pool tp;
     tp.start();
 
+    std::queue<std::future<void>> futures;
+
     /* build object file in static and shared (PIC) variants */
-    auto build_obj = [&tp, build_static, build_shared](
+    auto build_obj = [&tp, &futures, build_static, build_shared](
         fs::path const &fpath, fs::path const &sext, auto &buildf,
         auto &obj, auto &dynobj
     ) {
         auto srcf = path_with_ext(fpath, sext);
         if (build_static) {
             auto srco = path_with_ext(srcf, ".o");
-            tp.push([&, srcf, srco]() {
+            futures.push(tp.push([&, srcf, srco]() {
                 buildf(srcf.string(), srco.string(), false);
-            });
+            }));
             obj.push_back(srco.string());
         }
         if (build_shared) {
             auto srco = srcf;
             srco.replace_extension();
             srco += "_dyn.o";
-            tp.push([&, srcf, srco]() {
+            futures.push(tp.push([&, srcf, srco]() {
                 buildf(srcf.string(), srco.string(), true);
-            });
+            }));
             dynobj.push_back(srco.string());
         }
     };
 
-    std::printf("Building the library...\n");
+    ostd::writeln("Building the library...");
     for (auto aso: ASM_SOURCES) {
         build_obj(ASM_SOURCE_DIR / aso, ".S", call_as, asm_obj, asm_dynobj);
     }
@@ -467,10 +467,11 @@ int main(int argc, char **argv) {
         build_obj(CXX_SOURCE_DIR / cso, ".cc", call_cxx, cxx_obj, cxx_dynobj);
     }
 
-    /* excessive, but whatever... maybe add better
-     * sync later without restarting all the threads
-     */
-    tp.destroy();
+    while (!futures.empty()) {
+        /* wait and propagate possible exception */
+        futures.front().get();
+        futures.pop();
+    }
 
     if (build_static) {
         std::vector<std::string> all_obj;
@@ -485,36 +486,36 @@ int main(int argc, char **argv) {
         call_ldlib(OSTD_SHARED_LIB, all_obj, true);
     }
 
-    /* examples are parallel */
-    tp.start();
-
     if (build_examples) {
-        std::printf("Building examples...\n");
+        ostd::writeln("Building examples...");
         for (auto ex: EXAMPLES) {
-            tp.push([&build_example, ex]() {
+            futures.push(tp.push([&build_example, ex]() {
                 build_example(ex);
-            });
+            }));
         }
     }
 
     if (build_testsuite) {
-        std::printf("Building tests...\n");
+        ostd::writeln("Building tests...");
         build_test_runner();
         if (!fs::is_directory(TEST_DIR)) {
             if (!fs::create_directory(TEST_DIR)) {
-                std::printf("Failed creating test directory\n");
+                ostd::writeln("Failed creating test directory");
                 return 1;
             }
         }
         for (auto test: TEST_CASES) {
-            tp.push([&build_test, test]() {
+            futures.push(tp.push([&build_test, test]() {
                 build_test(test);
-            });
+            }));
         }
     }
 
-    /* wait for tests and examples to be done */
-    tp.destroy();
+    while (!futures.empty()) {
+        /* wait and propagate possible exception */
+        futures.front().get();
+        futures.pop();
+    }
 
     if (build_testsuite) {
         exec_v("./test_runner", { TEST_DIR.string() });
