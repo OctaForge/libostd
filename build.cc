@@ -51,6 +51,17 @@ static std::string TEST_CASES[] = {
 static std::string OSTD_SHARED_LIB = "libostd.so";
 static std::string OSTD_STATIC_LIB = "libostd.a";
 
+static std::string DEFAULT_CXXFLAGS = "-std=c++1z -I. -O2 -Wall -Wextra "
+                                      "-Wshadow -Wold-style-cast";
+static std::string DEFAULT_LDFLAGS  = "-pthread";
+static std::string DEFAULT_ASFLAGS  = "";
+
+static std::string DEBUG_CXXFLAGS = "-g";
+
+static std::string SHARED_CXXFLAGS = "-fPIC";
+static std::string SHARED_LDFLAGS  = "-shared";
+static std::string SHARED_ASFLAGS  = "-fPIC";
+
 /* DO NOT CHANGE PAST THIS POINT */
 
 static std::string from_env_or(char const *evar, char const *defval) {
@@ -186,10 +197,9 @@ int main(int argc, char **argv) {
     std::string build_cfg = "debug";
     bool clean = false;
 
-    std::string cxxflags = "-std=c++1z -I. -O2 -Wall -Wextra -Wshadow "
-                           "-Wold-style-cast";
-    std::string ldflags = "-pthread";
-    std::string asflags = "";
+    std::string cxxflags = DEFAULT_CXXFLAGS;
+    std::string ldflags  = DEFAULT_LDFLAGS;
+    std::string asflags  = DEFAULT_ASFLAGS;
 
 #define ARG_BOOL(arg, name, var) \
     if ((arg == name) || (arg == "no-" name)) { \
@@ -241,7 +251,8 @@ int main(int argc, char **argv) {
     add_cross(ar);
 
     if (build_cfg == "debug") {
-        cxxflags += " -g";
+        cxxflags += ' ';
+        cxxflags += DEBUG_CXXFLAGS;
     }
 
     add_env(cxxflags, "CXXFLAGS");
@@ -286,7 +297,7 @@ int main(int argc, char **argv) {
 
         if (shared) {
             echo_q("CXX (shared): %s\n", input.data());
-            args.push_back("-fPIC");
+            add_args(args, SHARED_CXXFLAGS);
         } else {
             echo_q("CXX: %s\n", input.data());
         }
@@ -310,7 +321,7 @@ int main(int argc, char **argv) {
 
         if (shared) {
             echo_q("AS (shared): %s\n", input.data());
-            args.push_back("-fPIC");
+            add_args(args, SHARED_ASFLAGS);
         } else {
             echo_q("AS: %s\n", input.data());
         }
@@ -353,12 +364,14 @@ int main(int argc, char **argv) {
         std::string const &output, std::vector<std::string> const &files,
         bool shared
     ) {
+        std::vector<std::string> args;
         if (shared) {
-            call_ld(output, files, { "-shared" });
+            add_args(args, SHARED_CXXFLAGS);
+            add_args(args, SHARED_LDFLAGS);
+            call_ld(output, files, args);
         } else {
             echo_q("AR: %s\n", output.data());
 
-            std::vector<std::string> args;
             args.push_back("rcs");
             args.push_back(output);
             args.insert(args.cend(), files.begin(), files.end());
