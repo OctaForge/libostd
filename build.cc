@@ -5,7 +5,13 @@
 #include <cstddef>
 #include <cstring>
 #include <string>
+#include <vector>
 #include <stdexcept>
+#include <memory>
+
+#include <unistd.h>
+#include <wordexp.h>
+#include <sys/wait.h>
 
 /* no dependency on the rest of ostd or the built library, so it's fine */
 #include "ostd/thread_pool.hh"
@@ -89,6 +95,67 @@ static void print_help(char const *arg0) {
     );
 }
 
+static void exec_command(
+    std::string const &cmd, std::vector<std::string> const &args
+) {
+    auto argp = std::make_unique<char *[]>(args.size() + 2);
+    argp[0] = const_cast<char *>(cmd.data());
+    for (std::size_t i = 0; i < args.size(); ++i) {
+        argp[i + 1] = const_cast<char *>(args[i].data());
+    }
+    argp[args.size() + 1] = nullptr;
+
+    auto pid = fork();
+    if (pid == -1) {
+        std::printf("command failed\n");
+        argp.reset();
+        std::exit(1);
+    } else if (!pid) {
+        if (!execvp(argp[0], argp.get())) {
+            argp.reset();
+            std::exit(1);
+        }
+    } else {
+        if (int retc = -1; (waitpid(pid, &retc, 0) == -1) || retc) {
+            std::printf("command failed with code %d\n", retc);
+            argp.reset();
+            std::exit(1);
+        }
+    }
+}
+
+static void print_command(
+    std::string const &cmd, std::vector<std::string> const &args
+) {
+    std::printf("%s", cmd.data());
+    for (auto &s: args) {
+        std::printf(" %s", s.data());
+    }
+    std::printf("\n");
+}
+
+static void add_args(std::vector<std::string> &args, std::string const &cmdl) {
+    wordexp_t p;
+    if (wordexp(cmdl.data(), &p, 0)) {
+        return;
+    }
+    for (std::size_t i = 0; i < p.we_wordc; ++i) {
+        args.push_back(p.we_wordv[i]);
+    }
+}
+
+static fs::path path_with_ext(fs::path const &p, fs::path const &ext) {
+    fs::path rp = p;
+    rp.replace_extension(ext);
+    return rp;
+}
+
+static void try_remove(fs::path const &path) {
+    try {
+       fs::remove(path);
+    } catch (fs::filesystem_error const &) {}
+}
+
 int main(int argc, char **argv) {
     bool build_examples = true;
     bool build_testsuite = true;
@@ -100,7 +167,6 @@ int main(int argc, char **argv) {
 
     std::string cxxflags = "-std=c++1z -I. -O2 -Wall -Wextra -Wshadow "
                            "-Wold-style-cast";
-    std::string cppflags;
     std::string ldflags = "-pthread";
     std::string asflags = "";
 
@@ -145,13 +211,11 @@ int main(int argc, char **argv) {
 
     auto strip = from_env_or("STRIP", "strip");
     auto cxx   = from_env_or("CXX", "c++");
-    auto cpp   = from_env_or("CPP", "cpp");
-    auto as    = from_env_or("AS", "as");
+    auto as    = from_env_or("AS", "c++");
     auto ar    = from_env_or("AR", "ar");
 
     add_cross(strip);
     add_cross(cxx);
-    add_cross(cpp);
     add_cross(as);
     add_cross(ar);
 
@@ -160,7 +224,6 @@ int main(int argc, char **argv) {
     }
 
     add_env(cxxflags, "CXXFLAGS");
-    add_env(cppflags, "CPPFLAGS");
     add_env(ldflags, "LDFLAGS");
     add_env(asflags, "ASFLAGS");
 
@@ -170,53 +233,49 @@ int main(int argc, char **argv) {
         }
     };
 
-    auto system_v = [verbose](char const *cmd) {
+    auto exec_v = [verbose](
+        std::string const &cmd, std::vector<std::string> const &args
+    ) {
         if (verbose) {
-            std::printf("%s\n", cmd);
+            print_command(cmd, args);
         }
-        int c = std::system(cmd);
-        if (c) {
-            std::printf("command exited with code %d\n", c);
-            std::exit(c);
-        }
+        exec_command(cmd, args);
     };
 
     if (clean) {
         std::printf("Cleaning...\n");
 
-        auto remove_nt = [](fs::path const &p) {
-             try {
-                fs::remove(p);
-             } catch (fs::filesystem_error const &) {}
-        };
-
         fs::path exp = "examples";
         for (auto ex: EXAMPLES) {
             auto rp = exp / ex;
-            remove_nt(rp);
+            try_remove(rp);
             rp.replace_extension(".o");
-            remove_nt(rp);
+            try_remove(rp);
         }
         fs::path asp = ASM_SOURCE_DIR;
         for (auto aso: ASM_SOURCES) {
             auto rp = asp / aso;
             rp.replace_extension(".o");
-            remove_nt(rp);
+            try_remove(rp);
+            std::string fname = aso;
+            fname += "_dyn.o";
+            rp.replace_filename(fname);
+            try_remove(rp);
         }
         fs::path csp = CXX_SOURCE_DIR;
         for (auto cso: CXX_SOURCES) {
             auto rp = csp / cso;
             rp.replace_extension(".o");
-            remove_nt(rp);
+            try_remove(rp);
             std::string fname = cso;
             fname += "_dyn.o";
             rp.replace_filename(fname);
-            remove_nt(rp);
+            try_remove(rp);
         }
-        remove_nt(OSTD_STATIC_LIB);
-        remove_nt(OSTD_SHARED_LIB);
-        remove_nt("test_runner.o");
-        remove_nt("test_runner");
+        try_remove(OSTD_STATIC_LIB);
+        try_remove(OSTD_SHARED_LIB);
+        try_remove("test_runner.o");
+        try_remove("test_runner");
         try {
             fs::remove_all("tests");
         } catch (fs::filesystem_error const &) {}
@@ -224,117 +283,115 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    auto call_cxx = [&](char const *input, char const *output, bool shared) {
-        std::string flags = cppflags;
-        flags += ' ';
-        flags += cxxflags;
+    auto call_cxx = [&](
+        std::string const &input, std::string const &output, bool shared
+    ) {
+        std::vector<std::string> args;
+        add_args(args, cxxflags);
 
         if (shared) {
-            echo_q("CXX (shared): %s\n", input);
-            flags += " -fPIC";
+            echo_q("CXX (shared): %s\n", input.data());
+            args.push_back("-fPIC");
         } else {
-            echo_q("CXX: %s\n", input);
+            echo_q("CXX: %s\n", input.data());
         }
 
-        std::string cmd = cxx;
-        cmd += ' ';
-        cmd += flags;
-        cmd += " -c -o \"";
-        cmd += output;
-        cmd += "\" \"";
-        cmd += input;
-        cmd += "\"";
+        args.push_back("-c");
+        args.push_back("-o");
+        args.push_back(output);
+        args.push_back(input);
 
-        system_v(cmd.data());
+        exec_v(cxx, args);
     };
 
-    auto call_as = [&](char const *input, char const *output) {
-        echo_q("AS: %s\n", input);
+    /* mostly unnecessary to separately compile shared, but
+     * the files may check for __PIC__ (at least mips32 does)
+     */
+    auto call_as = [&](
+        std::string const &input, std::string const &output, bool shared
+    ) {
+        std::vector<std::string> args;
+        add_args(args, asflags);
 
-        std::string cmd = cpp;
-        cmd += " -x assembler-with-cpp \"";
-        cmd += input;
-        cmd += "\" | ";
-        cmd += as;
-        cmd += ' ';
-        cmd += asflags;
-        cmd += " -o \"";
-        cmd += output;
-        cmd += "\"";
+        if (shared) {
+            echo_q("AS (shared): %s\n", input.data());
+            args.push_back("-fPIC");
+        } else {
+            echo_q("AS: %s\n", input.data());
+        }
 
-        system_v(cmd.data());
+        args.push_back("-c");
+        args.push_back("-o");
+        args.push_back(output);
+        args.push_back(input);
+
+        exec_v(as, args);
     };
 
-    auto call_ld = [&](char const *output, char const *files, char const *extra) {
-        echo_q("LD: %s\n", output);
+    auto call_ld = [&](
+        std::string const &output,
+        std::vector<std::string> const &files,
+        std::vector<std::string> const &flags
+    ) {
+        echo_q("LD: %s\n", output.data());
 
-        std::string cmd = cxx;
-        cmd += ' ';
-        cmd += cppflags;
-        cmd += ' ';
-        cmd += cxxflags;
-        cmd += " -o \"";
-        cmd += output;
-        cmd += "\" ";
-        cmd += files;
-        cmd += ' ';
-        cmd += extra;
-        cmd += ' ';
-        cmd += ldflags;
+        std::vector<std::string> args;
+        add_args(args, cxxflags);
 
-        system_v(cmd.data());
+        args.push_back("-o");
+        args.push_back(output);
+        args.insert(args.cend(), files.begin(), files.end());
+        args.insert(args.cend(), flags.begin(), flags.end());
+
+        add_args(args, ldflags);
+
+        exec_v(cxx, args);
 
         if (!std::strcmp(build_cfg, "release")) {
-            cmd = strip;
-            cmd += " \"";
-            cmd += output;
-            cmd += "\"";
-
-            system_v(cmd.data());
+            args.clear();
+            args.push_back(output);
+            exec_v(strip, args);
         }
     };
 
-    auto call_ldlib = [&](char const *output, char const *files, bool shared) {
+    auto call_ldlib = [&](
+        std::string const &output, std::vector<std::string> const &files,
+        bool shared
+    ) {
         if (shared) {
-            call_ld(output, files, "-shared");
+            call_ld(output, files, { "-shared" });
         } else {
-            echo_q("AR: %s\n", output);
+            echo_q("AR: %s\n", output.data());
 
-            std::string cmd = ar;
-            cmd += " rcs \"";
-            cmd += output;
-            cmd += "\"";
-            cmd += ' ';
-            cmd += files;
+            std::vector<std::string> args;
+            args.push_back("rcs");
+            args.push_back(output);
+            args.insert(args.cend(), files.begin(), files.end());
 
-            system_v(cmd.data());
+            exec_v(ar, args);
         }
     };
 
-    auto build_example = [&](char const *name) {
-        std::string base = "examples/";
-        base += name;
+    auto build_example = [&](std::string const &name) {
+        auto base = fs::path{"examples"} / name;
+        auto ccf = path_with_ext(base, ".cc");
+        auto obf = path_with_ext(base, ".o");
 
-        auto ccf = base + ".cc";
-        auto obf = base + ".o";
+        call_cxx(ccf.string(), obf.string(), false);
+        call_ld(base.string(), { obf.string() }, { default_lib });
 
-        call_cxx(ccf.data(), obf.data(), false);
-        call_ld(base.data(), obf.data(), default_lib);
-        std::remove(obf.data());
+        try_remove(obf);
     };
 
-    auto build_test = [&](char const *name) {
-        std::string base = TEST_DIR;
-        base += "/";
-        base += name;
+    auto build_test = [&](std::string const &name) {
+        auto base = fs::path{TEST_DIR} / name;
+        auto ccf = path_with_ext(base, ".cc");
+        auto obf = path_with_ext(base, ".o");
 
-        auto ccf = base + ".cc";
-        auto obf = base + ".o";
-
-        std::remove(ccf.data());
-        auto f = std::fopen(ccf.data(), "w");
+        try_remove(ccf);
+        auto f = std::fopen(ccf.string().data(), "w");
         if (!f) {
-            std::printf("cannot open '%s' for writing\n", ccf.data());
+            std::printf("cannot open '%s' for writing\n", ccf.string().data());
             std::exit(1);
         }
         fprintf(
@@ -350,60 +407,62 @@ int main(int argc, char **argv) {
             "    ostd::writeln(succ, \" \", fail);\n"
             "    return 0;\n"
             "}\n",
-            name, name
+            name.data(), name.data()
         );
-        fclose(f);
+        std::fclose(f);
 
-        call_cxx(ccf.data(), obf.data(), false);
-        call_ld(base.data(), obf.data(), default_lib);
-        std::remove(obf.data());
+        call_cxx(ccf.string(), obf.string(), false);
+        call_ld(base.string(), { obf.string() }, { default_lib });
+        try_remove(obf);
     };
 
     auto build_test_runner = [&]() {
         call_cxx("test_runner.cc", "test_runner.o", false);
-        call_ld("test_runner", "test_runner.o", default_lib);
-        std::remove("test_runner.o");
+        call_ld("test_runner", { "test_runner.o" }, { default_lib });
+        try_remove("test_runner.o");
     };
 
-    std::string asm_obj, cxx_obj, cxx_dynobj;
+    std::vector<std::string> asm_obj, cxx_obj, asm_dynobj, cxx_dynobj;
 
     ostd::thread_pool tp;
     tp.start();
 
-    std::printf("Building the library...\n");
-    for (auto aso: ASM_SOURCES) {
-        std::string base = ASM_SOURCE_DIR;
-        base += "/";
-        base += aso;
-        auto ass = base + ".S";
-        auto asob = base + ".o";
-        tp.push([&call_as, ass, asob]() {
-            call_as(ass.data(), asob.data());
-        });
-        asm_obj += ' ';
-        asm_obj += asob;
-    }
-    for (auto cso: CXX_SOURCES) {
-        std::string base = CXX_SOURCE_DIR;
-        base += "/";
-        base += cso;
-        auto css = base + ".cc";
+    /* build object file in static and shared (PIC) variants */
+    auto build_obj = [&tp, build_static, build_shared](
+        fs::path const &fpath, fs::path const &sext, auto &buildf,
+        auto &obj, auto &dynobj
+    ) {
+        auto srcf = path_with_ext(fpath, sext);
         if (build_static) {
-            auto csob = base + ".o";
-            tp.push([&call_cxx, css, csob]() {
-                call_cxx(css.data(), csob.data(), false);
+            auto srco = path_with_ext(srcf, ".o");
+            tp.push([&, srcf, srco]() {
+                buildf(srcf.string(), srco.string(), false);
             });
-            cxx_obj += ' ';
-            cxx_obj += csob;
+            obj.push_back(srco.string());
         }
         if (build_shared) {
-            auto csob = base + "_dyn.o";
-            tp.push([&call_cxx, css, csob]() {
-                call_cxx(css.data(), csob.data(), true);
+            auto srco = srcf;
+            srco.replace_extension();
+            srco += "_dyn.o";
+            tp.push([&, srcf, srco]() {
+                buildf(srcf.string(), srco.string(), true);
             });
-            cxx_dynobj += ' ';
-            cxx_dynobj += csob;
+            dynobj.push_back(srco.string());
         }
+    };
+
+    std::printf("Building the library...\n");
+    for (auto aso: ASM_SOURCES) {
+        build_obj(
+            fs::path{ASM_SOURCE_DIR} / aso, ".S",
+            call_as, asm_obj, asm_dynobj
+        );
+    }
+    for (auto cso: CXX_SOURCES) {
+        build_obj(
+            fs::path{CXX_SOURCE_DIR} / cso, ".cc",
+            call_cxx, cxx_obj, cxx_dynobj
+        );
     }
 
     /* excessive, but whatever... maybe add better
@@ -412,16 +471,16 @@ int main(int argc, char **argv) {
     tp.destroy();
 
     if (build_static) {
-        std::string all_obj = asm_obj;
-        all_obj += ' ';
-        all_obj += cxx_obj;
-        call_ldlib(OSTD_STATIC_LIB, all_obj.data(), false);
+        std::vector<std::string> all_obj;
+        all_obj.insert(all_obj.cend(), asm_obj.begin(), asm_obj.end());
+        all_obj.insert(all_obj.cend(), cxx_obj.begin(), cxx_obj.end());
+        call_ldlib(OSTD_STATIC_LIB, all_obj, false);
     }
     if (build_shared) {
-        std::string all_obj = asm_obj;
-        all_obj += ' ';
-        all_obj += cxx_dynobj;
-        call_ldlib(OSTD_SHARED_LIB, all_obj.data(), true);
+        std::vector<std::string> all_obj;
+        all_obj.insert(all_obj.cend(), asm_dynobj.begin(), asm_dynobj.end());
+        all_obj.insert(all_obj.cend(), cxx_dynobj.begin(), cxx_dynobj.end());
+        call_ldlib(OSTD_SHARED_LIB, all_obj, true);
     }
 
     /* examples are parallel */
@@ -456,9 +515,7 @@ int main(int argc, char **argv) {
     tp.destroy();
 
     if (build_testsuite) {
-        std::string cmd = "./test_runner ";
-        cmd += TEST_DIR;
-        system_v(cmd.data());
+        exec_v("./test_runner", { TEST_DIR });
     }
 
     return 0;
