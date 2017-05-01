@@ -28,28 +28,28 @@ namespace fs = std::experimental::filesystem;
 
 /* THESE VARIABLES CAN BE ALTERED */
 
-static char const *EXAMPLES[] = {
+static std::string EXAMPLES[] = {
     "format", "listdir", "range", "range_pipe", "signal",
     "stream1", "stream2", "coroutine1", "coroutine2", "concurrency"
 };
 
-static char const *ASM_SOURCE_DIR = "src/asm";
-static char const *ASM_SOURCES[] = {
+static fs::path ASM_SOURCE_DIR = "src/asm";
+static std::string ASM_SOURCES[] = {
     "jump_all_gas", "make_all_gas", "ontop_all_gas"
 };
 
-static char const *CXX_SOURCE_DIR = "src";
-static char const *CXX_SOURCES[] = {
+static fs::path CXX_SOURCE_DIR = "src";
+static std::string CXX_SOURCES[] = {
     "context_stack", "io", "concurrency"
 };
 
-static char const *TEST_DIR = "tests";
-static char const *TEST_CASES[] = {
+static fs::path TEST_DIR = "tests";
+static std::string TEST_CASES[] = {
     "algorithm", "range"
 };
 
-static char const *OSTD_SHARED_LIB = "libostd.so";
-static char const *OSTD_STATIC_LIB = "libostd.a";
+static std::string OSTD_SHARED_LIB = "libostd.so";
+static std::string OSTD_STATIC_LIB = "libostd.a";
 
 /* DO NOT CHANGE PAST THIS POINT */
 
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
     bool build_testsuite = true;
     bool build_static = true;
     bool build_shared = false;
-    char const *build_cfg = "debug";
+    std::string build_cfg = "debug";
     bool clean = false;
 
     std::string cxxflags = "-std=c++1z -I. -O2 -Wall -Wextra -Wshadow "
@@ -192,40 +192,40 @@ int main(int argc, char **argv) {
     std::string asflags = "";
 
 #define ARG_BOOL(arg, name, var) \
-    if (!std::strcmp(arg, name) || !std::strcmp(arg, "no-" name)) { \
-        var = !!std::strncmp(arg, "no-", 3); \
+    if ((arg == name) || (arg == "no-" name)) { \
+        var = (arg.substr(0, 3) != "-no"); \
         continue; \
     }
 
     for (int i = 1; i < argc; ++i) {
-        char const *arg = argv[i];
+        std::string arg = argv[i];
         ARG_BOOL(arg, "examples", build_examples);
         ARG_BOOL(arg, "test-suite", build_testsuite);
         ARG_BOOL(arg, "static-lib", build_static);
         ARG_BOOL(arg, "shared-lib", build_shared);
-        if (!std::strcmp(arg, "release") || !std::strcmp(arg, "debug")) {
+        if ((arg == "release") || (arg == "debug")) {
             build_cfg = arg;
             continue;
         }
-        if (!std::strcmp(arg, "verbose")) {
+        if (arg == "verbose") {
             verbose = true;
             continue;
         }
-        if (!std::strcmp(arg, "clean")) {
+        if (arg == "clean") {
             clean = true;
             continue;
         }
-        if (!std::strcmp(arg, "help")) {
+        if (arg == "help") {
             print_help(argv[0]);
             return 0;
         }
-        printf("unknown argument: %s\n", arg);
+        printf("unknown argument: %s\n", arg.data());
         return 1;
     }
 
 #undef ARG_BOOL
 
-    char const *default_lib = OSTD_SHARED_LIB;
+    std::string default_lib = OSTD_SHARED_LIB;
     if (build_static) {
         default_lib = OSTD_STATIC_LIB;
     }
@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
     add_cross(as);
     add_cross(ar);
 
-    if (!std::strcmp(build_cfg, "debug")) {
+    if (build_cfg == "debug") {
         cxxflags += " -g";
     }
 
@@ -258,13 +258,13 @@ int main(int argc, char **argv) {
             try_remove(rp);
         }
         for (auto aso: ASM_SOURCES) {
-            auto rp = path_with_ext(fs::path{ASM_SOURCE_DIR} / aso, ".o");
+            auto rp = path_with_ext(ASM_SOURCE_DIR / aso, ".o");
             try_remove(rp);
             rp.replace_filename(std::string{aso} + "_dyn.o");
             try_remove(rp);
         }
         for (auto cso: CXX_SOURCES) {
-            auto rp = path_with_ext(fs::path{CXX_SOURCE_DIR} / cso, ".o");
+            auto rp = path_with_ext(CXX_SOURCE_DIR / cso, ".o");
             try_remove(rp);
             rp.replace_filename(std::string{cso} + "_dyn.o");
             try_remove(rp);
@@ -342,7 +342,7 @@ int main(int argc, char **argv) {
 
         exec_v(cxx, args);
 
-        if (!std::strcmp(build_cfg, "release")) {
+        if (build_cfg == "release") {
             args.clear();
             args.push_back(output);
             exec_v(strip, args);
@@ -379,7 +379,7 @@ int main(int argc, char **argv) {
     };
 
     auto build_test = [&](std::string const &name) {
-        auto base = fs::path{TEST_DIR} / name;
+        auto base = TEST_DIR / name;
         auto ccf = path_with_ext(base, ".cc");
         auto obf = path_with_ext(base, ".o");
 
@@ -448,16 +448,10 @@ int main(int argc, char **argv) {
 
     std::printf("Building the library...\n");
     for (auto aso: ASM_SOURCES) {
-        build_obj(
-            fs::path{ASM_SOURCE_DIR} / aso, ".S",
-            call_as, asm_obj, asm_dynobj
-        );
+        build_obj(ASM_SOURCE_DIR / aso, ".S", call_as, asm_obj, asm_dynobj);
     }
     for (auto cso: CXX_SOURCES) {
-        build_obj(
-            fs::path{CXX_SOURCE_DIR} / cso, ".cc",
-            call_cxx, cxx_obj, cxx_dynobj
-        );
+        build_obj(CXX_SOURCE_DIR / cso, ".cc", call_cxx, cxx_obj, cxx_dynobj);
     }
 
     /* excessive, but whatever... maybe add better
@@ -510,7 +504,7 @@ int main(int argc, char **argv) {
     tp.destroy();
 
     if (build_testsuite) {
-        exec_v("./test_runner", { TEST_DIR });
+        exec_v("./test_runner", { TEST_DIR.string() });
     }
 
     return 0;
