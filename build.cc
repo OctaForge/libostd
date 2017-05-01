@@ -120,7 +120,7 @@ static void exec_command(
     if (pid == -1) {
         throw std::runtime_error{"command failed"};
     } else if (!pid) {
-        if (!execvp(argp[0], argp.get())) {
+        if (execvp(argp[0], argp.get())) {
             argp.reset();
             std::exit(1);
         }
