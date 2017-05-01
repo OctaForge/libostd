@@ -8,7 +8,6 @@
 #include <new>
 #include <mutex>
 
-#include "ostd/internal/win32.hh"
 #include "ostd/platform.hh"
 #include "ostd/context_stack.hh"
 
@@ -18,6 +17,9 @@
 #  include <sys/resource.h>
 #  include <sys/time.h>
 #  include <signal.h>
+#else
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
 #endif
 
 namespace ostd {

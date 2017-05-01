@@ -40,7 +40,7 @@ static std::string ASM_SOURCES[] = {
 
 static fs::path CXX_SOURCE_DIR = "src";
 static std::string CXX_SOURCES[] = {
-    "context_stack", "io", "concurrency"
+    "context_stack", "environ", "io", "concurrency"
 };
 
 static fs::path TEST_DIR = "tests";
