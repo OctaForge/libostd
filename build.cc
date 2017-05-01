@@ -150,10 +150,32 @@ static fs::path path_with_ext(fs::path const &p, fs::path const &ext) {
     return rp;
 }
 
-static void try_remove(fs::path const &path) {
+static void try_remove(fs::path const &path, bool all = false) {
     try {
-       fs::remove(path);
+        if (all) {
+            fs::remove_all(path);
+        } else {
+            fs::remove(path);
+        }
     } catch (fs::filesystem_error const &) {}
+}
+
+static bool verbose = false;
+
+template<typename ...A>
+static void echo_q(A const &...args) {
+    if (!verbose) {
+        std::printf(args...);
+    }
+}
+
+static void exec_v(
+    std::string const &cmd, std::vector<std::string> const &args
+) {
+    if (verbose) {
+        print_command(cmd, args);
+    }
+    exec_command(cmd, args);
 }
 
 int main(int argc, char **argv) {
@@ -162,7 +184,6 @@ int main(int argc, char **argv) {
     bool build_static = true;
     bool build_shared = false;
     char const *build_cfg = "debug";
-    bool verbose = false;
     bool clean = false;
 
     std::string cxxflags = "-std=c++1z -I. -O2 -Wall -Wextra -Wshadow "
@@ -227,58 +248,32 @@ int main(int argc, char **argv) {
     add_env(ldflags, "LDFLAGS");
     add_env(asflags, "ASFLAGS");
 
-    auto echo_q = [verbose](auto const &...args) {
-        if (!verbose) {
-            std::printf(args...);
-        }
-    };
-
-    auto exec_v = [verbose](
-        std::string const &cmd, std::vector<std::string> const &args
-    ) {
-        if (verbose) {
-            print_command(cmd, args);
-        }
-        exec_command(cmd, args);
-    };
-
     if (clean) {
         std::printf("Cleaning...\n");
 
-        fs::path exp = "examples";
         for (auto ex: EXAMPLES) {
-            auto rp = exp / ex;
+            auto rp = fs::path{"examples"} / ex;
             try_remove(rp);
             rp.replace_extension(".o");
             try_remove(rp);
         }
-        fs::path asp = ASM_SOURCE_DIR;
         for (auto aso: ASM_SOURCES) {
-            auto rp = asp / aso;
-            rp.replace_extension(".o");
+            auto rp = path_with_ext(fs::path{ASM_SOURCE_DIR} / aso, ".o");
             try_remove(rp);
-            std::string fname = aso;
-            fname += "_dyn.o";
-            rp.replace_filename(fname);
+            rp.replace_filename(std::string{aso} + "_dyn.o");
             try_remove(rp);
         }
-        fs::path csp = CXX_SOURCE_DIR;
         for (auto cso: CXX_SOURCES) {
-            auto rp = csp / cso;
-            rp.replace_extension(".o");
+            auto rp = path_with_ext(fs::path{CXX_SOURCE_DIR} / cso, ".o");
             try_remove(rp);
-            std::string fname = cso;
-            fname += "_dyn.o";
-            rp.replace_filename(fname);
+            rp.replace_filename(std::string{cso} + "_dyn.o");
             try_remove(rp);
         }
         try_remove(OSTD_STATIC_LIB);
         try_remove(OSTD_SHARED_LIB);
         try_remove("test_runner.o");
         try_remove("test_runner");
-        try {
-            fs::remove_all("tests");
-        } catch (fs::filesystem_error const &) {}
+        try_remove("tests", true);
 
         return 0;
     }

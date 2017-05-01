@@ -36,10 +36,10 @@ It also recognizes the environment variables `CXX` (the C++ compiler used
 to build, defaults to `c++`), `AS` (the assembler used to build, defaults to
 `c++` as well, as Clang and GCC can compile assembly files), `AR` (the tool
 to create static lib archives, `ar` by default) and `STRIP` (the tool used
-to strip the library in release mode).
+to strip the library in release mode, `strip` by default).
 
 Additionally, the `CXXFLAGS`, `LDFLAGS` and `ASFLAGS` environment variables
 are also used. The `CXXFLAGS` are passed when compiling C++ source files as
 well as when linking (the compiler is used to link). The `LDFLAGS` are passed
 additionally to `CXXFLAGS` only when linking. The `ASFLAGS` are passed to
-the assembler (`CXXFLAGS` are not, even when Clang/GCC are used).
+the assembler (`CXXFLAGS` are not, even when Clang/GCC is used).
