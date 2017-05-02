@@ -39,7 +39,7 @@ namespace test {
  * @{
  */
 
-#ifdef OSTD_BUILD_TESTS
+#if defined(OSTD_BUILD_TESTS) || defined(OSTD_GENERATING_DOC)
 
 #define OSTD_TEST_MODULE_STRINGIFY(x) #x
 #define OSTD_TEST_MODULE_STR(x) OSTD_TEST_MODULE_STRINGIFY(x)
