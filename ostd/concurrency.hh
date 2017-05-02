@@ -53,6 +53,8 @@
 #include <utility>
 #include <memory>
 #include <stdexcept>
+#include <exception>
+#include <type_traits>
 
 #include "ostd/platform.hh"
 #include "ostd/coroutine.hh"
@@ -64,6 +66,140 @@ namespace ostd {
 /** @addtogroup Concurrency
  * @{
  */
+
+struct scheduler;
+
+namespace detail {
+    template<typename T>
+    struct tid_impl {
+        tid_impl() = delete;
+
+        template<typename F>
+        tid_impl(F &func): p_lock(), p_eptr(), p_cond(func()) {}
+
+        T get() {
+            std::unique_lock<std::mutex> l{p_lock};
+            while (!p_stor) {
+                p_cond.wait(l);
+            }
+            if (p_eptr) {
+                std::rethrow_exception(std::exchange(p_eptr, nullptr));
+            }
+            auto ret = std::move(p_stor);
+            if constexpr(!std::is_same_v<T, void>) {
+                if constexpr(std::is_lvalue_reference_v<T>) {
+                    return **ret;
+                } else {
+                    return std::move(*ret);
+                }
+            }
+        }
+
+        void wait() const {
+            std::unique_lock<std::mutex> l{p_lock};
+            while (!p_stor) {
+                p_cond.wait(l);
+            }
+        }
+
+        template<typename F>
+        void set_value(F &func) {
+            {
+                std::lock_guard<std::mutex> l{p_lock};
+                try {
+                    if constexpr(std::is_same_v<T, void>) {
+                        func();
+                        p_stor = true;
+                    } else {
+                        if constexpr(std::is_lvalue_reference_v<T>) {
+                            p_stor = &func();
+                        } else {
+                            p_stor = std::move(func());
+                        }
+                    }
+                } catch (...) {
+                    p_eptr = std::current_exception();
+                }
+            }
+            p_cond.notify_one();
+        }
+
+    private:
+        using storage = std::conditional_t<
+            std::is_same_v<T, void>,
+            bool,
+            std::optional<std::conditional_t<
+                std::is_lvalue_reference_v<T>,
+                std::remove_reference_t<T> *,
+                std::decay_t<T>
+            >>
+        >;
+
+        mutable std::mutex p_lock;
+        mutable std::exception_ptr p_eptr;
+        generic_condvar p_cond;
+        storage p_stor = storage{};
+    };
+}
+
+/** @brief An object that defines a task.
+ *
+ * This is returned by ostd::spawn() and obviously scheduler::spawn() It
+ * represents a spawned task, allowing you to wait for the task to be done
+ * as well as retrieve its return value. It also allows sane cross-task
+ * exception handling, as any exception is saved inside the internal
+ * shared state and propagated on get().
+ *
+ * The internal shared state is reference counted, but it's only safe to
+ * call get() once from one instance. It cannot be constructed normally,
+ * only as a return value or a copy.
+ *
+ * The `T` template parameter is the type of the result. It can be `void`,
+ * in which case get() returns nothing, but can still propagate exceptions.
+ */
+template<typename T>
+struct tid {
+    friend struct scheduler;
+
+    tid() = delete;
+
+    tid(tid const &) = default;
+    tid(tid &&) = default;
+    tid &operator=(tid const &) = default;
+    tid &operator=(tid &&) = default;
+
+    /** @brief Waits for the result and returns it.
+     *
+     * If `T` is void, this does not return. If an exception was thrown by
+     * the task, it will be rethrown here, allowing sane exception handling
+     * between different tasks and possibly threads.
+     *
+     * Effectively calls wait() before returning or throwing.
+     */
+    T get() {
+        auto p = std::move(p_state);
+        return p->get();
+    }
+
+    /** @brief Checks if this `tid` points to a valid shared state. */
+    bool valid() const {
+        return p_state;
+    }
+
+    /** @brief Waits for the associated task to finish.
+     *
+     * The behavior is undefined if valid() is true.
+     */
+    void wait() const {
+        p_state->wait();
+    }
+
+private:
+    template<typename F>
+    tid(F func): p_state(new detail::tid_impl<T>{func}) {}
+
+    std::shared_ptr<detail::tid_impl<T>> p_state;
+};
 
 /** @brief A base interface for any scheduler.
  *
@@ -192,14 +328,24 @@ public:
      * @see do_spawn(), ostd::spawn()
      */
     template<typename F, typename ...A>
-    void spawn(F &&func, A &&...args) {
+    tid<std::result_of_t<F(A...)>> spawn(F func, A &&...args) {
+        tid<std::result_of_t<F(A...)>> t{[this]() {
+            return make_condition();
+        }};
+        /* private shared state reference */
+        auto st = t.p_state;
         if constexpr(sizeof...(A) == 0) {
-            do_spawn(func);
+            do_spawn([lfunc = std::move(func), lst = std::move(st)]() {
+                lst->set_value(lfunc);
+            });
         } else {
-            do_spawn(
-                std::bind(std::forward<F>(func), std::forward<A>(args)...)
-            );
+            do_spawn([lfunc = std::bind(
+                std::move(func), std::forward<A>(args)...
+            ), lst = std::move(st)]() {
+                lst->set_value(lfunc);
+            });
         }
+        return t;
     }
 
     /** @brief Creates a channel suitable for the scheduler.
@@ -972,8 +1118,8 @@ using coroutine_scheduler = basic_coroutine_scheduler<stack_pool>;
  * scheduler::spawn().
  */
 template<typename F, typename ...A>
-inline void spawn(F &&func, A &&...args) {
-    detail::current_scheduler->spawn(
+inline tid<std::result_of_t<F(A...)>> spawn(F &&func, A &&...args) {
+    return detail::current_scheduler->spawn(
         std::forward<F>(func), std::forward<A>(args)...
     );
 }
