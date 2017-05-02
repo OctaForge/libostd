@@ -148,11 +148,13 @@ namespace detail {
  * represents a spawned task, allowing you to wait for the task to be done
  * as well as retrieve its return value. It also allows sane cross-task
  * exception handling, as any exception is saved inside the internal
- * shared state and propagated on get().
+ * state and propagated on get().
  *
- * The internal shared state is reference counted, but it's only safe to
- * call get() once from one instance. It cannot be constructed normally,
- * only as a return value or a copy.
+ * Tids are move constructible and assignable, but not copyable. They also
+ * cannot be constructed normally, only returned from the appropriate spawn
+ * function. The internal state stays alive for as long as necessary (always
+ * at least until the associated task finishes, but it can remain alive after
+ * that to either get the return value or propagate an exception).
  *
  * The `T` template parameter is the type of the result. It can be `void`,
  * in which case get() returns nothing, but can still propagate exceptions.
@@ -162,10 +164,10 @@ struct tid {
     friend struct scheduler;
 
     tid() = delete;
+    tid(tid const &) = delete;
+    tid &operator=(tid const &) = delete;
 
-    tid(tid const &) = default;
     tid(tid &&) = default;
-    tid &operator=(tid const &) = default;
     tid &operator=(tid &&) = default;
 
     /** @brief Waits for the result and returns it.
@@ -174,7 +176,9 @@ struct tid {
      * the task, it will be rethrown here, allowing sane exception handling
      * between different tasks and possibly threads.
      *
-     * Effectively calls wait() before returning or throwing.
+     * Effectively calls wait() before returning or throwing. After this
+     * call is done, valid() will no longer be true. It is undefined to
+     * call this when valid() is not true.
      */
     T get() {
         auto p = std::move(p_state);
@@ -188,7 +192,7 @@ struct tid {
 
     /** @brief Waits for the associated task to finish.
      *
-     * The behavior is undefined if valid() is true.
+     * The behavior is undefined when valid() is not true.
      */
     void wait() const {
         p_state->wait();
