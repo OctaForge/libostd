@@ -13,6 +13,10 @@ using namespace ostd;
  * task, which may or may not run in parallel with the other one depending
  * on the scheduler currently in use - several schedulers are shown
  */
+auto input_array = { 150, 38, 76, 25, 67, 18, -15,  215, 25, -10 };
+
+auto first_half  = iter(input_array).slice(0, input_array.size() / 2);
+auto second_half = iter(input_array).slice(input_array.size() / 2);
 
 /* this version uses Go-style channels to exchange data; multiple
  * tasks can put data into channels, the channel itself is a thread
@@ -20,14 +24,12 @@ using namespace ostd;
  * wait on a channel for some data to be received
  */
 static void test_channel() {
-    auto arr = { 150, 38, 76, 25, 67, 18, -15,  215, 25, -10 };
-
     auto c = make_channel<int>();
     auto f = [](auto c, auto half) {
         c.put(foldl(half, 0));
     };
-    spawn(f, c, iter(arr).slice(0, arr.size() / 2));
-    spawn(f, c, iter(arr).slice(arr.size() / 2));
+    spawn(f, c, first_half);
+    spawn(f, c, second_half);
 
     int a = c.get();
     int b = c.get();
@@ -48,13 +50,11 @@ static void test_channel() {
  * from t2; in the above test, a can come from either task
  */
 static void test_tid() {
-    auto arr = { 150, 38, 76, 25, 67, 18, -15,  215, 25, -10 };
-
     auto f = [](auto half) {
         return foldl(half, 0);
     };
-    auto t1 = spawn(f, iter(arr).slice(0, arr.size() / 2));
-    auto t2 = spawn(f, iter(arr).slice(arr.size() / 2));
+    auto t1 = spawn(f, first_half);
+    auto t2 = spawn(f, second_half);
 
     int a = t1.get();
     int b = t2.get();

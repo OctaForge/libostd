@@ -377,11 +377,6 @@ release:
     void (*p_free)(void *) = nullptr;
 };
 
-/** @brief Unspecialized declaration of the coroutine.
- *
- * This one has no definition. All instances of coroutine must use `R(A...)`
- * as template arguments, which is specialized later.
- */
 template<typename T>
 struct coroutine;
 

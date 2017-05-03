@@ -80,11 +80,7 @@ enum class stream_seek {
     SET = SEEK_SET  ///< Beginning of the stream.
 };
 
-/** @brief A stream range class without a definition.
- *
- * Stream ranges only work with POD types. This variant is instantiated
- * for non-POD types and as it has no definition, it will fail to compile.
- */
+
 template<typename T = char, bool = std::is_pod_v<T>>
 struct stream_range;
 
@@ -544,6 +540,9 @@ private:
  * to read a value from the stream unless it already has one. The value will
  * therefore not be readable from the stream again (from another range for
  * example).
+ *
+ * This template is a specialization of undefined base type because stream
+ * ranges only work with POD types.
  *
  * @see stream_line_range
  */
