@@ -20,6 +20,7 @@
 #include "ostd/string.hh"
 #include "ostd/filesystem.hh"
 #include "ostd/thread_pool.hh"
+#include "ostd/channel.hh"
 
 namespace fs = ostd::filesystem;
 
@@ -133,14 +134,15 @@ static void exec_command(
     }
 }
 
-static void print_command(
+static std::string get_command(
     std::string const &cmd, std::vector<std::string> const &args
 ) {
-    ostd::write(cmd);
+    std::string ret = cmd;
     for (auto &s: args) {
-        ostd::writef(" %s", s);
+        ret += ' ';
+        ret += s;
     }
-    ostd::writeln();
+    return ret;
 }
 
 static void add_args(std::vector<std::string> &args, std::string const &cmdl) {
@@ -170,22 +172,6 @@ static void try_remove(fs::path const &path, bool all = false) {
 }
 
 static bool verbose = false;
-
-template<typename ...A>
-static void echo_q(ostd::string_range fmt, A const &...args) {
-    if (!verbose) {
-        ostd::writefln(fmt, args...);
-    }
-}
-
-static void exec_v(
-    std::string const &cmd, std::vector<std::string> const &args
-) {
-    if (verbose) {
-        print_command(cmd, args);
-    }
-    exec_command(cmd, args);
-}
 
 int main(int argc, char **argv) {
     bool build_examples = true;
@@ -286,6 +272,39 @@ int main(int argc, char **argv) {
 
         return 0;
     }
+
+    /* a queue of stuff to print to stdout */
+    ostd::channel<std::string> io_msgs;
+
+    /* a thread which reads from the queue */
+    std::thread io_thread{[&io_msgs]() {
+        try {
+            for (;;) {
+                /* wait for a msg; if closed, throw channel_error */
+                ostd::writeln(io_msgs.get());
+            }
+        } catch (ostd::channel_error const &) {
+            /* the queue is empty and closed, thread is done */
+            return;
+        }
+    }};
+
+    auto echo_q = [&io_msgs](ostd::string_range fmt, auto const &...args) {
+        if (!verbose) {
+            auto app = ostd::appender<std::string>();
+            ostd::format(app, fmt, args...);
+            io_msgs.put(std::move(app.get()));
+        }
+    };
+
+    auto exec_v = [&io_msgs](
+        std::string const &cmd, std::vector<std::string> const &args
+    ) {
+        if (verbose) {
+            io_msgs.put(get_command(cmd, args));
+        }
+        exec_command(cmd, args);
+    };
 
     auto call_cxx = [&](
         std::string const &input, std::string const &output, bool shared
@@ -459,7 +478,7 @@ int main(int argc, char **argv) {
         }
     };
 
-    ostd::writeln("Building the library...");
+    echo_q("Building the library...");
     for (auto aso: ASM_SOURCES) {
         build_obj(ASM_SOURCE_DIR / aso, ".S", call_as, asm_obj, asm_dynobj);
     }
@@ -487,7 +506,7 @@ int main(int argc, char **argv) {
     }
 
     if (build_examples) {
-        ostd::writeln("Building examples...");
+        echo_q("Building examples...");
         for (auto ex: EXAMPLES) {
             futures.push(tp.push([&build_example, ex]() {
                 build_example(ex);
@@ -496,11 +515,11 @@ int main(int argc, char **argv) {
     }
 
     if (build_testsuite) {
-        ostd::writeln("Building tests...");
+        echo_q("Building tests...");
         build_test_runner();
         if (!fs::is_directory(TEST_DIR)) {
             if (!fs::create_directory(TEST_DIR)) {
-                ostd::writeln("Failed creating test directory");
+                echo_q("Failed creating test directory");
                 return 1;
             }
         }
@@ -520,6 +539,9 @@ int main(int argc, char **argv) {
     if (build_testsuite) {
         exec_v("./test_runner", { TEST_DIR.string() });
     }
+
+    io_msgs.close();
+    io_thread.join();
 
     return 0;
 }

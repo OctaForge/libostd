@@ -13,7 +13,7 @@ using namespace ostd;
  * task, which may or may not run in parallel with the other one depending
  * on the scheduler currently in use - several schedulers are shown
  */
-auto input_array = { 150, 38, 76, 25, 67, 18, -15,  215, 25, -10 };
+auto input_array = { 150, 38, 76, 25, 67, 18, -15, 215, 25, -10 };
 
 auto first_half  = iter(input_array).slice(0, input_array.size() / 2);
 auto second_half = iter(input_array).slice(input_array.size() / 2);
