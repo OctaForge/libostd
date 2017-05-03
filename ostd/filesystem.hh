@@ -14,6 +14,8 @@
  * It also provides range integration for directory iterators and
  * ostd::format_traits specialization for std::filesystem::path.
  *
+ * @include listdir.cc
+ *
  * @copyright See COPYING.md in the project tree for further information.
  */
 

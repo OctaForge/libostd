@@ -1,3 +1,9 @@
+/** @example format.cc
+ *
+ * An example of using the string formatting system, including various
+ * differences from C such as user defined type and range formatting.
+ */
+
 #include <unordered_map>
 #include <vector>
 #include <tuple>

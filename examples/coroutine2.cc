@@ -1,3 +1,8 @@
+/** @example coroutine2.cc
+ *
+ * An example of using coroutines as generators as well as nested resume/yield.
+ */
+
 #include <ostd/io.hh>
 #include <ostd/coroutine.hh>
 

@@ -1,3 +1,9 @@
+/** @example stream1.cc
+ *
+ * An example of using streams to read and write binary files
+ * with some help from the standard range algorithms.
+ */
+
 #include <ostd/platform.hh>
 #include <ostd/io.hh>
 

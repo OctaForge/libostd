@@ -1,3 +1,8 @@
+/** @exmaple range_pipe.cc
+ *
+ * Simple examples of usage of the range system using the pipe syntax.
+ */
+
 #include <array>
 #include <ctime>
 

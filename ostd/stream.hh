@@ -5,18 +5,13 @@
  * Libostd provides a custom stream system with considerably simpler API
  * and integration with other libostd features (such as ranges).
  *
- * A simple example:
+ * Some string examples:
  *
- * ~~~{.cc}
- * #include <ostd/io.hh>
+ * @include stream2.cc
  *
- * int main() {
- *     ostd::file_stream fs{"input.txt"};
- *     for (auto const &line: fs.iter_lines()) {
- *         writefln("read line: %s", line);
- *     }
- * }
- * ~~~
+ * And binary examples:
+ *
+ * @include stream1.cc
  *
  * See the examples provided with the library for further information.
  *

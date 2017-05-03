@@ -11,6 +11,8 @@
  * and supports custom object formatting without heap allocations as well
  * as formatting of ranges, tuples and more.
  *
+ * @include format.cc
+ *
  * @copyright See COPYING.md in the project tree for further information.
  */
 

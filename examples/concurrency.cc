@@ -1,3 +1,9 @@
+/** @example concurrency.cc
+ *
+ * A simple example of the concurrency module usage, explaining schdulers,
+ * ostd::spawn(), ostd::tid as well as ostd::channel.
+ */
+
 #include <ostd/io.hh>
 #include <ostd/concurrency.hh>
 

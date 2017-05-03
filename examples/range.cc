@@ -1,3 +1,8 @@
+/** @exmaple range.cc
+ *
+ * Simple examples of usage of the range system without using the pipe syntax.
+ */
+
 #include <vector>
 
 #include <ostd/range.hh>

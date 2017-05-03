@@ -1,3 +1,9 @@
+/** @example stream2.cc
+ *
+ * An example of using streams to process strings, including some
+ * standard range algorithm use.
+ */
+
 #include <vector>
 
 #include <ostd/algorithm.hh>

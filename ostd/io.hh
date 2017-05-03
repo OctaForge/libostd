@@ -10,6 +10,14 @@
  * as well as wrappers over standard input/output/error and global functions
  * for formatted writing into standard output.
  *
+ * Some string examples:
+ *
+ * @include stream2.cc
+ *
+ * And binary examples:
+ *
+ * @include stream1.cc
+ *
  * @copyright See COPYING.md in the project tree for further information.
  */
 

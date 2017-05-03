@@ -14,6 +14,14 @@
  * also be used as generators and generally anywhere where you'd like to
  * suspend a function and resume it later (all kinds of async apps).
  *
+ * Plain coroutine usage:
+ *
+ * @include coroutine1.cc
+ *
+ * Generators and more:
+ *
+ * @include coroutine2.cc
+ *
  * @copyright See COPYING.md in the project tree for further information.
  */
 

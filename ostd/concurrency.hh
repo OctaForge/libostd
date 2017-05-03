@@ -15,15 +15,7 @@
  *
  * Typical usage of the concurrency system is as follows:
  *
- * ~~~{.cc}
- * #include <ostd/concurrency.hh>
- *
- * int main() {
- *     ostd::coroutine_scheduler{}.start([]() {
- *         // the rest of main follows
- *     });
- * }
- * ~~~
+ * @include concurrency.cc
  *
  * See the examples provided with the library for further information.
  *
@@ -39,6 +31,8 @@
  *
  * This file implements several schedulers as well as APIs to spawn
  * tasks, coroutines and channels that utilize the current scheduler's API.
+ *
+ * @include concurrency.cc
  *
  * @copyright See COPYING.md in the project tree for further information.
  */

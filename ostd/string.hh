@@ -27,6 +27,10 @@
  * }
  * ~~~
  *
+ * An example of using libostd string formatting:
+ *
+ * @include format.cc
+ *
  * See the examples provided with the library for further information.
  *
  * @{

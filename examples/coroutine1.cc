@@ -1,3 +1,8 @@
+/** @example coroutine1.cc
+ *
+ * An example of using plain coroutines as resumable functions.
+ */
+
 #include <ostd/io.hh>
 #include <ostd/coroutine.hh>
 

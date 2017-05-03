@@ -21,6 +21,14 @@
  * There is a whole article dedicated to ranges [here](@ref ranges). You can
  * also take a look at the many examples in the project tree.
  *
+ * Some more examples:
+ *
+ * @include range.cc
+ *
+ * Pipe syntax examples:
+ *
+ * @include range_pipe.cc
+ *
  * @{
  */
 
@@ -30,6 +38,14 @@
  *
  * This file provides the actual range system implementation,
  * some basic range types, iteration utilities and range traits.
+ *
+ * Some examples:
+ *
+ * @include range.cc
+ *
+ * Pipe syntax examples:
+ *
+ * @include range_pipe.cc
  *
  * @copyright See COPYING.md in the project tree for further information.
  */
