@@ -1,4 +1,4 @@
-/** @exmaple range.cc
+/** @example range.cc
  *
  * Simple examples of usage of the range system without using the pipe syntax.
  */
