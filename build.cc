@@ -27,25 +27,27 @@ namespace fs = ostd::filesystem;
 /* ugly, but do not explicitly compile */
 #include "src/io.cc"
 
+using strvec = std::vector<std::string>;
+
 /* THESE VARIABLES CAN BE ALTERED */
 
-static std::string EXAMPLES[] = {
+static std::vector<std::string> EXAMPLES = {
     "format", "listdir", "range", "range_pipe", "signal",
     "stream1", "stream2", "coroutine1", "coroutine2", "concurrency"
 };
 
 static fs::path ASM_SOURCE_DIR = "src/asm";
-static std::string ASM_SOURCES[] = {
+static strvec ASM_SOURCES = {
     "jump_all_gas", "make_all_gas", "ontop_all_gas"
 };
 
 static fs::path CXX_SOURCE_DIR = "src";
-static std::string CXX_SOURCES[] = {
+static strvec CXX_SOURCES = {
     "context_stack", "environ", "io", "concurrency"
 };
 
 static fs::path TEST_DIR = "tests";
-static std::string TEST_CASES[] = {
+static strvec TEST_CASES = {
     "algorithm", "range"
 };
 
@@ -107,9 +109,7 @@ static void print_help(ostd::string_range arg0) {
     );
 }
 
-static void exec_command(
-    std::string const &cmd, std::vector<std::string> const &args
-) {
+static void exec_command(std::string const &cmd, strvec const &args) {
     auto argp = std::make_unique<char *[]>(args.size() + 2);
     argp[0] = const_cast<char *>(cmd.data());
     for (std::size_t i = 0; i < args.size(); ++i) {
@@ -134,9 +134,7 @@ static void exec_command(
     }
 }
 
-static std::string get_command(
-    std::string const &cmd, std::vector<std::string> const &args
-) {
+static std::string get_command(std::string const &cmd, strvec const &args) {
     std::string ret = cmd;
     for (auto &s: args) {
         ret += ' ';
@@ -145,7 +143,7 @@ static std::string get_command(
     return ret;
 }
 
-static void add_args(std::vector<std::string> &args, std::string const &cmdl) {
+static void add_args(strvec &args, std::string const &cmdl) {
     wordexp_t p;
     if (wordexp(cmdl.data(), &p, 0)) {
         return;
@@ -297,9 +295,7 @@ int main(int argc, char **argv) {
         }
     };
 
-    auto exec_v = [&io_msgs](
-        std::string const &cmd, std::vector<std::string> const &args
-    ) {
+    auto exec_v = [&io_msgs](std::string const &cmd, strvec const &args) {
         if (verbose) {
             io_msgs.put(get_command(cmd, args));
         }
@@ -307,58 +303,70 @@ int main(int argc, char **argv) {
     };
 
     auto call_cxx = [&](
-        std::string const &input, std::string const &output, bool shared
+        fs::path const &input, fs::path const &output, bool shared
     ) {
-        std::vector<std::string> args;
+        strvec args;
         add_args(args, cxxflags);
 
+        auto ifs = input.string();
+        auto outp = output;
+
         if (shared) {
-            echo_q("CXX (shared): %s", input);
+            outp.replace_extension();
+            outp += "_dyn.o";
+            echo_q("CXX (shared): %s", ifs);
             add_args(args, SHARED_CXXFLAGS);
         } else {
-            echo_q("CXX: %s", input);
+            echo_q("CXX: %s", ifs);
         }
 
         args.push_back("-c");
         args.push_back("-o");
-        args.push_back(output);
-        args.push_back(input);
+        args.push_back(outp.string());
+        args.push_back(ifs);
 
         exec_v(cxx, args);
+
+        return outp;
     };
 
     /* mostly unnecessary to separately compile shared, but
      * the files may check for __PIC__ (at least mips32 does)
      */
     auto call_as = [&](
-        std::string const &input, std::string const &output, bool shared
+        fs::path const &input, fs::path const &output, bool shared
     ) {
-        std::vector<std::string> args;
+        strvec args;
         add_args(args, asflags);
 
+        auto ifs = input.string();
+        auto outp = output;
+
         if (shared) {
-            echo_q("AS (shared): %s", input);
+            outp.replace_extension();
+            outp += "_dyn.o";
+            echo_q("AS (shared): %s", ifs);
             add_args(args, SHARED_ASFLAGS);
         } else {
-            echo_q("AS: %s", input);
+            echo_q("AS: %s", ifs);
         }
 
         args.push_back("-c");
         args.push_back("-o");
-        args.push_back(output);
-        args.push_back(input);
+        args.push_back(outp.string());
+        args.push_back(ifs);
 
         exec_v(as, args);
+
+        return outp;
     };
 
     auto call_ld = [&](
-        std::string const &output,
-        std::vector<std::string> const &files,
-        std::vector<std::string> const &flags
+        std::string const &output, strvec const &files, strvec const &flags
     ) {
         echo_q("LD: %s", output);
 
-        std::vector<std::string> args;
+        strvec args;
         add_args(args, cxxflags);
 
         args.push_back("-o");
@@ -378,10 +386,9 @@ int main(int argc, char **argv) {
     };
 
     auto call_ldlib = [&](
-        std::string const &output, std::vector<std::string> const &files,
-        bool shared
+        std::string const &output, strvec const &files, bool shared
     ) {
-        std::vector<std::string> args;
+        strvec args;
         if (shared) {
             add_args(args, SHARED_CXXFLAGS);
             add_args(args, SHARED_LDFLAGS);
@@ -402,7 +409,7 @@ int main(int argc, char **argv) {
         auto ccf = path_with_ext(base, ".cc");
         auto obf = path_with_ext(base, ".o");
 
-        call_cxx(ccf.string(), obf.string(), false);
+        call_cxx(ccf, obf, false);
         call_ld(base.string(), { obf.string() }, { default_lib });
 
         try_remove(obf);
@@ -436,7 +443,7 @@ int main(int argc, char **argv) {
         );
         f.close();
 
-        call_cxx(ccf.string(), obf.string(), false);
+        call_cxx(ccf, obf, false);
         call_ld(base.string(), { obf.string() }, { default_lib });
         try_remove(obf);
     };
@@ -447,68 +454,61 @@ int main(int argc, char **argv) {
         try_remove("test_runner.o");
     };
 
-    std::vector<std::string> asm_obj, cxx_obj, asm_dynobj, cxx_dynobj;
-
     ostd::thread_pool tp;
     tp.start();
 
-    std::queue<std::future<void>> futures;
+    std::queue<std::future<fs::path>> future_obj, future_dynobj;
 
-    /* build object file in static and shared (PIC) variants */
-    auto build_obj = [&tp, &futures, build_static, build_shared](
-        fs::path const &fpath, fs::path const &sext, auto &buildf,
-        auto &obj, auto &dynobj
+    /* build object files in static and shared (PIC) variants */
+    auto build_all = [&](
+        strvec &list, fs::path const &spath, fs::path const &sext, auto &buildf
     ) {
-        auto srcf = path_with_ext(fpath, sext);
-        if (build_static) {
+        auto build_obj = [&](fs::path const &fpath,  bool shared) {
+            auto srcf = path_with_ext(fpath, sext);
             auto srco = path_with_ext(srcf, ".o");
-            futures.push(tp.push([&, srcf, srco]() {
-                buildf(srcf.string(), srco.string(), false);
+            auto &fq = (shared ? future_dynobj : future_obj);
+            fq.push(tp.push([&buildf, srcf, srco, shared]() {
+                return buildf(srcf, srco, shared);
             }));
-            obj.push_back(srco.string());
-        }
-        if (build_shared) {
-            auto srco = srcf;
-            srco.replace_extension();
-            srco += "_dyn.o";
-            futures.push(tp.push([&, srcf, srco]() {
-                buildf(srcf.string(), srco.string(), true);
-            }));
-            dynobj.push_back(srco.string());
+        };
+        for (auto sf: list) {
+            auto sp = spath / sf;
+            if (build_static) {
+                build_obj(sp, false);
+            }
+            if (build_shared) {
+                build_obj(sp, true);
+            }
         }
     };
 
     echo_q("Building the library...");
-    for (auto aso: ASM_SOURCES) {
-        build_obj(ASM_SOURCE_DIR / aso, ".S", call_as, asm_obj, asm_dynobj);
-    }
-    for (auto cso: CXX_SOURCES) {
-        build_obj(CXX_SOURCE_DIR / cso, ".cc", call_cxx, cxx_obj, cxx_dynobj);
-    }
-
-    while (!futures.empty()) {
-        /* wait and propagate possible exception */
-        futures.front().get();
-        futures.pop();
-    }
+    build_all(ASM_SOURCES, ASM_SOURCE_DIR, ".S", call_as);
+    build_all(CXX_SOURCES, CXX_SOURCE_DIR, ".cc", call_cxx);
 
     if (build_static) {
-        std::vector<std::string> all_obj;
-        all_obj.insert(all_obj.cend(), asm_obj.begin(), asm_obj.end());
-        all_obj.insert(all_obj.cend(), cxx_obj.begin(), cxx_obj.end());
-        call_ldlib(OSTD_STATIC_LIB, all_obj, false);
+        strvec objs;
+        while (!future_obj.empty()) {
+            objs.push_back(future_obj.front().get());
+            future_obj.pop();
+        }
+        call_ldlib(OSTD_STATIC_LIB, objs, false);
     }
     if (build_shared) {
-        std::vector<std::string> all_obj;
-        all_obj.insert(all_obj.cend(), asm_dynobj.begin(), asm_dynobj.end());
-        all_obj.insert(all_obj.cend(), cxx_dynobj.begin(), cxx_dynobj.end());
-        call_ldlib(OSTD_SHARED_LIB, all_obj, true);
+        strvec objs;
+        while (!future_dynobj.empty()) {
+            objs.push_back(future_dynobj.front().get());
+            future_dynobj.pop();
+        }
+        call_ldlib(OSTD_SHARED_LIB, objs, true);
     }
+
+    std::queue<std::future<void>> future_bin;
 
     if (build_examples) {
         echo_q("Building examples...");
         for (auto ex: EXAMPLES) {
-            futures.push(tp.push([&build_example, ex]() {
+            future_bin.push(tp.push([&build_example, ex]() {
                 build_example(ex);
             }));
         }
@@ -524,16 +524,16 @@ int main(int argc, char **argv) {
             }
         }
         for (auto test: TEST_CASES) {
-            futures.push(tp.push([&build_test, test]() {
+            future_bin.push(tp.push([&build_test, test]() {
                 build_test(test);
             }));
         }
     }
 
-    while (!futures.empty()) {
+    while (!future_bin.empty()) {
         /* wait and propagate possible exception */
-        futures.front().get();
-        futures.pop();
+        future_bin.front().get();
+        future_bin.pop();
     }
 
     if (build_testsuite) {

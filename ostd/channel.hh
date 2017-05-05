@@ -115,10 +115,20 @@ struct channel {
      *
      * @throws ostd::channel_error when the channel is closed.
      *
-     * @see put(T const &)
+     * @see put(T const &), emplace()
      */
     void put(T &&val) {
         p_state->put(std::move(val));
+    }
+
+    /** @brief Like put(), but constructs the element in-place.
+     *
+     * The arguments are to be passed to the element constructor.
+     * No copy or move operations are performed.
+     */
+    template<typename ...A>
+    void emplace(A &&...args) {
+        p_state->emplace(std::forward<A>(args)...);
     }
 
     /** @brief Waits for a value and returns it.
@@ -207,6 +217,18 @@ private:
                     throw channel_error{"put in a closed channel"};
                 }
                 p_messages.push_back(std::forward<U>(val));
+            }
+            p_cond.notify_one();
+        }
+
+        template<typename ...A>
+        void emplace(A &&...args) {
+            {
+                std::lock_guard<std::mutex> l{p_lock};
+                if (p_closed) {
+                    throw channel_error{"emplace in a closed channel"};
+                }
+                p_messages.emplace(std::forward<A>(args)...);
             }
             p_cond.notify_one();
         }
