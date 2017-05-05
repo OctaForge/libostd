@@ -28,6 +28,7 @@ namespace fs = ostd::filesystem;
 #include "src/io.cc"
 
 using strvec = std::vector<std::string>;
+using pathvec = std::vector<fs::path>;
 
 /* THESE VARIABLES CAN BE ALTERED */
 
@@ -51,8 +52,8 @@ static strvec TEST_CASES = {
     "algorithm", "range"
 };
 
-static std::string OSTD_SHARED_LIB = "libostd.so";
-static std::string OSTD_STATIC_LIB = "libostd.a";
+static fs::path OSTD_SHARED_LIB = "libostd.so";
+static fs::path OSTD_STATIC_LIB = "libostd.a";
 
 static std::string DEFAULT_CXXFLAGS = "-std=c++1z -I. -O2 -Wall -Wextra "
                                       "-Wshadow -Wold-style-cast";
@@ -362,7 +363,7 @@ int main(int argc, char **argv) {
     };
 
     auto call_ld = [&](
-        std::string const &output, strvec const &files, strvec const &flags
+        fs::path const &output, pathvec const &files, strvec const &flags
     ) {
         echo_q("LD: %s", output);
 
@@ -370,8 +371,10 @@ int main(int argc, char **argv) {
         add_args(args, cxxflags);
 
         args.push_back("-o");
-        args.push_back(output);
-        args.insert(args.cend(), files.begin(), files.end());
+        args.push_back(output.string());
+        for (auto &p: files) {
+            args.push_back(p.string());
+        }
         args.insert(args.cend(), flags.begin(), flags.end());
 
         add_args(args, ldflags);
@@ -380,13 +383,13 @@ int main(int argc, char **argv) {
 
         if (build_cfg == "release") {
             args.clear();
-            args.push_back(output);
+            args.push_back(output.string());
             exec_v(strip, args);
         }
     };
 
     auto call_ldlib = [&](
-        std::string const &output, strvec const &files, bool shared
+        fs::path const &output, pathvec const &files, bool shared
     ) {
         strvec args;
         if (shared) {
@@ -397,8 +400,10 @@ int main(int argc, char **argv) {
             echo_q("AR: %s", output);
 
             args.push_back("rcs");
-            args.push_back(output);
-            args.insert(args.cend(), files.begin(), files.end());
+            args.push_back(output.string());
+            for (auto &p: files) {
+                args.push_back(p.string());
+            }
 
             exec_v(ar, args);
         }
@@ -410,7 +415,7 @@ int main(int argc, char **argv) {
         auto obf = path_with_ext(base, ".o");
 
         call_cxx(ccf, obf, false);
-        call_ld(base.string(), { obf.string() }, { default_lib });
+        call_ld(base, { obf }, { default_lib });
 
         try_remove(obf);
     };
@@ -444,7 +449,7 @@ int main(int argc, char **argv) {
         f.close();
 
         call_cxx(ccf, obf, false);
-        call_ld(base.string(), { obf.string() }, { default_lib });
+        call_ld(base, { obf }, { default_lib });
         try_remove(obf);
     };
 
@@ -487,7 +492,7 @@ int main(int argc, char **argv) {
     build_all(CXX_SOURCES, CXX_SOURCE_DIR, ".cc", call_cxx);
 
     if (build_static) {
-        strvec objs;
+        pathvec objs;
         while (!future_obj.empty()) {
             objs.push_back(future_obj.front().get());
             future_obj.pop();
@@ -495,7 +500,7 @@ int main(int argc, char **argv) {
         call_ldlib(OSTD_STATIC_LIB, objs, false);
     }
     if (build_shared) {
-        strvec objs;
+        pathvec objs;
         while (!future_dynobj.empty()) {
             objs.push_back(future_dynobj.front().get());
             future_dynobj.pop();
