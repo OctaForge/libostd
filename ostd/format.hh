@@ -130,7 +130,7 @@ namespace detail {
      * 7 .. string
      * 8 .. custom object
      */
-    static constexpr unsigned char const fmt_specs[] = {
+    inline constexpr unsigned char const fmt_specs[] = {
         /* uppercase spec set */
         1, 3, 8, 8, /* A B C D */
         1, 1, 1, 8, /* E F G H */
@@ -156,12 +156,12 @@ namespace detail {
         0, 0, 0, 0, 0
     };
 
-    static constexpr int const fmt_bases[] = {
+    inline constexpr int const fmt_bases[] = {
         0, 0, 0, 2, 8, 10, 16, 0
     };
 
     /* non-printable escapes up to 0x20 (space) */
-    static constexpr char const *fmt_escapes[] = {
+    inline constexpr char const *fmt_escapes[] = {
         "\\0"  , "\\x01", "\\x02", "\\x03", "\\x04", "\\x05",
         "\\x06", "\\a"  , "\\b"  , "\\t"  , "\\n"  , "\\v"  ,
         "\\f"  , "\\r"  , "\\x0E", "\\x0F", "\\x10", "\\x11",
@@ -217,7 +217,7 @@ namespace detail {
     std::false_type tuple_like_test(...);
 
     template<typename T>
-    constexpr bool is_tuple_like = decltype(tuple_like_test<T>(0))::value;
+    inline constexpr bool is_tuple_like = decltype(tuple_like_test<T>(0))::value;
 
     /* test if format traits are available for the type */
     template<typename T, typename R>
@@ -230,7 +230,7 @@ namespace detail {
     static std::false_type test_tofmt(...);
 
     template<typename T, typename R>
-    constexpr bool fmt_tofmt_test = decltype(test_tofmt<T, R>(0))::value;
+    inline constexpr bool fmt_tofmt_test = decltype(test_tofmt<T, R>(0))::value;
 }
 
 /** @brief A structure implementing type safe C-style formatting.
