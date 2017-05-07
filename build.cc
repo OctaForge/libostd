@@ -11,7 +11,6 @@
 #include <memory>
 
 #include <unistd.h>
-#include <wordexp.h>
 #include <sys/wait.h>
 
 #include "ostd/io.hh"
@@ -26,6 +25,7 @@ namespace fs = ostd::filesystem;
 
 /* ugly, but do not explicitly compile */
 #include "src/io.cc"
+#include "src/process.cc"
 
 using strvec = std::vector<std::string>;
 using pathvec = std::vector<fs::path>;
@@ -145,13 +145,9 @@ static std::string get_command(std::string const &cmd, strvec const &args) {
 }
 
 static void add_args(strvec &args, std::string const &cmdl) {
-    wordexp_t p;
-    if (wordexp(cmdl.data(), &p, 0)) {
-        return;
-    }
-    for (std::size_t i = 0; i < p.we_wordc; ++i) {
-        args.push_back(p.we_wordv[i]);
-    }
+    auto app = ostd::appender(std::move(args));
+    ostd::split_args(app, cmdl);
+    args = std::move(app.get());
 }
 
 static fs::path path_with_ext(fs::path const &p, fs::path const &ext) {
