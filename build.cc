@@ -44,7 +44,7 @@ static strvec ASM_SOURCES = {
 
 static fs::path CXX_SOURCE_DIR = "src";
 static strvec CXX_SOURCES = {
-    "context_stack", "environ", "io", "concurrency"
+    "context_stack", "environ", "io", "concurrency", "process"
 };
 
 static fs::path TEST_DIR = "tests";

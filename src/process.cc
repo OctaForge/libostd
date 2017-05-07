@@ -76,7 +76,6 @@ OSTD_EXPORT void split_args_impl(
     int argc = 0;
     wchar_t **pwargs = CommandLineToArgvW(wstr.get(), &argc);
 
-    guard.reset());
     if (!pwargs) {
         throw word_error{"command line parsing failed"};
     }
