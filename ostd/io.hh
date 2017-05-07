@@ -67,12 +67,15 @@ enum class stream_mode {
  * used, they close the underlying stream on destruction (if still open).
  */
 struct OSTD_EXPORT file_stream: stream {
+    /** @brief The callback type for closing foreign owned files */
+    using close_function = std::function<void(FILE *)>;
+
     /** @brief Crates an empty file stream.
      *
      * The resulting file stream won't have an associated file. Any operations
      * involving the potential associated file are considered unfedined.
      */
-    file_stream(): p_f(), p_owned(false) {}
+    file_stream(): p_f(), p_closef() {}
 
     file_stream(file_stream const &) = delete;
 
@@ -81,9 +84,8 @@ struct OSTD_EXPORT file_stream: stream {
      * The other file stream is set to an empty state,
      * i.e. it will not have any associated file set.
      */
-    file_stream(file_stream &&s): p_f(s.p_f), p_owned(s.p_owned) {
+    file_stream(file_stream &&s): p_f(s.p_f), p_closef(std::move(s.p_closef)) {
         s.p_f = nullptr;
-        s.p_owned = false;
     }
 
     /** @brief Creates a file stream using a file path.
@@ -98,18 +100,21 @@ struct OSTD_EXPORT file_stream: stream {
      * is a plain reading stream.
      */
     file_stream(string_range path, stream_mode mode = stream_mode::READ):
-        p_f()
+        p_f(), p_closef()
     {
         open(path, mode);
     }
 
     /** @brief Creates a file stream using a C `FILE` pointer.
      *
-     * You can then manipulate the pointer using the stream, but it will
-     * not be owned; you need to manually close it using the correct C
-     * function when you're done.
+     * If `f` is non-empty, the stream will own the pointer and call the
+     * provided close function on close() or in the destructor, otherwise
+     * the pointer is not owwned (is_owned() will be false) and will
+     * remain open.
      */
-    file_stream(FILE *f): p_f(f), p_owned(false) {}
+    file_stream(FILE *fptr, close_function f = close_function{}):
+        p_f(fptr), p_closef(std::move(f))
+    {}
 
     /** @brief Calls close() on the stream. */
     ~file_stream() { close(); }
@@ -146,17 +151,16 @@ struct OSTD_EXPORT file_stream: stream {
      * returns `false`. Otherwise, it will set the association and
      * returns `true`.
      *
-     * In the end, is_open() will be true but is_owned() will be false.
-     * You need to manually take care of the pointer because this stream
-     * will not close it.
+     * The close function will be set when the file pointer is set
+     * and that will also determine ownership of the pointer.
      */
-    bool open(FILE *f);
+    bool open(FILE *fptr, close_function f = close_function{});
 
     /** @brief Checks if there is a resource associated with this stream. */
     bool is_open() const { return p_f != nullptr; }
 
     /** @brief Checks if we're owning the associated resource. */
-    bool is_owned() const { return p_owned; }
+    bool is_owned() const { return !!p_closef; }
 
     /** @brief Closes the associated file.
      *
@@ -248,7 +252,7 @@ struct OSTD_EXPORT file_stream: stream {
     void swap(file_stream &s) {
         using std::swap;
         swap(p_f, s.p_f);
-        swap(p_owned, s.p_owned);
+        swap(p_closef, s.p_closef);
     }
 
     /** @brief Gets an underlying C `FILE` pointer backing the stream.
@@ -261,9 +265,17 @@ struct OSTD_EXPORT file_stream: stream {
      */
     FILE *get_file() const { return p_f; }
 
+    /** @brief Gets the function used to close the file stream.
+      *
+      * If is_owned() is not true, this function will be empty. It will
+      * implicitly point to a function that calls the normal `fclose`
+      * when the stream is opened using a path.
+      */
+    close_function get_close_function() const { return p_closef; }
+
 private:
     FILE *p_f;
-    bool p_owned;
+    close_function p_closef;
 };
 
 /** @brief Swaps two file streams including ownership. */

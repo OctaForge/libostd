@@ -16,6 +16,10 @@ static char const *filemodes[] = {
     "rb", "wb", "ab", "rb+", "wb+", "ab+"
 };
 
+static void default_close(FILE *f) {
+    std::fclose(f);
+}
+
 bool file_stream::open(string_range path, stream_mode mode) {
     if (p_f || (path.size() > FILENAME_MAX)) {
         return false;
@@ -23,7 +27,7 @@ bool file_stream::open(string_range path, stream_mode mode) {
     char buf[FILENAME_MAX + 1];
     std::memcpy(buf, &path[0], path.size());
     buf[path.size()] = '\0';
-    p_owned = false;
+    p_closef = nullptr;
 #ifndef OSTD_PLATFORM_WIN32
     p_f = std::fopen(buf, filemodes[std::size_t(mode)]);
 #else
@@ -31,25 +35,27 @@ bool file_stream::open(string_range path, stream_mode mode) {
         return false;
     }
 #endif
-    p_owned = !!p_f;
+    if (p_f) {
+        p_closef = default_close;
+    }
     return is_open();
 }
 
-bool file_stream::open(FILE *f) {
+bool file_stream::open(FILE *fptr, close_function f) {
     if (p_f) {
         return false;
     }
-    p_f = f;
-    p_owned = false;
+    p_f = fptr;
+    p_closef = f;
     return is_open();
 }
 
 void file_stream::close() {
-    if (p_f && p_owned) {
-        std::fclose(p_f);
+    if (p_f && p_closef) {
+        p_closef(p_f);
     }
     p_f = nullptr;
-    p_owned = false;
+    p_closef = nullptr;
 }
 
 bool file_stream::end() const {
