@@ -158,6 +158,8 @@ struct pipe {
         if (!p) {
             throw process_error{errno, std::generic_category()};
         }
+        /* do not close twice, the stream will close it */
+        fd[std::size_t(write)] = -1;
         s.open(p, [](FILE *f) {
             std::fclose(f);
         });
