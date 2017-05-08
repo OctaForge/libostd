@@ -261,7 +261,7 @@ OSTD_EXPORT void subprocess::open_impl(
         }
         if (use_err == process_stream::PIPE) {
             fd_stderr.close(true);
-            fd_stderr.fdopen(out, false);
+            fd_stderr.fdopen(err, false);
         }
         pid = int(cpid);
         errno_fd = std::exchange(fd_errno[1], -1);
