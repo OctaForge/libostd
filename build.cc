@@ -110,35 +110,22 @@ static void print_help(ostd::string_range arg0) {
     );
 }
 
-static void exec_command(std::string const &cmd, strvec const &args) {
-    auto argp = std::make_unique<char *[]>(args.size() + 2);
-    argp[0] = const_cast<char *>(cmd.data());
-    for (std::size_t i = 0; i < args.size(); ++i) {
-        argp[i + 1] = const_cast<char *>(args[i].data());
-    }
-    argp[args.size() + 1] = nullptr;
-
-    auto pid = fork();
-    if (pid == -1) {
-        throw std::runtime_error{"command failed"};
-    } else if (!pid) {
-        if (execvp(argp[0], argp.get())) {
-            argp.reset();
-            std::exit(1);
-        }
-    } else {
-        if (int retc = -1; (waitpid(pid, &retc, 0) == -1) || retc) {
-            auto app = ostd::appender<std::string>();
-            ostd::format(app, "command failed with code %d", retc);
-            throw std::runtime_error{app.get()};
-        }
+static void exec_command(strvec const &args) {
+    ostd::process_info pi;
+    pi.open(nullptr, ostd::iter(args));
+    if (int ret; (ret = pi.close())) {
+        auto app = ostd::appender<std::string>();
+        ostd::format(app, "command failed with code %d", ret);
+        throw std::runtime_error{app.get()};
     }
 }
 
-static std::string get_command(std::string const &cmd, strvec const &args) {
-    std::string ret = cmd;
+static std::string get_command(strvec const &args) {
+    std::string ret;
     for (auto &s: args) {
-        ret += ' ';
+        if (!ret.empty()) {
+            ret += ' ';
+        }
         ret += s;
     }
     return ret;
@@ -292,17 +279,17 @@ int main(int argc, char **argv) {
         }
     };
 
-    auto exec_v = [&io_msgs](std::string const &cmd, strvec const &args) {
+    auto exec_v = [&io_msgs](strvec const &args) {
         if (verbose) {
-            io_msgs.put(get_command(cmd, args));
+            io_msgs.put(get_command(args));
         }
-        exec_command(cmd, args);
+        exec_command(args);
     };
 
     auto call_cxx = [&](
         fs::path const &input, fs::path const &output, bool shared
     ) {
-        strvec args;
+        strvec args = { cxx };
         add_args(args, cxxflags);
 
         auto ifs = input.string();
@@ -322,7 +309,7 @@ int main(int argc, char **argv) {
         args.push_back(outp.string());
         args.push_back(ifs);
 
-        exec_v(cxx, args);
+        exec_v(args);
 
         return outp;
     };
@@ -333,7 +320,7 @@ int main(int argc, char **argv) {
     auto call_as = [&](
         fs::path const &input, fs::path const &output, bool shared
     ) {
-        strvec args;
+        strvec args = { as };
         add_args(args, asflags);
 
         auto ifs = input.string();
@@ -353,7 +340,7 @@ int main(int argc, char **argv) {
         args.push_back(outp.string());
         args.push_back(ifs);
 
-        exec_v(as, args);
+        exec_v(args);
 
         return outp;
     };
@@ -363,7 +350,7 @@ int main(int argc, char **argv) {
     ) {
         echo_q("LD: %s", output);
 
-        strvec args;
+        strvec args = { cxx };
         add_args(args, cxxflags);
 
         args.push_back("-o");
@@ -375,24 +362,26 @@ int main(int argc, char **argv) {
 
         add_args(args, ldflags);
 
-        exec_v(cxx, args);
+        exec_v(args);
 
         if (build_cfg == "release") {
             args.clear();
+            args.push_back(strip);
             args.push_back(output.string());
-            exec_v(strip, args);
+            exec_v(args);
         }
     };
 
     auto call_ldlib = [&](
         fs::path const &output, pathvec const &files, bool shared
     ) {
-        strvec args;
         if (shared) {
-            add_args(args, SHARED_CXXFLAGS);
-            add_args(args, SHARED_LDFLAGS);
-            call_ld(output, files, args);
+            strvec flags;
+            add_args(flags, SHARED_CXXFLAGS);
+            add_args(flags, SHARED_LDFLAGS);
+            call_ld(output, files, flags);
         } else {
+            strvec args = { ar };
             echo_q("AR: %s", output);
 
             args.push_back("rcs");
@@ -401,7 +390,7 @@ int main(int argc, char **argv) {
                 args.push_back(p.string());
             }
 
-            exec_v(ar, args);
+            exec_v(args);
         }
     };
 
@@ -538,7 +527,7 @@ int main(int argc, char **argv) {
     }
 
     if (build_testsuite) {
-        exec_v("./test_runner", { TEST_DIR.string() });
+        exec_v({ "./test_runner", TEST_DIR.string() });
     }
 
     io_msgs.close();

@@ -15,9 +15,16 @@
 #define OSTD_PROCESS_HH
 
 #include <stdexcept>
+#include <system_error>
+#include <type_traits>
+#include <utility>
+#include <string>
+#include <vector>
 
 #include "ostd/platform.hh"
 #include "ostd/string.hh"
+#include "ostd/range.hh"
+#include "ostd/io.hh"
 
 namespace ostd {
 
@@ -68,6 +75,88 @@ OutputRange &&split_args(OutputRange &&out, string_range str) {
     }, &out);
     return std::forward<OutputRange>(out);
 }
+
+struct process_error: std::system_error {
+    using std::system_error::system_error;
+};
+
+enum class process_pipe {
+    DEFAULT = 0,
+    PIPE,
+    STDOUT
+};
+
+struct OSTD_EXPORT process_info {
+    process_pipe use_in  = process_pipe::DEFAULT;
+    process_pipe use_out = process_pipe::DEFAULT;
+    process_pipe use_err = process_pipe::DEFAULT;
+    file_stream in  = file_stream{};
+    file_stream out = file_stream{};
+    file_stream err = file_stream{};
+
+    process_info() {}
+    process_info(
+        process_pipe in_use, process_pipe out_use, process_pipe err_use
+    ):
+        use_in(in_use), use_out(out_use), use_err(err_use)
+    {}
+
+    process_info(process_info &&i):
+        use_in(i.use_in), use_out(i.use_out), use_err(i.use_err),
+        in(std::move(i.in)), out(std::move(i.out)), err(std::move(i.err)),
+        pid(i.pid), errno_fd(i.errno_fd)
+    {
+        i.pid = -1;
+        i.errno_fd = -1;
+    }
+
+    process_info &operator=(process_info &&i) {
+        swap(i);
+        return *this;
+    }
+
+    void swap(process_info &i) {
+        using std::swap;
+        swap(use_in, i.use_in);
+        swap(use_out, i.use_out);
+        swap(use_err, i.use_err);
+        swap(in, i.in);
+        swap(out, i.out);
+        swap(err, i.err);
+        swap(pid, i.pid);
+        swap(errno_fd, i.errno_fd);
+    }
+
+    ~process_info();
+
+    template<typename InputRange>
+    void open(string_range cmd, InputRange args, bool use_path = true) {
+        static_assert(
+            std::is_constructible_v<std::string, range_reference_t<InputRange>>,
+            "The arguments must be strings"
+        );
+        std::vector<std::string> argv;
+        if (cmd.empty()) {
+            if (args.empty()) {
+                throw process_error{EINVAL, std::generic_category()};
+            }
+            cmd = args[0];
+        }
+        for (; !args.empty(); args.pop_front()) {
+            argv.emplace_back(args.front());
+        }
+        open_impl(std::string{cmd}, argv, use_path);
+    }
+
+    int close();
+
+private:
+    void open_impl(
+        std::string const &cmd, std::vector<std::string> const &args,
+        bool use_path
+    );
+    int pid = -1, errno_fd = -1;
+};
 
 /** @} */
 
