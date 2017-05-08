@@ -127,9 +127,59 @@ OSTD_EXPORT void split_args_impl(
 
 } /* namespace detail */
 
-static void stdstream_close(FILE *f) {
-    std::fclose(f);
-}
+#ifndef OSTD_PLATFORM_WIN32
+struct pipe {
+    int fd[2] = { -1, -1 };
+
+    ~pipe() {
+        if (fd[0] >= 0) {
+            ::close(fd[0]);
+        }
+        if (fd[1] >= 0) {
+            ::close(fd[1]);
+        }
+    }
+
+    void open(process_stream use) {
+        if (use != process_stream::PIPE) {
+            return;
+        }
+        if (::pipe(fd) < 0) {
+            throw process_error{errno, std::generic_category()};
+        }
+    }
+
+    int &operator[](std::size_t idx) {
+        return fd[idx];
+    }
+
+    void fdopen(file_stream &s, bool write) {
+        FILE *p = ::fdopen(fd[std::size_t(write)], write ? "w" : "r");
+        if (!p) {
+            throw process_error{errno, std::generic_category()};
+        }
+        s.open(p, [](FILE *f) {
+            std::fclose(f);
+        });
+    }
+
+    void close(bool write) {
+        ::close(std::exchange(fd[std::size_t(write)], -1));
+    }
+
+    bool dup2(int target, pipe &err, bool write) {
+        if (::dup2(fd[std::size_t(write)], target) < 0) {
+            err.write_errno();
+            return false;
+        }
+        close(write);
+        return true;
+    }
+
+    void write_errno() {
+        write(fd[1], int(errno), sizeof(int));
+    }
+};
 
 OSTD_EXPORT void process_info::open_impl(
     std::string const &cmd, std::vector<std::string> const &args,
@@ -139,128 +189,104 @@ OSTD_EXPORT void process_info::open_impl(
         throw process_error{EINVAL, std::generic_category()};
     }
 
-#ifndef OSTD_PLATFORM_WIN32
     auto argp = std::make_unique<char *[]>(args.size() + 1);
     for (std::size_t i = 0; i < args.size(); ++i) {
         argp[i] = const_cast<char *>(args[i].data());
     }
     argp[args.size()] = nullptr;
 
-    int fd_errno[2]; /* used to detect if exec failed */
-    int fd_stdin[2];
-    int fd_stdout[2];
-    int fd_stderr[2];
+    /* fd_errno used to detect if exec failed */
+    pipe fd_errno, fd_stdin, fd_stdout, fd_stderr;
 
-    if (
-        (pipe(fd_errno) < 0) ||
-        ((use_in == process_stream::PIPE) && (pipe(fd_stdin) < 0)) ||
-        ((use_out == process_stream::PIPE) && (pipe(fd_stdout) < 0)) ||
-        ((use_err == process_stream::PIPE) && (pipe(fd_stderr) < 0))
-    ) {
-        throw process_error{errno, std::generic_category()};
-    }
+    fd_errno.open(process_stream::PIPE);
+    fd_stdin.open(use_in);
+    fd_stdout.open(use_out);
+    fd_stderr.open(use_err);
 
     auto cpid = fork();
     if (cpid == -1) {
         throw process_error{errno, std::generic_category()};
     } else if (!cpid) {
         /* child process */
-        ::close(fd_errno[0]);
+        fd_errno.close(false);
         /* fcntl fails, write the errno to be read from parent */
         if (fcntl(fd_errno[1], F_SETFD, FD_CLOEXEC) < 0) {
-            write(fd_errno[1], int(errno), sizeof(int));
+            fd_errno.write_errno();
             std::exit(1);
         }
         /* prepare standard streams */
         if (use_in == process_stream::PIPE) {
-            /* close writing end */
-            ::close(fd_stdin[1]);
-            if (dup2(fd_stdin[0], STDIN_FILENO) < 0) {
-                write(fd_errno[1], int(errno), sizeof(int));
+            fd_stdin.close(true);
+            if (!fd_stdin.dup2(STDIN_FILENO, fd_errno, false)) {
                 std::exit(1);
             }
         }
         if (use_out == process_stream::PIPE) {
-            /* close reading end */
-            ::close(fd_stdout[0]);
-            if (dup2(fd_stdout[1], STDOUT_FILENO) < 0) {
-                write(fd_errno[1], int(errno), sizeof(int));
+            fd_stdout.close(false);
+            if (!fd_stdout.dup2(STDOUT_FILENO, fd_errno, true)) {
                 std::exit(1);
             }
         }
         if (use_err == process_stream::PIPE) {
-            /* close reading end */
-            ::close(fd_stderr[0]);
-            if (dup2(fd_stderr[1], STDERR_FILENO) < 0) {
-                write(fd_errno[1], int(errno), sizeof(int));
+            fd_stderr.close(false);
+            if (!fd_stderr.dup2(STDERR_FILENO, fd_errno, true)) {
                 std::exit(1);
             }
         } else if (use_err == process_stream::STDOUT) {
             if (dup2(STDOUT_FILENO, STDERR_FILENO) < 0) {
-                write(fd_errno[1], int(errno), sizeof(int));
+                fd_errno.write_errno();
                 std::exit(1);
             }
         }
-        int ret = 0;
         if (use_path) {
-            ret = execvp(cmd.data(), argp.get());
+            execvp(cmd.data(), argp.get());
         } else {
-            ret = execv(cmd.data(), argp.get());
+            execv(cmd.data(), argp.get());
         }
+        /* exec has returned, so error has occured */
+        fd_errno.write_errno();
         std::exit(1);
     } else {
         /* parent process */
-        ::close(fd_errno[1]);
+        fd_errno.close(true);
         if (use_in == process_stream::PIPE) {
-            /* close reading end */
-            ::close(fd_stdin[0]);
-            auto p = fdopen(fd_stdin[1], "w");
-            if (!p) {
-                throw process_error{errno, std::generic_category()};
-            }
-            in.open(p, stdstream_close);
+            fd_stdin.close(false);
+            fd_stdin.fdopen(in, true);
         }
         if (use_out == process_stream::PIPE) {
-            /* close writing end */
-            ::close(fd_stdout[1]);
-            auto p = fdopen(fd_stdout[0], "r");
-            if (!p) {
-                throw process_error{errno, std::generic_category()};
-            }
-            out.open(p, stdstream_close);
+            fd_stdout.close(true);
+            fd_stdout.fdopen(out, false);
         }
         if (use_err == process_stream::PIPE) {
-            /* close writing end */
-            ::close(fd_stderr[1]);
-            auto p = fdopen(fd_stderr[0], "r");
-            if (!p) {
-                throw process_error{errno, std::generic_category()};
-            }
-            err.open(p, stdstream_close);
+            fd_stderr.close(true);
+            fd_stderr.fdopen(out, false);
         }
         pid = int(cpid);
-        errno_fd = fd_errno[1];
+        errno_fd = std::exchange(fd_errno[1], -1);
     }
-#else
-    /* stub for now */
-    return;
-#endif
+}
+
+OSTD_EXPORT void process_info::reset() {
+    pid = -1;
+    if (errno_fd >= 0) {
+        ::close(std::exchange(errno_fd, -1));
+    }
 }
 
 OSTD_EXPORT int process_info::close() {
     if (pid < 0) {
+        reset();
         throw process_error{ECHILD, std::generic_category()};
     }
-#ifndef OSTD_PLATFORM_WIN32
     int retc = 0;
     if (pid_t wp; (wp = waitpid(pid, &retc, 0)) < 0) {
+        reset();
         throw process_error{errno, std::generic_category()};
     }
     if (retc) {
         int eno;
         auto r = read(errno_fd, &eno, sizeof(int));
-        ::close(errno_fd);
-        errno_fd = -1;
+        reset();
         if (r < 0) {
             throw process_error{errno, std::generic_category()};
         } else if (r == sizeof(int)) {
@@ -268,22 +294,31 @@ OSTD_EXPORT int process_info::close() {
         }
     }
     return retc;
-#else
-    throw process_error{ECHILD, std::generic_category()};
-#endif
 }
 
 OSTD_EXPORT process_info::~process_info() {
     try {
         close();
     } catch (process_error const &) {}
-#ifndef OSTD_PLATFORM_WIN32
-    if (errno_fd > 0) {
-        ::close(errno_fd);
-    }
-#else
-    return;
-#endif
+    reset();
 }
+
+#else /* OSTD_PLATFORM_WIN32 */
+
+OSTD_EXPORT void process_info::open_impl(
+    std::string const &, std::vector<std::string> const &, bool
+) {
+    return;
+}
+
+OSTD_EXPORT int process_info::close() {
+    throw process_error{ECHILD, std::generic_category()};
+}
+
+OSTD_EXPORT process_info::~process_info() {
+    return;
+}
+
+#endif
 
 } /* namespace ostd */

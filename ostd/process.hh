@@ -175,6 +175,9 @@ private:
         std::string const &cmd, std::vector<std::string> const &args,
         bool use_path
     );
+
+    void reset();
+
     int pid = -1, errno_fd = -1;
 };
 
