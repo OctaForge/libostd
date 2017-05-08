@@ -10,9 +10,6 @@
 #include <utility>
 #include <memory>
 
-#include <unistd.h>
-#include <sys/wait.h>
-
 #include "ostd/io.hh"
 #include "ostd/range.hh"
 #include "ostd/format.hh"
