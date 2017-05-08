@@ -201,9 +201,6 @@ OSTD_EXPORT void subprocess::open_impl(
     }
     argp[args.size()] = nullptr;
 
-    p_current = ::new (reinterpret_cast<void *>(&p_data)) data{};
-    data *pd = static_cast<data *>(p_current);
-
     /* fd_errno used to detect if exec failed */
     pipe fd_errno, fd_stdin, fd_stdout, fd_stderr;
 
@@ -270,6 +267,8 @@ OSTD_EXPORT void subprocess::open_impl(
             fd_stderr.close(true);
             fd_stderr.fdopen(err, false);
         }
+        p_current = ::new (reinterpret_cast<void *>(&p_data)) data{};
+        data *pd = static_cast<data *>(p_current);
         pd->pid = int(cpid);
         pd->errno_fd = std::exchange(fd_errno[1], -1);
     }
