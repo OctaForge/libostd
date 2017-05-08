@@ -214,17 +214,29 @@ OSTD_EXPORT void process_info::open_impl(
         if (use_in == process_stream::PIPE) {
             /* close reading end */
             ::close(fd_stdin[0]);
-            in.open(fdopen(fd_stdin[1], "w"), stdstream_close);
+            auto p = fdopen(fd_stdin[1], "w");
+            if (!p) {
+                throw process_error{errno, std::generic_category()};
+            }
+            in.open(p, stdstream_close);
         }
         if (use_out == process_stream::PIPE) {
             /* close writing end */
             ::close(fd_stdout[1]);
-            out.open(fdopen(fd_stdout[0], "r"), stdstream_close);
+            auto p = fdopen(fd_stdout[0], "r");
+            if (!p) {
+                throw process_error{errno, std::generic_category()};
+            }
+            out.open(p, stdstream_close);
         }
         if (use_err == process_stream::PIPE) {
             /* close writing end */
             ::close(fd_stderr[1]);
-            err.open(fdopen(fd_stderr[0], "r"), stdstream_close);
+            auto p = fdopen(fd_stderr[0], "r");
+            if (!p) {
+                throw process_error{errno, std::generic_category()};
+            }
+            err.open(p, stdstream_close);
         }
         pid = int(cpid);
         errno_fd = fd_errno[1];
