@@ -286,27 +286,6 @@ OSTD_EXPORT void subprocess::reset() {
     p_current = nullptr;
 }
 
-OSTD_EXPORT void subprocess::move_data(subprocess &i) {
-    data *od = static_cast<data *>(i.p_current);
-    if (!od) {
-        return;
-    }
-    p_current = ::new (reinterpret_cast<void *>(&p_data)) data{*od};
-    i.p_current = nullptr;
-}
-
-OSTD_EXPORT void subprocess::swap_data(subprocess &i) {
-    if (!p_current) {
-        move_data(i);
-    } else if (!i.p_current) {
-        i.move_data(*this);
-    } else {
-        std::swap(
-            *static_cast<data *>(p_current), *static_cast<data *>(i.p_current)
-        );
-    }
-}
-
 OSTD_EXPORT int subprocess::close() {
     if (!p_current) {
         throw process_error{ECHILD, std::generic_category()};
@@ -333,6 +312,10 @@ OSTD_EXPORT int subprocess::close() {
 
 #else /* OSTD_PLATFORM_WIN32 */
 
+struct data {
+    HANDLE process = nullptr, thread = nullptr;
+};
+
 OSTD_EXPORT void subprocess::open_impl(
     std::string const &, std::vector<std::string> const &, bool
 ) {
@@ -347,6 +330,27 @@ OSTD_EXPORT void subprocess::reset() {
 }
 
 #endif
+
+OSTD_EXPORT void subprocess::move_data(subprocess &i) {
+    data *od = static_cast<data *>(i.p_current);
+    if (!od) {
+        return;
+    }
+    p_current = ::new (reinterpret_cast<void *>(&p_data)) data{*od};
+    i.p_current = nullptr;
+}
+
+OSTD_EXPORT void subprocess::swap_data(subprocess &i) {
+    if (!p_current) {
+        move_data(i);
+    } else if (!i.p_current) {
+        i.move_data(*this);
+    } else {
+        std::swap(
+            *static_cast<data *>(p_current), *static_cast<data *>(i.p_current)
+        );
+    }
+}
 
 OSTD_EXPORT subprocess::~subprocess() {
     try {
