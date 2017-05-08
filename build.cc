@@ -112,7 +112,7 @@ static void print_help(ostd::string_range arg0) {
 
 static void exec_command(strvec const &args) {
     ostd::process_info pi;
-    pi.open(nullptr, ostd::iter(args));
+    pi.open_command(ostd::iter(args));
     if (int ret; (ret = pi.close())) {
         auto app = ostd::appender<std::string>();
         ostd::format(app, "command failed with code %d", ret);

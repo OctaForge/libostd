@@ -129,8 +129,31 @@ struct OSTD_EXPORT process_info {
 
     ~process_info();
 
+    int close();
+
     template<typename InputRange>
-    void open(string_range cmd, InputRange args, bool use_path = true) {
+    void open_path(string_range path, InputRange &&args) {
+        open_full(path, std::forward<InputRange>(args), false);
+    }
+
+    template<typename InputRange>
+    void open_path(InputRange &&args) {
+        open_path(nullptr, std::forward<InputRange>(args));
+    }
+
+    template<typename InputRange>
+    void open_command(string_range cmd, InputRange &&args) {
+        open_full(cmd, std::forward<InputRange>(args), true);
+    }
+
+    template<typename InputRange>
+    void open_command(InputRange &&args) {
+        open_command(nullptr, std::forward<InputRange>(args));
+    }
+
+private:
+    template<typename InputRange>
+    void open_full(string_range cmd, InputRange args, bool use_path) {
         static_assert(
             std::is_constructible_v<std::string, range_reference_t<InputRange>>,
             "The arguments must be strings"
@@ -148,9 +171,6 @@ struct OSTD_EXPORT process_info {
         open_impl(std::string{cmd}, argv, use_path);
     }
 
-    int close();
-
-private:
     void open_impl(
         std::string const &cmd, std::vector<std::string> const &args,
         bool use_path
