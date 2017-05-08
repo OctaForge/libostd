@@ -181,7 +181,7 @@ struct pipe {
     }
 };
 
-OSTD_EXPORT void process_info::open_impl(
+OSTD_EXPORT void subprocess::open_impl(
     std::string const &cmd, std::vector<std::string> const &args,
     bool use_path
 ) {
@@ -266,14 +266,14 @@ OSTD_EXPORT void process_info::open_impl(
     }
 }
 
-OSTD_EXPORT void process_info::reset() {
+OSTD_EXPORT void subprocess::reset() {
     pid = -1;
     if (errno_fd >= 0) {
         ::close(std::exchange(errno_fd, -1));
     }
 }
 
-OSTD_EXPORT int process_info::close() {
+OSTD_EXPORT int subprocess::close() {
     if (pid < 0) {
         reset();
         throw process_error{ECHILD, std::generic_category()};
@@ -296,7 +296,7 @@ OSTD_EXPORT int process_info::close() {
     return retc;
 }
 
-OSTD_EXPORT process_info::~process_info() {
+OSTD_EXPORT subprocess::~subprocess() {
     try {
         close();
     } catch (process_error const &) {}
@@ -305,17 +305,17 @@ OSTD_EXPORT process_info::~process_info() {
 
 #else /* OSTD_PLATFORM_WIN32 */
 
-OSTD_EXPORT void process_info::open_impl(
+OSTD_EXPORT void subprocess::open_impl(
     std::string const &, std::vector<std::string> const &, bool
 ) {
     return;
 }
 
-OSTD_EXPORT int process_info::close() {
+OSTD_EXPORT int subprocess::close() {
     throw process_error{ECHILD, std::generic_category()};
 }
 
-OSTD_EXPORT process_info::~process_info() {
+OSTD_EXPORT subprocess::~subprocess() {
     return;
 }
 

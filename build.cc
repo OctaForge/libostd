@@ -111,9 +111,9 @@ static void print_help(ostd::string_range arg0) {
 }
 
 static void exec_command(strvec const &args) {
-    ostd::process_info pi;
-    pi.open_command(ostd::iter(args));
-    if (int ret; (ret = pi.close())) {
+    ostd::subprocess p;
+    p.open_command(ostd::iter(args));
+    if (int ret; (ret = p.close())) {
         auto app = ostd::appender<std::string>();
         ostd::format(app, "command failed with code %d", ret);
         throw std::runtime_error{app.get()};

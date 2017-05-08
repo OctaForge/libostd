@@ -86,7 +86,7 @@ enum class process_stream {
     STDOUT
 };
 
-struct OSTD_EXPORT process_info {
+struct OSTD_EXPORT subprocess {
     process_stream use_in  = process_stream::DEFAULT;
     process_stream use_out = process_stream::DEFAULT;
     process_stream use_err = process_stream::DEFAULT;
@@ -94,14 +94,14 @@ struct OSTD_EXPORT process_info {
     file_stream out = file_stream{};
     file_stream err = file_stream{};
 
-    process_info() {}
-    process_info(
+    subprocess() {}
+    subprocess(
         process_stream in_use, process_stream out_use, process_stream err_use
     ):
         use_in(in_use), use_out(out_use), use_err(err_use)
     {}
 
-    process_info(process_info &&i):
+    subprocess(subprocess &&i):
         use_in(i.use_in), use_out(i.use_out), use_err(i.use_err),
         in(std::move(i.in)), out(std::move(i.out)), err(std::move(i.err)),
         pid(i.pid), errno_fd(i.errno_fd)
@@ -110,12 +110,12 @@ struct OSTD_EXPORT process_info {
         i.errno_fd = -1;
     }
 
-    process_info &operator=(process_info &&i) {
+    subprocess &operator=(subprocess &&i) {
         swap(i);
         return *this;
     }
 
-    void swap(process_info &i) {
+    void swap(subprocess &i) {
         using std::swap;
         swap(use_in, i.use_in);
         swap(use_out, i.use_out);
@@ -127,7 +127,7 @@ struct OSTD_EXPORT process_info {
         swap(errno_fd, i.errno_fd);
     }
 
-    ~process_info();
+    ~subprocess();
 
     int close();
 
