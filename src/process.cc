@@ -267,10 +267,9 @@ OSTD_EXPORT void subprocess::open_impl(
             fd_stderr.close(true);
             fd_stderr.fdopen(err, false);
         }
-        p_current = ::new (reinterpret_cast<void *>(&p_data)) data{};
-        data *pd = static_cast<data *>(p_current);
-        pd->pid = int(cpid);
-        pd->errno_fd = std::exchange(fd_errno[1], -1);
+        p_current = ::new (reinterpret_cast<void *>(&p_data)) data{
+            int(cpid), std::exchange(fd_errno[1], -1)
+        };
     }
 }
 
