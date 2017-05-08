@@ -80,23 +80,23 @@ struct process_error: std::system_error {
     using std::system_error::system_error;
 };
 
-enum class process_pipe {
+enum class process_stream {
     DEFAULT = 0,
     PIPE,
     STDOUT
 };
 
 struct OSTD_EXPORT process_info {
-    process_pipe use_in  = process_pipe::DEFAULT;
-    process_pipe use_out = process_pipe::DEFAULT;
-    process_pipe use_err = process_pipe::DEFAULT;
+    process_stream use_in  = process_stream::DEFAULT;
+    process_stream use_out = process_stream::DEFAULT;
+    process_stream use_err = process_stream::DEFAULT;
     file_stream in  = file_stream{};
     file_stream out = file_stream{};
     file_stream err = file_stream{};
 
     process_info() {}
     process_info(
-        process_pipe in_use, process_pipe out_use, process_pipe err_use
+        process_stream in_use, process_stream out_use, process_stream err_use
     ):
         use_in(in_use), use_out(out_use), use_err(err_use)
     {}

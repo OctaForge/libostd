@@ -135,7 +135,7 @@ OSTD_EXPORT void process_info::open_impl(
     std::string const &cmd, std::vector<std::string> const &args,
     bool use_path
 ) {
-    if (use_in == process_pipe::STDOUT) {
+    if (use_in == process_stream::STDOUT) {
         throw process_error{EINVAL, std::generic_category()};
     }
 
@@ -153,9 +153,9 @@ OSTD_EXPORT void process_info::open_impl(
 
     if (
         (pipe(fd_errno) < 0) ||
-        ((use_in == process_pipe::PIPE) && (pipe(fd_stdin) < 0)) ||
-        ((use_out == process_pipe::PIPE) && (pipe(fd_stdout) < 0)) ||
-        ((use_err == process_pipe::PIPE) && (pipe(fd_stderr) < 0))
+        ((use_in == process_stream::PIPE) && (pipe(fd_stdin) < 0)) ||
+        ((use_out == process_stream::PIPE) && (pipe(fd_stdout) < 0)) ||
+        ((use_err == process_stream::PIPE) && (pipe(fd_stderr) < 0))
     ) {
         throw process_error{errno, std::generic_category()};
     }
@@ -172,7 +172,7 @@ OSTD_EXPORT void process_info::open_impl(
             std::exit(1);
         }
         /* prepare standard streams */
-        if (use_in == process_pipe::PIPE) {
+        if (use_in == process_stream::PIPE) {
             /* close writing end */
             ::close(fd_stdin[1]);
             if (dup2(fd_stdin[0], STDIN_FILENO) < 0) {
@@ -180,7 +180,7 @@ OSTD_EXPORT void process_info::open_impl(
                 std::exit(1);
             }
         }
-        if (use_out == process_pipe::PIPE) {
+        if (use_out == process_stream::PIPE) {
             /* close reading end */
             ::close(fd_stdout[0]);
             if (dup2(fd_stdout[1], STDOUT_FILENO) < 0) {
@@ -188,14 +188,14 @@ OSTD_EXPORT void process_info::open_impl(
                 std::exit(1);
             }
         }
-        if (use_err == process_pipe::PIPE) {
+        if (use_err == process_stream::PIPE) {
             /* close reading end */
             ::close(fd_stderr[0]);
             if (dup2(fd_stderr[1], STDERR_FILENO) < 0) {
                 write(fd_errno[1], int(errno), sizeof(int));
                 std::exit(1);
             }
-        } else if (use_err == process_pipe::STDOUT) {
+        } else if (use_err == process_stream::STDOUT) {
             if (dup2(STDOUT_FILENO, STDERR_FILENO) < 0) {
                 write(fd_errno[1], int(errno), sizeof(int));
                 std::exit(1);
@@ -211,17 +211,17 @@ OSTD_EXPORT void process_info::open_impl(
     } else {
         /* parent process */
         ::close(fd_errno[1]);
-        if (use_in == process_pipe::PIPE) {
+        if (use_in == process_stream::PIPE) {
             /* close reading end */
             ::close(fd_stdin[0]);
             in.open(fdopen(fd_stdin[1], "w"), stdstream_close);
         }
-        if (use_out == process_pipe::PIPE) {
+        if (use_out == process_stream::PIPE) {
             /* close writing end */
             ::close(fd_stdout[1]);
             out.open(fdopen(fd_stdout[0], "r"), stdstream_close);
         }
-        if (use_err == process_pipe::PIPE) {
+        if (use_err == process_stream::PIPE) {
             /* close writing end */
             ::close(fd_stderr[1]);
             err.open(fdopen(fd_stderr[0], "r"), stdstream_close);
