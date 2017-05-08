@@ -103,11 +103,9 @@ struct OSTD_EXPORT subprocess {
 
     subprocess(subprocess &&i):
         use_in(i.use_in), use_out(i.use_out), use_err(i.use_err),
-        in(std::move(i.in)), out(std::move(i.out)), err(std::move(i.err)),
-        pid(i.pid), errno_fd(i.errno_fd)
+        in(std::move(i.in)), out(std::move(i.out)), err(std::move(i.err))
     {
-        i.pid = -1;
-        i.errno_fd = -1;
+        move_data(i);
     }
 
     subprocess &operator=(subprocess &&i) {
@@ -123,8 +121,7 @@ struct OSTD_EXPORT subprocess {
         swap(in, i.in);
         swap(out, i.out);
         swap(err, i.err);
-        swap(pid, i.pid);
-        swap(errno_fd, i.errno_fd);
+        swap_data(i);
     }
 
     ~subprocess();
@@ -177,8 +174,11 @@ private:
     );
 
     void reset();
+    void move_data(subprocess &i);
+    void swap_data(subprocess &i);
 
-    int pid = -1, errno_fd = -1;
+    std::aligned_storage_t<2 * sizeof(void *)> p_data;
+    void *p_current = nullptr;
 };
 
 /** @} */

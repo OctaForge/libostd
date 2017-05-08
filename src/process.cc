@@ -128,6 +128,10 @@ OSTD_EXPORT void split_args_impl(
 } /* namespace detail */
 
 #ifndef OSTD_PLATFORM_WIN32
+struct data {
+    int pid = -1, errno_fd = -1;
+};
+
 struct pipe {
     int fd[2] = { -1, -1 };
 
@@ -197,6 +201,9 @@ OSTD_EXPORT void subprocess::open_impl(
     }
     argp[args.size()] = nullptr;
 
+    p_current = ::new (reinterpret_cast<void *>(&p_data)) data{};
+    data *pd = static_cast<data *>(p_current);
+
     /* fd_errno used to detect if exec failed */
     pipe fd_errno, fd_stdin, fd_stdout, fd_stderr;
 
@@ -263,31 +270,56 @@ OSTD_EXPORT void subprocess::open_impl(
             fd_stderr.close(true);
             fd_stderr.fdopen(err, false);
         }
-        pid = int(cpid);
-        errno_fd = std::exchange(fd_errno[1], -1);
+        pd->pid = int(cpid);
+        pd->errno_fd = std::exchange(fd_errno[1], -1);
     }
 }
 
 OSTD_EXPORT void subprocess::reset() {
-    pid = -1;
-    if (errno_fd >= 0) {
-        ::close(std::exchange(errno_fd, -1));
+    if (!p_current) {
+        return;
+    }
+    data *pd = static_cast<data *>(p_current);
+    if (pd->errno_fd >= 0) {
+        ::close(pd->errno_fd);
+    }
+    p_current = nullptr;
+}
+
+OSTD_EXPORT void subprocess::move_data(subprocess &i) {
+    data *od = static_cast<data *>(i.p_current);
+    if (!od) {
+        return;
+    }
+    p_current = ::new (reinterpret_cast<void *>(&p_data)) data{*od};
+    i.p_current = nullptr;
+}
+
+OSTD_EXPORT void subprocess::swap_data(subprocess &i) {
+    if (!p_current) {
+        move_data(i);
+    } else if (!i.p_current) {
+        i.move_data(*this);
+    } else {
+        std::swap(
+            *static_cast<data *>(p_current), *static_cast<data *>(i.p_current)
+        );
     }
 }
 
 OSTD_EXPORT int subprocess::close() {
-    if (pid < 0) {
-        reset();
+    if (!p_current) {
         throw process_error{ECHILD, std::generic_category()};
     }
+    data *pd = static_cast<data *>(p_current);
     int retc = 0;
-    if (pid_t wp; (wp = waitpid(pid, &retc, 0)) < 0) {
+    if (pid_t wp; (wp = waitpid(pd->pid, &retc, 0)) < 0) {
         reset();
         throw process_error{errno, std::generic_category()};
     }
     if (retc) {
         int eno;
-        auto r = read(errno_fd, &eno, sizeof(int));
+        auto r = read(pd->errno_fd, &eno, sizeof(int));
         reset();
         if (r < 0) {
             throw process_error{errno, std::generic_category()};
@@ -295,14 +327,8 @@ OSTD_EXPORT int subprocess::close() {
             throw process_error{eno, std::generic_category()};
         }
     }
-    return retc;
-}
-
-OSTD_EXPORT subprocess::~subprocess() {
-    try {
-        close();
-    } catch (process_error const &) {}
     reset();
+    return retc;
 }
 
 #else /* OSTD_PLATFORM_WIN32 */
@@ -317,10 +343,16 @@ OSTD_EXPORT int subprocess::close() {
     throw process_error{ECHILD, std::generic_category()};
 }
 
-OSTD_EXPORT subprocess::~subprocess() {
-    return;
+OSTD_EXPORT void subprocess::reset() {
 }
 
 #endif
+
+OSTD_EXPORT subprocess::~subprocess() {
+    try {
+        close();
+    } catch (process_error const &) {}
+    reset();
+}
 
 } /* namespace ostd */
