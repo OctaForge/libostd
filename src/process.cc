@@ -32,6 +32,10 @@ namespace detail {
 OSTD_EXPORT void split_args_impl(
     string_range const &str, void (*func)(string_range, void *), void *data
 ) {
+    if (!str.size()) {
+        return;
+    }
+
 #ifndef OSTD_PLATFORM_WIN32
     std::string strs{str};
 
