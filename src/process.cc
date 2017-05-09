@@ -570,7 +570,7 @@ OSTD_EXPORT void subprocess::open_impl(
         )) {
             throw process_error{"unicode conversion failed"};
         }
-        if (use_path) {
+        if (!use_path) {
             cmdpath = wcmd.get();
         } else {
             cmdpath = resolve_file(wcmd.get());
