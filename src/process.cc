@@ -97,14 +97,14 @@ OSTD_EXPORT void split_args_impl(
 
         std::size_t req = 0;
         if (!(req = WideCharToMultiByte(
-            CP_UTF8, 0, arg, arglen, nullptr, 0, nullptr, nullptr
+            CP_UTF8, 0, arg, arglen + 1, nullptr, 0, nullptr, nullptr
         ))) {
             throw word_error{"unicode conversion failed"};
         }
 
         std::unique_ptr<char[]> buf{new char[req]};
         if (!WideCharToMultiByte(
-            CP_UTF8, 0, arg, arglen, buf.get(), req, nullptr, nullptr
+            CP_UTF8, 0, arg, arglen + 1, buf.get(), req, nullptr, nullptr
         )) {
             throw word_error{"unicode conversion failed"};
         }
@@ -562,7 +562,7 @@ OSTD_EXPORT void subprocess::open_impl(
     {
         std::unique_ptr<wchar_t[]> wcmd{new wchar_t[cmd.size() + 1]};
         if (!MultiByteToWideChar(
-            CP_UTF8, 0, cmd.data(), cmd.size(), wcmd.get(), cmd.size() + 1
+            CP_UTF8, 0, cmd.data(), cmd.size() + 1, wcmd.get(), cmd.size() + 1
         )) {
             throw process_error{"unicode conversion failed"};
         }
@@ -578,7 +578,7 @@ OSTD_EXPORT void subprocess::open_impl(
 
     std::unique_ptr<wchar_t[]> cmdline{new wchar_t[astr.size() + 1]};
     if (!MultiByteToWideChar(
-        CP_UTF8, 0, astr.data(), astr.size(), cmdline.get(), astr.size() + 1
+        CP_UTF8, 0, astr.data(), astr.size() + 1, cmdline.get(), astr.size() + 1
     )) {
         throw process_error{"unicode conversion failed"};
     }
