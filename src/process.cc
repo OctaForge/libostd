@@ -430,8 +430,8 @@ static std::wstring resolve_file(wchar_t const *cmd) {
         if (req > sizeof(buf)) {
             dynbuf.reserve(req);
             for (;;) {
-                req = GetEnvironmentVariable(
-                    "PATH", dynbuf.data(), dynbuf.capacity()
+                req = GetEnvironmentVariableW(
+                    L"PATH", dynbuf.data(), dynbuf.capacity()
                 );
                 if (!req) {
                     return cmd;
