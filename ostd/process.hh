@@ -15,7 +15,6 @@
 #define OSTD_PROCESS_HH
 
 #include <stdexcept>
-#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <string>
@@ -78,8 +77,8 @@ OutputRange &&split_args(OutputRange &&out, string_range str) {
 }
 
 /** @brief Thrown on errors in ostd::subprocess. */
-struct process_error: std::system_error {
-    using std::system_error::system_error;
+struct process_error: std::runtime_error {
+    using std::runtime_error::runtime_error;
 };
 
 /** @brief The mode used for standard streams in ostd::subprocess.
@@ -180,12 +179,12 @@ struct OSTD_EXPORT subprocess {
      *
      * No streams will be set to redirect.
      */
-    subprocess() {}
+    subprocess() noexcept {}
 
     /** @brief Initializes a subprocess with the given stream redirections.*/
     subprocess(
         process_stream in_use, process_stream out_use, process_stream err_use
-    ):
+    ) noexcept:
         use_in(in_use), use_out(out_use), use_err(err_use)
     {}
 
@@ -313,7 +312,7 @@ private:
         std::vector<std::string> argv;
         if (cmd.empty()) {
             if (args.empty()) {
-                throw process_error{EINVAL, std::generic_category()};
+                throw process_error{"no arguments given"};
             }
             cmd = args[0];
         }

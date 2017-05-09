@@ -11,6 +11,7 @@
 #include <new>
 
 #include "ostd/process.hh"
+#include "ostd/format.hh"
 
 #ifdef OSTD_PLATFORM_WIN32
 #  include "ostd/filesystem.hh"
@@ -70,12 +71,7 @@ OSTD_EXPORT void split_args_impl(
     if (!MultiByteToWideChar(
         CP_UTF8, 0, str.data(), str.size(), wstr.get(), str.size() + 1
     )) {
-        switch (GetLastError()) {
-        case ERROR_NO_UNICODE_TRANSLATION:
-            throw word_error{"unicode conversion failed"};
-        default:
-            throw word_error{"unknown error"};
-        }
+        throw word_error{"unicode conversion failed"};
     }
 
     int argc = 0;
@@ -101,24 +97,14 @@ OSTD_EXPORT void split_args_impl(
         if (!(req = WideCharToMultiByte(
             CP_UTF8, 0, arg, arglen, nullptr, 0, nullptr, nullptr
         ))) {
-            switch (GetLastError()) {
-            case ERROR_NO_UNICODE_TRANSLATION:
-                throw word_error{"unicode conversion failed"};
-            default:
-                throw word_error{"unknown error"};
-            }
+            throw word_error{"unicode conversion failed"};
         }
 
         std::unique_ptr<char[]> buf{new char[req]};
         if (!WideCharToMultiByte(
             CP_UTF8, 0, arg, arglen, buf.get(), req, nullptr, nullptr
         )) {
-            switch (GetLastError()) {
-            case ERROR_NO_UNICODE_TRANSLATION:
-                throw word_error{"unicode conversion failed"};
-            default:
-                throw word_error{"unknown error"};
-            }
+            throw word_error{"unicode conversion failed"};
         }
 
         func(string_range{buf.get(), buf.get() + req - 1}, data);
@@ -150,7 +136,7 @@ struct pipe {
             return;
         }
         if (::pipe(fd) < 0) {
-            throw process_error{errno, std::generic_category()};
+            throw process_error{"could not open pipe"};
         }
     }
 
@@ -161,7 +147,7 @@ struct pipe {
     void fdopen(file_stream &s, bool write) {
         FILE *p = ::fdopen(fd[std::size_t(write)], write ? "w" : "r");
         if (!p) {
-            throw process_error{errno, std::generic_category()};
+            throw process_error{"could not open redirected stream"};
         }
         /* do not close twice, the stream will close it */
         fd[std::size_t(write)] = -1;
@@ -193,7 +179,7 @@ OSTD_EXPORT void subprocess::open_impl(
     bool use_path
 ) {
     if (use_in == process_stream::STDOUT) {
-        throw process_error{EINVAL, std::generic_category()};
+        throw process_error{"could not redirect stdin to stdout"};
     }
 
     auto argp = std::make_unique<char *[]>(args.size() + 1);
@@ -212,7 +198,7 @@ OSTD_EXPORT void subprocess::open_impl(
 
     auto cpid = fork();
     if (cpid == -1) {
-        throw process_error{errno, std::generic_category()};
+        throw process_error{"fork failed"};
     } else if (!cpid) {
         /* child process */
         fd_errno.close(false);
@@ -287,22 +273,29 @@ OSTD_EXPORT void subprocess::reset() {
 
 OSTD_EXPORT int subprocess::close() {
     if (!p_current) {
-        throw process_error{ECHILD, std::generic_category()};
+        throw process_error{"no child process"};
     }
     data *pd = static_cast<data *>(p_current);
     int retc = 0;
     if (pid_t wp; (wp = waitpid(pd->pid, &retc, 0)) < 0) {
         reset();
-        throw process_error{errno, std::generic_category()};
+        throw process_error{"child process wait failed"};
     }
     if (retc) {
         int eno;
         auto r = read(pd->errno_fd, &eno, sizeof(int));
         reset();
         if (r < 0) {
-            throw process_error{errno, std::generic_category()};
+            throw process_error{"could not read from pipe"};
         } else if (r == sizeof(int)) {
-            throw process_error{eno, std::generic_category()};
+            char buf[1024];
+            if (!strerror_r(eno, buf, sizeof(buf))) {
+                auto app = appender<std::string>();
+                format(app, "could not execute subprocess (%s)", buf);
+                throw process_error{std::move(app.get())};
+            } else {
+                throw process_error{"could not execute subprocess"};
+            }
         }
     }
     reset();
@@ -332,10 +325,10 @@ struct pipe {
             return;
         }
         if (!CreatePipe(&p_r, &p_w, &sa, 0)) {
-            throw process_error{EPIPE, std::generic_category()};
+            throw process_error{"could not open pipe"};
         }
         if (!SetHandleInformation(read ? p_r : p_w, HANDLE_FLAG_INHERIT, 0)) {
-            throw process_error{EPIPE, std::generic_category()};
+            throw process_error{"could not set pipe parameters"};
         }
     }
 
@@ -345,7 +338,7 @@ struct pipe {
             read ? _O_RDONLY : 0
         );
         if (fd < 0) {
-            throw process_error{EPIPE, std::generic_category()};
+            throw process_error{"could not open redirected stream"};
         }
         if (read) {
             p_r = nullptr;
@@ -355,7 +348,7 @@ struct pipe {
         auto p = _fdopen(fd, read ? "r" : "w");
         if (!p) {
             _close(fd);
-            throw process_error{EPIPE, std::generic_category()};
+            throw process_error{"could not open redirected stream"};
         }
         s.open(p, [](FILE *f) {
             std::fclose(f);
@@ -512,7 +505,7 @@ OSTD_EXPORT void subprocess::open_impl(
     std::string const &cmd, std::vector<std::string> const &args, bool use_path
 ) {
     if (use_in == process_stream::STDOUT) {
-        throw process_error{EINVAL, std::generic_category()};
+        throw process_error{"could not redirect stdin to stdout"};
     }
 
     /* pipes */
@@ -544,7 +537,7 @@ OSTD_EXPORT void subprocess::open_impl(
     } else {
         si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
         if (si.hStdInput == INVALID_HANDLE_VALUE) {
-            throw process_error{EINVAL, std::generic_category()};
+            throw process_error{"could not get standard input handle"};
         }
     }
     if (use_out == process_stream::PIPE) {
@@ -553,7 +546,7 @@ OSTD_EXPORT void subprocess::open_impl(
     } else {
         si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
         if (si.hStdOutput == INVALID_HANDLE_VALUE) {
-            throw process_error{EINVAL, std::generic_category()};
+            throw process_error{"could not get standard output handle"};
         }
     }
     if (use_err == process_stream::PIPE) {
@@ -564,7 +557,7 @@ OSTD_EXPORT void subprocess::open_impl(
     } else {
         si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
         if (si.hStdError == INVALID_HANDLE_VALUE) {
-            throw process_error{EINVAL, std::generic_category()};
+            throw process_error{"could not get standard error handle"};
         }
     }
     si.dwFlags |= STARTF_USESTDHANDLES;
@@ -576,7 +569,7 @@ OSTD_EXPORT void subprocess::open_impl(
         if (!MultiByteToWideChar(
             CP_UTF8, 0, cmd.data(), cmd.size(), wcmd.data(), cmd.size() + 1
         )) {
-            throw process_error{EINVAL, std::generic_category()};
+            throw process_error{"unicode conversion failed"};
         }
         if (use_path) {
             cmdpath = wcmd.get();
@@ -592,7 +585,7 @@ OSTD_EXPORT void subprocess::open_impl(
     if (!MultiByteToWideChar(
         CP_UTF8, 0, astr.data(), astr.size(), cmdline.data(), astr.size() + 1
     )) {
-        throw process_error{EINVAL, std::generic_category()};
+        throw process_error{"unicode conversion failed"};
     }
 
     /* owned by CreateProcess, do not close explicitly */
@@ -618,7 +611,7 @@ OSTD_EXPORT void subprocess::open_impl(
     };
 
     if (!success) {
-        throw process_error{ECHILD, std::generic_category()};
+        throw process_error{"could not execute subprocess"};
     }
 }
 
@@ -628,7 +621,7 @@ OSTD_EXPORT void subprocess::reset() {
 
 OSTD_EXPORT int subprocess::close() {
     if (!p_current) {
-        throw process_error{ECHILD, std::generic_category()};
+        throw process_error{"no child process"};
     }
 
     data *pd = static_cast<data *>(p_current);
@@ -637,7 +630,7 @@ OSTD_EXPORT int subprocess::close() {
         CloseHandle(pd->process);
         CloseHandle(pd->thread);
         reset();
-        throw process_error{ECHILD, std::generic_category()};
+        throw process_error{"child process wait failed"};
     }
 
     int ec;
@@ -645,7 +638,7 @@ OSTD_EXPORT int subprocess::close() {
         CloseHandle(pd->process);
         CloseHandle(pd->thread);
         reset();
-        throw process_error{ECHILD, std::generic_category()};
+        throw process_error{"could not retrieve exit code"};
     }
 
     CloseHandle(pd->process);
