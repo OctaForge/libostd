@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cerrno>
+#include <system_error>
 #include <string>
 #include <memory>
 #include <new>
@@ -288,14 +289,10 @@ OSTD_EXPORT int subprocess::close() {
         if (r < 0) {
             throw process_error{"could not read from pipe"};
         } else if (r == sizeof(int)) {
-            char buf[1024];
-            if (!strerror_r(eno, buf, sizeof(buf))) {
-                auto app = appender<std::string>();
-                format(app, "could not execute subprocess (%s)", buf);
-                throw process_error{std::move(app.get())};
-            } else {
-                throw process_error{"could not execute subprocess"};
-            }
+            auto ec = std::system_category().default_error_condition(eno);
+            auto app = appender<std::string>();
+            format(app, "could not execute subprocess (%s)", ec.message());
+            throw process_error{std::move(app.get())};
         }
     }
     reset();
