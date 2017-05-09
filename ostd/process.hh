@@ -310,14 +310,17 @@ private:
             "The arguments must be strings"
         );
         std::vector<std::string> argv;
-        if (cmd.empty()) {
-            if (args.empty()) {
-                throw process_error{"no arguments given"};
-            }
-            cmd = args[0];
-        }
         for (; !args.empty(); args.pop_front()) {
             argv.emplace_back(args.front());
+        }
+        if (argv.empty()) {
+            throw process_error{"no arguments given"};
+        }
+        if (cmd.empty()) {
+            cmd = argv[0];
+            if (cmd.empty()) {
+                throw process_error{"no command given"};
+            }
         }
         open_impl(std::string{cmd}, argv, use_path);
     }
