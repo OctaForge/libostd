@@ -227,7 +227,15 @@ struct OSTD_EXPORT subprocess {
      * If a child process assigned to this structure currently
      * exists, it will wait for it to finish first by calling close().
      */
-    ~subprocess();
+    ~subprocess() {
+        if (!p_current) {
+            return;
+        }
+        try {
+            close();
+        } catch (process_error const &) {}
+        reset();
+    }
 
     /** @brief Waits for a currently running child process to be done.
      *
