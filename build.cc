@@ -1,5 +1,8 @@
 /* A build system for libostd. */
 
+/* for Windows so that we avoid dllimport/dllexport */
+#define OSTD_BUILD_LIB
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstddef>
@@ -198,9 +201,9 @@ int main(int argc, char **argv) {
 
 #undef ARG_BOOL
 
-    std::string default_lib = OSTD_SHARED_LIB;
+    std::string default_lib = OSTD_SHARED_LIB.string();
     if (build_static) {
-        default_lib = OSTD_STATIC_LIB;
+        default_lib = OSTD_STATIC_LIB.string();
     }
 
     auto strip = from_env_or("STRIP", "strip");

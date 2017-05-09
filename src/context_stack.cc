@@ -122,7 +122,7 @@ namespace detail {
 #endif
 } /* namespace detail */
 
-bool stack_traits::is_unbounded() noexcept {
+OSTD_EXPORT bool stack_traits::is_unbounded() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
     return true;
 #elif defined(OSTD_PLATFORM_POSIX)
@@ -130,14 +130,14 @@ bool stack_traits::is_unbounded() noexcept {
 #endif
 }
 
-std::size_t stack_traits::page_size() noexcept {
+OSTD_EXPORT std::size_t stack_traits::page_size() noexcept {
     static std::size_t size = 0;
     static std::once_flag fl;
     std::call_once(fl, detail::ctx_pagesize, &size);
     return size;
 }
 
-std::size_t stack_traits::minimum_size() noexcept {
+OSTD_EXPORT std::size_t stack_traits::minimum_size() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
     /* no func on windows, sane default of 8 KiB */
     return 8 * 1024;
@@ -147,7 +147,7 @@ std::size_t stack_traits::minimum_size() noexcept {
 #endif
 }
 
-std::size_t stack_traits::maximum_size() noexcept {
+OSTD_EXPORT std::size_t stack_traits::maximum_size() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
     /* value is technically undefined when is_unbounded() is
      * true, just default to 1 GiB so we actually return something
@@ -159,7 +159,7 @@ std::size_t stack_traits::maximum_size() noexcept {
 #endif
 }
 
-std::size_t stack_traits::default_size() noexcept {
+OSTD_EXPORT std::size_t stack_traits::default_size() noexcept {
 #if defined(OSTD_PLATFORM_WIN32)
     /* no func on windows either, default to 64 KiB */
     return 8 * 8 * 1024;

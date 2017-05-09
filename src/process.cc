@@ -14,13 +14,14 @@
 #include "ostd/process.hh"
 #include "ostd/format.hh"
 
+#include <fcntl.h>
+
 #ifdef OSTD_PLATFORM_WIN32
 #  include "ostd/filesystem.hh"
 #  include <windows.h>
 namespace fs = ostd::filesystem;
 #else
 #  include <unistd.h>
-#  include <fcntl.h>
 #  include <sys/wait.h>
 #  include <wordexp.h>
 #endif
@@ -365,9 +366,7 @@ static std::wstring resolve_file(wchar_t const *cmd) {
 
     auto is_maybe_exec = [](fs::path const &p) {
         auto st = fs::status(p);
-        if (fs::is_regular_file(st) || fs::is_symlink(st)) {
-            return true;
-        }
+        return (fs::is_regular_file(st) || fs::is_symlink(st));
     };
 
     fs::path p{cmd};
@@ -381,12 +380,8 @@ static std::wstring resolve_file(wchar_t const *cmd) {
     }
     /* the directory from which the app loaded */
     if (GetModuleFileNameW(nullptr, buf, sizeof(buf))) {
-#ifdef NTDDI_WIN8
-        PathCchRemoveFileSpecW(buf, sizeof(buf));
-#else
-        PathRemoveFileSpecW(buf);
-#endif
-        auto rp = fs::path{buf} / p;
+        fs::path rp{buf};
+        rp.replace_filename(p);
         if (is_maybe_exec(rp)) {
             return rp.native();
         }
@@ -407,7 +402,7 @@ static std::wstring resolve_file(wchar_t const *cmd) {
     }
     /* the windows directory */
     if (GetWindowsDirectoryW(buf, sizeof(buf))) {
-        auto rp = fs::path{path} / p;
+        auto rp = fs::path{buf} / p;
         if (is_maybe_exec(rp)) {
             return rp.native();
         }
@@ -435,13 +430,16 @@ static std::wstring resolve_file(wchar_t const *cmd) {
             }
         }
         for (;;) {
-            auto p = wcschr(envp, L';');
+            auto sp = wcschr(envp, L';');
             fs::path rp;
-            if (!p) {
-                rp = fs::path{p} / p;
+            if (!sp) {
+                rp = fs::path{envp} / p;
+            } else if (sp == envp) {
+                envp = sp + 1;
+                continue;
             } else {
-                rp = fs::path{envp, p} / p;
-                envp = p + 1;
+                rp = fs::path{envp, sp} / p;
+                envp = sp + 1;
             }
             if (is_maybe_exec(rp)) {
                 return rp.native();
@@ -514,19 +512,19 @@ OSTD_EXPORT void subprocess::open_impl(
 
     pipe pipe_in, pipe_out, pipe_err;
 
-    pipe_in.open(use_in, false);
-    pipe_out.open(use_out, true);
-    pipe_err.open(use_err, true)
+    pipe_in.open(use_in, sa, false);
+    pipe_out.open(use_out, sa, true);
+    pipe_err.open(use_err, sa, true);
 
     /* process creation */
 
     PROCESS_INFORMATION pi;
-    STARTUPINFO si;
+    STARTUPINFOW si;
 
     memset(&pi, 0, sizeof(PROCESS_INFORMATION));
-    memset(&si, 0, sizeof(STARTUPINFO));
+    memset(&si, 0, sizeof(STARTUPINFOW));
 
-    si.cb = sizeof(STARTUPINFO);
+    si.cb = sizeof(STARTUPINFOW);
 
     if (use_in == process_stream::PIPE) {
         si.hStdInput = pipe_in.p_r;
@@ -549,7 +547,7 @@ OSTD_EXPORT void subprocess::open_impl(
     if (use_err == process_stream::PIPE) {
         si.hStdError = pipe_err.p_w;
         pipe_err.fdopen(err, true);
-    } else if (use_err = process_stream::STDOUT) {
+    } else if (use_err == process_stream::STDOUT) {
         si.hStdError = si.hStdOutput;
     } else {
         si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
@@ -564,7 +562,7 @@ OSTD_EXPORT void subprocess::open_impl(
     {
         std::unique_ptr<wchar_t[]> wcmd{new wchar_t[cmd.size() + 1]};
         if (!MultiByteToWideChar(
-            CP_UTF8, 0, cmd.data(), cmd.size(), wcmd.data(), cmd.size() + 1
+            CP_UTF8, 0, cmd.data(), cmd.size(), wcmd.get(), cmd.size() + 1
         )) {
             throw process_error{"unicode conversion failed"};
         }
@@ -580,7 +578,7 @@ OSTD_EXPORT void subprocess::open_impl(
 
     std::unique_ptr<wchar_t[]> cmdline{new wchar_t[astr.size() + 1]};
     if (!MultiByteToWideChar(
-        CP_UTF8, 0, astr.data(), astr.size(), cmdline.data(), astr.size() + 1
+        CP_UTF8, 0, astr.data(), astr.size(), cmdline.get(), astr.size() + 1
     )) {
         throw process_error{"unicode conversion failed"};
     }
@@ -592,7 +590,7 @@ OSTD_EXPORT void subprocess::open_impl(
 
     auto success = CreateProcessW(
         cmdpath.data(),
-        cmdline.data(),
+        cmdline.get(),
         nullptr,        /* process security attributes */
         nullptr,        /* primary thread security attributes */
         true,           /* inherit handles */
@@ -630,7 +628,7 @@ OSTD_EXPORT int subprocess::close() {
         throw process_error{"child process wait failed"};
     }
 
-    int ec;
+    DWORD ec = 0;
     if (!GetExitCodeProcess(pd->process, &ec)) {
         CloseHandle(pd->process);
         CloseHandle(pd->thread);
@@ -642,7 +640,7 @@ OSTD_EXPORT int subprocess::close() {
     CloseHandle(pd->thread);
     reset();
 
-    return ec;
+    return int(ec);
 }
 
 #endif
