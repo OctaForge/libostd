@@ -479,21 +479,22 @@ static std::string concat_args(std::vector<std::string> const &args) {
             if (*p == '\"') {
                 /* not preceded by \, so it's safe */
                 ret += "\\\"";
+                ++p;
             } else {
                 /* handle any sequence of \ optionally followed by a " */
-                std::size_t nbsl = 0;
-                while (*p++ == '\\') {
-                    ++nbsl;
+                char const *op = p;
+                while (*p == '\\') {
+                    ++p;
                 }
                 if (*p == '\"') {
                     /* double all the backslashes plus one for the " */
-                    ret.append(nbsl * 2 + 1, '\\');
+                    ret.append((p - op) * 2 + 1, '\\');
                     ret += '\"';
                 } else {
-                    ret.append(nbsl, '\\');
+                    ret.append(p - op, '\\');
                 }
             }
-            sp = p + 1;
+            sp = p;
         }
         ret += '\"';
     }

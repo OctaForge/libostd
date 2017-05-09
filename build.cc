@@ -37,7 +37,7 @@ static std::vector<std::string> EXAMPLES = {
     "stream1", "stream2", "coroutine1", "coroutine2", "concurrency"
 };
 
-static fs::path ASM_SOURCE_DIR = "src/asm";
+static fs::path ASM_SOURCE_DIR = fs::path{"src"} / "asm";
 static strvec ASM_SOURCES = {
     "jump_all_gas", "make_all_gas", "ontop_all_gas"
 };
