@@ -287,7 +287,7 @@ int main(int argc, char **argv) {
     };
 
     auto call_cxx = [&](
-        fs::path const &input, fs::path const &output, bool shared
+        fs::path const &input, fs::path const &output, bool lib, bool shared
     ) {
         strvec args = { cxx };
         add_args(args, cxxflags);
@@ -304,6 +304,13 @@ int main(int argc, char **argv) {
             echo_q("CXX: %s", ifs);
         }
 
+        if (lib) {
+            args.push_back("-DOSTD_BUILD_LIB");
+            if (shared) {
+                args.push_back("-DOSTD_BUILD_DLL");
+            }
+        }
+
         args.push_back("-c");
         args.push_back("-o");
         args.push_back(outp.string());
@@ -318,7 +325,7 @@ int main(int argc, char **argv) {
      * the files may check for __PIC__ (at least mips32 does)
      */
     auto call_as = [&](
-        fs::path const &input, fs::path const &output, bool shared
+        fs::path const &input, fs::path const &output, bool, bool shared
     ) {
         strvec args = { as };
         add_args(args, asflags);
@@ -399,7 +406,7 @@ int main(int argc, char **argv) {
         auto ccf = path_with_ext(base, ".cc");
         auto obf = path_with_ext(base, ".o");
 
-        call_cxx(ccf, obf, false);
+        call_cxx(ccf, obf, false, false);
         call_ld(base, { obf }, { default_lib });
 
         try_remove(obf);
@@ -433,13 +440,13 @@ int main(int argc, char **argv) {
         );
         f.close();
 
-        call_cxx(ccf, obf, false);
+        call_cxx(ccf, obf, false, false);
         call_ld(base, { obf }, { default_lib });
         try_remove(obf);
     };
 
     auto build_test_runner = [&]() {
-        call_cxx("test_runner.cc", "test_runner.o", false);
+        call_cxx("test_runner.cc", "test_runner.o", false, false);
         call_ld("test_runner", { "test_runner.o" }, { default_lib });
         try_remove("test_runner.o");
     };
@@ -458,7 +465,7 @@ int main(int argc, char **argv) {
             auto srco = path_with_ext(srcf, ".o");
             auto &fq = (shared ? future_dynobj : future_obj);
             fq.push(tp.push([&buildf, srcf, srco, shared]() {
-                return buildf(srcf, srco, shared);
+                return buildf(srcf, srco, true, shared);
             }));
         };
         for (auto sf: list) {
