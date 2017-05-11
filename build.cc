@@ -3,15 +3,10 @@
 /* for Windows so that we avoid dllimport/dllexport */
 #define OSTD_BUILD_LIB
 
-#include <cstdio>
-#include <cstdlib>
-#include <cstddef>
-#include <cstring>
 #include <string>
 #include <vector>
 #include <stdexcept>
 #include <utility>
-#include <memory>
 
 #include "ostd/io.hh"
 #include "ostd/range.hh"
