@@ -1689,8 +1689,11 @@ namespace detail {
             p_data.push_back(std::move(v));
         }
 
-        T &get() { return p_data; }
-        T const &get() const { return p_data; }
+        T &get() & { return p_data; }
+        T const &get() const & { return p_data; }
+
+        T &&get() && { return std::move(p_data); }
+        T const &&get() const && { return std::move(p_data); }
 
     private:
         T p_data;
@@ -1714,7 +1717,11 @@ namespace detail {
  * These are available depending on if they're also available in the wrapped
  * container and have identical signatures.
  *
- * The `get()` method returns a reference to the wrapped container.
+ * The `get()` method returns an lvalue or rvalue reference to the wrapped
+ * container, depending on the lvalue-ness or rvalue-ness of the appender
+ * itself (it's ref-qualified). If the appender is const, so will be the
+ * returned value.
+ *
  * The `put(v)` method is overloaded for both by-copy and by-move put.
  *
  * @see ostd::appender(Container &&)
