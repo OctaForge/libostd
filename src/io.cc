@@ -63,10 +63,12 @@ OSTD_EXPORT bool file_stream::end() const {
 }
 
 OSTD_EXPORT void file_stream::seek(stream_off_t pos, stream_seek whence) {
-#ifndef OSTD_PLATFORM_WIN32
+#if defined(OSTD_PLATFORM_POSIX)
     if (fseeko(p_f, pos, int(whence)))
-#else
+#elif defined(OSTD_PLATFORM_WIN32)
     if (_fseeki64(p_f, pos, int(whence)))
+#else
+    if (fseek(p_f, pos, int(whence)))
 #endif
     {
         throw stream_error{errno, std::generic_category()};
@@ -74,10 +76,12 @@ OSTD_EXPORT void file_stream::seek(stream_off_t pos, stream_seek whence) {
 }
 
 OSTD_EXPORT stream_off_t file_stream::tell() const {
-#ifndef OSTD_PLATFORM_WIN32
+#if defined(OSTD_PLATFORM_POSIX)
     auto ret = ftello(p_f);
-#else
+#elif defined(OSTD_PLATFORM_WIN32)
     auto ret = _ftelli64(p_f);
+#else
+    auto ret = ftell(p_f);
 #endif
     if (ret < 0) {
         throw stream_error{errno, std::generic_category()};
