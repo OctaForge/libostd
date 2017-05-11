@@ -106,12 +106,10 @@ static void print_help(ostd::string_range arg0) {
 }
 
 static void exec_command(strvec const &args) {
-    ostd::subprocess p;
-    p.open_command(ostd::iter(args));
-    if (int ret; (ret = p.close())) {
-        auto app = ostd::appender<std::string>();
-        ostd::format(app, "command failed with code %d", ret);
-        throw std::runtime_error{app.get()};
+    if (int ret = ostd::subprocess{ostd::iter(args)}.close(); ret) {
+        throw std::runtime_error{ostd::format(
+            ostd::appender<std::string>(), "command failed with code %d", ret
+        ).get()};
     }
 }
 

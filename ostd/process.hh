@@ -180,18 +180,56 @@ struct OSTD_EXPORT subprocess {
      */
     file_stream err = file_stream{};
 
-    /** @brief Initializes a default subprocess.
-     *
-     * No streams will be set to redirect.
-     */
-    subprocess() noexcept {}
-
-    /** @brief Initializes a subprocess with the given stream redirections.*/
+    /** @brief Initializes the structure with the given stream redirections. */
     subprocess(
-        process_stream in_use, process_stream out_use, process_stream err_use
+        process_stream  in_use = process_stream::DEFAULT,
+        process_stream out_use = process_stream::DEFAULT,
+        process_stream err_use = process_stream::DEFAULT
     ) noexcept:
         use_in(in_use), use_out(out_use), use_err(err_use)
     {}
+
+    /** @brief Initializes the structure and opens a subprocess.
+     *
+     * This is similar to calling either open_command() or open_path()
+     * after constructing the object depending on `use_path`. It may
+     * throw the same exceptions as the respective two methods.
+     */
+    template<typename InputRange>
+    subprocess(
+        string_range cmd, InputRange &&args, bool use_path = true,
+        process_stream  in_use = process_stream::DEFAULT,
+        process_stream out_use = process_stream::DEFAULT,
+        process_stream err_use = process_stream::DEFAULT,
+        std::enable_if_t<
+            is_input_range<InputRange>, bool
+        > = true
+    ):
+        use_in(in_use), use_out(out_use), use_err(err_use)
+    {
+        open_full(cmd, std::forward<InputRange>(args), use_path);
+    }
+
+    /** @brief Initializes the structure and opens a subprocess.
+     *
+     * This is similar to calling either open_command() or open_path()
+     * after constructing the object depending on `use_path`. It may
+     * throw the same exceptions as the respective two methods.
+     */
+    template<typename InputRange>
+    subprocess(
+        InputRange &&args, bool use_path = true,
+        process_stream  in_use = process_stream::DEFAULT,
+        process_stream out_use = process_stream::DEFAULT,
+        process_stream err_use = process_stream::DEFAULT,
+        std::enable_if_t<
+            is_input_range<InputRange>, bool
+        > = true
+    ):
+        use_in(in_use), use_out(out_use), use_err(err_use)
+    {
+        open_full(nullptr, std::forward<InputRange>(args), use_path);
+    }
 
     /** @brief Moves the subprocess data. */
     subprocess(subprocess &&i) noexcept:
