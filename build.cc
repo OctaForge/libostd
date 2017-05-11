@@ -27,23 +27,23 @@ using pathvec = std::vector<fs::path>;
 
 /* THESE VARIABLES CAN BE ALTERED */
 
-static std::vector<std::string> EXAMPLES = {
+static pathvec EXAMPLES = {
     "format", "listdir", "range", "range_pipe", "signal",
     "stream1", "stream2", "coroutine1", "coroutine2", "concurrency"
 };
 
 static fs::path ASM_SOURCE_DIR = fs::path{"src"} / "asm";
-static strvec ASM_SOURCES = {
+static pathvec ASM_SOURCES = {
     "jump_all_gas", "make_all_gas", "ontop_all_gas"
 };
 
 static fs::path CXX_SOURCE_DIR = "src";
-static strvec CXX_SOURCES = {
+static pathvec CXX_SOURCES = {
     "context_stack", "environ", "io", "concurrency", "process"
 };
 
 static fs::path TEST_DIR = "tests";
-static strvec TEST_CASES = {
+static pathvec TEST_CASES = {
     "algorithm", "range"
 };
 
@@ -223,22 +223,22 @@ int main(int argc, char **argv) {
     if (clean) {
         ostd::writeln("Cleaning...");
 
-        for (auto ex: EXAMPLES) {
-            auto rp = fs::path{"examples"} / ex;
+        for (auto &ex: EXAMPLES) {
+            auto rp = "examples" / ex;
             try_remove(rp);
             rp.replace_extension(".o");
             try_remove(rp);
         }
-        for (auto aso: ASM_SOURCES) {
+        for (auto &aso: ASM_SOURCES) {
             auto rp = path_with_ext(ASM_SOURCE_DIR / aso, ".o");
             try_remove(rp);
-            rp.replace_filename(std::string{aso} + "_dyn.o");
+            rp.replace_filename(aso.string() + "_dyn.o");
             try_remove(rp);
         }
-        for (auto cso: CXX_SOURCES) {
+        for (auto &cso: CXX_SOURCES) {
             auto rp = path_with_ext(CXX_SOURCE_DIR / cso, ".o");
             try_remove(rp);
-            rp.replace_filename(std::string{cso} + "_dyn.o");
+            rp.replace_filename(cso.string() + "_dyn.o");
             try_remove(rp);
         }
         try_remove(OSTD_STATIC_LIB);
@@ -396,8 +396,8 @@ int main(int argc, char **argv) {
         }
     };
 
-    auto build_example = [&](std::string const &name) {
-        auto base = fs::path{"examples"} / name;
+    auto build_example = [&](fs::path const &name) {
+        auto base = "examples" / name;
         auto ccf = path_with_ext(base, ".cc");
         auto obf = path_with_ext(base, ".o");
 
@@ -407,7 +407,7 @@ int main(int argc, char **argv) {
         try_remove(obf);
     };
 
-    auto build_test = [&](std::string const &name) {
+    auto build_test = [&](fs::path const &name) {
         auto base = TEST_DIR / name;
         auto ccf = path_with_ext(base, ".cc");
         auto obf = path_with_ext(base, ".o");
@@ -453,7 +453,8 @@ int main(int argc, char **argv) {
 
     /* build object files in static and shared (PIC) variants */
     auto build_all = [&](
-        strvec &list, fs::path const &spath, fs::path const &sext, auto &buildf
+        pathvec const &list, fs::path const &spath,
+        fs::path const &sext, auto &buildf
     ) {
         auto build_obj = [&](fs::path const &fpath,  bool shared) {
             auto srcf = path_with_ext(fpath, sext);
@@ -463,7 +464,7 @@ int main(int argc, char **argv) {
                 return buildf(srcf, srco, true, shared);
             }));
         };
-        for (auto sf: list) {
+        for (auto &sf: list) {
             auto sp = spath / sf;
             if (build_static) {
                 build_obj(sp, false);
@@ -499,7 +500,7 @@ int main(int argc, char **argv) {
 
     if (build_examples) {
         echo_q("Building examples...");
-        for (auto ex: EXAMPLES) {
+        for (auto &ex: EXAMPLES) {
             future_bin.push(tp.push([&build_example, ex]() {
                 build_example(ex);
             }));
@@ -515,7 +516,7 @@ int main(int argc, char **argv) {
                 return 1;
             }
         }
-        for (auto test: TEST_CASES) {
+        for (auto &test: TEST_CASES) {
             future_bin.push(tp.push([&build_test, test]() {
                 build_test(test);
             }));
