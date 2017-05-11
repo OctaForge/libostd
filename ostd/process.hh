@@ -84,7 +84,7 @@ Sink &&split_args(Sink &&out, string_range str) {
 }
 
 /** @brief Thrown on errors in ostd::subprocess. */
-struct process_error: std::runtime_error {
+struct subprocess_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
@@ -97,7 +97,7 @@ struct process_error: std::runtime_error {
  *
  * Only use the `STDOUT` value for stderr stream.
  */
-enum class process_stream {
+enum class subprocess_stream {
     DEFAULT = 0, ///< Do not perform any redirection.
     PIPE,        ///< Capture the stream as an ostd::file_stream.
     STDOUT       ///< Writes to stderr will be written to stdout.
@@ -114,7 +114,7 @@ enum class process_stream {
 struct OSTD_EXPORT subprocess {
     /** @brief The standard input redirection mode.
      *
-     * The value is one of ostd::process_stream. Set this before opening
+     * The value is one of ostd::subprocess_stream. Set this before opening
      * the subprocess. If it's set to `PIPE`, you will be able to write
      * into the standard input of the child process using the `in` member,
      * which is a standard ostd::file_stream. Never set it to `STDOUT`
@@ -124,11 +124,11 @@ struct OSTD_EXPORT subprocess {
      * @see ostd::subprocess::in, ostd::subprocess::use_out,
      *      ostd::subprocess::use_err
      */
-    process_stream use_in = process_stream::DEFAULT;
+    subprocess_stream use_in = subprocess_stream::DEFAULT;
 
     /** @brief The standard output redirection mode.
      *
-     * The value is one of ostd::process_stream. Set this before opening
+     * The value is one of ostd::subprocess_stream. Set this before opening
      * the subprocess. If it's set to `PIPE`, you will be able to read
      * from the standard output of the child process using the `out` member,
      * which is a standard ostd::file_stream. Setting this to `STDOUT` has
@@ -137,11 +137,11 @@ struct OSTD_EXPORT subprocess {
      * @see ostd::subprocess::out, ostd::subprocess::use_in,
      *      ostd::subprocess::use_err
      */
-    process_stream use_out = process_stream::DEFAULT;
+    subprocess_stream use_out = subprocess_stream::DEFAULT;
 
     /** @brief The standard error redirection mode.
      *
-     * The value is one of ostd::process_stream. Set this before opening
+     * The value is one of ostd::subprocess_stream. Set this before opening
      * the subprocess. If it's set to `PIPE`, you will be able to read
      * from the standard error of the child process using the `err` member,
      * which is a standard ostd::file_stream. Setting this to `STDOUT`
@@ -153,7 +153,7 @@ struct OSTD_EXPORT subprocess {
      * @see ostd::subprocess::err, ostd::subprocess::use_in,
      *      ostd::subprocess::use_out
      */
-    process_stream use_err = process_stream::DEFAULT;
+    subprocess_stream use_err = subprocess_stream::DEFAULT;
 
     /** @brief The standard input stream when redirected.
      *
@@ -184,9 +184,9 @@ struct OSTD_EXPORT subprocess {
 
     /** @brief Initializes the structure with the given stream redirections. */
     subprocess(
-        process_stream  in_use = process_stream::DEFAULT,
-        process_stream out_use = process_stream::DEFAULT,
-        process_stream err_use = process_stream::DEFAULT
+        subprocess_stream  in_use = subprocess_stream::DEFAULT,
+        subprocess_stream out_use = subprocess_stream::DEFAULT,
+        subprocess_stream err_use = subprocess_stream::DEFAULT
     ) noexcept:
         use_in(in_use), use_out(out_use), use_err(err_use)
     {}
@@ -200,9 +200,9 @@ struct OSTD_EXPORT subprocess {
     template<typename InputRange>
     subprocess(
         string_range cmd, InputRange &&args, bool use_path = true,
-        process_stream  in_use = process_stream::DEFAULT,
-        process_stream out_use = process_stream::DEFAULT,
-        process_stream err_use = process_stream::DEFAULT,
+        subprocess_stream  in_use = subprocess_stream::DEFAULT,
+        subprocess_stream out_use = subprocess_stream::DEFAULT,
+        subprocess_stream err_use = subprocess_stream::DEFAULT,
         std::enable_if_t<
             is_input_range<InputRange>, bool
         > = true
@@ -221,9 +221,9 @@ struct OSTD_EXPORT subprocess {
     template<typename InputRange>
     subprocess(
         InputRange &&args, bool use_path = true,
-        process_stream  in_use = process_stream::DEFAULT,
-        process_stream out_use = process_stream::DEFAULT,
-        process_stream err_use = process_stream::DEFAULT,
+        subprocess_stream  in_use = subprocess_stream::DEFAULT,
+        subprocess_stream out_use = subprocess_stream::DEFAULT,
+        subprocess_stream err_use = subprocess_stream::DEFAULT,
         std::enable_if_t<
             is_input_range<InputRange>, bool
         > = true
@@ -273,21 +273,21 @@ struct OSTD_EXPORT subprocess {
         }
         try {
             close();
-        } catch (process_error const &) {}
+        } catch (subprocess_error const &) {}
         reset();
     }
 
     /** @brief Waits for a currently running child process to be done.
      *
      * If there isn't any child process assigned to this, it will throw
-     * ostd::process_error. It will also throw the same exception if some
-     * other error has occured. It will not throw if the command has
+     * ostd::subprocess_error. It will also throw the same exception if
+     * some other error has occured. It will not throw if the command has
      * executed but exited with a non-zero code. This code will be
      * returned instead.
      *
      * @returns The child process return code on success.
      *
-     * @throws ostd::process_error on failure of any kind.
+     * @throws ostd::subprocess_error on failure of any kind.
      *
      * @see open_path(), open_command()
      */
@@ -302,13 +302,13 @@ struct OSTD_EXPORT subprocess {
      *
      * If `path` is empty, the first element of `args` is used.
      *
-     * If this fails, ostd::process_error will be thrown.
+     * If this fails, ostd::subprocess_error will be thrown.
      *
      * On success, a new subprocess will be created and this will return
      * without waiting for it to finish. Use close() to wait and get the
      * return code.
      *
-     * @throws ostd::process_error on failure of any kind.
+     * @throws ostd::subprocess_error on failure of any kind.
      *
      * @see open_command(), close()
      */
@@ -334,13 +334,13 @@ struct OSTD_EXPORT subprocess {
      *
      * If `cmd` is empty, the first element of `args` is used.
      *
-     * If this fails, ostd::process_error will be thrown.
+     * If this fails, ostd::subprocess_error will be thrown.
      *
      * On success, a new subprocess will be created and this will return
      * without waiting for it to finish. Use close() to wait and get the
      * return code.
      *
-     * @throws ostd::process_error on failure of any kind.
+     * @throws ostd::subprocess_error on failure of any kind.
      *
      * @see open_path(), close()
      */
@@ -367,12 +367,12 @@ private:
             argv.emplace_back(args.front());
         }
         if (argv.empty()) {
-            throw process_error{"no arguments given"};
+            throw subprocess_error{"no arguments given"};
         }
         if (cmd.empty()) {
             cmd = argv[0];
             if (cmd.empty()) {
-                throw process_error{"no command given"};
+                throw subprocess_error{"no command given"};
             }
         }
         open_impl(std::string{cmd}, argv, use_path);

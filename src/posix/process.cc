@@ -88,12 +88,12 @@ struct pipe {
         }
     }
 
-    void open(process_stream use) {
-        if (use != process_stream::PIPE) {
+    void open(subprocess_stream use) {
+        if (use != subprocess_stream::PIPE) {
             return;
         }
         if (::pipe(fd) < 0) {
-            throw process_error{"could not open pipe"};
+            throw subprocess_error{"could not open pipe"};
         }
     }
 
@@ -104,7 +104,7 @@ struct pipe {
     void fdopen(file_stream &s, bool write) {
         FILE *p = ::fdopen(fd[std::size_t(write)], write ? "w" : "r");
         if (!p) {
-            throw process_error{"could not open redirected stream"};
+            throw subprocess_error{"could not open redirected stream"};
         }
         /* do not close twice, the stream will close it */
         fd[std::size_t(write)] = -1;
@@ -135,8 +135,8 @@ OSTD_EXPORT void subprocess::open_impl(
     std::string const &cmd, std::vector<std::string> const &args,
     bool use_path
 ) {
-    if (use_in == process_stream::STDOUT) {
-        throw process_error{"could not redirect stdin to stdout"};
+    if (use_in == subprocess_stream::STDOUT) {
+        throw subprocess_error{"could not redirect stdin to stdout"};
     }
 
     auto argp = std::make_unique<char *[]>(args.size() + 1);
@@ -148,14 +148,14 @@ OSTD_EXPORT void subprocess::open_impl(
     /* fd_errno used to detect if exec failed */
     pipe fd_errno, fd_stdin, fd_stdout, fd_stderr;
 
-    fd_errno.open(process_stream::PIPE);
+    fd_errno.open(subprocess_stream::PIPE);
     fd_stdin.open(use_in);
     fd_stdout.open(use_out);
     fd_stderr.open(use_err);
 
     auto cpid = fork();
     if (cpid == -1) {
-        throw process_error{"fork failed"};
+        throw subprocess_error{"fork failed"};
     } else if (!cpid) {
         /* child process */
         fd_errno.close(false);
@@ -165,24 +165,24 @@ OSTD_EXPORT void subprocess::open_impl(
             std::exit(1);
         }
         /* prepare standard streams */
-        if (use_in == process_stream::PIPE) {
+        if (use_in == subprocess_stream::PIPE) {
             fd_stdin.close(true);
             if (!fd_stdin.dup2(STDIN_FILENO, fd_errno, false)) {
                 std::exit(1);
             }
         }
-        if (use_out == process_stream::PIPE) {
+        if (use_out == subprocess_stream::PIPE) {
             fd_stdout.close(false);
             if (!fd_stdout.dup2(STDOUT_FILENO, fd_errno, true)) {
                 std::exit(1);
             }
         }
-        if (use_err == process_stream::PIPE) {
+        if (use_err == subprocess_stream::PIPE) {
             fd_stderr.close(false);
             if (!fd_stderr.dup2(STDERR_FILENO, fd_errno, true)) {
                 std::exit(1);
             }
-        } else if (use_err == process_stream::STDOUT) {
+        } else if (use_err == subprocess_stream::STDOUT) {
             if (dup2(STDOUT_FILENO, STDERR_FILENO) < 0) {
                 fd_errno.write_errno();
                 std::exit(1);
@@ -199,15 +199,15 @@ OSTD_EXPORT void subprocess::open_impl(
     } else {
         /* parent process */
         fd_errno.close(true);
-        if (use_in == process_stream::PIPE) {
+        if (use_in == subprocess_stream::PIPE) {
             fd_stdin.close(false);
             fd_stdin.fdopen(in, true);
         }
-        if (use_out == process_stream::PIPE) {
+        if (use_out == subprocess_stream::PIPE) {
             fd_stdout.close(true);
             fd_stdout.fdopen(out, false);
         }
-        if (use_err == process_stream::PIPE) {
+        if (use_err == subprocess_stream::PIPE) {
             fd_stderr.close(true);
             fd_stderr.fdopen(err, false);
         }
@@ -230,25 +230,25 @@ OSTD_EXPORT void subprocess::reset() {
 
 OSTD_EXPORT int subprocess::close() {
     if (!p_current) {
-        throw process_error{"no child process"};
+        throw subprocess_error{"no child process"};
     }
     data *pd = static_cast<data *>(p_current);
     int retc = 0;
     if (pid_t wp; (wp = waitpid(pd->pid, &retc, 0)) < 0) {
         reset();
-        throw process_error{"child process wait failed"};
+        throw subprocess_error{"child process wait failed"};
     }
     if (retc) {
         int eno;
         auto r = read(pd->errno_fd, &eno, sizeof(int));
         reset();
         if (r < 0) {
-            throw process_error{"could not read from pipe"};
+            throw subprocess_error{"could not read from pipe"};
         } else if (r == sizeof(int)) {
             auto ec = std::system_category().default_error_condition(eno);
             auto app = appender<std::string>();
             format(app, "could not execute subprocess (%s)", ec.message());
-            throw process_error{std::move(app.get())};
+            throw subprocess_error{std::move(app.get())};
         }
     }
     reset();

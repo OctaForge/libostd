@@ -101,15 +101,15 @@ struct pipe {
         }
     }
 
-    void open(process_stream use, SECURITY_ATTRIBUTES &sa, bool read) {
-        if (use != process_stream::PIPE) {
+    void open(subprocess_stream use, SECURITY_ATTRIBUTES &sa, bool read) {
+        if (use != subprocess_stream::PIPE) {
             return;
         }
         if (!CreatePipe(&p_r, &p_w, &sa, 0)) {
-            throw process_error{"could not open pipe"};
+            throw subprocess_error{"could not open pipe"};
         }
         if (!SetHandleInformation(read ? p_r : p_w, HANDLE_FLAG_INHERIT, 0)) {
-            throw process_error{"could not set pipe parameters"};
+            throw subprocess_error{"could not set pipe parameters"};
         }
     }
 
@@ -119,7 +119,7 @@ struct pipe {
             read ? _O_RDONLY : 0
         );
         if (fd < 0) {
-            throw process_error{"could not open redirected stream"};
+            throw subprocess_error{"could not open redirected stream"};
         }
         if (read) {
             p_r = nullptr;
@@ -129,7 +129,7 @@ struct pipe {
         auto p = _fdopen(fd, read ? "r" : "w");
         if (!p) {
             _close(fd);
-            throw process_error{"could not open redirected stream"};
+            throw subprocess_error{"could not open redirected stream"};
         }
         s.open(p, [](FILE *f) {
             std::fclose(f);
@@ -283,8 +283,8 @@ static std::string concat_args(std::vector<std::string> const &args) {
 OSTD_EXPORT void subprocess::open_impl(
     std::string const &cmd, std::vector<std::string> const &args, bool use_path
 ) {
-    if (use_in == process_stream::STDOUT) {
-        throw process_error{"could not redirect stdin to stdout"};
+    if (use_in == subprocess_stream::STDOUT) {
+        throw subprocess_error{"could not redirect stdin to stdout"};
     }
 
     /* pipes */
@@ -310,33 +310,33 @@ OSTD_EXPORT void subprocess::open_impl(
 
     si.cb = sizeof(STARTUPINFOW);
 
-    if (use_in == process_stream::PIPE) {
+    if (use_in == subprocess_stream::PIPE) {
         si.hStdInput = pipe_in.p_r;
         pipe_in.fdopen(in, false);
     } else {
         si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
         if (si.hStdInput == INVALID_HANDLE_VALUE) {
-            throw process_error{"could not get standard input handle"};
+            throw subprocess_error{"could not get standard input handle"};
         }
     }
-    if (use_out == process_stream::PIPE) {
+    if (use_out == subprocess_stream::PIPE) {
         si.hStdOutput = pipe_out.p_w;
         pipe_out.fdopen(out, true);
     } else {
         si.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
         if (si.hStdOutput == INVALID_HANDLE_VALUE) {
-            throw process_error{"could not get standard output handle"};
+            throw subprocess_error{"could not get standard output handle"};
         }
     }
-    if (use_err == process_stream::PIPE) {
+    if (use_err == subprocess_stream::PIPE) {
         si.hStdError = pipe_err.p_w;
         pipe_err.fdopen(err, true);
-    } else if (use_err == process_stream::STDOUT) {
+    } else if (use_err == subprocess_stream::STDOUT) {
         si.hStdError = si.hStdOutput;
     } else {
         si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
         if (si.hStdError == INVALID_HANDLE_VALUE) {
-            throw process_error{"could not get standard error handle"};
+            throw subprocess_error{"could not get standard error handle"};
         }
     }
     si.dwFlags |= STARTF_USESTDHANDLES;
@@ -348,7 +348,7 @@ OSTD_EXPORT void subprocess::open_impl(
         if (!MultiByteToWideChar(
             CP_UTF8, 0, cmd.data(), cmd.size() + 1, wcmd.get(), cmd.size() + 1
         )) {
-            throw process_error{"unicode conversion failed"};
+            throw subprocess_error{"unicode conversion failed"};
         }
         if (!use_path) {
             cmdpath = wcmd.get();
@@ -364,7 +364,7 @@ OSTD_EXPORT void subprocess::open_impl(
     if (!MultiByteToWideChar(
         CP_UTF8, 0, astr.data(), astr.size() + 1, cmdline.get(), astr.size() + 1
     )) {
-        throw process_error{"unicode conversion failed"};
+        throw subprocess_error{"unicode conversion failed"};
     }
 
     /* owned by CreateProcess, do not close explicitly */
@@ -390,7 +390,7 @@ OSTD_EXPORT void subprocess::open_impl(
     };
 
     if (!success) {
-        throw process_error{"could not execute subprocess"};
+        throw subprocess_error{"could not execute subprocess"};
     }
 }
 
@@ -400,7 +400,7 @@ OSTD_EXPORT void subprocess::reset() {
 
 OSTD_EXPORT int subprocess::close() {
     if (!p_current) {
-        throw process_error{"no child process"};
+        throw subprocess_error{"no child process"};
     }
 
     data *pd = static_cast<data *>(p_current);
@@ -409,7 +409,7 @@ OSTD_EXPORT int subprocess::close() {
         CloseHandle(pd->process);
         CloseHandle(pd->thread);
         reset();
-        throw process_error{"child process wait failed"};
+        throw subprocess_error{"child process wait failed"};
     }
 
     DWORD ec = 0;
@@ -417,7 +417,7 @@ OSTD_EXPORT int subprocess::close() {
         CloseHandle(pd->process);
         CloseHandle(pd->thread);
         reset();
-        throw process_error{"could not retrieve exit code"};
+        throw subprocess_error{"could not retrieve exit code"};
     }
 
     CloseHandle(pd->process);
