@@ -44,10 +44,6 @@
 
 #include "ostd/platform.hh"
 
-#if !defined(OSTD_PLATFORM_POSIX) && !defined(OSTD_PLATFORM_WIN32)
-#  error "Unsupported platform"
-#endif
-
 #ifndef OSTD_PLATFORM_WIN32
 #include <sys/types.h>
 #endif
@@ -62,16 +58,18 @@ namespace ostd {
  * @{
  */
 
-#ifndef OSTD_PLATFORM_WIN32
+#if defined(OSTD_PLATFORM_POSIX) || defined(OSTD_GENERATING_DOC)
 /** @brief The stream offset type.
  *
  * This is a signed integer type that can represent file sizes and offsets.
  * On POSIX systems, it defaults to the POSIX `off_t` type. On Windows, it's
- * a signed 64-bit integer.
+ * a signed 64-bit integer. On other systems it's `long`.
  */
 using stream_off_t = off_t;
-#else
+#elif defined(OSTD_PLATFORM_WIN32)
 using stream_off_t = __int64;
+#else
+using stream_off_t = long;
 #endif
 
 /** @brief Reference position for seeking.

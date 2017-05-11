@@ -24,10 +24,6 @@
 
 #include "ostd/platform.hh"
 
-#if !defined(OSTD_PLATFORM_POSIX) && !defined(OSTD_PLATFORM_WIN32)
-#  error "Unsupported platform"
-#endif
-
 #ifdef OSTD_USE_VALGRIND
 #  include <valgrind/valgrind.h>
 #endif

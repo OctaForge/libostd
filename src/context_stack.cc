@@ -5,12 +5,10 @@
 
 #include "ostd/platform.hh"
 
-#ifdef OSTD_PLATFORM_WIN32
+#if defined(OSTD_PLATFORM_WIN32)
 #  include "src/win32/context_stack.cc"
-#else
-#ifdef OSTD_PLATFORM_POSIX
+#elif defined(OSTD_PLATFORM_POSIX)
 #  include "src/posix/context_stack.cc"
 #else
 #  error "Unsupported platform"
-#endif
 #endif

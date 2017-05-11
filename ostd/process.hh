@@ -21,11 +21,6 @@
 #include <vector>
 
 #include "ostd/platform.hh"
-
-#if !defined(OSTD_PLATFORM_POSIX) && !defined(OSTD_PLATFORM_WIN32)
-#  error "Unsupported platform"
-#endif
-
 #include "ostd/string.hh"
 #include "ostd/range.hh"
 #include "ostd/io.hh"
