@@ -54,12 +54,12 @@ namespace detail {
  * is assumed to be UTF-8 and the output strings are always UTF-8, on POSIX
  * the wordexp implementation is followed (so it's locale specific).
  *
- * The `out` argument is an output range that takes a single argument at
- * a time. The value type is any that can be explicitly constructed from
- * an ostd::string_range. However, the string range that is used internally
- * during the conversions is just temporary and freed at the end of this
- * function, so it's important that the string type holds its own memory;
- * an std::string will usually suffice.
+ * The `out` argument can be an output range that takes a single argument
+ * at a time. The value type is an ostd::string_range. If it's not an output
+ * range, it has to be a function that takes the ostd::string_range. However,
+ * the string range that is used internally during the conversions is just
+ * temporary and freed at the end of this function, so it's important that
+ * it's copied in the range or the lambda.
  *
  * The ostd::word_error exception is used to handle failures of this
  * function itself. It may also throw other exceptions though, particularly
@@ -71,14 +71,16 @@ namespace detail {
  * @throws ostd::word_error on failure or anything thrown by `out`.
  * @throws std::bad_alloc on alloation failures.
  */
-template<typename OutputRange>
-OutputRange &&split_args(OutputRange &&out, string_range str) {
+template<typename Sink>
+Sink &&split_args(Sink &&out, string_range str) {
     detail::split_args_impl(str, [](string_range val, void *outp) {
-        static_cast<std::decay_t<OutputRange> *>(outp)->put(
-            range_value_t<std::decay_t<OutputRange>>{val}
-        );
+        if constexpr(is_output_range<std::decay_t<Sink>>) {
+            static_cast<std::decay_t<Sink> *>(outp)->put(val);
+        } else {
+            (*static_cast<std::decay_t<Sink> *>(outp))(val);
+        }
     }, &out);
-    return std::forward<OutputRange>(out);
+    return std::forward<Sink>(out);
 }
 
 /** @brief Thrown on errors in ostd::subprocess. */

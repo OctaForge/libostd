@@ -125,9 +125,9 @@ static std::string get_command(strvec const &args) {
 }
 
 static void add_args(strvec &args, std::string const &cmdl) {
-    auto app = ostd::appender(std::move(args));
-    ostd::split_args(app, cmdl);
-    args = std::move(app.get());
+    ostd::split_args([&args](ostd::string_range arg) {
+        args.emplace_back(arg);
+    }, cmdl);
 }
 
 static fs::path path_with_ext(fs::path const &p, fs::path const &ext) {
