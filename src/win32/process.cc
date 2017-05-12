@@ -283,6 +283,37 @@ OSTD_EXPORT void subprocess::open_impl(
         throw subprocess_error{"could not redirect stdin to stdout"};
     }
 
+    /* make sure child processes exit with parent */
+    struct jobject {
+        jobject() {
+            handle = CreateJobObject(nullptr, nullptr);
+            if (!handle) {
+                throw subprocess_error{"could not create job object"};
+            }
+            JOBJECT_EXTENDED_LIMIT_INFORMATION jeli;
+            memset(&jeli, 0, sizeof(JOBJECT_EXTENDED_LIMIT_INFORMATION));
+
+            jeli.BasicLimitInformation.LimitFlags =
+                JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+            if (!SetInformationJobObject(
+                handle, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)
+            )) {
+                CloseHandle(handle);
+                throw subprocess_error{"could not set job object flags"}
+            }
+        }
+        ~jobject() {
+            /* this will cause assigned children to terminate */
+            CloseHandle(handle);
+        }
+        HANDLE handle = nullptr;
+    };
+    /* initialization of local statics is thread safe, throwing
+     * an exception makes it re-initialize on the next call of this
+     */
+    static jobject job;
+
     /* pipes */
 
     SECURITY_ATTRIBUTES sa;
@@ -368,15 +399,18 @@ OSTD_EXPORT void subprocess::open_impl(
     pipe_out.p_w = nullptr;
     pipe_err.p_w = nullptr;
 
+    /* we use CREATE_SUSPENDED so that the process doesn't
+     * actually start when job assignment ends up failing...
+     */
     auto success = CreateProcessW(
         cmdpath.data(),
         cmdline.get(),
-        nullptr,        /* process security attributes */
-        nullptr,        /* primary thread security attributes */
-        true,           /* inherit handles */
-        0,              /* creation flags */
-        nullptr,        /* use parent env */
-        nullptr,        /* use parent cwd */
+        nullptr,          /* process security attributes */
+        nullptr,          /* primary thread security attributes */
+        true,             /* inherit handles */
+        CREATE_SUSPENDED, /* creation flags */
+        nullptr,          /* use parent env */
+        nullptr,          /* use parent cwd */
         &si,
         &pi
     );
@@ -385,6 +419,23 @@ OSTD_EXPORT void subprocess::open_impl(
         throw subprocess_error{"could not execute subprocess"};
     }
 
+    auto term_throw = [](PROCESS_INFORMATION &pi, char const *msg) {
+        TerminateProcess(pi.hProcess, 0);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        throw subprocess_error{msg};
+    };
+
+    success = AssignProcessToJobObject(job.handle, pi.hProcess);
+    if (!success) {
+        term_throw(pi, "could not assign child to job");
+    }
+
+    if (ResumeThread(pi.hThread) == DWORD(-1)) {
+        term_throw(pi, "could not resume child thread");
+    }
+
+    /* does not terminate process, but we don't need it anymore */
     CloseHandle(pi.hThread);
     p_current = static_cast<void *>(pi.hProcess);
 }
