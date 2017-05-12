@@ -390,32 +390,27 @@ OSTD_EXPORT void subprocess::open_impl(
 }
 
 OSTD_EXPORT void subprocess::reset() {
-    p_current = nullptr;
+    CloseHandle(static_cast<HANDLE>(std::exchange(p_current, nullptr)));
 }
 
 OSTD_EXPORT int subprocess::close() {
     if (!p_current) {
         throw subprocess_error{"no child process"};
     }
-
-    HANDLE *proc = static_cast<HANDLE *>(p_current);
+    HANDLE proc = static_cast<HANDLE>(p_current);
 
     if (WaitForSingleObject(proc, INFINITE) == WAIT_FAILED) {
-        CloseHandle(proc);
         reset();
         throw subprocess_error{"child process wait failed"};
     }
 
     DWORD ec = 0;
     if (!GetExitCodeProcess(proc, &ec)) {
-        CloseHandle(proc);
         reset();
         throw subprocess_error{"could not retrieve exit code"};
     }
 
-    CloseHandle(proc);
     reset();
-
     return int(ec);
 }
 

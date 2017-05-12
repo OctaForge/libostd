@@ -284,7 +284,7 @@ struct OSTD_EXPORT subprocess {
      *
      * @throws ostd::subprocess_error on failure of any kind.
      *
-     * @see open_path(), open_command()
+     * @see open_path(), open_command(), valid()
      */
     int close();
 
@@ -297,11 +297,13 @@ struct OSTD_EXPORT subprocess {
      *
      * If `path` is empty, the first element of `args` is used.
      *
-     * If this fails, ostd::subprocess_error will be thrown.
+     * If this fails for any reason, ostd::subprocess_error will be thrown.
+     * Having another child process running is considered a failure, so
+     * use close() or detach() before opening another.
      *
      * On success, a new subprocess will be created and this will return
      * without waiting for it to finish. Use close() to wait and get the
-     * return code.
+     * return code or detach() to give up ownership of the child process.
      *
      * @throws ostd::subprocess_error on failure of any kind.
      *
@@ -329,11 +331,13 @@ struct OSTD_EXPORT subprocess {
      *
      * If `cmd` is empty, the first element of `args` is used.
      *
-     * If this fails, ostd::subprocess_error will be thrown.
+     * If this fails for any reason, ostd::subprocess_error will be thrown.
+     * Having another child process running is considered a failure, so
+     * use close() or detach() before opening another.
      *
      * On success, a new subprocess will be created and this will return
      * without waiting for it to finish. Use close() to wait and get the
-     * return code.
+     * return code or detach() to give up ownership of the child process.
      *
      * @throws ostd::subprocess_error on failure of any kind.
      *
@@ -350,6 +354,31 @@ struct OSTD_EXPORT subprocess {
         open_command(nullptr, std::forward<InputRange>(args));
     }
 
+    /** @brief Detaches the child process.
+     *
+     * If there is a running child process, makes it so that it's no
+     * longer owned by this subprocess object. The child process will
+     * keep running even after the subprocess object has died.
+     *
+     * @throws ostd::subprocess_error if there is no child process.
+     *
+     * @see valid()
+     */
+    void detach() {
+        if (!p_current) {
+            throw subprocess_error{"no child process"};
+        }
+        reset();
+    }
+
+    /** @brief Checks if there is a running child process.
+     *
+     * @returns If there is one, true, otherwise false.
+     */
+    bool valid() const noexcept {
+        return !!p_current;
+    }
+
 private:
     template<typename InputRange>
     void open_full(string_range cmd, InputRange args, bool use_path) {
@@ -357,6 +386,11 @@ private:
             std::is_constructible_v<std::string, range_reference_t<InputRange>>,
             "The arguments must be strings"
         );
+
+        if (p_current) {
+            throw subprocess_error{"another child process already running"};
+        }
+
         std::vector<std::string> argv;
         for (; !args.empty(); args.pop_front()) {
             argv.emplace_back(args.front());
