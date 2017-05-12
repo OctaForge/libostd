@@ -291,7 +291,7 @@ OSTD_EXPORT void subprocess::open_impl(
                 throw subprocess_error{"could not create job object"};
             }
             JOBJECT_EXTENDED_LIMIT_INFORMATION jeli;
-            memset(&jeli, 0, sizeof(JOBJECT_EXTENDED_LIMIT_INFORMATION));
+            memset(&jeli, 0, sizeof(jeli));
 
             jeli.BasicLimitInformation.LimitFlags =
                 JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
@@ -300,7 +300,7 @@ OSTD_EXPORT void subprocess::open_impl(
                 handle, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)
             )) {
                 CloseHandle(handle);
-                throw subprocess_error{"could not set job object flags"}
+                throw subprocess_error{"could not set job object flags"};
             }
         }
         ~jobject() {
@@ -332,8 +332,8 @@ OSTD_EXPORT void subprocess::open_impl(
     PROCESS_INFORMATION pi;
     STARTUPINFOW si;
 
-    memset(&pi, 0, sizeof(PROCESS_INFORMATION));
-    memset(&si, 0, sizeof(STARTUPINFOW));
+    memset(&pi, 0, sizeof(pi));
+    memset(&si, 0, sizeof(si));
 
     si.cb = sizeof(STARTUPINFOW);
 
