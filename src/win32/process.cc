@@ -85,10 +85,6 @@ OSTD_EXPORT void split_args_impl(
 
 } /* namespace detail */
 
-struct data {
-    HANDLE process = nullptr, thread = nullptr;
-};
-
 struct pipe {
     HANDLE p_r = nullptr, p_w = nullptr;
 
@@ -385,13 +381,12 @@ OSTD_EXPORT void subprocess::open_impl(
         &pi
     );
 
-    p_current = ::new (reinterpret_cast<void *>(&p_data)) data{
-        pi.hProcess, pi.hThread
-    };
-
     if (!success) {
         throw subprocess_error{"could not execute subprocess"};
     }
+
+    CloseHandle(pi.hThread);
+    p_current = static_cast<void *>(pi.hProcess);
 }
 
 OSTD_EXPORT void subprocess::reset() {
@@ -403,49 +398,33 @@ OSTD_EXPORT int subprocess::close() {
         throw subprocess_error{"no child process"};
     }
 
-    data *pd = static_cast<data *>(p_current);
+    HANDLE *proc = static_cast<HANDLE *>(p_current);
 
-    if (WaitForSingleObject(pd->process, INFINITE) == WAIT_FAILED) {
-        CloseHandle(pd->process);
-        CloseHandle(pd->thread);
+    if (WaitForSingleObject(proc, INFINITE) == WAIT_FAILED) {
+        CloseHandle(proc);
         reset();
         throw subprocess_error{"child process wait failed"};
     }
 
     DWORD ec = 0;
-    if (!GetExitCodeProcess(pd->process, &ec)) {
-        CloseHandle(pd->process);
-        CloseHandle(pd->thread);
+    if (!GetExitCodeProcess(proc, &ec)) {
+        CloseHandle(proc);
         reset();
         throw subprocess_error{"could not retrieve exit code"};
     }
 
-    CloseHandle(pd->process);
-    CloseHandle(pd->thread);
+    CloseHandle(proc);
     reset();
 
     return int(ec);
 }
 
 OSTD_EXPORT void subprocess::move_data(subprocess &i) {
-    data *od = static_cast<data *>(i.p_current);
-    if (!od) {
-        return;
-    }
-    p_current = ::new (reinterpret_cast<void *>(&p_data)) data{*od};
-    i.p_current = nullptr;
+    std::swap(p_current, i.p_current);
 }
 
 OSTD_EXPORT void subprocess::swap_data(subprocess &i) {
-    if (!p_current) {
-        move_data(i);
-    } else if (!i.p_current) {
-        i.move_data(*this);
-    } else {
-        std::swap(
-            *static_cast<data *>(p_current), *static_cast<data *>(i.p_current)
-        );
-    }
+    move_data(i);
 }
 
 } /* namespace ostd */
