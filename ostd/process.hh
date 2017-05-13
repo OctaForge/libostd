@@ -383,7 +383,7 @@ private:
     template<typename InputRange>
     void open_full(string_range cmd, InputRange args, bool use_path) {
         static_assert(
-            std::is_constructible_v<std::string, range_reference_t<InputRange>>,
+            std::is_constructible_v<string_range, range_reference_t<InputRange>>,
             "The arguments must be strings"
         );
 
@@ -391,25 +391,20 @@ private:
             throw subprocess_error{"another child process already running"};
         }
 
-        std::vector<std::string> argv;
-        for (; !args.empty(); args.pop_front()) {
-            argv.emplace_back(args.front());
-        }
-        if (argv.empty()) {
-            throw subprocess_error{"no arguments given"};
-        }
-        if (cmd.empty()) {
-            cmd = argv[0];
-            if (cmd.empty()) {
-                throw subprocess_error{"no command given"};
+        open_impl(use_path, cmd, [](string_range &arg, void *data) {
+            InputRange &argr = *static_cast<InputRange *>(data);
+            if (argr.empty()) {
+                return false;
             }
-        }
-        open_impl(std::string{cmd}, argv, use_path);
+            arg = string_range{argr.front()};
+            argr.pop_front();
+            return true;
+        }, &args);
     }
 
     void open_impl(
-        std::string const &cmd, std::vector<std::string> const &args,
-        bool use_path
+        bool use_path, string_range cmd,
+        bool (*func)(string_range &, void *), void *data
     );
 
     void reset();

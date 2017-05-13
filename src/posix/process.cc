@@ -132,18 +132,55 @@ struct pipe {
 };
 
 OSTD_EXPORT void subprocess::open_impl(
-    std::string const &cmd, std::vector<std::string> const &args,
-    bool use_path
+    bool use_path, string_range cmd,
+    bool (*func)(string_range &, void *), void *datap
 ) {
     if (use_in == subprocess_stream::STDOUT) {
         throw subprocess_error{"could not redirect stdin to stdout"};
     }
 
-    auto argp = std::make_unique<char *[]>(args.size() + 1);
-    for (std::size_t i = 0; i < args.size(); ++i) {
-        argp[i] = const_cast<char *>(args[i].data());
+    struct argpv {
+        char *cmd = nullptr;
+        std::vector<char *> vec;
+        ~argpv() {
+            auto vs = vec.size();
+            if (!vs) {
+                return;
+            }
+            if (cmd && (cmd != vec[0])) {
+                delete[] cmd;
+            }
+            for (std::size_t i = 0; i < (vs - 1); ++i) {
+                delete[] vec[i];
+            }
+        }
+    } argp;
+
+    for (string_range r; func(r, datap);) {
+        auto sz = r.size();
+        char *str = new char[sz + 1];
+        string_range::traits_type::copy(str, r.data(), sz)[sz] = '\0';
+        argp.vec.push_back(str);
     }
-    argp[args.size()] = nullptr;
+
+    if (argp.vec.empty()) {
+        throw subprocess_error{"no arguments given"};
+    }
+
+    if (cmd.empty()) {
+        argp.cmd = argp.vec[0];
+        if (!*argp.cmd) {
+            throw subprocess_error{"no command given"};
+        }
+    } else {
+        auto sz = cmd.size();
+        char *str = new char[sz + 1];
+        string_range::traits_type::copy(str, cmd.data(), sz)[sz] = '\0';
+        argp.cmd = str;
+    }
+
+    /* terminate */
+    argp.vec.push_back(nullptr);
 
     /* fd_errno used to detect if exec failed */
     pipe fd_errno, fd_stdin, fd_stdout, fd_stderr;
@@ -189,9 +226,9 @@ OSTD_EXPORT void subprocess::open_impl(
             }
         }
         if (use_path) {
-            execvp(cmd.data(), argp.get());
+            execvp(argp.cmd, argp.vec.data());
         } else {
-            execv(cmd.data(), argp.get());
+            execv(argp.cmd, argp.vec.data());
         }
         /* exec has returned, so error has occured */
         fd_errno.write_errno();

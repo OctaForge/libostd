@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <windows.h>
 
+#include "ostd/algprithm.hh"
 #include "ostd/process.hh"
 #include "ostd/format.hh"
 
@@ -237,47 +238,93 @@ static std::wstring resolve_file(wchar_t const *cmd) {
  *
  * we need to replicate this awful behavior here, hence the extra code
  */
-static std::string concat_args(std::vector<std::string> const &args) {
+static std::unique_ptr<wchar_t[]> concat_args(
+    string_range cmd, bool (*func)(string_range &, void *), void *datap,
+    std::wstring &cmdpath
+) {
     std::string ret;
-    for (auto &s: args) {
+
+    string_range p;
+    if (!func(p, datap)) {
+        throw subprocess_error{"no arguments given"};
+    }
+    if (!cmd.size()) {
+        cmd = p;
+        if (!cmd.size()) {
+            throw subprocess_error{"no command given"};
+        }
+    }
+
+    /* convert and optionally resolve PATH and other lookup locations */
+    {
+        std::unique_ptr<wchar_t[]> wcmd{new wchar_t[cmd.size() + 1]};
+        auto req = MultiByteToWideChar(
+            CP_UTF8, 0, cmd.data(), cmd.size(), wcmd.get(), cmd.size() + 1
+        );
+        if (!req) {
+            throw subprocess_error{"unicode conversion failed"};
+        }
+        wcmd.get()[req] = '\0';
+        if (!use_path) {
+            cmdpath = wcmd.get();
+        } else {
+            cmdpath = resolve_file(wcmd.get());
+        }
+    }
+
+    /* concat the args */
+    for (bool has = true; has; has = func(p, datap)) {
         if (!ret.empty()) {
             ret += ' ';
         }
         ret += '\"';
-        for (char const *sp = s.data();;) {
-            char const *p = strpbrk(sp, "\"\\");
-            if (!p) {
-                ret += sp;
+        for (;;) {
+            auto found = ostd::find_one_of(p, string_range{"\"\\"});
+            if (found.empty()) {
+                ret.append(p.iter_begin(), p.iter_end());
                 break;
             }
-            ret.append(sp, p);
-            if (*p == '\"') {
+            auto sl = p.slice(0, p.size() - found.size());
+            ret.append(sl.iter_begin(), sl.iter_end());
+            if (found.front() == '\"') {
                 /* not preceded by \, so it's safe */
                 ret += "\\\"";
-                ++p;
+                found.pop_front();
             } else {
                 /* handle any sequence of \ optionally followed by a " */
-                char const *op = p;
-                while (*p == '\\') {
-                    ++p;
+                std::size_t nsl = 0;
+                while (found.front() == '\\') {
+                    ++nsl;
+                    found.pop_front();
                 }
-                if (*p == '\"') {
+                if (!found.empty() && (found.front() == '\"')) {
                     /* double all the backslashes plus one for the " */
-                    ret.append((p - op) * 2 + 1, '\\');
+                    ret.append(nsl * 2 + 1, '\\');
                     ret += '\"';
                 } else {
-                    ret.append(p - op, '\\');
+                    /* double if the backslashes were at the end of the arg */
+                    ret.append(nsl * (found.empty() + 1), '\\');
                 }
             }
-            sp = p;
+            p = found;
         }
         ret += '\"';
     }
-    return ret;
+
+    /* convert to UTF-16 */
+    std::unique_ptr<wchar_t[]> cmdline{new wchar_t[ret.size() + 1]};
+    if (!MultiByteToWideChar(
+        CP_UTF8, 0, ret.data(), ret.size() + 1, cmdline.get(), ret.size() + 1
+    )) {
+        throw subprocess_error{"unicode conversion failed"};
+    }
+
+    return cmdline;
 }
 
 OSTD_EXPORT void subprocess::open_impl(
-    std::string const &cmd, std::vector<std::string> const &args, bool use_path
+    bool use_path, string_range cmd,
+    bool (*func)(string_range &, void *), void *datap
 ) {
     if (use_in == subprocess_stream::STDOUT) {
         throw subprocess_error{"could not redirect stdin to stdout"};
@@ -369,30 +416,7 @@ OSTD_EXPORT void subprocess::open_impl(
     si.dwFlags |= STARTF_USESTDHANDLES;
 
     std::wstring cmdpath;
-    /* convert and optionally resolve PATH and other lookup locations */
-    {
-        std::unique_ptr<wchar_t[]> wcmd{new wchar_t[cmd.size() + 1]};
-        if (!MultiByteToWideChar(
-            CP_UTF8, 0, cmd.data(), cmd.size() + 1, wcmd.get(), cmd.size() + 1
-        )) {
-            throw subprocess_error{"unicode conversion failed"};
-        }
-        if (!use_path) {
-            cmdpath = wcmd.get();
-        } else {
-            cmdpath = resolve_file(wcmd.get());
-        }
-    }
-
-    /* cmdline gets an ordinary conversion... */
-    auto astr = concat_args(args);
-
-    std::unique_ptr<wchar_t[]> cmdline{new wchar_t[astr.size() + 1]};
-    if (!MultiByteToWideChar(
-        CP_UTF8, 0, astr.data(), astr.size() + 1, cmdline.get(), astr.size() + 1
-    )) {
-        throw subprocess_error{"unicode conversion failed"};
-    }
+    auto cmdline = concat_args(cmd, func, datap, cmdpath);
 
     /* owned by CreateProcess, do not close explicitly */
     pipe_in.p_r = nullptr;
