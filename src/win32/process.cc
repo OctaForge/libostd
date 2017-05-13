@@ -324,7 +324,8 @@ static std::unique_ptr<wchar_t[]> concat_args(
 
 OSTD_EXPORT void subprocess::open_impl(
     bool use_path, string_range cmd,
-    bool (*func)(string_range &, void *), void *datap
+    bool (*func)(string_range &, void *), void *datap,
+    bool (*efunc)(string_range &, void *), void *edatap
 ) {
     if (use_in == subprocess_stream::STDOUT) {
         throw subprocess_error{"could not redirect stdin to stdout"};
@@ -418,6 +419,40 @@ OSTD_EXPORT void subprocess::open_impl(
     std::wstring cmdpath;
     auto cmdline = concat_args(cmd, func, datap, cmdpath);
 
+    std::wstring envstr;
+    if (edatap) {
+        for (string_range r; efunc(r, edatap);) {
+            std::unique_ptr<wchar_t[]> wr{new wchar_t[r.size() + 1]};
+            auto req = MultiByteToWideChar(
+                CP_UTF8, 0, r.data(), r.size(), wr.get(), wr.size() + 1
+            );
+            if (!req) {
+                throw subprocess_error{"unicode conversion failed"};
+            }
+            wr.get()[req] = L'\0';
+            /* include terminating zero */
+            envstr.append(wr.get(), req + 1);
+        }
+    } else {
+        struct env_guard {
+            wchar_t *envp = nullptr;
+            env_guard() {
+                envp = GetEnvironmentStringsW();
+                if (!envp) {
+                    throw subprocess_error{"could not get environment block"};
+                }
+            }
+            ~env_guard() {
+                FreeEnvironmentStrings(envp);
+            }
+        } envs;
+        wchar_t *endp = envs.envp;
+        while (*endp) {
+            endp += wcslen(endp) + 1;
+        }
+        envstr.append(envs.envp, std::size_t(endp - envs.envp));
+    }
+
     /* owned by CreateProcess, do not close explicitly */
     pipe_in.p_r = nullptr;
     pipe_out.p_w = nullptr;
@@ -432,8 +467,8 @@ OSTD_EXPORT void subprocess::open_impl(
         nullptr,          /* process security attributes */
         nullptr,          /* primary thread security attributes */
         true,             /* inherit handles */
-        CREATE_SUSPENDED, /* creation flags */
-        nullptr,          /* use parent env */
+        CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT, /* creation flags */
+        envstr.data(),    /* use parent env */
         nullptr,          /* use parent cwd */
         &si,
         &pi

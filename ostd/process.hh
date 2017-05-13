@@ -107,6 +107,10 @@ enum class subprocess_stream {
  * as well as the `exec` family of functions.
  */
 struct OSTD_EXPORT subprocess {
+private:
+    struct nat {};
+
+public:
     /** @brief The standard input redirection mode.
      *
      * The value is one of ostd::subprocess_stream. Set this before opening
@@ -192,19 +196,20 @@ struct OSTD_EXPORT subprocess {
      * after constructing the object depending on `use_path`. It may
      * throw the same exceptions as the respective two methods.
      */
-    template<typename InputRange>
+    template<typename InputRange1, typename InputRange2>
     subprocess(
-        string_range cmd, InputRange &&args, bool use_path = true,
+        string_range cmd, InputRange1 &&args, InputRange2 &&envs,
+        bool use_path = true,
         subprocess_stream  in_use = subprocess_stream::DEFAULT,
         subprocess_stream out_use = subprocess_stream::DEFAULT,
-        subprocess_stream err_use = subprocess_stream::DEFAULT,
-        std::enable_if_t<
-            is_input_range<InputRange>, bool
-        > = true
+        subprocess_stream err_use = subprocess_stream::DEFAULT
     ):
         use_in(in_use), use_out(out_use), use_err(err_use)
     {
-        open_full(cmd, std::forward<InputRange>(args), use_path);
+        open_full(
+            cmd, std::forward<InputRange1>(args),
+            std::forward<InputRange2>(envs), use_path
+        );
     }
 
     /** @brief Initializes the structure and opens a subprocess.
@@ -213,19 +218,16 @@ struct OSTD_EXPORT subprocess {
      * after constructing the object depending on `use_path`. It may
      * throw the same exceptions as the respective two methods.
      */
-    template<typename InputRange>
+    template<typename InputRange1>
     subprocess(
-        InputRange &&args, bool use_path = true,
+        string_range cmd, InputRange1 &&args, bool use_path = true,
         subprocess_stream  in_use = subprocess_stream::DEFAULT,
         subprocess_stream out_use = subprocess_stream::DEFAULT,
-        subprocess_stream err_use = subprocess_stream::DEFAULT,
-        std::enable_if_t<
-            is_input_range<InputRange>, bool
-        > = true
+        subprocess_stream err_use = subprocess_stream::DEFAULT
     ):
         use_in(in_use), use_out(out_use), use_err(err_use)
     {
-        open_full(nullptr, std::forward<InputRange>(args), use_path);
+        open_full(cmd, std::forward<InputRange1>(args), nullptr, use_path);
     }
 
     /** @brief Moves the subprocess data. */
@@ -297,6 +299,12 @@ struct OSTD_EXPORT subprocess {
      *
      * If `path` is empty, the first element of `args` is used.
      *
+     * The `envs` argument represents a range of string-like types just like
+     * `args` and each string represents an environment variable of the
+     * subprocess, in format `name=value`. If you do not want to specify
+     * custom environment variables, use an overload without the `envs`
+     * argument - the child process will inherit its parent's environment.
+     *
      * If this fails for any reason, ostd::subprocess_error will be thrown.
      * Having another child process running is considered a failure, so
      * use close() or detach() before opening another.
@@ -309,15 +317,18 @@ struct OSTD_EXPORT subprocess {
      *
      * @see open_command(), close()
      */
-    template<typename InputRange>
-    void open_path(string_range path, InputRange &&args) {
-        open_full(path, std::forward<InputRange>(args), false);
+    template<typename InputRange1, typename InputRange2>
+    void open_path(string_range path, InputRange1 &&args, InputRange2 &&envs) {
+        open_full(
+            path, std::forward<InputRange1>(args),
+            std::forward<InputRange2>(envs), false
+        );
     }
 
-    /** @brief Like open_path() with an empty first argument. */
+    /** @brief See the main open_path() documentation. */
     template<typename InputRange>
-    void open_path(InputRange &&args) {
-        open_path(nullptr, std::forward<InputRange>(args));
+    void open_path(string_range path, InputRange &&args) {
+        open_full(path, std::forward<InputRange>(args), nullptr, false);
     }
 
     /** @brief Opens a subprocess using the given arguments.
@@ -331,6 +342,12 @@ struct OSTD_EXPORT subprocess {
      *
      * If `cmd` is empty, the first element of `args` is used.
      *
+     * The `envs` argument represents a range of string-like types just like
+     * `args` and each string represents an environment variable of the
+     * subprocess, in format `name=value`. If you do not want to specify
+     * custom environment variables, use an overload without the `envs`
+     * argument - the child process will inherit its parent's environment.
+     *
      * If this fails for any reason, ostd::subprocess_error will be thrown.
      * Having another child process running is considered a failure, so
      * use close() or detach() before opening another.
@@ -343,15 +360,18 @@ struct OSTD_EXPORT subprocess {
      *
      * @see open_path(), close()
      */
-    template<typename InputRange>
-    void open_command(string_range cmd, InputRange &&args) {
-        open_full(cmd, std::forward<InputRange>(args), true);
+    template<typename InputRange1, typename InputRange2>
+    void open_command(string_range cmd, InputRange1 &&args, InputRange2 &&envs) {
+        open_full(
+            cmd, std::forward<InputRange1>(args),
+            std::forward<InputRange2>(envs), true
+        );
     }
 
-    /** @brief Like open_command() with an empty first argument. */
+    /** @brief See the main open_command() documentation. */
     template<typename InputRange>
-    void open_command(InputRange &&args) {
-        open_command(nullptr, std::forward<InputRange>(args));
+    void open_command(string_range cmd, InputRange &&args) {
+        open_full(cmd, std::forward<InputRange>(args), nullptr, true);
     }
 
     /** @brief Detaches the child process.
@@ -380,31 +400,60 @@ struct OSTD_EXPORT subprocess {
     }
 
 private:
-    template<typename InputRange>
-    void open_full(string_range cmd, InputRange args, bool use_path) {
+    template<typename InputRange1, typename InputRange2>
+    void open_full(
+        string_range cmd, InputRange1 args, InputRange2 env, bool use_path
+    ) {
         static_assert(
-            std::is_constructible_v<string_range, range_reference_t<InputRange>>,
+            std::is_constructible_v<
+                string_range, range_reference_t<InputRange1>
+            >,
             "The arguments must be strings"
         );
+        if constexpr(!std::is_null_pointer_v<InputRange2>) {
+            static_assert(
+                std::is_constructible_v<
+                    string_range, range_reference_t<InputRange2>
+                >,
+                "The environment variables must be strings"
+            );
+        }
 
         if (p_current) {
             throw subprocess_error{"another child process already running"};
         }
 
-        open_impl(use_path, cmd, [](string_range &arg, void *data) {
-            InputRange &argr = *static_cast<InputRange *>(data);
+        auto argf = [](string_range &arg, void *data) {
+            InputRange1 &argr = *static_cast<InputRange1 *>(data);
             if (argr.empty()) {
                 return false;
             }
             arg = string_range{argr.front()};
             argr.pop_front();
             return true;
-        }, &args);
+        };
+        bool (*envf)(string_range &, void *) = nullptr;
+        void *argp = &args, *envp = nullptr;
+
+        if constexpr(!std::is_null_pointer_v<InputRange2>) {
+            envf = [](string_range envv, void *data) {
+                InputRange2 &envr = *static_cast<InputRange2 *>(data);
+                if (envr.empty()) {
+                    return false;
+                }
+                envv = string_range{envr.front()};
+                envr.pop_front();
+                return true;
+            };
+            envp = &env;
+        }
+        open_impl(use_path, cmd, argf, argp, envf, envp);
     }
 
     void open_impl(
         bool use_path, string_range cmd,
-        bool (*func)(string_range &, void *), void *data
+        bool (*func)(string_range &, void *), void *data,
+        bool (*efunc)(string_range &, void *), void *edatap
     );
 
     void reset();
