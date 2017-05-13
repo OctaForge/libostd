@@ -140,7 +140,7 @@ struct pipe {
  * makes this kind of easy, but it's still a lot of code I'd rather
  * not write... oh well
  */
-static std::wstring resolve_file(wchar_t const *cmd) {
+static std::unique_ptr<wchar_t[]> resolve_file(std::unique_ptr<wchar_t[]> cmd) {
     /* a reused buffer, TODO: allow longer paths */
     wchar_t buf[1024];
 
@@ -149,7 +149,14 @@ static std::wstring resolve_file(wchar_t const *cmd) {
         return (fs::is_regular_file(st) || fs::is_symlink(st));
     };
 
-    fs::path p{cmd};
+    auto get_unique = [](fs::path const &p) {
+        auto const &s = p.native();
+        std::unique_ptr<wchar_t[]> ret{new wchar_t[s.size() + 1]};
+        std::wstring::traits_type::copy(ret.get(), s.data(), s.size() + 1);
+        return ret;
+    };
+
+    fs::path p{cmd.get()};
     /* deal with some easy cases */
     if ((p.filename() != p) || (p == L".") || (p == L"..")) {
         return cmd;
@@ -163,28 +170,28 @@ static std::wstring resolve_file(wchar_t const *cmd) {
         fs::path rp{buf};
         rp.replace_filename(p);
         if (is_maybe_exec(rp)) {
-            return rp.native();
+            return get_unique(rp);
         }
     }
     /* the current directory */
     {
         auto rp = fs::path{L"."} / p;
         if (is_maybe_exec(rp)) {
-            return rp.native();
+            return get_unique(rp);
         }
     }
     /* the system directory */
     if (GetSystemDirectoryW(buf, sizeof(buf))) {
         auto rp = fs::path{buf} / p;
         if (is_maybe_exec(rp)) {
-            return rp.native();
+            return get_unique(rp);
         }
     }
     /* the windows directory */
     if (GetWindowsDirectoryW(buf, sizeof(buf))) {
         auto rp = fs::path{buf} / p;
         if (is_maybe_exec(rp)) {
-            return rp.native();
+            return get_unique(rp);
         }
     }
     /* the PATH envvar */
@@ -222,7 +229,7 @@ static std::wstring resolve_file(wchar_t const *cmd) {
                 envp = sp + 1;
             }
             if (is_maybe_exec(rp)) {
-                return rp.native();
+                return get_unique(rp);
             }
         }
     }
@@ -240,7 +247,7 @@ static std::wstring resolve_file(wchar_t const *cmd) {
  */
 static std::unique_ptr<wchar_t[]> concat_args(
     string_range cmd, bool (*func)(string_range &, void *), void *datap,
-    std::wstring &cmdpath
+    std::unique_ptr<wchar_t[]> &cmdpath
 ) {
     std::string ret;
 
@@ -266,9 +273,9 @@ static std::unique_ptr<wchar_t[]> concat_args(
         }
         wcmd.get()[req] = '\0';
         if (!use_path) {
-            cmdpath = wcmd.get();
+            cmdpath = std::move(wcmd);
         } else {
-            cmdpath = resolve_file(wcmd.get());
+            cmdpath = resolve_file(std::move(wcmd));
         }
     }
 
@@ -416,7 +423,7 @@ OSTD_EXPORT void subprocess::open_impl(
     }
     si.dwFlags |= STARTF_USESTDHANDLES;
 
-    std::wstring cmdpath;
+    std::unique_ptr<wchar_t[]> cmdpath;
     auto cmdline = concat_args(cmd, func, datap, cmdpath);
 
     std::wstring envstr;
@@ -462,7 +469,7 @@ OSTD_EXPORT void subprocess::open_impl(
      * actually start when job assignment ends up failing...
      */
     auto success = CreateProcessW(
-        cmdpath.data(),
+        cmdpath.get(),
         cmdline.get(),
         nullptr,          /* process security attributes */
         nullptr,          /* primary thread security attributes */
