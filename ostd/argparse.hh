@@ -24,6 +24,7 @@
 #include "ostd/algorithm.hh"
 #include "ostd/format.hh"
 #include "ostd/string.hh"
+#include "ostd/io.hh"
 
 namespace ostd {
 
@@ -44,7 +45,9 @@ enum class arg_type {
 enum class arg_value {
     NONE = 0,
     REQUIRED,
-    OPTIONAL
+    OPTIONAL,
+    ALL,
+    REST
 };
 
 struct arg_parser;
@@ -59,7 +62,12 @@ struct arg_argument {
     virtual bool is_arg(string_range name) const = 0;
 
 protected:
-    arg_argument() {}
+    arg_argument(arg_value req = arg_value::NONE, int nargs = 1):
+        p_valreq(req), p_nargs(nargs)
+    {}
+
+    arg_value p_valreq;
+    int p_nargs;
 };
 
 struct arg_optional: arg_argument {
@@ -88,14 +96,17 @@ struct arg_optional: arg_argument {
     }
 
 protected:
-    arg_optional(char short_name, string_range long_name, arg_value req):
-        p_lname(long_name), p_valreq(req), p_sname(short_name)
+    arg_optional() = delete;
+    arg_optional(
+        char short_name, string_range long_name,
+        arg_value req, int nargs = 1
+    ):
+        arg_argument(req, nargs), p_lname(long_name), p_sname(short_name)
     {}
 
 private:
     std::optional<std::string> p_value;
     std::string p_lname;
-    arg_value p_valreq;
     char p_sname;
 };
 
@@ -109,6 +120,18 @@ struct arg_positional: arg_argument {
     bool is_arg(string_range) const {
         return false;
     }
+
+protected:
+    arg_positional() = delete;
+    arg_positional(
+        string_range name, arg_value req = arg_value::REQUIRED, int nargs = 1
+    ):
+        arg_argument(req, nargs),
+        p_name(name)
+    {}
+
+private:
+    std::string p_name;
 };
 
 struct arg_category: arg_argument {
@@ -121,10 +144,30 @@ struct arg_category: arg_argument {
     bool is_arg(string_range) const {
         return false;
     }
+
+protected:
+    arg_category() = delete;
+    arg_category(
+        string_range name
+    ):
+        p_name(name)
+    {}
+
+private:
+    std::string p_name;
 };
 
 struct arg_parser {
-    arg_parser() {}
+    arg_parser(string_range progname = string_range{}):
+        p_progname(progname)
+    {}
+
+    void parse(int argc, char **argv) {
+        if (p_progname.empty()) {
+            p_progname = argv[0];
+        }
+        parse(iter(&argv[1], &argv[argc]));
+    }
 
     template<typename InputRange>
     void parse(InputRange args) {
@@ -171,7 +214,76 @@ struct arg_parser {
         return static_cast<arg_category &>(*p_opts.emplace_back(p));
     }
 
+    template<typename OutputRange>
+    OutputRange &&print_help(OutputRange &&range) {
+        print_usage_impl(range);
+        print_help_impl(range);
+        return std::forward<OutputRange>(range);
+    }
+
+    void print_help() {
+        print_help(cout.iter());
+    }
+
 private:
+    template<typename OR>
+    void print_usage_impl(OR &out) {
+        string_range progname = p_progname;
+        if (progname.empty()) {
+            progname = "program";
+        }
+        format(out, "usage: %s [opts] [args]\n", progname);
+    }
+
+    template<typename OR>
+    void print_help_impl(OR &out) {
+        bool has_opt = false, has_pos = false;
+        for (auto &p: p_opts) {
+            switch (p->type()) {
+                case arg_type::OPTIONAL:
+                    has_opt = true;
+                    break;
+                case arg_type::POSITIONAL:
+                    has_pos = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if (has_pos) {
+            format(out, "\npositional arguments:\n");
+            for (auto &p: p_opts) {
+                if (p->type() != arg_type::POSITIONAL) {
+                    continue;
+                }
+                auto &parg = static_cast<arg_positional &>(*p.get());
+                format(out, "  %s\n", parg.p_name);
+            }
+        }
+
+        if (has_opt) {
+            format(out, "\noptional arguments:\n");
+            for (auto &p: p_opts) {
+                if (p->type() != arg_type::OPTIONAL) {
+                    continue;
+                }
+                auto &parg = static_cast<arg_optional &>(*p.get());
+                format(out, "  ");
+                if (parg.p_sname) {
+                    format(out, "-%c", parg.p_sname);
+                    if (!parg.p_lname.empty()) {
+                        format(out, ", ");
+                    }
+                }
+                if (!parg.p_lname.empty()) {
+                    format(out, "--%s", parg.p_lname);
+                }
+                out.put('\n');
+            }
+        }
+    }
+
     template<typename R>
     void parse_long(string_range arg, R &args) {
         string_range val = find(arg, '=');
@@ -188,7 +300,7 @@ private:
         if (needs == arg_value::NONE) {
             if (has_val) {
                 throw arg_error{format(
-                    appender<std::string>(), "argument '%s' takes no value",
+                    appender<std::string>(), "argument '--%s' takes no value",
                     desc.p_lname
                 ).get()};
             }
@@ -198,7 +310,7 @@ private:
             if (args.empty()) {
                 if (needs == arg_value::REQUIRED) {
                     throw arg_error{format(
-                        appender<std::string>(), "argument '%s' needs a value",
+                        appender<std::string>(), "argument '--%s' needs a value",
                         desc.p_lname
                     ).get()};
                 }
@@ -287,6 +399,7 @@ private:
     }
 
     std::vector<std::unique_ptr<arg_argument>> p_opts;
+    std::string p_progname;
 };
 
 /** @} */
