@@ -116,7 +116,7 @@ struct arg_optional: arg_argument {
     arg_optional &action(F func) {
         p_action = [func = std::move(func)](
             iterator_range<string_range const *> vals
-        ) -> std::any {
+        ) mutable -> std::any {
             return func(vals);
         };
         return *this;
@@ -278,6 +278,21 @@ struct arg_parser {
     }
 
     template<typename OutputRange>
+    arg_optional &add_help(OutputRange out, string_range msg) {
+        auto &opt = add_optional('h', "help", arg_value::NONE);
+        opt.help(msg);
+        opt.action([this, out = std::move(out)](auto) mutable {
+            this->print_help(out);
+            return true;
+        });
+        return opt;
+    }
+
+    arg_optional &add_help(string_range msg) {
+        return add_help(cout.iter(), msg);
+    }
+
+    template<typename OutputRange>
     OutputRange &&print_help(OutputRange &&range) {
         print_usage_impl(range);
         print_help_impl(range);
@@ -296,6 +311,11 @@ struct arg_parser {
     T &get(string_range name) {
         auto &arg = find_arg<arg_optional>(name);
         return std::any_cast<T &>(arg.p_value);
+    }
+
+    bool used(string_range name) {
+        auto &arg = find_arg<arg_optional>(name);
+        return arg.p_value.has_value();
     }
 
 private:
@@ -415,6 +435,7 @@ private:
                     desc.p_lname
                 ).get()};
             }
+            desc.set_values(nullptr);
             return;
         }
         if (!has_val) {
@@ -425,6 +446,7 @@ private:
                         desc.p_lname
                     ).get()};
                 }
+                desc.set_values(nullptr);
                 return;
             }
             string_range tval = args.front();
@@ -438,6 +460,8 @@ private:
             if (arg_val) {
                 args.pop_front();
             }
+        } else {
+            desc.set_values(nullptr);
         }
     }
 
@@ -461,6 +485,7 @@ private:
                     desc.p_sname
                 ).get()};
             }
+            desc.set_values(nullptr);
             return;
         }
         if (!has_val) {
@@ -471,6 +496,7 @@ private:
                         desc.p_sname
                     ).get()};
                 }
+                desc.set_values(nullptr);
                 return;
             }
             string_range tval = args.front();
@@ -484,6 +510,8 @@ private:
             if (arg_val) {
                 args.pop_front();
             }
+        } else {
+            desc.set_values(nullptr);
         }
     }
 
@@ -513,6 +541,49 @@ private:
     std::vector<std::unique_ptr<arg_description>> p_opts;
     std::string p_progname;
 };
+
+template<typename OutputRange>
+auto arg_print_help(OutputRange o, arg_parser &p) {
+    struct cb {
+        cb(OutputRange orange, arg_parser &par):
+            p(par), out(orange)
+        {}
+
+        bool operator()(iterator_range<string_range const *>) {
+            p.print_help(out);
+            return true;
+        }
+    private:
+        arg_parser &p;
+        OutputRange out;
+    };
+    return cb{o, p};
+};
+
+auto arg_print_help(arg_parser &p) {
+    return arg_print_help(cout.iter(), p);
+}
+
+template<typename T>
+auto arg_store_const(T &&val) {
+    struct cb {
+        cb(T &&cval): value(std::forward<T>(cval)) {}
+        std::decay_t<T> operator()(iterator_range<string_range const *>) {
+            return std::move(value);
+        }
+    private:
+        std::decay_t<T> value;
+    };
+    return cb{std::forward<T>(val)};
+}
+
+auto arg_store_true() {
+    return arg_store_const(true);
+}
+
+auto arg_store_false() {
+    return arg_store_const(false);
+}
 
 /** @} */
 
