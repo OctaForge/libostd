@@ -112,14 +112,43 @@ struct arg_optional: arg_argument {
         return p_valreq;
     }
 
+    template<typename T>
+    arg_optional &value(T &&val) {
+        p_value = std::forward<T>(val);
+    }
+
     template<typename F>
     arg_optional &action(F func) {
-        p_action = [func = std::move(func)](
+        p_action = [this, func = std::move(func)](
             iterator_range<string_range const *> vals
-        ) mutable -> std::any {
-            return func(vals);
+        ) mutable {
+            p_value = func(vals);
         };
         return *this;
+    }
+
+    template<typename F, typename T>
+    arg_optional &action(F func, T &vref) {
+        p_action = [this, &vref, func = std::move(func)](
+            iterator_range<string_range const *> vals
+        ) mutable {
+            vref = func(vals);
+            p_value = true;
+        };
+        return *this;
+    }
+
+    template<typename F, typename T>
+    arg_optional &action(std::pair<F, T> p) {
+        p_value = std::move(p.second);
+        return action(std::move(p.first));
+    }
+
+    template<typename F, typename T, typename U>
+    arg_optional &action(std::pair<F, T> p, U &vref) {
+        vref = std::move(p.second);
+        p_value = false;
+        return action(std::move(p.first), vref);
     }
 
     arg_optional &help(string_range str) {
@@ -141,7 +170,7 @@ protected:
 
     void set_values(iterator_range<string_range const *> vals) {
         if (p_action) {
-            p_value = p_action(vals);
+            p_action(vals);
         } else {
             switch (vals.size()) {
                 case 0:
@@ -164,7 +193,7 @@ protected:
 
 private:
     std::any p_value;
-    std::function<std::any(iterator_range<string_range const *>)> p_action;
+    std::function<void(iterator_range<string_range const *>)> p_action;
     std::string p_lname;
     char p_sname;
 };
@@ -544,20 +573,12 @@ private:
 
 template<typename OutputRange>
 auto arg_print_help(OutputRange o, arg_parser &p) {
-    struct cb {
-        cb(OutputRange orange, arg_parser &par):
-            p(par), out(orange)
-        {}
-
-        bool operator()(iterator_range<string_range const *>) {
-            p.print_help(out);
-            return true;
-        }
-    private:
-        arg_parser &p;
-        OutputRange out;
+    return [o = std::move(o), &p](iterator_range<string_range const *>)
+        mutable
+    {
+        p.print_help(o);
+        return true;
     };
-    return cb{o, p};
 };
 
 auto arg_print_help(arg_parser &p) {
@@ -566,23 +587,17 @@ auto arg_print_help(arg_parser &p) {
 
 template<typename T>
 auto arg_store_const(T &&val) {
-    struct cb {
-        cb(T &&cval): value(std::forward<T>(cval)) {}
-        std::decay_t<T> operator()(iterator_range<string_range const *>) {
-            return std::move(value);
-        }
-    private:
-        std::decay_t<T> value;
+    return [val](iterator_range<string_range const *>) mutable {
+        return std::move(val);
     };
-    return cb{std::forward<T>(val)};
 }
 
 auto arg_store_true() {
-    return arg_store_const(true);
+    return std::make_pair(arg_store_const(true), false);
 }
 
 auto arg_store_false() {
-    return arg_store_const(false);
+    return std::make_pair(arg_store_const(false), true);
 }
 
 /** @} */
