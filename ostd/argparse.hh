@@ -16,7 +16,6 @@
 #ifndef OSTD_ARGPARSE_HH
 #define OSTD_ARGPARSE_HH
 
-#include <any>
 #include <vector>
 #include <memory>
 #include <stdexcept>
@@ -112,9 +111,8 @@ struct arg_optional: arg_argument {
         return p_valreq;
     }
 
-    template<typename T>
-    arg_optional &value(T &&val) {
-        p_value = std::forward<T>(val);
+    bool used() const {
+        return p_used;
     }
 
     template<typename F>
@@ -122,33 +120,10 @@ struct arg_optional: arg_argument {
         p_action = [this, func = std::move(func)](
             iterator_range<string_range const *> vals
         ) mutable {
-            p_value = func(vals);
+            func(vals);
+            p_used = true;
         };
         return *this;
-    }
-
-    template<typename F, typename T>
-    arg_optional &action(F func, T &vref) {
-        p_action = [this, &vref, func = std::move(func)](
-            iterator_range<string_range const *> vals
-        ) mutable {
-            vref = func(vals);
-            p_value = true;
-        };
-        return *this;
-    }
-
-    template<typename F, typename T>
-    arg_optional &action(std::pair<F, T> p) {
-        p_value = std::move(p.second);
-        return action(std::move(p.first));
-    }
-
-    template<typename F, typename T, typename U>
-    arg_optional &action(std::pair<F, T> p, U &vref) {
-        vref = std::move(p.second);
-        p_value = false;
-        return action(std::move(p.first), vref);
     }
 
     arg_optional &help(string_range str) {
@@ -172,30 +147,15 @@ protected:
         if (p_action) {
             p_action(vals);
         } else {
-            switch (vals.size()) {
-                case 0:
-                    p_value = true;
-                    break;
-                case 1:
-                    p_value = std::string{vals.front()};
-                    break;
-                default: {
-                    std::vector<std::string> strs;
-                    strs.reserve(vals.size());
-                    for (auto s: vals) {
-                        strs.emplace_back(s);
-                    }
-                    p_value = std::move(strs);
-                }
-            }
+            p_used = true;
         }
     }
 
 private:
-    std::any p_value;
     std::function<void(iterator_range<string_range const *>)> p_action;
     std::string p_lname;
     char p_sname;
+    bool p_used = false;
 };
 
 struct arg_positional: arg_argument {
@@ -336,15 +296,9 @@ struct arg_parser {
         return find_arg<arg_argument>(name);
     }
 
-    template<typename T>
-    T &get(string_range name) {
-        auto &arg = find_arg<arg_optional>(name);
-        return std::any_cast<T &>(arg.p_value);
-    }
-
     bool used(string_range name) {
         auto &arg = find_arg<arg_optional>(name);
-        return arg.p_value.has_value();
+        return arg.p_used;
     }
 
 private:
@@ -577,7 +531,6 @@ auto arg_print_help(OutputRange o, arg_parser &p) {
         mutable
     {
         p.print_help(o);
-        return true;
     };
 };
 
@@ -585,19 +538,26 @@ auto arg_print_help(arg_parser &p) {
     return arg_print_help(cout.iter(), p);
 }
 
-template<typename T>
-auto arg_store_const(T &&val) {
-    return [val](iterator_range<string_range const *>) mutable {
-        return std::move(val);
+template<typename T, typename U>
+auto arg_store_const(T &&val, U &ref) {
+    return [val, &ref](iterator_range<string_range const *>) mutable {
+        ref = std::move(val);
     };
 }
 
-auto arg_store_true() {
-    return std::make_pair(arg_store_const(true), false);
+template<typename T>
+auto arg_store_str(T &ref) {
+    return [&ref](iterator_range<string_range const *> r) mutable {
+        ref = T{r[0]};
+    };
 }
 
-auto arg_store_false() {
-    return std::make_pair(arg_store_const(false), true);
+auto arg_store_true(bool &ref) {
+    return arg_store_const(true, ref);
+}
+
+auto arg_store_false(bool &ref) {
+    return arg_store_const(false, ref);
 }
 
 /** @} */
