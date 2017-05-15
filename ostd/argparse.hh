@@ -16,6 +16,7 @@
 #ifndef OSTD_ARGPARSE_HH
 #define OSTD_ARGPARSE_HH
 
+#include <any>
 #include <vector>
 #include <memory>
 #include <stdexcept>
@@ -106,7 +107,19 @@ struct arg_optional: arg_argument {
     }
 
     void set_value(string_range val) {
-        p_value = std::string{val};
+        if (p_action) {
+            p_value = p_action(val);
+        } else {
+            p_value = std::string{val};
+        }
+    }
+
+    template<typename F>
+    arg_optional &action(F func) {
+        p_action = [func = std::move(func)](string_range r) -> std::any {
+            return func(r);
+        };
+        return *this;
     }
 
 protected:
@@ -122,7 +135,8 @@ protected:
     {}
 
 private:
-    std::optional<std::string> p_value;
+    std::any p_value;
+    std::function<std::any(string_range)> p_action;
     std::string p_lname;
     char p_sname;
 };
@@ -134,8 +148,8 @@ struct arg_positional: arg_argument {
         return arg_type::POSITIONAL;
     }
 
-    bool is_arg(string_range) const {
-        return false;
+    bool is_arg(string_range name) const {
+        return (name == ostd::citer(p_name));
     }
 
 protected:
@@ -246,6 +260,16 @@ struct arg_parser {
         print_help(cout.iter());
     }
 
+    arg_argument &get(string_range name) {
+        return find_arg<arg_argument>(name);
+    }
+
+    template<typename T>
+    T &get(string_range name) {
+        auto &arg = find_arg<arg_optional>(name);
+        return std::any_cast<T &>(arg.p_value);
+    }
+
 private:
     template<typename OR>
     void print_usage_impl(OR &out) {
@@ -314,7 +338,7 @@ private:
             val.pop_front();
         }
 
-        auto &desc = static_cast<arg_optional &>(find_arg(arg));
+        auto &desc = find_arg<arg_optional>(arg);
 
         args.pop_front();
         auto needs = desc.needs_value();
@@ -360,7 +384,7 @@ private:
             arg = arg.slice(0, 2);
         }
 
-        auto &desc = static_cast<arg_optional &>(find_arg(arg));
+        auto &desc = find_arg<arg_optional>(arg);
 
         args.pop_front();
         auto needs = desc.needs_value();
@@ -409,8 +433,9 @@ private:
         return nullptr;
     }
 
-    arg_description &find_arg(string_range name) {
-        auto p = find_arg_ptr(name);
+    template<typename AT>
+    AT &find_arg(string_range name) {
+        auto p = static_cast<AT *>(find_arg_ptr(name));
         if (p) {
             return *p;
         }
