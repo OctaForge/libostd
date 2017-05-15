@@ -250,19 +250,19 @@ struct arg_parser {
 
     template<typename ...A>
     arg_optional &add_optional(A &&...args) {
-        arg_description *p = new arg_optional{std::forward<A>(args)...};
+        arg_description *p = new arg_optional(std::forward<A>(args)...);
         return static_cast<arg_optional &>(*p_opts.emplace_back(p));
     }
 
     template<typename ...A>
     arg_positional &add_positional(A &&...args) {
-        arg_description *p = new arg_positional{std::forward<A>(args)...};
+        arg_description *p = new arg_positional(std::forward<A>(args)...);
         return static_cast<arg_positional &>(*p_opts.emplace_back(p));
     }
 
     template<typename ...A>
     arg_category &add_category(A &&...args) {
-        arg_description *p = new arg_category{std::forward<A>(args)...};
+        arg_description *p = new arg_category(std::forward<A>(args)...);
         return static_cast<arg_category &>(*p_opts.emplace_back(p));
     }
 
