@@ -52,18 +52,32 @@ enum class arg_value {
 
 struct arg_parser;
 
-struct arg_argument {
+struct arg_description {
     friend struct arg_parser;
 
-    virtual ~arg_argument() {}
+    virtual ~arg_description() {}
 
     virtual arg_type type() const = 0;
 
     virtual bool is_arg(string_range name) const = 0;
 
 protected:
+    arg_description() {}
+};
+
+struct arg_argument: arg_description {
+    friend struct arg_parser;
+
+protected:
     arg_argument(arg_value req = arg_value::NONE, int nargs = 1):
-        p_valreq(req), p_nargs(nargs)
+        arg_description(), p_valreq(req), p_nargs(nargs)
+    {}
+    arg_argument(int nargs):
+        arg_description(),
+        p_valreq((nargs > 0)
+            ? arg_value::REQUIRED
+            : ((nargs < 0) ? arg_value::ALL : arg_value::NONE)
+        ), p_nargs(nargs)
     {}
 
     arg_value p_valreq;
@@ -103,6 +117,9 @@ protected:
     ):
         arg_argument(req, nargs), p_lname(long_name), p_sname(short_name)
     {}
+    arg_optional(char short_name, string_range long_name, int nargs):
+        arg_argument(nargs), p_lname(long_name), p_sname(short_name)
+    {}
 
 private:
     std::optional<std::string> p_value;
@@ -129,12 +146,16 @@ protected:
         arg_argument(req, nargs),
         p_name(name)
     {}
+    arg_positional(string_range name, int nargs):
+        arg_argument(nargs),
+        p_name(name)
+    {}
 
 private:
     std::string p_name;
 };
 
-struct arg_category: arg_argument {
+struct arg_category: arg_description {
     friend struct arg_parser;
 
     arg_type type() const {
@@ -198,19 +219,19 @@ struct arg_parser {
 
     template<typename ...A>
     arg_optional &add_optional(A &&...args) {
-        arg_argument *p = new arg_optional{std::forward<A>(args)...};
+        arg_description *p = new arg_optional{std::forward<A>(args)...};
         return static_cast<arg_optional &>(*p_opts.emplace_back(p));
     }
 
     template<typename ...A>
     arg_positional &add_positional(A &&...args) {
-        arg_argument *p = new arg_positional{std::forward<A>(args)...};
+        arg_description *p = new arg_positional{std::forward<A>(args)...};
         return static_cast<arg_positional &>(*p_opts.emplace_back(p));
     }
 
     template<typename ...A>
     arg_category &add_category(A &&...args) {
-        arg_argument *p = new arg_category{std::forward<A>(args)...};
+        arg_description *p = new arg_category{std::forward<A>(args)...};
         return static_cast<arg_category &>(*p_opts.emplace_back(p));
     }
 
@@ -379,7 +400,7 @@ private:
     void parse_pos(string_range) {
     }
 
-    arg_argument *find_arg_ptr(string_range name) {
+    arg_description *find_arg_ptr(string_range name) {
         for (auto &p: p_opts) {
             if (p->is_arg(name)) {
                 return &*p;
@@ -388,7 +409,7 @@ private:
         return nullptr;
     }
 
-    arg_argument &find_arg(string_range name) {
+    arg_description &find_arg(string_range name) {
         auto p = find_arg_ptr(name);
         if (p) {
             return *p;
@@ -398,7 +419,7 @@ private:
         ).get()};
     }
 
-    std::vector<std::unique_ptr<arg_argument>> p_opts;
+    std::vector<std::unique_ptr<arg_description>> p_opts;
     std::string p_progname;
 };
 
