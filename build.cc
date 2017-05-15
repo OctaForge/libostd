@@ -15,6 +15,7 @@
 #include "ostd/filesystem.hh"
 #include "ostd/thread_pool.hh"
 #include "ostd/channel.hh"
+#include "ostd/argparse.hh"
 
 namespace fs = ostd::filesystem;
 
@@ -88,23 +89,6 @@ static void add_env(std::string &val, char const *evar) {
     val += varv;
 }
 
-static void print_help(ostd::string_range arg0) {
-    ostd::writef(
-        "%s [options]\n"
-        "Available options:\n"
-        "  [no-]examples   - (do not) build examples (default: yes)\n"
-        "  [no-]test-suite - (do not) build test suite (default: yes)\n"
-        "  [no-]static-lib - (do not) build static libostd (default: yes)\n"
-        "  [no-]shared-lib - (do not) build shared libostd (default: no)\n"
-        "  release         - release build (strip, no -g)\n"
-        "  debug           - debug build (default, no strip, -g)\n"
-        "  verbose         - print entire commands\n"
-        "  clean           - remove generated files and exit\n"
-        "  help            - print this and exit\n",
-        arg0
-    );
-}
-
 static void exec_command(strvec const &args) {
     if (int ret = ostd::subprocess{nullptr, ostd::iter(args)}.close(); ret) {
         throw std::runtime_error{ostd::format(
@@ -160,39 +144,49 @@ int main(int argc, char **argv) {
     std::string ldflags  = DEFAULT_LDFLAGS;
     std::string asflags  = DEFAULT_ASFLAGS;
 
-#define ARG_BOOL(arg, name, var) \
-    if ((arg == name) || (arg == "no-" name)) { \
-        var = (arg.substr(0, 3) != "-no"); \
-        continue; \
-    }
+    ostd::arg_parser ap;
 
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-        ARG_BOOL(arg, "examples", build_examples);
-        ARG_BOOL(arg, "test-suite", build_testsuite);
-        ARG_BOOL(arg, "static-lib", build_static);
-        ARG_BOOL(arg, "shared-lib", build_shared);
-        if ((arg == "release") || (arg == "debug")) {
-            build_cfg = arg;
-            continue;
-        }
-        if (arg == "verbose") {
-            verbose = true;
-            continue;
-        }
-        if (arg == "clean") {
-            clean = true;
-            continue;
-        }
-        if (arg == "help") {
-            print_help(argv[0]);
-            return 0;
-        }
-        ostd::writefln("unknown argument: %s", arg.data());
+    auto &help = ap.add_help("print this message and exit");
+
+    ap.add_optional('\0', "no-examples", ostd::arg_value::NONE)
+        .help("do not build examples")
+        .action(ostd::arg_store_false(build_examples));
+
+    ap.add_optional('\0', "no-test-suite", ostd::arg_value::NONE)
+        .help("do not build test suite")
+        .action(ostd::arg_store_false(build_testsuite));
+
+    ap.add_optional('\0', "no-static", ostd::arg_value::NONE)
+        .help("do not build static libostd")
+        .action(ostd::arg_store_false(build_static));
+
+    ap.add_optional('\0', "shared", ostd::arg_value::NONE)
+        .help("build shared libostd")
+        .action(ostd::arg_store_true(build_shared));
+
+    ap.add_optional('\0', "config", ostd::arg_value::REQUIRED)
+        .help("build configuration (debug/release)")
+        .action(ostd::arg_store_str(build_cfg));
+
+    ap.add_optional('v', "verbose", ostd::arg_value::NONE)
+        .help("print entire commands")
+        .action(ostd::arg_store_true(verbose));
+
+    ap.add_optional('\0', "clean", ostd::arg_value::NONE)
+        .help("remove generated files and exit")
+        .action(ostd::arg_store_true(clean));
+
+    try {
+        ap.parse(argc, argv);
+    } catch (ostd::arg_error const &e) {
+        ostd::cerr.writefln("argument parsing failed: %s", e.what());
+        ap.print_help(ostd::cerr.iter());
         return 1;
     }
 
-#undef ARG_BOOL
+    if (help.used()) {
+        return 0;
+    }
 
     std::string default_lib = OSTD_SHARED_LIB.string();
     if (build_static) {
