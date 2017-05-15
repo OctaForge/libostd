@@ -54,6 +54,7 @@ struct arg_parser;
 
 struct arg_description {
     friend struct arg_parser;
+    friend struct arg_description_container;
 
     virtual ~arg_description() {}
 
@@ -67,6 +68,7 @@ protected:
 
 struct arg_argument: arg_description {
     friend struct arg_parser;
+    friend struct arg_description_container;
 
     arg_argument &help(string_range str) {
         p_helpstr = std::string{str};
@@ -92,6 +94,7 @@ protected:
 
 struct arg_optional: arg_argument {
     friend struct arg_parser;
+    friend struct arg_description_container;
 
     arg_type type() const {
         return arg_type::OPTIONAL;
@@ -160,6 +163,7 @@ private:
 
 struct arg_positional: arg_argument {
     friend struct arg_parser;
+    friend struct arg_description_container;
 
     arg_type type() const {
         return arg_type::POSITIONAL;
@@ -188,6 +192,7 @@ private:
 
 struct arg_category: arg_description {
     friend struct arg_parser;
+    friend struct arg_description_container;
 
     arg_type type() const {
         return arg_type::CATEGORY;
@@ -209,9 +214,54 @@ private:
     std::string p_name;
 };
 
-struct arg_parser {
+struct arg_description_container {
+    template<typename ...A>
+    arg_optional &add_optional(A &&...args) {
+        arg_description *p = new arg_optional(std::forward<A>(args)...);
+        return static_cast<arg_optional &>(*p_opts.emplace_back(p));
+    }
+
+    template<typename ...A>
+    arg_positional &add_positional(A &&...args) {
+        arg_description *p = new arg_positional(std::forward<A>(args)...);
+        return static_cast<arg_positional &>(*p_opts.emplace_back(p));
+    }
+
+    template<typename ...A>
+    arg_category &add_category(A &&...args) {
+        arg_description *p = new arg_category(std::forward<A>(args)...);
+        return static_cast<arg_category &>(*p_opts.emplace_back(p));
+    }
+
+protected:
+    arg_description_container() {}
+
+    arg_description *find_arg_ptr(string_range name) {
+        for (auto &p: p_opts) {
+            if (p->is_arg(name)) {
+                return &*p;
+            }
+        }
+        return nullptr;
+    }
+
+    template<typename AT>
+    AT &find_arg(string_range name) {
+        auto p = static_cast<AT *>(find_arg_ptr(name));
+        if (p) {
+            return *p;
+        }
+        throw arg_error{format(
+            appender<std::string>(), "unknown argument '%s'", name
+        ).get()};
+    }
+
+    std::vector<std::unique_ptr<arg_description>> p_opts;
+};
+
+struct arg_parser: arg_description_container {
     arg_parser(string_range progname = string_range{}):
-        p_progname(progname)
+        arg_description_container(), p_progname(progname)
     {}
 
     void parse(int argc, char **argv) {
@@ -246,24 +296,6 @@ struct arg_parser {
             }
             parse_pos(s);
         }
-    }
-
-    template<typename ...A>
-    arg_optional &add_optional(A &&...args) {
-        arg_description *p = new arg_optional(std::forward<A>(args)...);
-        return static_cast<arg_optional &>(*p_opts.emplace_back(p));
-    }
-
-    template<typename ...A>
-    arg_positional &add_positional(A &&...args) {
-        arg_description *p = new arg_positional(std::forward<A>(args)...);
-        return static_cast<arg_positional &>(*p_opts.emplace_back(p));
-    }
-
-    template<typename ...A>
-    arg_category &add_category(A &&...args) {
-        arg_description *p = new arg_category(std::forward<A>(args)...);
-        return static_cast<arg_category &>(*p_opts.emplace_back(p));
     }
 
     template<typename OutputRange>
@@ -501,27 +533,6 @@ private:
     void parse_pos(string_range) {
     }
 
-    arg_description *find_arg_ptr(string_range name) {
-        for (auto &p: p_opts) {
-            if (p->is_arg(name)) {
-                return &*p;
-            }
-        }
-        return nullptr;
-    }
-
-    template<typename AT>
-    AT &find_arg(string_range name) {
-        auto p = static_cast<AT *>(find_arg_ptr(name));
-        if (p) {
-            return *p;
-        }
-        throw arg_error{format(
-            appender<std::string>(), "unknown argument '%s'", name
-        ).get()};
-    }
-
-    std::vector<std::unique_ptr<arg_description>> p_opts;
     std::string p_progname;
 };
 
