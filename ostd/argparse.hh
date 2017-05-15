@@ -69,6 +69,11 @@ protected:
 struct arg_argument: arg_description {
     friend struct arg_parser;
 
+    arg_argument &help(string_range str) {
+        p_helpstr = std::string{str};
+        return *this;
+    }
+
 protected:
     arg_argument(arg_value req = arg_value::NONE, int nargs = 1):
         arg_description(), p_valreq(req), p_nargs(nargs)
@@ -81,6 +86,7 @@ protected:
         ), p_nargs(nargs)
     {}
 
+    std::string p_helpstr;
     arg_value p_valreq;
     int p_nargs;
 };
@@ -106,19 +112,18 @@ struct arg_optional: arg_argument {
         return p_valreq;
     }
 
-    void set_value(string_range val) {
-        if (p_action) {
-            p_value = p_action(val);
-        } else {
-            p_value = std::string{val};
-        }
-    }
-
     template<typename F>
     arg_optional &action(F func) {
-        p_action = [func = std::move(func)](string_range r) -> std::any {
-            return func(r);
+        p_action = [func = std::move(func)](
+            iterator_range<string_range const *> vals
+        ) -> std::any {
+            return func(vals);
         };
+        return *this;
+    }
+
+    arg_optional &help(string_range str) {
+        arg_argument::help(str);
         return *this;
     }
 
@@ -134,9 +139,32 @@ protected:
         arg_argument(nargs), p_lname(long_name), p_sname(short_name)
     {}
 
+    void set_values(iterator_range<string_range const *> vals) {
+        if (p_action) {
+            p_value = p_action(vals);
+        } else {
+            switch (vals.size()) {
+                case 0:
+                    p_value = true;
+                    break;
+                case 1:
+                    p_value = std::string{vals.front()};
+                    break;
+                default: {
+                    std::vector<std::string> strs;
+                    strs.reserve(vals.size());
+                    for (auto s: vals) {
+                        strs.emplace_back(s);
+                    }
+                    p_value = std::move(strs);
+                }
+            }
+        }
+    }
+
 private:
     std::any p_value;
-    std::function<std::any(string_range)> p_action;
+    std::function<std::any(iterator_range<string_range const *>)> p_action;
     std::string p_lname;
     char p_sname;
 };
@@ -282,32 +310,58 @@ private:
 
     template<typename OR>
     void print_help_impl(OR &out) {
-        bool has_opt = false, has_pos = false;
+        std::size_t opt_namel = 0, pos_namel = 0;
         for (auto &p: p_opts) {
             switch (p->type()) {
-                case arg_type::OPTIONAL:
-                    has_opt = true;
+                case arg_type::OPTIONAL: {
+                    auto &opt = static_cast<arg_optional &>(*p);
+                    std::size_t nl = 0;
+                    if (opt.p_sname) {
+                        nl += 2;
+                    }
+                    if (!opt.p_lname.empty()) {
+                        if (opt.p_sname) {
+                            nl += 2;
+                        }
+                        nl += opt.p_lname.size() + 2;
+                    }
+                    opt_namel = std::max(opt_namel, nl);
                     break;
+                }
                 case arg_type::POSITIONAL:
-                    has_pos = true;
+                    pos_namel = std::max(
+                        pos_namel,
+                        static_cast<arg_positional &>(*p).p_name.size()
+                    );
                     break;
                 default:
                     break;
             }
         }
 
-        if (has_pos) {
+        std::size_t maxpad = std::max(opt_namel, pos_namel);
+
+        if (pos_namel) {
             format(out, "\npositional arguments:\n");
             for (auto &p: p_opts) {
                 if (p->type() != arg_type::POSITIONAL) {
                     continue;
                 }
                 auto &parg = static_cast<arg_positional &>(*p.get());
-                format(out, "  %s\n", parg.p_name);
+                format(out, "  %s", parg.p_name);
+                if (parg.p_helpstr.empty()) {
+                    out.put('\n');
+                } else {
+                    std::size_t nd = maxpad - parg.p_name.size() + 2;
+                    for (std::size_t i = 0; i < nd; ++i) {
+                        out.put(' ');
+                    }
+                    format(out, "%s\n", parg.p_helpstr);
+                }
             }
         }
 
-        if (has_opt) {
+        if (opt_namel) {
             format(out, "\noptional arguments:\n");
             for (auto &p: p_opts) {
                 if (p->type() != arg_type::OPTIONAL) {
@@ -315,16 +369,28 @@ private:
                 }
                 auto &parg = static_cast<arg_optional &>(*p.get());
                 format(out, "  ");
+                std::size_t nd = 0;
                 if (parg.p_sname) {
+                    nd += 2;
                     format(out, "-%c", parg.p_sname);
                     if (!parg.p_lname.empty()) {
+                        nd += 2;
                         format(out, ", ");
                     }
                 }
                 if (!parg.p_lname.empty()) {
+                    nd += parg.p_lname.size() + 2;
                     format(out, "--%s", parg.p_lname);
                 }
-                out.put('\n');
+                if (parg.p_helpstr.empty()) {
+                    out.put('\n');
+                } else {
+                    nd = maxpad - nd + 2;
+                    for (std::size_t i = 0; i < nd; ++i) {
+                        out.put(' ');
+                    }
+                    format(out, "%s\n", parg.p_helpstr);
+                }
             }
         }
     }
@@ -368,7 +434,7 @@ private:
             }
         }
         if (has_val) {
-            desc.set_value(val);
+            desc.set_values(iter({ val }));
             if (arg_val) {
                 args.pop_front();
             }
@@ -414,7 +480,7 @@ private:
             }
         }
         if (has_val) {
-            desc.set_value(val);
+            desc.set_values(iter({ val }));
             if (arg_val) {
                 args.pop_front();
             }
