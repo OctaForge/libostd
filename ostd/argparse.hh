@@ -123,18 +123,13 @@ struct arg_optional: arg_argument {
         return p_valreq;
     }
 
-    bool used() const {
+    std::size_t used() const {
         return p_used;
     }
 
     template<typename F>
     arg_optional &action(F func) {
-        p_action = [this, func = std::move(func)](
-            iterator_range<string_range const *> vals
-        ) mutable {
-            func(vals);
-            p_used = true;
-        };
+        p_action = func;
         return *this;
     }
 
@@ -180,15 +175,14 @@ protected:
     void set_values(iterator_range<string_range const *> vals) {
         if (p_action) {
             p_action(vals);
-        } else {
-            p_used = true;
         }
+        ++p_used;
     }
 
 private:
     std::function<void(iterator_range<string_range const *>)> p_action;
     std::vector<std::string> p_names;
-    bool p_used = false;
+    std::size_t p_used = 0;
 };
 
 struct arg_positional: arg_argument {
@@ -365,7 +359,7 @@ struct basic_arg_parser: arg_description_container {
         return find_arg<arg_argument>(name);
     }
 
-    bool used(string_range name) {
+    std::size_t used(string_range name) {
         auto &arg = find_arg<arg_optional>(name);
         return arg.p_used;
     }
