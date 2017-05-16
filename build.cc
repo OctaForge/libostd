@@ -148,31 +148,31 @@ int main(int argc, char **argv) {
 
     auto &help = ap.add_help("print this message and exit");
 
-    ap.add_optional(0, "no-examples", ostd::arg_value::NONE)
+    ap.add_optional("--no-examples", ostd::arg_value::NONE)
         .help("do not build examples")
         .action(ostd::arg_store_false(build_examples));
 
-    ap.add_optional(0, "no-test-suite", ostd::arg_value::NONE)
+    ap.add_optional("--no-test-suite", ostd::arg_value::NONE)
         .help("do not build test suite")
         .action(ostd::arg_store_false(build_testsuite));
 
-    ap.add_optional(0, "no-static", ostd::arg_value::NONE)
+    ap.add_optional("--no-static", ostd::arg_value::NONE)
         .help("do not build static libostd")
         .action(ostd::arg_store_false(build_static));
 
-    ap.add_optional(0, "shared", ostd::arg_value::NONE)
+    ap.add_optional("--shared", ostd::arg_value::NONE)
         .help("build shared libostd")
         .action(ostd::arg_store_true(build_shared));
 
-    ap.add_optional(0, "config", ostd::arg_value::REQUIRED)
+    ap.add_optional("--config", ostd::arg_value::REQUIRED)
         .help("build configuration (debug/release)")
         .action(ostd::arg_store_str(build_cfg));
 
-    ap.add_optional('v', "verbose", ostd::arg_value::NONE)
+    ap.add_optional("-v", "--verbose", ostd::arg_value::NONE)
         .help("print entire commands")
         .action(ostd::arg_store_true(verbose));
 
-    ap.add_optional(0, "clean", ostd::arg_value::NONE)
+    ap.add_optional("--clean", ostd::arg_value::NONE)
         .help("remove generated files and exit")
         .action(ostd::arg_store_true(clean));
 
