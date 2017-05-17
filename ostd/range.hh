@@ -1095,6 +1095,14 @@ namespace detail {
         size_t get_written() const {
             return p_written;
         }
+
+        R &get_range() {
+            return p_range;
+        }
+
+        R const &get_range() const {
+            return p_range;
+        }
     };
 }
 
@@ -1108,6 +1116,13 @@ namespace detail {
  *
  * ~~~{.cc}
  * range_size_t<R> get_written() const;
+ * ~~~
+ *
+ * These methods are provided to retrieve the range:
+ *
+ * ~~~{.cc}
+ * R &get_range();
+ * R const &get_range() const;
  * ~~~
  */
 template<typename R>

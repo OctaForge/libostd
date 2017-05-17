@@ -16,6 +16,8 @@
 #ifndef OSTD_ARGPARSE_HH
 #define OSTD_ARGPARSE_HH
 
+#include <cctype>
+#include <algorithm>
 #include <optional>
 #include <vector>
 #include <memory>
@@ -72,21 +74,32 @@ struct arg_argument: arg_description {
         return p_helpstr;
     }
 
+    arg_argument &metavar(string_range str) {
+        p_metavar = std::string{str};
+        return *this;
+    }
+
+    string_range get_metavar() const {
+        return p_metavar;
+    }
+
+    std::size_t get_nargs() const {
+        return p_nargs;
+    }
+
 protected:
-    arg_argument(arg_value req = arg_value::NONE, int nargs = 1):
+    arg_argument(arg_value req = arg_value::NONE, std::size_t nargs = 1):
         arg_description(), p_valreq(req), p_nargs(nargs)
     {}
-    arg_argument(int nargs):
+    arg_argument(std::size_t nargs):
         arg_description(),
-        p_valreq((nargs > 0)
-            ? arg_value::REQUIRED
-            : ((nargs < 0) ? arg_value::ALL : arg_value::NONE)
-        ), p_nargs(nargs)
+        p_valreq((nargs > 0) ? arg_value::REQUIRED : arg_value::NONE),
+        p_nargs(nargs)
     {}
 
-    std::string p_helpstr;
+    std::string p_helpstr, p_metavar;
     arg_value p_valreq;
-    int p_nargs;
+    std::size_t p_nargs;
 };
 
 struct arg_optional: arg_argument {
@@ -138,26 +151,27 @@ struct arg_optional: arg_argument {
 protected:
     arg_optional() = delete;
 
-    arg_optional(string_range name, arg_value req, int nargs = 1):
+    arg_optional(string_range name, arg_value req, std::size_t nargs = 1):
         arg_argument(req, nargs)
     {
         p_names.emplace_back(name);
     }
-    arg_optional(string_range name, int nargs):
+    arg_optional(string_range name, std::size_t nargs):
         arg_argument(nargs)
     {
         p_names.emplace_back(name);
     }
 
     arg_optional(
-        string_range name1, string_range name2, arg_value req, int nargs = 1
+        string_range name1, string_range name2, arg_value req,
+        std::size_t nargs = 1
     ):
         arg_argument(req, nargs)
     {
         p_names.emplace_back(name1);
         p_names.emplace_back(name2);
     }
-    arg_optional(string_range name1, string_range name2, int nargs):
+    arg_optional(string_range name1, string_range name2, std::size_t nargs):
         arg_argument(nargs)
     {
         p_names.emplace_back(name1);
@@ -195,12 +209,13 @@ struct arg_positional: arg_argument {
 protected:
     arg_positional() = delete;
     arg_positional(
-        string_range name, arg_value req = arg_value::REQUIRED, int nargs = 1
+        string_range name, arg_value req = arg_value::REQUIRED,
+        std::size_t nargs = 1
     ):
         arg_argument(req, nargs),
         p_name(name)
     {}
-    arg_positional(string_range name, int nargs):
+    arg_positional(string_range name, std::size_t nargs):
         arg_argument(nargs),
         p_name(name)
     {}
@@ -454,30 +469,37 @@ struct default_help_formatter {
     void format_options(OutputRange &out) {
         std::size_t opt_namel = 0, pos_namel = 0;
         for (auto &p: p_parser.iter()) {
+            auto cs = counting_sink(noop_sink<char>());
             switch (p->type()) {
                 case arg_type::OPTIONAL: {
-                    auto &opt = static_cast<arg_optional &>(*p);
-                    auto names = opt.get_names();
-                    std::size_t nl = 0;
-                    for (auto &s: names) {
-                        nl += s.size();
-                    }
-                    nl += 2 * (names.size() - 1);
-                    opt_namel = std::max(opt_namel, nl);
+                    format_option(cs, static_cast<arg_optional &>(*p));
+                    opt_namel = std::max(opt_namel, cs.get_written());
                     break;
                 }
                 case arg_type::POSITIONAL:
-                    pos_namel = std::max(
-                        pos_namel,
-                        static_cast<arg_positional &>(*p).get_name().size()
-                    );
+                    format_option(cs, static_cast<arg_positional &>(*p));
+                    pos_namel = std::max(pos_namel, cs.get_written());
                     break;
                 default:
                     break;
             }
         }
-
         std::size_t maxpad = std::max(opt_namel, pos_namel);
+
+        auto write_help = [maxpad](
+            auto &out, arg_argument &arg, std::size_t len
+        ) {
+            auto help = arg.get_help();
+            if (help.empty()) {
+                out.put('\n');
+            } else {
+                std::size_t nd = maxpad - len + 2;
+                for (std::size_t i = 0; i < nd; ++i) {
+                    out.put(' ');
+                }
+                format(out, "%s\n", help);
+            }
+        };
 
         if (pos_namel) {
             format(out, "\npositional arguments:\n");
@@ -485,18 +507,12 @@ struct default_help_formatter {
                 if (p->type() != arg_type::POSITIONAL) {
                     continue;
                 }
+                format(out, "  ");
                 auto &parg = static_cast<arg_positional &>(*p.get());
-                auto name = parg.get_name(), help = parg.get_help();
-                format(out, "  %s", name);
-                if (help.empty()) {
-                    out.put('\n');
-                } else {
-                    std::size_t nd = maxpad - name.size() + 2;
-                    for (std::size_t i = 0; i < nd; ++i) {
-                        out.put(' ');
-                    }
-                    format(out, "%s\n", help);
-                }
+                auto cr = counting_sink(out);
+                format_option(cr, parg);
+                out = std::move(cr.get_range());
+                write_help(out, parg, cr.get_written());
             }
         }
 
@@ -506,30 +522,72 @@ struct default_help_formatter {
                 if (p->type() != arg_type::OPTIONAL) {
                     continue;
                 }
-                auto &parg = static_cast<arg_optional &>(*p.get());
-                auto names = parg.get_names();
-                auto help = parg.get_help();
                 format(out, "  ");
-                std::size_t nd = 0;
-                for (auto &s: names) {
-                    if (nd) {
-                        nd += 2;
-                        format(out, ", ");
-                    }
-                    nd += s.size();
-                    format(out, "%s", s);
-                }
-                if (help.empty()) {
-                    out.put('\n');
-                } else {
-                    nd = maxpad - nd + 2;
-                    for (std::size_t i = 0; i < nd; ++i) {
-                        out.put(' ');
-                    }
-                    format(out, "%s\n", help);
-                }
+                auto &oarg = static_cast<arg_optional &>(*p.get());
+                auto cr = counting_sink(out);
+                format_option(cr, oarg);
+                out = std::move(cr.get_range());
+                write_help(out, oarg, cr.get_written());
             }
         }
+    }
+
+    template<typename OutputRange>
+    void format_option(OutputRange &out, arg_optional const &arg) {
+        auto names = arg.get_names();
+        std::string mt{arg.get_metavar()};
+        if (mt.empty()) {
+            for (auto &s: names) {
+                if (!starts_with(s, "--")) {
+                    continue;
+                }
+                string_range mtr = s;
+                while (!mtr.empty() && (mtr.front() == '-')) {
+                    mtr.pop_front();
+                }
+                mt = std::string{mtr};
+                break;
+            }
+            if (mt.empty()) {
+                mt = "VALUE";
+            } else {
+                std::transform(mt.begin(), mt.end(), mt.begin(), toupper);
+            }
+        }
+        bool first = true;
+        for (auto &s: names) {
+            if (!first) {
+                format(out, ", ");
+            }
+            format(out, s);
+            switch (arg.needs_value()) {
+                case arg_value::REQUIRED:
+                    format(out, " %s", mt);
+                    break;
+                case arg_value::OPTIONAL:
+                    format(out, " [%s]", mt);
+                    break;
+                case arg_value::ALL:
+                    if (arg.get_nargs() > 0) {
+                        format(out, " %s", mt);
+                    } else {
+                        format(out, " [%s]", mt);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            first = false;
+        }
+    }
+
+    template<typename OutputRange>
+    void format_option(OutputRange &out, arg_positional const &arg) {
+        auto mt = arg.get_metavar();
+        if (mt.empty()) {
+            mt = arg.get_name();
+        }
+        format(out, mt);
     }
 
 private:
