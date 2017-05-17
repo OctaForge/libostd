@@ -51,17 +51,7 @@ enum class arg_value {
     REST
 };
 
-template<typename HelpFormatter>
-struct basic_arg_parser;
-struct arg_description_container;
-struct default_help_formatter;
-
 struct arg_description {
-    template<typename HelpFormatter>
-    friend struct basic_arg_parser;
-    friend struct arg_description_container;
-    friend struct default_help_formatter;
-
     virtual ~arg_description() {}
 
     virtual arg_type type() const = 0;
@@ -73,14 +63,13 @@ protected:
 };
 
 struct arg_argument: arg_description {
-    template<typename HelpFormatter>
-    friend struct basic_arg_parser;
-    friend struct arg_description_container;
-    friend struct default_help_formatter;
-
     arg_argument &help(string_range str) {
         p_helpstr = std::string{str};
         return *this;
+    }
+
+    string_range get_help() const {
+        return p_helpstr;
     }
 
 protected:
@@ -104,7 +93,6 @@ struct arg_optional: arg_argument {
     template<typename HelpFormatter>
     friend struct basic_arg_parser;
     friend struct arg_description_container;
-    friend struct default_help_formatter;
 
     arg_type type() const {
         return arg_type::OPTIONAL;
@@ -141,6 +129,10 @@ struct arg_optional: arg_argument {
     arg_optional &add_name(string_range name) {
         p_names.emplace_back(name);
         return *this;
+    }
+
+    auto get_names() const {
+        return iter(p_names);
     }
 
 protected:
@@ -186,10 +178,7 @@ private:
 };
 
 struct arg_positional: arg_argument {
-    template<typename HelpFormatter>
-    friend struct basic_arg_parser;
     friend struct arg_description_container;
-    friend struct default_help_formatter;
 
     arg_type type() const {
         return arg_type::POSITIONAL;
@@ -197,6 +186,10 @@ struct arg_positional: arg_argument {
 
     bool is_arg(string_range name) const {
         return (name == ostd::citer(p_name));
+    }
+
+    string_range get_name() const {
+        return p_name;
     }
 
 protected:
@@ -217,10 +210,7 @@ private:
 };
 
 struct arg_category: arg_description {
-    template<typename HelpFormatter>
-    friend struct basic_arg_parser;
     friend struct arg_description_container;
-    friend struct default_help_formatter;
 
     arg_type type() const {
         return arg_type::CATEGORY;
@@ -261,6 +251,10 @@ struct arg_description_container {
         return static_cast<arg_category &>(*p_opts.emplace_back(p));
     }
 
+    auto iter() const {
+        return ostd::citer(p_opts);
+    }
+
 protected:
     arg_description_container() {}
 
@@ -289,8 +283,6 @@ protected:
 
 template<typename HelpFormatter>
 struct basic_arg_parser: arg_description_container {
-    friend struct default_help_formatter;
-
     basic_arg_parser(string_range progname = string_range{}):
         arg_description_container(), p_progname(progname)
     {}
@@ -299,7 +291,7 @@ struct basic_arg_parser: arg_description_container {
         if (p_progname.empty()) {
             p_progname = argv[0];
         }
-        parse(iter(&argv[1], &argv[argc]));
+        parse(ostd::iter(&argv[1], &argv[argc]));
     }
 
     template<typename InputRange>
@@ -364,6 +356,10 @@ struct basic_arg_parser: arg_description_container {
         return arg.p_used;
     }
 
+    string_range get_progname() const {
+        return p_progname;
+    }
+
 private:
     template<typename R>
     void parse_long(string_range arg, R &args) {
@@ -424,7 +420,7 @@ private:
             }
         }
         if (val) {
-            desc.set_values(iter({ *val }));
+            desc.set_values(ostd::iter({ *val }));
             if (arg_val) {
                 args.pop_front();
             }
@@ -447,7 +443,7 @@ struct default_help_formatter {
 
     template<typename OutputRange>
     void format_usage(OutputRange &out) {
-        string_range progname = p_parser.p_progname;
+        string_range progname = p_parser.get_progname();
         if (progname.empty()) {
             progname = "program";
         }
@@ -457,22 +453,23 @@ struct default_help_formatter {
     template<typename OutputRange>
     void format_options(OutputRange &out) {
         std::size_t opt_namel = 0, pos_namel = 0;
-        for (auto &p: p_parser.p_opts) {
+        for (auto &p: p_parser.iter()) {
             switch (p->type()) {
                 case arg_type::OPTIONAL: {
                     auto &opt = static_cast<arg_optional &>(*p);
+                    auto names = opt.get_names();
                     std::size_t nl = 0;
-                    for (auto &s: opt.p_names) {
+                    for (auto &s: names) {
                         nl += s.size();
                     }
-                    nl += 2 * (opt.p_names.size() - 1);
+                    nl += 2 * (names.size() - 1);
                     opt_namel = std::max(opt_namel, nl);
                     break;
                 }
                 case arg_type::POSITIONAL:
                     pos_namel = std::max(
                         pos_namel,
-                        static_cast<arg_positional &>(*p).p_name.size()
+                        static_cast<arg_positional &>(*p).get_name().size()
                     );
                     break;
                 default:
@@ -484,34 +481,37 @@ struct default_help_formatter {
 
         if (pos_namel) {
             format(out, "\npositional arguments:\n");
-            for (auto &p: p_parser.p_opts) {
+            for (auto &p: p_parser.iter()) {
                 if (p->type() != arg_type::POSITIONAL) {
                     continue;
                 }
                 auto &parg = static_cast<arg_positional &>(*p.get());
-                format(out, "  %s", parg.p_name);
-                if (parg.p_helpstr.empty()) {
+                auto name = parg.get_name(), help = parg.get_help();
+                format(out, "  %s", name);
+                if (help.empty()) {
                     out.put('\n');
                 } else {
-                    std::size_t nd = maxpad - parg.p_name.size() + 2;
+                    std::size_t nd = maxpad - name.size() + 2;
                     for (std::size_t i = 0; i < nd; ++i) {
                         out.put(' ');
                     }
-                    format(out, "%s\n", parg.p_helpstr);
+                    format(out, "%s\n", help);
                 }
             }
         }
 
         if (opt_namel) {
             format(out, "\noptional arguments:\n");
-            for (auto &p: p_parser.p_opts) {
+            for (auto &p: p_parser.iter()) {
                 if (p->type() != arg_type::OPTIONAL) {
                     continue;
                 }
                 auto &parg = static_cast<arg_optional &>(*p.get());
+                auto names = parg.get_names();
+                auto help = parg.get_help();
                 format(out, "  ");
                 std::size_t nd = 0;
-                for (auto &s: parg.p_names) {
+                for (auto &s: names) {
                     if (nd) {
                         nd += 2;
                         format(out, ", ");
@@ -519,14 +519,14 @@ struct default_help_formatter {
                     nd += s.size();
                     format(out, "%s", s);
                 }
-                if (parg.p_helpstr.empty()) {
+                if (help.empty()) {
                     out.put('\n');
                 } else {
                     nd = maxpad - nd + 2;
                     for (std::size_t i = 0; i < nd; ++i) {
                         out.put(' ');
                     }
-                    format(out, "%s\n", parg.p_helpstr);
+                    format(out, "%s\n", help);
                 }
             }
         }
