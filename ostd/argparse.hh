@@ -139,6 +139,16 @@ struct arg_optional: arg_argument {
         return *this;
     }
 
+    arg_optional &metavar(string_range str) {
+        arg_argument::metavar(str);
+        return *this;
+    }
+
+    arg_optional &limit(std::size_t n) {
+        p_limit = n;
+        return *this;
+    }
+
     arg_optional &add_name(string_range name) {
         p_names.emplace_back(name);
         return *this;
@@ -180,7 +190,15 @@ protected:
         p_names.emplace_back(name2);
     }
 
-    void set_values(iterator_range<string_range const *> vals) {
+    void set_values(
+        string_range argname, iterator_range<string_range const *> vals
+    ) {
+        if (p_limit && (p_used == p_limit)) {
+            throw arg_error{format(
+                appender<std::string>(),
+                "argument '%s' can be used at most %d times", argname, p_limit
+            ).get()};
+        }
         if (p_action) {
             p_action(vals);
         }
@@ -202,7 +220,7 @@ private:
 
     std::function<void(iterator_range<string_range const *>)> p_action;
     std::vector<std::string> p_names;
-    std::size_t p_used = 0;
+    std::size_t p_used = 0, p_limit = 0;
 };
 
 struct arg_positional: arg_argument {
@@ -428,7 +446,7 @@ private:
                     argname
                 ).get()};
             }
-            desc.set_values(nullptr);
+            desc.set_values(argname, nullptr);
             return;
         }
         if (!val) {
@@ -439,7 +457,7 @@ private:
                         argname
                     ).get()};
                 }
-                desc.set_values(nullptr);
+                desc.set_values(argname, nullptr);
                 return;
             }
             string_range tval = args.front();
@@ -449,12 +467,12 @@ private:
             }
         }
         if (val) {
-            desc.set_values(ostd::iter({ *val }));
+            desc.set_values(argname, ostd::iter({ *val }));
             if (arg_val) {
                 args.pop_front();
             }
         } else {
-            desc.set_values(nullptr);
+            desc.set_values(argname, nullptr);
         }
     }
 
