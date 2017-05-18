@@ -16,6 +16,7 @@
 #ifndef OSTD_ARGPARSE_HH
 #define OSTD_ARGPARSE_HH
 
+#include <cstdio>
 #include <cctype>
 #include <algorithm>
 #include <optional>
@@ -23,6 +24,7 @@
 #include <memory>
 #include <stdexcept>
 #include <utility>
+#include <functional>
 
 #include "ostd/algorithm.hh"
 #include "ostd/format.hh"
@@ -661,6 +663,23 @@ auto arg_store_true(bool &ref) {
 
 auto arg_store_false(bool &ref) {
     return arg_store_const(false, ref);
+}
+
+template<typename ...A>
+auto arg_store_format(string_range fmt, A &...args) {
+    /* TODO: use ostd::format once it supports reading */
+    return [fmts = std::string{fmt}, argst = std::tie(args...)](
+        iterator_range<string_range const *> r
+    ) mutable {
+        std::apply([&fmts, istr = std::string{r[0]}](auto &...refs) {
+            if (sscanf(istr.data(), fmts.data(), &refs...) != sizeof...(A)) {
+                throw arg_error{format(
+                    appender<std::string>(),
+                    "argument requires format '%s' (got '%s')", fmts, istr
+                ).get()};
+            }
+        }, argst);
+    };
 }
 
 /** @} */
