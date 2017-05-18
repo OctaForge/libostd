@@ -154,6 +154,7 @@ protected:
     arg_optional(string_range name, arg_value req, std::size_t nargs = 1):
         arg_argument(req, nargs)
     {
+        validate_req(req);
         p_names.emplace_back(name);
     }
     arg_optional(string_range name, std::size_t nargs):
@@ -168,6 +169,7 @@ protected:
     ):
         arg_argument(req, nargs)
     {
+        validate_req(req);
         p_names.emplace_back(name1);
         p_names.emplace_back(name2);
     }
@@ -186,6 +188,18 @@ protected:
     }
 
 private:
+    void validate_req(arg_value req) {
+        switch (req) {
+            case arg_value::NONE:
+            case arg_value::REQUIRED:
+            case arg_value::OPTIONAL:
+            case arg_value::ALL:
+                break;
+            default:
+                throw arg_error{"invalid argument requirement"};
+        }
+    }
+
     std::function<void(iterator_range<string_range const *>)> p_action;
     std::vector<std::string> p_names;
     std::size_t p_used = 0;
