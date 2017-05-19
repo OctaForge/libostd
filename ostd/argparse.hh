@@ -358,12 +358,8 @@ struct basic_arg_parser: arg_description_container {
                 parse_pos(s);
                 continue;
             }
-            if (starts_with(s, "--")) {
-                parse_long(s, args);
-                continue;
-            }
-            if ((s.size() > 1) && (s[0] == '-') && (s != "-")) {
-                parse_short(s, args);
+            if (!s.empty() && (s[0] == '-') && (s != "-")) {
+                parse_opt(s, args);
                 continue;
             }
             parse_pos(s);
@@ -411,30 +407,16 @@ struct basic_arg_parser: arg_description_container {
 
 private:
     template<typename R>
-    void parse_long(string_range arg, R &args) {
-        std::optional<string_range> val;
+    void parse_opt(string_range arg, R &args) {
+        bool has_val = false;
+        string_range val;
         if (auto sv = find(arg, '='); !sv.empty()) {
             arg = arg.slice(0, arg.size() - sv.size());
             sv.pop_front();
             val = sv;
+            has_val = true;
         }
-        parse_arg(arg, std::move(val), args);
-    }
 
-    template<typename R>
-    void parse_short(string_range arg, R &args) {
-        std::optional<string_range> val;
-        if (arg.size() > 2) {
-            val = arg.slice(2);
-            arg = arg.slice(0, 2);
-        }
-        parse_arg(arg, std::move(val), args);
-    }
-
-    template<typename R>
-    void parse_arg(
-        string_range arg, std::optional<string_range> val, R &args
-    ) {
         bool arg_val = false;
         std::string argname{arg};
         auto &desc = find_arg<arg_optional>(arg);
@@ -442,7 +424,7 @@ private:
         args.pop_front();
         auto needs = desc.needs_value();
         if (needs == arg_value::NONE) {
-            if (val) {
+            if (has_val) {
                 throw arg_error{format(
                     appender<std::string>(), "argument '%s' takes no value",
                     argname
@@ -451,7 +433,7 @@ private:
             desc.set_values(argname, nullptr);
             return;
         }
-        if (!val) {
+        if (!has_val) {
             if (args.empty()) {
                 if (needs == arg_value::REQUIRED) {
                     throw arg_error{format(
@@ -465,11 +447,11 @@ private:
             string_range tval = args.front();
             if ((needs != arg_value::OPTIONAL) || !find_arg_ptr(tval)) {
                 val = tval;
-                arg_val = true;
+                has_val = arg_val = true;
             }
         }
-        if (val) {
-            desc.set_values(argname, ostd::iter({ *val }));
+        if (has_val) {
+            desc.set_values(argname, ostd::iter({ val }));
             if (arg_val) {
                 args.pop_front();
             }
