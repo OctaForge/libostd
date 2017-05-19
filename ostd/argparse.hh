@@ -332,8 +332,10 @@ protected:
 
 template<typename HelpFormatter>
 struct basic_arg_parser: arg_description_container {
-    basic_arg_parser(string_range progname = string_range{}):
-        arg_description_container(), p_progname(progname)
+    basic_arg_parser(
+        string_range progname = string_range{}, bool posix = false
+    ):
+        arg_description_container(), p_progname(progname), p_posix(posix)
     {}
 
     void parse(int argc, char **argv) {
@@ -346,7 +348,6 @@ struct basic_arg_parser: arg_description_container {
     template<typename InputRange>
     void parse(InputRange args) {
         bool allow_optional = true;
-
         while (!args.empty()) {
             string_range s{args.front()};
             if (s == "--") {
@@ -354,13 +355,12 @@ struct basic_arg_parser: arg_description_container {
                 allow_optional = false;
                 continue;
             }
-            if (!allow_optional) {
-                parse_pos(s);
-                continue;
-            }
-            if (is_optarg(s)) {
+            if (allow_optional && is_optarg(s)) {
                 parse_opt(s, args);
                 continue;
+            }
+            if (p_posix) {
+                allow_optional = false;
             }
             parse_pos(s);
         }
@@ -403,6 +403,14 @@ struct basic_arg_parser: arg_description_container {
 
     string_range get_progname() const {
         return p_progname;
+    }
+
+    bool posix_ordering() const {
+        return p_posix;
+    }
+
+    bool posix_ordering(bool v) {
+        return std::exchange(p_posix, v);
     }
 
 private:
@@ -470,6 +478,7 @@ private:
 
     std::string p_progname;
     HelpFormatter p_helpfmt{*this};
+    bool p_posix = false;
 };
 
 struct default_help_formatter {
