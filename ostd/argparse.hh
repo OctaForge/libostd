@@ -372,7 +372,6 @@ struct basic_arg_parser: arg_description_container {
         opt.help(msg);
         opt.action([this, out = std::move(out)](auto) mutable {
             this->print_help(out);
-            return true;
         });
         return opt;
     }
