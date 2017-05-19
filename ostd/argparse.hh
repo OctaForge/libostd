@@ -358,7 +358,7 @@ struct basic_arg_parser: arg_description_container {
                 parse_pos(s);
                 continue;
             }
-            if (!s.empty() && (s[0] == '-') && (s != "-")) {
+            if (is_optarg(s)) {
                 parse_opt(s, args);
                 continue;
             }
@@ -406,6 +406,10 @@ struct basic_arg_parser: arg_description_container {
     }
 
 private:
+    static bool is_optarg(string_range arg) {
+        return (!arg.empty() && (arg[0] == '-') && (arg != "-"));
+    }
+
     template<typename R>
     void parse_opt(string_range arg, R &args) {
         bool has_val = false;
@@ -434,7 +438,11 @@ private:
             return;
         }
         if (!has_val) {
-            if (args.empty()) {
+            string_range tval;
+            if (!args.empty()) {
+                tval = args.front();
+            }
+            if (args.empty() || is_optarg(tval)) {
                 if (needs == arg_value::REQUIRED) {
                     throw arg_error{format(
                         appender<std::string>(), "argument '%s' needs a value",
@@ -444,11 +452,8 @@ private:
                 desc.set_values(argname, nullptr);
                 return;
             }
-            string_range tval = args.front();
-            if ((needs != arg_value::OPTIONAL) || !find_arg_ptr(tval)) {
-                val = tval;
-                has_val = arg_val = true;
-            }
+            val = tval;
+            has_val = arg_val = true;
         }
         if (has_val) {
             desc.set_values(argname, ostd::iter({ val }));
