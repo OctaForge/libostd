@@ -48,8 +48,7 @@ enum class arg_type {
 };
 
 enum class arg_value {
-    NONE = 0,
-    REQUIRED,
+    EXACTLY,
     OPTIONAL,
     ALL,
     REST
@@ -85,17 +84,21 @@ struct arg_argument: arg_description {
         return p_metavar;
     }
 
+    arg_value needs_value() const {
+        return p_valreq;
+    }
+
     std::size_t get_nargs() const {
         return p_nargs;
     }
 
 protected:
-    arg_argument(arg_value req = arg_value::NONE, std::size_t nargs = 1):
+    arg_argument(arg_value req, std::size_t nargs):
         arg_description(), p_valreq(req), p_nargs(nargs)
     {}
     arg_argument(std::size_t nargs):
         arg_description(),
-        p_valreq((nargs > 0) ? arg_value::REQUIRED : arg_value::NONE),
+        p_valreq(arg_value::EXACTLY),
         p_nargs(nargs)
     {}
 
@@ -120,10 +123,6 @@ struct arg_optional: arg_argument {
             }
         }
         return false;
-    }
-
-    arg_value needs_value() const {
-        return p_valreq;
     }
 
     std::size_t used() const {
@@ -210,8 +209,7 @@ protected:
 private:
     void validate_req(arg_value req) {
         switch (req) {
-            case arg_value::NONE:
-            case arg_value::REQUIRED:
+            case arg_value::EXACTLY:
             case arg_value::OPTIONAL:
             case arg_value::ALL:
                 break;
@@ -243,7 +241,7 @@ struct arg_positional: arg_argument {
 protected:
     arg_positional() = delete;
     arg_positional(
-        string_range name, arg_value req = arg_value::REQUIRED,
+        string_range name, arg_value req = arg_value::EXACTLY,
         std::size_t nargs = 1
     ):
         arg_argument(req, nargs),
@@ -368,7 +366,7 @@ struct basic_arg_parser: arg_description_container {
 
     template<typename OutputRange>
     arg_optional &add_help(OutputRange out, string_range msg) {
-        auto &opt = add_optional("-h", "--help", arg_value::NONE);
+        auto &opt = add_optional("-h", "--help", 0);
         opt.help(msg);
         opt.action([this, out = std::move(out)](auto) mutable {
             this->print_help(out);
@@ -418,57 +416,76 @@ private:
     }
 
     template<typename R>
-    void parse_opt(string_range arg, R &args) {
-        bool has_val = false;
-        string_range val;
-        if (auto sv = find(arg, '='); !sv.empty()) {
-            arg = arg.slice(0, arg.size() - sv.size());
+    void parse_opt(string_range argr, R &args) {
+        std::vector<std::string> vals;
+        if (auto sv = find(argr, '='); !sv.empty()) {
+            argr = argr.slice(0, argr.size() - sv.size());
             sv.pop_front();
-            val = sv;
-            has_val = true;
+            vals.emplace_back(sv);
         }
-
-        bool arg_val = false;
-        std::string argname{arg};
-        auto &desc = find_arg<arg_optional>(arg);
-
         args.pop_front();
+        std::string arg{argr};
+
+        auto &desc = find_arg<arg_optional>(arg);
         auto needs = desc.needs_value();
-        if (needs == arg_value::NONE) {
-            if (has_val) {
+        auto nargs = desc.get_nargs();
+
+        /* optional argument takes no values */
+        if ((needs == arg_value::EXACTLY) && !nargs) {
+            /* value was provided through = */
+            if (!vals.empty()) {
                 throw arg_error{format(
                     appender<std::string>(), "argument '%s' takes no value",
-                    argname
+                    arg
                 ).get()};
             }
-            desc.set_values(argname, nullptr);
+            desc.set_values(arg, nullptr);
             return;
         }
-        if (!has_val) {
-            string_range tval;
-            if (!args.empty()) {
-                tval = args.front();
+        if (
+            vals.empty() ||
+            (needs == arg_value::ALL) ||
+            ((needs == arg_value::EXACTLY) && (nargs > 1))
+        ) {
+            auto rargs = nargs;
+            if ((needs == arg_value::EXACTLY) && !vals.empty()) {
+                --rargs;
             }
-            if (args.empty() || is_optarg(tval)) {
-                if (needs == arg_value::REQUIRED) {
+            for (;;) {
+                bool pval = !args.empty() && !is_optarg(args.front());
+                if ((needs == arg_value::EXACTLY) && rargs && !pval) {
                     throw arg_error{format(
-                        appender<std::string>(), "argument '%s' needs a value",
-                        argname
+                        appender<std::string>(),
+                        "argument '%s' needs exactly %d values",
+                        arg, nargs
                     ).get()};
                 }
-                desc.set_values(argname, nullptr);
-                return;
-            }
-            val = tval;
-            has_val = arg_val = true;
-        }
-        if (has_val) {
-            desc.set_values(argname, ostd::iter({ val }));
-            if (arg_val) {
+                if (!pval || ((needs == arg_value::EXACTLY) && !rargs)) {
+                    break;
+                }
+                vals.emplace_back(args.front());
                 args.pop_front();
+                if (rargs) {
+                    --rargs;
+                }
             }
+        }
+        if ((needs == arg_value::ALL) && (nargs > vals.size())) {
+            throw arg_error{format(
+                appender<std::string>(),
+                "argument '%s' needs at least %d values", arg, nargs
+            ).get()};
+        }
+        if (!vals.empty()) {
+            std::vector<string_range> srvals;
+            for (auto const &s: vals) {
+                srvals.push_back(s);
+            }
+            desc.set_values(
+                arg, ostd::iter(&srvals[0], &srvals[srvals.size()])
+            );
         } else {
-            desc.set_values(argname, nullptr);
+            desc.set_values(arg, nullptr);
         }
     }
 
@@ -590,18 +607,20 @@ struct default_help_formatter {
             }
             format(out, s);
             switch (arg.needs_value()) {
-                case arg_value::REQUIRED:
-                    format(out, " %s", mt);
+                case arg_value::EXACTLY: {
+                    for (auto nargs = arg.get_nargs(); nargs; --nargs) {
+                        format(out, " %s", mt);
+                    }
                     break;
+                }
                 case arg_value::OPTIONAL:
                     format(out, " [%s]", mt);
                     break;
                 case arg_value::ALL:
-                    if (arg.get_nargs() > 0) {
+                    for (auto nargs = arg.get_nargs(); nargs; --nargs) {
                         format(out, " %s", mt);
-                    } else {
-                        format(out, " [%s]", mt);
                     }
+                    format(out, " [%s ...]", mt);
                     break;
                 default:
                     break;
