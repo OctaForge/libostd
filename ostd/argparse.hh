@@ -295,10 +295,18 @@ struct arg_group: arg_description {
         return arg_type::GROUP;
     }
 
+    string_range get_name() const {
+        return p_name;
+    }
+
     template<typename ...A>
     arg_optional &add_optional(A &&...args) {
         arg_optional *o = new arg_optional(std::forward<A>(args)...);
         return *p_opts.emplace_back(o);
+    }
+
+    auto iter() const {
+        return ostd::citer(p_opts);
     }
 
 protected:
@@ -614,24 +622,30 @@ struct default_help_formatter {
 
     template<typename OutputRange>
     void format_options(OutputRange &out) {
-        std::size_t opt_namel = 0, pos_namel = 0;
+        std::size_t opt_namel = 0, pos_namel = 0, grp_namel = 0;
         for (auto &p: p_parser.iter()) {
             auto cs = counting_sink(noop_sink<char>());
             switch (p->type()) {
-                case arg_type::OPTIONAL: {
+                case arg_type::OPTIONAL:
                     format_option(cs, static_cast<arg_optional &>(*p));
                     opt_namel = std::max(opt_namel, cs.get_written());
                     break;
-                }
                 case arg_type::POSITIONAL:
                     format_option(cs, static_cast<arg_positional &>(*p));
                     pos_namel = std::max(pos_namel, cs.get_written());
+                    break;
+                case arg_type::GROUP:
+                    for (auto &sp: static_cast<arg_group &>(*p).iter()) {
+                        auto ccs = cs;
+                        format_option(ccs, *sp);
+                        grp_namel = std::max(grp_namel, ccs.get_written());
+                    }
                     break;
                 default:
                     break;
             }
         }
-        std::size_t maxpad = std::max(opt_namel, pos_namel);
+        std::size_t maxpad = std::max({opt_namel, pos_namel, grp_namel});
 
         auto write_help = [maxpad](
             auto &out, arg_argument &arg, std::size_t len
@@ -649,13 +663,13 @@ struct default_help_formatter {
         };
 
         if (pos_namel) {
-            format(out, "\npositional arguments:\n");
+            format(out, "\nPositional arguments:\n");
             for (auto &p: p_parser.iter()) {
                 if (p->type() != arg_type::POSITIONAL) {
                     continue;
                 }
                 format(out, "  ");
-                auto &parg = static_cast<arg_positional &>(*p.get());
+                auto &parg = static_cast<arg_positional &>(*p);
                 auto cr = counting_sink(out);
                 format_option(cr, parg);
                 out = std::move(cr.get_range());
@@ -664,17 +678,32 @@ struct default_help_formatter {
         }
 
         if (opt_namel) {
-            format(out, "\noptional arguments:\n");
+            format(out, "\nOptional arguments:\n");
             for (auto &p: p_parser.iter()) {
                 if (p->type() != arg_type::OPTIONAL) {
                     continue;
                 }
                 format(out, "  ");
-                auto &oarg = static_cast<arg_optional &>(*p.get());
+                auto &oarg = static_cast<arg_optional &>(*p);
                 auto cr = counting_sink(out);
                 format_option(cr, oarg);
                 out = std::move(cr.get_range());
                 write_help(out, oarg, cr.get_written());
+            }
+        }
+
+        for (auto &gp: p_parser.iter()) {
+            if (gp->type() != arg_type::GROUP) {
+                continue;
+            }
+            auto &garg = static_cast<arg_group &>(*gp);
+            format(out, "\n%s:\n", garg.get_name());
+            for (auto &p: garg.iter()) {
+                format(out, "  ");
+                auto cr = counting_sink(out);
+                format_option(cr, *p);
+                out = std::move(cr.get_range());
+                write_help(out, *p, cr.get_written());
             }
         }
     }
