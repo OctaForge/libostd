@@ -208,10 +208,10 @@ protected:
                 "argument '%s' can be used at most %d times", argname, p_limit
             ).get()};
         }
+        ++p_used;
         if (p_action) {
             p_action(vals);
         }
-        ++p_used;
     }
 
 private:
@@ -377,6 +377,10 @@ protected:
 
 template<typename HelpFormatter>
 struct basic_arg_parser: arg_description_container {
+private:
+    struct parse_stop {};
+
+public:
     basic_arg_parser(
         string_range progname = string_range{}, bool posix = false
     ):
@@ -401,13 +405,32 @@ struct basic_arg_parser: arg_description_container {
                 continue;
             }
             if (allow_optional && is_optarg(s)) {
-                parse_opt(s, args);
+                try {
+                    parse_opt(s, args);
+                } catch (parse_stop) {
+                    return;
+                }
                 continue;
             }
             if (p_posix) {
                 allow_optional = false;
             }
             parse_pos(s, args, allow_optional);
+        }
+        for (auto &p: iter()) {
+            if (p->type() != arg_type::POSITIONAL) {
+                continue;
+            }
+            arg_positional &desc = static_cast<arg_positional &>(*p);
+            auto needs = desc.needs_value();
+            auto nargs = desc.get_nargs();
+            if ((needs != arg_value::EXACTLY) && (needs != arg_value::ALL)) {
+                continue;
+            }
+            if (!nargs || desc.used()) {
+                continue;
+            }
+            throw arg_error{"too few arguments"};
         }
     }
 
@@ -417,6 +440,7 @@ struct basic_arg_parser: arg_description_container {
         opt.help(msg);
         opt.action([this, out = std::move(out)](auto) mutable {
             this->print_help(out);
+            this->stop_parsing();
         });
         return opt;
     }
@@ -450,6 +474,10 @@ struct basic_arg_parser: arg_description_container {
 
     bool posix_ordering(bool v) {
         return std::exchange(p_posix, v);
+    }
+
+    void stop_parsing() {
+        throw parse_stop{};
     }
 
 private:
@@ -780,6 +808,7 @@ auto arg_print_help(OutputRange o, arg_parser &p) {
         mutable
     {
         p.print_help(o);
+        p.stop_parsing();
     };
 };
 
