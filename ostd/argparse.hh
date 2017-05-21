@@ -55,13 +55,17 @@ enum class arg_value {
 };
 
 struct arg_description {
+    friend struct arg_description_container;
+
     virtual ~arg_description() {}
 
     virtual arg_type type() const = 0;
 
-    virtual bool is_arg(string_range name) const = 0;
-
 protected:
+    virtual arg_description *find_arg(string_range, std::optional<arg_type>) {
+        return nullptr;
+    }
+
     arg_description() {}
 };
 
@@ -114,15 +118,6 @@ struct arg_optional: arg_argument {
 
     arg_type type() const {
         return arg_type::OPTIONAL;
-    }
-
-    bool is_arg(string_range name) const {
-        for (auto const &nm: p_names) {
-            if (name == iter(nm)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     std::size_t used() const {
@@ -191,6 +186,18 @@ protected:
         p_names.emplace_back(name2);
     }
 
+    arg_description *find_arg(string_range name, std::optional<arg_type> tp) {
+        if (tp && (*tp != type())) {
+            return nullptr;
+        }
+        for (auto const &nm: p_names) {
+            if (name == iter(nm)) {
+                return this;
+            }
+        }
+        return nullptr;
+    }
+
     void set_values(
         string_range argname, iterator_range<string_range const *> vals
     ) {
@@ -232,10 +239,6 @@ struct arg_positional: arg_argument {
         return arg_type::POSITIONAL;
     }
 
-    bool is_arg(string_range name) const {
-        return (name == ostd::citer(p_name));
-    }
-
     string_range get_name() const {
         return p_name;
     }
@@ -264,6 +267,13 @@ protected:
         p_name(name)
     {}
 
+    arg_description *find_arg(string_range name, std::optional<arg_type> tp) {
+        if ((tp && (*tp != type())) || (name != ostd::citer(p_name))) {
+            return nullptr;
+        }
+        return this;
+    }
+
     void set_values(iterator_range<string_range const *> vals) {
         if (p_action) {
             p_action(vals);
@@ -282,10 +292,6 @@ struct arg_category: arg_description {
 
     arg_type type() const {
         return arg_type::CATEGORY;
-    }
-
-    bool is_arg(string_range) const {
-        return false;
     }
 
 protected:
@@ -329,10 +335,14 @@ protected:
     template<typename AT>
     AT &find_arg(string_range name) {
         for (auto &p: p_opts) {
-            auto *pp = static_cast<AT *>(p.get());
-            if (pp && pp->is_arg(name)) {
-                return *pp;
+            auto *pp = p->find_arg(name, std::nullopt);
+            if (!pp) {
+                continue;
             }
+            if (auto *r = dynamic_cast<AT *>(pp); r) {
+                return *r;
+            }
+            break;
         }
         throw arg_error{format(
             appender<std::string>(), "unknown argument '%s'", name
