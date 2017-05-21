@@ -146,7 +146,9 @@ int main(int argc, char **argv) {
 
     ostd::arg_parser ap;
 
-    auto &help = ap.add_help("print this message and exit");
+    auto &help = ap.add_optional("-h", "--help", 0)
+        .help("print this message and exit")
+        .action(ostd::arg_print_help(ap));
 
     ap.add_optional("--no-examples", 0)
         .help("do not build examples")
@@ -172,9 +174,17 @@ int main(int argc, char **argv) {
         .help("print entire commands")
         .action(ostd::arg_store_true(verbose));
 
-    ap.add_optional("--clean", 0)
-        .help("remove generated files and exit")
-        .action(ostd::arg_store_true(clean));
+    ap.add_positional("target", ostd::arg_value::OPTIONAL)
+        .help("the action to perform")
+        .action([&clean](auto vals) {
+            if (!vals.empty()) {
+                if (vals.front() == "clean") {
+                    clean = true;
+                } else if (vals.front() != "build") {
+                    throw ostd::arg_error{"invalid build action"};
+                }
+            }
+        });
 
     try {
         ap.parse(argc, argv);

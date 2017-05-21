@@ -250,6 +250,16 @@ struct arg_positional: arg_argument {
         return *this;
     }
 
+    arg_positional &help(string_range str) {
+        arg_argument::help(str);
+        return *this;
+    }
+
+    arg_positional &metavar(string_range str) {
+        arg_argument::metavar(str);
+        return *this;
+    }
+
     bool used() const {
         return p_used;
     }
@@ -432,21 +442,6 @@ public:
             }
             throw arg_error{"too few arguments"};
         }
-    }
-
-    template<typename OutputRange>
-    arg_optional &add_help(OutputRange out, string_range msg) {
-        auto &opt = add_optional("-h", "--help", 0);
-        opt.help(msg);
-        opt.action([this, out = std::move(out)](auto) mutable {
-            this->print_help(out);
-            this->stop_parsing();
-        });
-        return opt;
-    }
-
-    arg_optional &add_help(string_range msg) {
-        return add_help(cout.iter(), msg);
     }
 
     template<typename OutputRange>
