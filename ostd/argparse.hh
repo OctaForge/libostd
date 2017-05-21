@@ -326,20 +326,13 @@ struct arg_description_container {
 protected:
     arg_description_container() {}
 
-    arg_description *find_arg_ptr(string_range name) {
-        for (auto &p: p_opts) {
-            if (p->is_arg(name)) {
-                return &*p;
-            }
-        }
-        return nullptr;
-    }
-
     template<typename AT>
     AT &find_arg(string_range name) {
-        auto p = static_cast<AT *>(find_arg_ptr(name));
-        if (p) {
-            return *p;
+        for (auto &p: p_opts) {
+            auto *pp = static_cast<AT *>(p.get());
+            if (pp && pp->is_arg(name)) {
+                return *pp;
+            }
         }
         throw arg_error{format(
             appender<std::string>(), "unknown argument '%s'", name
@@ -412,11 +405,6 @@ struct basic_arg_parser: arg_description_container {
 
     arg_argument &get(string_range name) {
         return find_arg<arg_argument>(name);
-    }
-
-    std::size_t used(string_range name) {
-        auto &arg = find_arg<arg_optional>(name);
-        return arg.p_used;
     }
 
     string_range get_progname() const {
