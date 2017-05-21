@@ -224,6 +224,8 @@ private:
 };
 
 struct arg_positional: arg_argument {
+    template<typename HelpFormatter>
+    friend struct basic_arg_parser;
     friend struct arg_description_container;
 
     arg_type type() const {
@@ -236,6 +238,16 @@ struct arg_positional: arg_argument {
 
     string_range get_name() const {
         return p_name;
+    }
+
+    template<typename F>
+    arg_positional &action(F func) {
+        p_action = func;
+        return *this;
+    }
+
+    bool used() const {
+        return p_used;
     }
 
 protected:
@@ -252,8 +264,17 @@ protected:
         p_name(name)
     {}
 
+    void set_values(iterator_range<string_range const *> vals) {
+        if (p_action) {
+            p_action(vals);
+        }
+        p_used = true;
+    }
+
 private:
+    std::function<void(iterator_range<string_range const *>)> p_action;
     std::string p_name;
+    bool p_used = false;
 };
 
 struct arg_category: arg_description {
@@ -360,7 +381,7 @@ struct basic_arg_parser: arg_description_container {
             if (p_posix) {
                 allow_optional = false;
             }
-            parse_pos(s);
+            parse_pos(s, args, allow_optional);
         }
     }
 
@@ -489,7 +510,74 @@ private:
         }
     }
 
-    void parse_pos(string_range) {
+    template<typename R>
+    void parse_pos(string_range argr, R &args, bool allow_opt) {
+        arg_positional *descp = nullptr;
+        for (auto &popt: p_opts) {
+            if (popt->type() != arg_type::POSITIONAL) {
+                continue;
+            }
+            arg_positional &o = *static_cast<arg_positional *>(popt.get());
+            if (o.used()) {
+                continue;
+            }
+            descp = &o;
+            break;
+        }
+
+        if (!descp) {
+            throw arg_error{format(
+                appender<std::string>(), "unexpected argument '%s'", argr
+            ).get()};
+        }
+
+        arg_positional &desc = *descp;
+        auto needs = desc.needs_value();
+        auto nargs = desc.get_nargs();
+
+        std::vector<std::string> vals;
+        vals.emplace_back(argr);
+        args.pop_front();
+
+        if (needs == arg_value::REST) {
+            for (; !args.empty(); args.pop_front()) {
+                vals.emplace_back(args.front());
+            }
+        } else if (needs == arg_value::ALL) {
+            for (; !args.empty(); args.pop_front()) {
+                string_range v = args.front();
+                if (allow_opt && is_optarg(v)) {
+                    break;
+                }
+                vals.emplace_back(v);
+            }
+            if (nargs > vals.size()) {
+                throw arg_error{format(
+                    appender<std::string>(),
+                    "positional argument '%s' needs at least %d values",
+                    desc.get_name(), nargs
+                ).get()};
+            }
+        } else if ((needs == arg_value::EXACTLY) && (nargs > 1)) {
+            auto reqargs = nargs - 1;
+            while (reqargs) {
+                if (args.empty() || (allow_opt && is_optarg(args.front()))) {
+                    throw arg_error{format(
+                        appender<std::string>(),
+                        "positional argument '%s' needs exactly %d values",
+                        desc.get_name(), nargs
+                    ).get()};
+                }
+                vals.emplace_back(args.front());
+                args.pop_front();
+            }
+        } /* else is OPTIONAL and we already have an arg */
+
+        std::vector<string_range> srvals;
+        for (auto const &s: vals) {
+            srvals.push_back(s);
+        }
+        desc.set_values(ostd::iter(&srvals[0], &srvals[srvals.size()]));
     }
 
     std::string p_progname;
