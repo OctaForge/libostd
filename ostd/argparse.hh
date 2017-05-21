@@ -44,7 +44,7 @@ struct arg_error: std::runtime_error {
 enum class arg_type {
     OPTIONAL = 0,
     POSITIONAL,
-    CATEGORY
+    GROUP
 };
 
 enum class arg_value {
@@ -115,6 +115,7 @@ struct arg_optional: arg_argument {
     template<typename HelpFormatter>
     friend struct basic_arg_parser;
     friend struct arg_description_container;
+    friend struct arg_group;
 
     arg_type type() const {
         return arg_type::OPTIONAL;
@@ -287,23 +288,37 @@ private:
     bool p_used = false;
 };
 
-struct arg_category: arg_description {
+struct arg_group: arg_description {
     friend struct arg_description_container;
 
     arg_type type() const {
-        return arg_type::CATEGORY;
+        return arg_type::GROUP;
+    }
+
+    template<typename ...A>
+    arg_optional &add_optional(A &&...args) {
+        arg_optional *o = new arg_optional(std::forward<A>(args)...);
+        return *p_opts.emplace_back(o);
     }
 
 protected:
-    arg_category() = delete;
-    arg_category(
-        string_range name
-    ):
+    arg_group() = delete;
+    arg_group(string_range name):
         p_name(name)
     {}
 
+    arg_description *find_arg(string_range name, std::optional<arg_type> tp) {
+        for (auto &opt: p_opts) {
+            if (auto *p = opt->find_arg(name, tp); p) {
+                return p;
+            }
+        }
+        return nullptr;
+    }
+
 private:
     std::string p_name;
+    std::vector<std::unique_ptr<arg_optional>> p_opts;
 };
 
 struct arg_description_container {
@@ -320,9 +335,9 @@ struct arg_description_container {
     }
 
     template<typename ...A>
-    arg_category &add_category(A &&...args) {
-        arg_description *p = new arg_category(std::forward<A>(args)...);
-        return static_cast<arg_category &>(*p_opts.emplace_back(p));
+    arg_group &add_group(A &&...args) {
+        arg_description *p = new arg_group(std::forward<A>(args)...);
+        return static_cast<arg_group &>(*p_opts.emplace_back(p));
     }
 
     auto iter() const {
