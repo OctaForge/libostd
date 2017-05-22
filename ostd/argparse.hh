@@ -406,6 +406,20 @@ public:
 
     template<typename InputRange>
     void parse(InputRange args) {
+        /* count positional args until remainder */
+        std::size_t npos = 0;
+        bool has_rest = false;
+        for (auto &p: iter()) {
+            if (p->type() != arg_type::POSITIONAL) {
+                continue;
+            }
+            arg_positional &desc = static_cast<arg_positional &>(*p);
+            if (desc.needs_value() == arg_value::REST) {
+                has_rest = true;
+                break;
+            }
+            ++npos;
+        }
         bool allow_optional = true;
         while (!args.empty()) {
             string_range s{args.front()};
@@ -426,6 +440,16 @@ public:
                 allow_optional = false;
             }
             parse_pos(s, args, allow_optional);
+            if (has_rest && npos) {
+                --npos;
+                if (!npos && !args.empty()) {
+                    /* parse rest after all preceding positionals are filled
+                     * if the only positional consumes rest, it will be filled
+                     * by the above when the first non-optional is encountered
+                     */
+                    parse_pos(string_range{args.front()}, args, false);
+                }
+            }
         }
         for (auto &p: iter()) {
             if (p->type() != arg_type::POSITIONAL) {
