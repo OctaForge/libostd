@@ -44,7 +44,8 @@ struct arg_error: std::runtime_error {
 enum class arg_type {
     OPTIONAL = 0,
     POSITIONAL,
-    GROUP
+    GROUP,
+    MUTUALLY_EXCLUSIVE_GROUP
 };
 
 enum class arg_value {
@@ -62,7 +63,9 @@ struct arg_description {
     virtual arg_type type() const = 0;
 
 protected:
-    virtual arg_description *find_arg(string_range, std::optional<arg_type>) {
+    virtual arg_description *find_arg(
+        string_range, std::optional<arg_type>, bool
+    ) {
         return nullptr;
     }
 
@@ -116,6 +119,7 @@ struct arg_optional: arg_argument {
     friend struct basic_arg_parser;
     friend struct arg_description_container;
     friend struct arg_group;
+    friend struct arg_mutually_exclusive_group;
 
     arg_type type() const {
         return arg_type::OPTIONAL;
@@ -187,7 +191,9 @@ protected:
         p_names.emplace_back(name2);
     }
 
-    arg_description *find_arg(string_range name, std::optional<arg_type> tp) {
+    arg_description *find_arg(
+        string_range name, std::optional<arg_type> tp, bool
+    ) {
         if (tp && (*tp != type())) {
             return nullptr;
         }
@@ -278,7 +284,9 @@ protected:
         p_name(name)
     {}
 
-    arg_description *find_arg(string_range name, std::optional<arg_type> tp) {
+    arg_description *find_arg(
+        string_range name, std::optional<arg_type> tp, bool
+    ) {
         if ((tp && (*tp != type())) || (name != ostd::citer(p_name))) {
             return nullptr;
         }
@@ -325,9 +333,11 @@ protected:
         p_name(name)
     {}
 
-    arg_description *find_arg(string_range name, std::optional<arg_type> tp) {
+    arg_description *find_arg(
+        string_range name, std::optional<arg_type> tp, bool parsing
+    ) {
         for (auto &opt: p_opts) {
-            if (auto *p = opt->find_arg(name, tp); p) {
+            if (auto *p = opt->find_arg(name, tp, parsing); p) {
                 return p;
             }
         }
@@ -337,6 +347,63 @@ protected:
 private:
     std::string p_name;
     std::vector<std::unique_ptr<arg_optional>> p_opts;
+};
+
+struct arg_mutually_exclusive_group: arg_description {
+    friend struct arg_description_container;
+
+    arg_type type() const {
+        return arg_type::MUTUALLY_EXCLUSIVE_GROUP;
+    }
+
+    template<typename ...A>
+    arg_optional &add_optional(A &&...args) {
+        arg_optional *o = new arg_optional(std::forward<A>(args)...);
+        return *p_opts.emplace_back(o);
+    }
+
+    auto iter() const {
+        return ostd::citer(p_opts);
+    }
+
+    bool required() const {
+        return p_required;
+    }
+
+protected:
+    arg_mutually_exclusive_group(bool required = false):
+        p_required(required)
+    {}
+
+    arg_description *find_arg(
+        string_range name, std::optional<arg_type> tp, bool parsing
+    ) {
+        string_range used;
+        for (auto &opt: p_opts) {
+            if (auto *p = opt->find_arg(name, tp, parsing); p) {
+                if (parsing && !used.empty()) {
+                    throw arg_error{format(
+                        appender<std::string>(),
+                        "argument '%s' not allowed with argument '%s'",
+                        name, used
+                    ).get()};
+                }
+                return p;
+            }
+            if (opt->used()) {
+                for (auto &n: opt->get_names()) {
+                    if (n.size() > used.size()) {
+                        used = n;
+                    }
+                }
+            }
+        }
+        return nullptr;
+    }
+
+private:
+    std::vector<std::unique_ptr<arg_optional>> p_opts;
+    bool p_required;
 };
 
 struct arg_description_container {
@@ -358,6 +425,16 @@ struct arg_description_container {
         return static_cast<arg_group &>(*p_opts.emplace_back(p));
     }
 
+    template<typename ...A>
+    arg_mutually_exclusive_group &add_mutually_exclusive_group(A &&...args) {
+        arg_description *p = new arg_mutually_exclusive_group(
+            std::forward<A>(args)...
+        );
+        return static_cast<arg_mutually_exclusive_group &>(
+            *p_opts.emplace_back(p)
+        );
+    }
+
     auto iter() const {
         return ostd::citer(p_opts);
     }
@@ -366,9 +443,9 @@ protected:
     arg_description_container() {}
 
     template<typename AT>
-    AT &find_arg(string_range name) {
+    AT &find_arg(string_range name, bool parsing) {
         for (auto &p: p_opts) {
-            auto *pp = p->find_arg(name, std::nullopt);
+            auto *pp = p->find_arg(name, std::nullopt, parsing);
             if (!pp) {
                 continue;
             }
@@ -452,6 +529,33 @@ public:
             }
         }
         for (auto &p: iter()) {
+            if (p->type() == arg_type::MUTUALLY_EXCLUSIVE_GROUP) {
+                auto &mgrp = static_cast<arg_mutually_exclusive_group &>(*p);
+                if (!mgrp.required()) {
+                    continue;
+                }
+                std::vector<string_range> names;
+                for (auto &mp: mgrp.iter()) {
+                    string_range cn;
+                    for (auto &n: mp->get_names()) {
+                        if (n.size() > cn.size()) {
+                            cn = n;
+                        }
+                    }
+                    if (!cn.empty()) {
+                        names.push_back(cn);
+                    }
+                    if (mp->used()) {
+                        goto loopcont;
+                    }
+                }
+                throw arg_error{format(
+                    appender<std::string>(),
+                    "one of the arguments %('%s'%|, %) is required", names
+                ).get()};
+loopcont:
+                continue;
+            }
             if (p->type() != arg_type::POSITIONAL) {
                 continue;
             }
@@ -480,7 +584,7 @@ public:
     }
 
     arg_argument &get(string_range name) {
-        return find_arg<arg_argument>(name);
+        return find_arg<arg_argument>(name, false);
     }
 
     string_range get_progname() const {
@@ -515,7 +619,7 @@ private:
         args.pop_front();
         std::string arg{argr};
 
-        auto &desc = find_arg<arg_optional>(arg);
+        auto &desc = find_arg<arg_optional>(arg, true);
         auto needs = desc.needs_value();
         auto nargs = desc.get_nargs();
 
@@ -670,22 +774,42 @@ struct default_help_formatter {
     template<typename OutputRange>
     void format_options(OutputRange &out) {
         std::size_t opt_namel = 0, pos_namel = 0, grp_namel = 0;
+
+        std::vector<arg_optional *> allopt;
+        std::vector<arg_positional *> allpos;
+
         for (auto &p: p_parser.iter()) {
             auto cs = counting_sink(noop_sink<char>());
             switch (p->type()) {
-                case arg_type::OPTIONAL:
-                    format_option(cs, static_cast<arg_optional &>(*p));
+                case arg_type::OPTIONAL: {
+                    auto &opt = static_cast<arg_optional &>(*p);
+                    format_option(cs, opt);
                     opt_namel = std::max(opt_namel, cs.get_written());
+                    allopt.push_back(&opt);
                     break;
-                case arg_type::POSITIONAL:
-                    format_option(cs, static_cast<arg_positional &>(*p));
+                }
+                case arg_type::POSITIONAL: {
+                    auto &opt = static_cast<arg_positional &>(*p);
+                    format_option(cs, opt);
                     pos_namel = std::max(pos_namel, cs.get_written());
+                    allpos.push_back(&opt);
                     break;
+                }
                 case arg_type::GROUP:
                     for (auto &sp: static_cast<arg_group &>(*p).iter()) {
                         auto ccs = cs;
                         format_option(ccs, *sp);
                         grp_namel = std::max(grp_namel, ccs.get_written());
+                    }
+                    break;
+                case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
+                    for (auto &sp: static_cast<
+                        arg_mutually_exclusive_group &
+                    >(*p).iter()) {
+                        auto ccs = cs;
+                        format_option(ccs, *sp);
+                        opt_namel = std::max(opt_namel, ccs.get_written());
+                        allopt.push_back(sp.get());
                     }
                     break;
                 default:
@@ -709,14 +833,11 @@ struct default_help_formatter {
             }
         };
 
-        if (pos_namel) {
+        if (!allpos.empty()) {
             format(out, "\nPositional arguments:\n");
-            for (auto &p: p_parser.iter()) {
-                if (p->type() != arg_type::POSITIONAL) {
-                    continue;
-                }
+            for (auto p: allpos) {
                 format(out, "  ");
-                auto &parg = static_cast<arg_positional &>(*p);
+                auto &parg = *p;
                 auto cr = counting_sink(out);
                 format_option(cr, parg);
                 out = std::move(cr.get_range());
@@ -724,14 +845,11 @@ struct default_help_formatter {
             }
         }
 
-        if (opt_namel) {
+        if (!allopt.empty()) {
             format(out, "\nOptional arguments:\n");
-            for (auto &p: p_parser.iter()) {
-                if (p->type() != arg_type::OPTIONAL) {
-                    continue;
-                }
+            for (auto &p: allopt) {
                 format(out, "  ");
-                auto &oarg = static_cast<arg_optional &>(*p);
+                auto &oarg = *p;
                 auto cr = counting_sink(out);
                 format_option(cr, oarg);
                 out = std::move(cr.get_range());
