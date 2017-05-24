@@ -768,7 +768,7 @@ struct default_help_formatter {
         if (progname.empty()) {
             progname = "program";
         }
-        format(out, "usage: %s [opts] [args]\n", progname);
+        format(out, "Usage: %s [opts] [args]\n", progname);
     }
 
     template<typename OutputRange>
