@@ -931,23 +931,57 @@ struct default_help_formatter {
             }
         }
 
-        p_parser.for_each([&write_help, &out, this](auto const &parg) {
-            if (parg.type() != arg_type::GROUP) {
+        allopt.clear();
+        allpos.clear();
+
+        p_parser.for_each([
+            &write_help, &out, &allopt, &allpos, this
+        ](auto const &arg) {
+            if (arg.type() != arg_type::GROUP) {
                 return true;
             }
-            auto &garg = static_cast<arg_group const &>(parg);
+            auto &garg = static_cast<arg_group const &>(arg);
             format(out, "\n%s:\n", garg.get_name());
-            garg.for_each([&write_help, &out, this](auto const &marg) {
-                format(out, "  ");
-                auto cr = counting_sink(out);
-                this->format_option(cr, marg);
-                out = std::move(cr.get_range());
-                write_help(
-                    out, static_cast<arg_argument const &>(marg),
-                    cr.get_written()
-                );
+            garg.for_each([
+                &write_help, &out, &allopt, &allpos, this
+            ](auto const &marg) {
+                switch (marg.type()) {
+                    case arg_type::OPTIONAL:
+                        allopt.push_back(
+                            static_cast<arg_optional const *>(&marg)
+                        );
+                        break;
+                    case arg_type::POSITIONAL:
+                        allpos.push_back(
+                            static_cast<arg_positional const *>(&marg)
+                        );
+                        break;
+                    default:
+                        /* should never happen */
+                        throw arg_error{"invalid argument type"};
+                }
                 return true;
-            }, true, true);
+            }, true, false);
+            if (!allpos.empty()) {
+                for (auto p: allpos) {
+                    format(out, "  ");
+                    auto &parg = *p;
+                    auto cr = counting_sink(out);
+                    format_option(cr, parg);
+                    out = std::move(cr.get_range());
+                    write_help(out, parg, cr.get_written());
+                }
+            }
+            if (!allopt.empty()) {
+                for (auto &p: allopt) {
+                    format(out, "  ");
+                    auto &oarg = *p;
+                    auto cr = counting_sink(out);
+                    format_option(cr, oarg);
+                    out = std::move(cr.get_range());
+                    write_help(out, oarg, cr.get_written());
+                }
+            }
             return true;
         }, false, false);
     }
