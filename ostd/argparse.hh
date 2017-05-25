@@ -57,6 +57,7 @@ enum class arg_value {
 
 struct arg_description {
     friend struct arg_description_container;
+    friend struct arg_group;
 
     virtual ~arg_description() {}
 
@@ -387,8 +388,24 @@ struct arg_group: arg_description {
 
     template<typename ...A>
     arg_optional &add_optional(A &&...args) {
-        arg_optional *o = new arg_optional(std::forward<A>(args)...);
-        return *p_opts.emplace_back(o);
+        arg_description *p = new arg_optional(std::forward<A>(args)...);
+        return static_cast<arg_optional &>(*p_opts.emplace_back(p));
+    }
+
+    template<typename ...A>
+    arg_positional &add_positional(A &&...args) {
+        arg_description *p = new arg_positional(std::forward<A>(args)...);
+        return static_cast<arg_positional &>(*p_opts.emplace_back(p));
+    }
+
+    template<typename ...A>
+    arg_mutually_exclusive_group &add_mutually_exclusive_group(A &&...args) {
+        arg_description *p = new arg_mutually_exclusive_group(
+            std::forward<A>(args)...
+        );
+        return static_cast<arg_mutually_exclusive_group &>(
+            *p_opts.emplace_back(p)
+        );
     }
 
     template<typename F>
@@ -415,21 +432,21 @@ protected:
 
 private:
     template<typename F>
-    bool for_each_impl(F &func, bool) const {
+    bool for_each_impl(F &func, bool iter_ex) const {
         for (auto &desc: p_opts) {
             switch (desc->type()) {
                 case arg_type::OPTIONAL:
                 case arg_type::POSITIONAL:
-                    if (!func(static_cast<arg_description const &>(*desc))) {
+                    if (!func(*desc)) {
                         return false;
                     }
                     break;
                 case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
-                    /*if (!static_cast<arg_mutually_exclusive_group const &>(
+                    if (!static_cast<arg_mutually_exclusive_group const &>(
                         *desc
                     ).for_each(func, iter_ex)) {
                         return false;
-                    }*/
+                    }
                     break;
                 default:
                     /* should never happen */
@@ -440,7 +457,7 @@ private:
     }
 
     std::string p_name;
-    std::vector<std::unique_ptr<arg_optional>> p_opts;
+    std::vector<std::unique_ptr<arg_description>> p_opts;
 };
 
 struct arg_description_container {
