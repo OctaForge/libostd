@@ -838,8 +838,8 @@ struct default_help_formatter {
     void format_options(OutputRange &out) {
         std::size_t opt_namel = 0, pos_namel = 0, grp_namel = 0;
 
-        std::vector<arg_optional const *> allopt;
-        std::vector<arg_positional const *> allpos;
+        std::vector<arg_argument const *> allopt;
+        std::vector<arg_argument const *> allpos;
 
         p_parser.for_each([
             &allopt, &allpos, &opt_namel, &pos_namel, &grp_namel, this
@@ -892,50 +892,42 @@ struct default_help_formatter {
         }, false, false);
         std::size_t maxpad = std::max({opt_namel, pos_namel, grp_namel});
 
-        auto write_help = [maxpad](
-            auto &out, arg_argument const &arg, std::size_t len
+        auto write_help = [maxpad, this](
+            auto &out, std::vector<arg_argument const *> const &args
         ) {
-            auto help = arg.get_help();
-            if (help.empty()) {
-                out.put('\n');
-            } else {
-                std::size_t nd = maxpad - len + 2;
-                for (std::size_t i = 0; i < nd; ++i) {
-                    out.put(' ');
+            for (auto p: args) {
+                format(out, "  ");
+                auto &parg = *p;
+                auto cr = counting_sink(out);
+                this->format_option(cr, parg);
+                out = std::move(cr.get_range());
+                auto help = parg.get_help();
+                if (help.empty()) {
+                    out.put('\n');
+                } else {
+                    std::size_t nd = maxpad - cr.get_written() + 2;
+                    for (std::size_t i = 0; i < nd; ++i) {
+                        out.put(' ');
+                    }
+                    format(out, "%s\n", help);
                 }
-                format(out, "%s\n", help);
             }
         };
 
         if (!allpos.empty()) {
             format(out, "\nPositional arguments:\n");
-            for (auto p: allpos) {
-                format(out, "  ");
-                auto &parg = *p;
-                auto cr = counting_sink(out);
-                format_option(cr, parg);
-                out = std::move(cr.get_range());
-                write_help(out, parg, cr.get_written());
-            }
+            write_help(out, allpos);
         }
 
         if (!allopt.empty()) {
             format(out, "\nOptional arguments:\n");
-            for (auto &p: allopt) {
-                format(out, "  ");
-                auto &oarg = *p;
-                auto cr = counting_sink(out);
-                format_option(cr, oarg);
-                out = std::move(cr.get_range());
-                write_help(out, oarg, cr.get_written());
-            }
+            write_help(out, allopt);
         }
 
         allopt.clear();
         allpos.clear();
 
-        p_parser.for_each([
-            &write_help, &out, &allopt, &allpos, this
+        p_parser.for_each([&write_help, &out, &allopt, &allpos
         ](auto const &arg) {
             if (arg.type() != arg_type::GROUP) {
                 return true;
@@ -943,7 +935,7 @@ struct default_help_formatter {
             auto &garg = static_cast<arg_group const &>(arg);
             format(out, "\n%s:\n", garg.get_name());
             garg.for_each([
-                &write_help, &out, &allopt, &allpos, this
+                &write_help, &out, &allopt, &allpos
             ](auto const &marg) {
                 switch (marg.type()) {
                     case arg_type::OPTIONAL:
@@ -962,26 +954,8 @@ struct default_help_formatter {
                 }
                 return true;
             }, true, false);
-            if (!allpos.empty()) {
-                for (auto p: allpos) {
-                    format(out, "  ");
-                    auto &parg = *p;
-                    auto cr = counting_sink(out);
-                    format_option(cr, parg);
-                    out = std::move(cr.get_range());
-                    write_help(out, parg, cr.get_written());
-                }
-            }
-            if (!allopt.empty()) {
-                for (auto &p: allopt) {
-                    format(out, "  ");
-                    auto &oarg = *p;
-                    auto cr = counting_sink(out);
-                    format_option(cr, oarg);
-                    out = std::move(cr.get_range());
-                    write_help(out, oarg, cr.get_written());
-                }
-            }
+            write_help(out, allpos);
+            write_help(out, allopt);
             return true;
         }, false, false);
     }
