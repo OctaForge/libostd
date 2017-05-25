@@ -400,10 +400,6 @@ struct arg_description_container {
         );
     }
 
-    auto iter() const {
-        return ostd::citer(p_opts);
-    }
-
     template<typename F>
     bool for_each(F &&func, bool iter_ex, bool iter_grp) const {
         return for_each_impl(func, iter_ex, iter_grp);
@@ -845,25 +841,27 @@ struct default_help_formatter {
         std::vector<arg_optional const *> allopt;
         std::vector<arg_positional const *> allpos;
 
-        for (auto &p: p_parser.iter()) {
+        p_parser.for_each([
+            &allopt, &allpos, &opt_namel, &pos_namel, &grp_namel, this
+        ](auto const &parg) {
             auto cs = counting_sink(noop_sink<char>());
-            switch (p->type()) {
+            switch (parg.type()) {
                 case arg_type::OPTIONAL: {
-                    auto &opt = static_cast<arg_optional &>(*p);
-                    format_option(cs, opt);
+                    auto &opt = static_cast<arg_optional const &>(parg);
+                    this->format_option(cs, opt);
                     opt_namel = std::max(opt_namel, cs.get_written());
                     allopt.push_back(&opt);
                     break;
                 }
                 case arg_type::POSITIONAL: {
-                    auto &opt = static_cast<arg_positional &>(*p);
-                    format_option(cs, opt);
+                    auto &opt = static_cast<arg_positional const &>(parg);
+                    this->format_option(cs, opt);
                     pos_namel = std::max(pos_namel, cs.get_written());
                     allpos.push_back(&opt);
                     break;
                 }
                 case arg_type::GROUP:
-                    static_cast<arg_group &>(*p).for_each(
+                    static_cast<arg_group const &>(parg).for_each(
                         [&cs, &grp_namel, this](auto const &arg) {
                             auto ccs = cs;
                             this->format_option(ccs, arg);
@@ -873,7 +871,9 @@ struct default_help_formatter {
                     );
                     break;
                 case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
-                    static_cast<arg_mutually_exclusive_group &>(*p).for_each(
+                    static_cast<arg_mutually_exclusive_group const &>(
+                        parg
+                    ).for_each(
                         [&cs, &opt_namel, &allopt, this](auto const &arg) {
                             auto ccs = cs;
                             this->format_option(ccs, arg);
@@ -888,7 +888,8 @@ struct default_help_formatter {
                 default:
                     break;
             }
-        }
+            return true;
+        }, false, false);
         std::size_t maxpad = std::max({opt_namel, pos_namel, grp_namel});
 
         auto write_help = [maxpad](
@@ -930,11 +931,11 @@ struct default_help_formatter {
             }
         }
 
-        for (auto &gp: p_parser.iter()) {
-            if (gp->type() != arg_type::GROUP) {
-                continue;
+        p_parser.for_each([&write_help, &out, this](auto const &parg) {
+            if (parg.type() != arg_type::GROUP) {
+                return true;
             }
-            auto &garg = static_cast<arg_group &>(*gp);
+            auto &garg = static_cast<arg_group const &>(parg);
             format(out, "\n%s:\n", garg.get_name());
             garg.for_each([&write_help, &out, this](auto const &marg) {
                 format(out, "  ");
@@ -947,7 +948,8 @@ struct default_help_formatter {
                 );
                 return true;
             }, true, true);
-        }
+            return true;
+        }, false, false);
     }
 
     template<typename OutputRange>
