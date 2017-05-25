@@ -306,49 +306,6 @@ private:
     bool p_used = false;
 };
 
-struct arg_group: arg_description {
-    friend struct arg_description_container;
-
-    arg_type type() const {
-        return arg_type::GROUP;
-    }
-
-    string_range get_name() const {
-        return p_name;
-    }
-
-    template<typename ...A>
-    arg_optional &add_optional(A &&...args) {
-        arg_optional *o = new arg_optional(std::forward<A>(args)...);
-        return *p_opts.emplace_back(o);
-    }
-
-    auto iter() const {
-        return ostd::citer(p_opts);
-    }
-
-protected:
-    arg_group() = delete;
-    arg_group(string_range name):
-        p_name(name)
-    {}
-
-    arg_description *find_arg(
-        string_range name, std::optional<arg_type> tp, bool parsing
-    ) {
-        for (auto &opt: p_opts) {
-            if (auto *p = opt->find_arg(name, tp, parsing); p) {
-                return p;
-            }
-        }
-        return nullptr;
-    }
-
-private:
-    std::string p_name;
-    std::vector<std::unique_ptr<arg_optional>> p_opts;
-};
-
 struct arg_mutually_exclusive_group: arg_description {
     friend struct arg_description_container;
 
@@ -364,6 +321,11 @@ struct arg_mutually_exclusive_group: arg_description {
 
     auto iter() const {
         return ostd::citer(p_opts);
+    }
+
+    template<typename F>
+    bool for_each(F &&func, bool iter_ex) const {
+        return for_each_impl(func, iter_ex);
     }
 
     bool required() const {
@@ -402,8 +364,91 @@ protected:
     }
 
 private:
+    template<typename F>
+    bool for_each_impl(F &func, bool) const {
+        for (auto &desc: p_opts) {
+            if (!func(static_cast<arg_description const &>(*desc))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     std::vector<std::unique_ptr<arg_optional>> p_opts;
     bool p_required;
+};
+
+struct arg_group: arg_description {
+    friend struct arg_description_container;
+
+    arg_type type() const {
+        return arg_type::GROUP;
+    }
+
+    string_range get_name() const {
+        return p_name;
+    }
+
+    template<typename ...A>
+    arg_optional &add_optional(A &&...args) {
+        arg_optional *o = new arg_optional(std::forward<A>(args)...);
+        return *p_opts.emplace_back(o);
+    }
+
+    auto iter() const {
+        return ostd::citer(p_opts);
+    }
+
+    template<typename F>
+    bool for_each(F &&func, bool iter_ex) const {
+        return for_each_impl(func, iter_ex);
+    }
+
+protected:
+    arg_group() = delete;
+    arg_group(string_range name):
+        p_name(name)
+    {}
+
+    arg_description *find_arg(
+        string_range name, std::optional<arg_type> tp, bool parsing
+    ) {
+        for (auto &opt: p_opts) {
+            if (auto *p = opt->find_arg(name, tp, parsing); p) {
+                return p;
+            }
+        }
+        return nullptr;
+    }
+
+private:
+    template<typename F>
+    bool for_each_impl(F &func, bool) const {
+        for (auto &desc: p_opts) {
+            switch (desc->type()) {
+                case arg_type::OPTIONAL:
+                case arg_type::POSITIONAL:
+                    if (!func(static_cast<arg_description const &>(*desc))) {
+                        return false;
+                    }
+                    break;
+                case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
+                    /*if (!static_cast<arg_mutually_exclusive_group const &>(
+                        *desc
+                    ).for_each(func, iter_ex)) {
+                        return false;
+                    }*/
+                    break;
+                default:
+                    /* should never happen */
+                    throw arg_error{"invalid argument type"};
+            }
+        }
+        return true;
+    }
+
+    std::string p_name;
+    std::vector<std::unique_ptr<arg_optional>> p_opts;
 };
 
 struct arg_description_container {
@@ -439,6 +484,11 @@ struct arg_description_container {
         return ostd::citer(p_opts);
     }
 
+    template<typename F>
+    bool for_each(F &&func, bool iter_ex) const {
+        return for_each_impl(func, iter_ex);
+    }
+
 protected:
     arg_description_container() {}
 
@@ -457,6 +507,46 @@ protected:
         throw arg_error{format(
             appender<std::string>(), "unknown argument '%s'", name
         ).get()};
+    }
+
+    template<typename F>
+    bool for_each_impl(F &func, bool iter_ex) const {
+        for (auto &desc: p_opts) {
+            switch (desc->type()) {
+                case arg_type::OPTIONAL:
+                case arg_type::POSITIONAL:
+                    if (!func(static_cast<arg_description const &>(*desc))) {
+                        return false;
+                    }
+                    break;
+                case arg_type::GROUP:
+                    if (!static_cast<arg_group const &>(*desc).for_each(
+                        func, iter_ex
+                    )) {
+                        return false;
+                    }
+                    break;
+                case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
+                    if (!iter_ex) {
+                        if (!func(static_cast<arg_description const &>(
+                            *desc
+                        ))) {
+                            return false;
+                        }
+                        continue;
+                    }
+                    if (!static_cast<arg_mutually_exclusive_group const &>(
+                        *desc
+                    ).for_each(func, iter_ex)) {
+                        return false;
+                    }
+                    break;
+                default:
+                    /* should never happen */
+                    throw arg_error{"invalid argument type"};
+            }
+        }
+        return true;
     }
 
     std::vector<std::unique_ptr<arg_description>> p_opts;
@@ -486,17 +576,18 @@ public:
         /* count positional args until remainder */
         std::size_t npos = 0;
         bool has_rest = false;
-        for (auto &p: iter()) {
-            if (p->type() != arg_type::POSITIONAL) {
-                continue;
+        for_each([&has_rest, &npos](auto const &arg) {
+            if (arg.type() != arg_type::POSITIONAL) {
+                return true;
             }
-            arg_positional &desc = static_cast<arg_positional &>(*p);
+            auto const &desc = static_cast<arg_positional const &>(arg);
             if (desc.needs_value() == arg_value::REST) {
                 has_rest = true;
-                break;
+                return false;
             }
             ++npos;
-        }
+            return true;
+        }, true);
         bool allow_optional = true;
         while (!args.empty()) {
             string_range s{args.front()};
@@ -528,11 +619,13 @@ public:
                 }
             }
         }
-        for (auto &p: iter()) {
-            if (p->type() == arg_type::MUTUALLY_EXCLUSIVE_GROUP) {
-                auto &mgrp = static_cast<arg_mutually_exclusive_group &>(*p);
+        for_each([](auto const &arg) {
+            if (arg.type() == arg_type::MUTUALLY_EXCLUSIVE_GROUP) {
+                auto &mgrp = static_cast<
+                    arg_mutually_exclusive_group const &
+                >(arg);
                 if (!mgrp.required()) {
-                    continue;
+                    return true;
                 }
                 std::vector<string_range> names;
                 for (auto &mp: mgrp.iter()) {
@@ -546,30 +639,29 @@ public:
                         names.push_back(cn);
                     }
                     if (mp->used()) {
-                        goto loopcont;
+                        return true;
                     }
                 }
                 throw arg_error{format(
                     appender<std::string>(),
                     "one of the arguments %('%s'%|, %) is required", names
                 ).get()};
-loopcont:
-                continue;
+                return true;
             }
-            if (p->type() != arg_type::POSITIONAL) {
-                continue;
+            if (arg.type() != arg_type::POSITIONAL) {
+                return true;
             }
-            arg_positional &desc = static_cast<arg_positional &>(*p);
+            auto const &desc = static_cast<arg_positional const &>(arg);
             auto needs = desc.needs_value();
             auto nargs = desc.get_nargs();
             if ((needs != arg_value::EXACTLY) && (needs != arg_value::ALL)) {
-                continue;
+                return true;
             }
             if (!nargs || desc.used()) {
-                continue;
+                return true;
             }
             throw arg_error{"too few arguments"};
-        }
+        }, false);
     }
 
     template<typename OutputRange>
@@ -931,6 +1023,21 @@ struct default_help_formatter {
             mt = arg.get_name();
         }
         format(out, mt);
+    }
+
+    template<typename OutputRange>
+    void format_option(OutputRange &out, arg_argument const &arg) {
+        switch (arg.type()) {
+            case arg_type::OPTIONAL:
+                format_option(out, static_cast<arg_optional const &>(arg));
+                break;
+            case arg_type::POSITIONAL:
+                format_option(out, static_cast<arg_positional const &>(arg));
+                break;
+            default:
+                /* should never happen */
+                throw arg_error{"invalid argument type"};
+        }
     }
 
 private:
