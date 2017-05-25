@@ -322,8 +322,8 @@ struct arg_mutually_exclusive_group: arg_description {
     }
 
     template<typename F>
-    bool for_each(F &&func, bool iter_ex) const {
-        return for_each_impl(func, iter_ex);
+    bool for_each(F &&func, bool iter_ex, bool iter_grp) const {
+        return for_each_impl(func, iter_ex, iter_grp);
     }
 
     bool required() const {
@@ -364,7 +364,7 @@ protected:
 
 private:
     template<typename F>
-    bool for_each_impl(F &func, bool) const {
+    bool for_each_impl(F &func, bool, bool) const {
         for (auto &desc: p_opts) {
             if (!func(*desc)) {
                 return false;
@@ -405,8 +405,8 @@ struct arg_description_container {
     }
 
     template<typename F>
-    bool for_each(F &&func, bool iter_ex) const {
-        return for_each_impl(func, iter_ex);
+    bool for_each(F &&func, bool iter_ex, bool iter_grp) const {
+        return for_each_impl(func, iter_ex, iter_grp);
     }
 
 protected:
@@ -430,7 +430,7 @@ protected:
     }
 
     template<typename F>
-    bool for_each_impl(F &func, bool iter_ex) const;
+    bool for_each_impl(F &func, bool iter_ex, bool iter_grp) const;
 
     std::vector<std::unique_ptr<arg_description>> p_opts;
 };
@@ -471,35 +471,39 @@ private:
 
 template<typename F>
 inline bool arg_description_container::for_each_impl(
-    F &func, bool iter_ex
+    F &func, bool iter_ex, bool iter_grp
 ) const {
     for (auto &desc: p_opts) {
         switch (desc->type()) {
             case arg_type::OPTIONAL:
             case arg_type::POSITIONAL:
-                if (!func(static_cast<arg_description const &>(*desc))) {
+                if (!func(*desc)) {
                     return false;
                 }
                 break;
             case arg_type::GROUP:
+                if (!iter_grp) {
+                    if (!func(*desc)) {
+                        return false;
+                    }
+                    continue;
+                }
                 if (!static_cast<arg_group const &>(*desc).for_each(
-                    func, iter_ex
+                    func, iter_ex, iter_grp
                 )) {
                     return false;
                 }
                 break;
             case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
                 if (!iter_ex) {
-                    if (!func(static_cast<arg_description const &>(
-                        *desc
-                    ))) {
+                    if (!func(*desc)) {
                         return false;
                     }
                     continue;
                 }
                 if (!static_cast<arg_mutually_exclusive_group const &>(
                     *desc
-                ).for_each(func, iter_ex)) {
+                ).for_each(func, iter_ex, iter_grp)) {
                     return false;
                 }
                 break;
@@ -552,7 +556,7 @@ public:
             }
             ++npos;
             return true;
-        }, true);
+        }, true, true);
         bool allow_optional = true;
         while (!args.empty()) {
             string_range s{args.front()};
@@ -610,7 +614,7 @@ public:
                         return false;
                     }
                     return true;
-                }, true);
+                }, true, true);
                 if (!cont) {
                     throw arg_error{format(
                         appender<std::string>(),
@@ -632,7 +636,7 @@ public:
                 return true;
             }
             throw arg_error{"too few arguments"};
-        }, false);
+        }, false, true);
     }
 
     template<typename OutputRange>
@@ -865,7 +869,7 @@ struct default_help_formatter {
                             this->format_option(ccs, arg);
                             grp_namel = std::max(grp_namel, ccs.get_written());
                             return true;
-                        }, true
+                        }, true, true
                     );
                     break;
                 case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
@@ -878,7 +882,7 @@ struct default_help_formatter {
                                 arg_optional const *
                             >(&arg));
                             return true;
-                        }, true
+                        }, true, true
                     );
                     break;
                 default:
@@ -942,7 +946,7 @@ struct default_help_formatter {
                     cr.get_written()
                 );
                 return true;
-            }, true);
+            }, true, true);
         }
     }
 
