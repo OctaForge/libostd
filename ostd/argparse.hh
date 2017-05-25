@@ -319,10 +319,6 @@ struct arg_mutually_exclusive_group: arg_description {
         return *p_opts.emplace_back(o);
     }
 
-    auto iter() const {
-        return ostd::citer(p_opts);
-    }
-
     template<typename F>
     bool for_each(F &&func, bool iter_ex) const {
         return for_each_impl(func, iter_ex);
@@ -393,10 +389,6 @@ struct arg_group: arg_description {
     arg_optional &add_optional(A &&...args) {
         arg_optional *o = new arg_optional(std::forward<A>(args)...);
         return *p_opts.emplace_back(o);
-    }
-
-    auto iter() const {
-        return ostd::citer(p_opts);
     }
 
     template<typename F>
@@ -628,9 +620,11 @@ public:
                     return true;
                 }
                 std::vector<string_range> names;
-                for (auto &mp: mgrp.iter()) {
+                bool cont = false;
+                mgrp.for_each([&names, &cont](auto const &marg) {
                     string_range cn;
-                    for (auto &n: mp->get_names()) {
+                    auto const &mopt = static_cast<arg_optional const &>(marg);
+                    for (auto &n: mopt.get_names()) {
                         if (n.size() > cn.size()) {
                             cn = n;
                         }
@@ -638,14 +632,18 @@ public:
                     if (!cn.empty()) {
                         names.push_back(cn);
                     }
-                    if (mp->used()) {
-                        return true;
+                    if (mopt.used()) {
+                        cont = true;
+                        return false;
                     }
+                    return true;
+                }, true);
+                if (!cont) {
+                    throw arg_error{format(
+                        appender<std::string>(),
+                        "one of the arguments %('%s'%|, %) is required", names
+                    ).get()};
                 }
-                throw arg_error{format(
-                    appender<std::string>(),
-                    "one of the arguments %('%s'%|, %) is required", names
-                ).get()};
                 return true;
             }
             if (arg.type() != arg_type::POSITIONAL) {
@@ -867,8 +865,8 @@ struct default_help_formatter {
     void format_options(OutputRange &out) {
         std::size_t opt_namel = 0, pos_namel = 0, grp_namel = 0;
 
-        std::vector<arg_optional *> allopt;
-        std::vector<arg_positional *> allpos;
+        std::vector<arg_optional const *> allopt;
+        std::vector<arg_positional const *> allpos;
 
         for (auto &p: p_parser.iter()) {
             auto cs = counting_sink(noop_sink<char>());
@@ -888,21 +886,27 @@ struct default_help_formatter {
                     break;
                 }
                 case arg_type::GROUP:
-                    for (auto &sp: static_cast<arg_group &>(*p).iter()) {
-                        auto ccs = cs;
-                        format_option(ccs, *sp);
-                        grp_namel = std::max(grp_namel, ccs.get_written());
-                    }
+                    static_cast<arg_group &>(*p).for_each(
+                        [&cs, &grp_namel, this](auto const &arg) {
+                            auto ccs = cs;
+                            this->format_option(ccs, arg);
+                            grp_namel = std::max(grp_namel, ccs.get_written());
+                            return true;
+                        }, true
+                    );
                     break;
                 case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
-                    for (auto &sp: static_cast<
-                        arg_mutually_exclusive_group &
-                    >(*p).iter()) {
-                        auto ccs = cs;
-                        format_option(ccs, *sp);
-                        opt_namel = std::max(opt_namel, ccs.get_written());
-                        allopt.push_back(sp.get());
-                    }
+                    static_cast<arg_mutually_exclusive_group &>(*p).for_each(
+                        [&cs, &opt_namel, &allopt, this](auto const &arg) {
+                            auto ccs = cs;
+                            this->format_option(ccs, arg);
+                            opt_namel = std::max(opt_namel, ccs.get_written());
+                            allopt.push_back(static_cast<
+                                arg_optional const *
+                            >(&arg));
+                            return true;
+                        }, true
+                    );
                     break;
                 default:
                     break;
@@ -911,7 +915,7 @@ struct default_help_formatter {
         std::size_t maxpad = std::max({opt_namel, pos_namel, grp_namel});
 
         auto write_help = [maxpad](
-            auto &out, arg_argument &arg, std::size_t len
+            auto &out, arg_argument const &arg, std::size_t len
         ) {
             auto help = arg.get_help();
             if (help.empty()) {
@@ -955,13 +959,17 @@ struct default_help_formatter {
             }
             auto &garg = static_cast<arg_group &>(*gp);
             format(out, "\n%s:\n", garg.get_name());
-            for (auto &p: garg.iter()) {
+            garg.for_each([&write_help, &out, this](auto const &marg) {
                 format(out, "  ");
                 auto cr = counting_sink(out);
-                format_option(cr, *p);
+                this->format_option(cr, marg);
                 out = std::move(cr.get_range());
-                write_help(out, *p, cr.get_written());
-            }
+                write_help(
+                    out, static_cast<arg_argument const &>(marg),
+                    cr.get_written()
+                );
+                return true;
+            }, true);
         }
     }
 
@@ -1026,7 +1034,7 @@ struct default_help_formatter {
     }
 
     template<typename OutputRange>
-    void format_option(OutputRange &out, arg_argument const &arg) {
+    void format_option(OutputRange &out, arg_description const &arg) {
         switch (arg.type()) {
             case arg_type::OPTIONAL:
                 format_option(out, static_cast<arg_optional const &>(arg));
