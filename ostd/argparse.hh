@@ -375,91 +375,6 @@ private:
     bool p_required;
 };
 
-struct arg_group: arg_description {
-    friend struct arg_description_container;
-
-    arg_type type() const {
-        return arg_type::GROUP;
-    }
-
-    string_range get_name() const {
-        return p_name;
-    }
-
-    template<typename ...A>
-    arg_optional &add_optional(A &&...args) {
-        arg_description *p = new arg_optional(std::forward<A>(args)...);
-        return static_cast<arg_optional &>(*p_opts.emplace_back(p));
-    }
-
-    template<typename ...A>
-    arg_positional &add_positional(A &&...args) {
-        arg_description *p = new arg_positional(std::forward<A>(args)...);
-        return static_cast<arg_positional &>(*p_opts.emplace_back(p));
-    }
-
-    template<typename ...A>
-    arg_mutually_exclusive_group &add_mutually_exclusive_group(A &&...args) {
-        arg_description *p = new arg_mutually_exclusive_group(
-            std::forward<A>(args)...
-        );
-        return static_cast<arg_mutually_exclusive_group &>(
-            *p_opts.emplace_back(p)
-        );
-    }
-
-    template<typename F>
-    bool for_each(F &&func, bool iter_ex) const {
-        return for_each_impl(func, iter_ex);
-    }
-
-protected:
-    arg_group() = delete;
-    arg_group(string_range name):
-        p_name(name)
-    {}
-
-    arg_description *find_arg(
-        string_range name, std::optional<arg_type> tp, bool parsing
-    ) {
-        for (auto &opt: p_opts) {
-            if (auto *p = opt->find_arg(name, tp, parsing); p) {
-                return p;
-            }
-        }
-        return nullptr;
-    }
-
-private:
-    template<typename F>
-    bool for_each_impl(F &func, bool iter_ex) const {
-        for (auto &desc: p_opts) {
-            switch (desc->type()) {
-                case arg_type::OPTIONAL:
-                case arg_type::POSITIONAL:
-                    if (!func(*desc)) {
-                        return false;
-                    }
-                    break;
-                case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
-                    if (!static_cast<arg_mutually_exclusive_group const &>(
-                        *desc
-                    ).for_each(func, iter_ex)) {
-                        return false;
-                    }
-                    break;
-                default:
-                    /* should never happen */
-                    throw arg_error{"invalid argument type"};
-            }
-        }
-        return true;
-    }
-
-    std::string p_name;
-    std::vector<std::unique_ptr<arg_description>> p_opts;
-};
-
 struct arg_description_container {
     template<typename ...A>
     arg_optional &add_optional(A &&...args) {
@@ -471,12 +386,6 @@ struct arg_description_container {
     arg_positional &add_positional(A &&...args) {
         arg_description *p = new arg_positional(std::forward<A>(args)...);
         return static_cast<arg_positional &>(*p_opts.emplace_back(p));
-    }
-
-    template<typename ...A>
-    arg_group &add_group(A &&...args) {
-        arg_description *p = new arg_group(std::forward<A>(args)...);
-        return static_cast<arg_group &>(*p_opts.emplace_back(p));
     }
 
     template<typename ...A>
@@ -519,47 +428,86 @@ protected:
     }
 
     template<typename F>
-    bool for_each_impl(F &func, bool iter_ex) const {
-        for (auto &desc: p_opts) {
-            switch (desc->type()) {
-                case arg_type::OPTIONAL:
-                case arg_type::POSITIONAL:
-                    if (!func(static_cast<arg_description const &>(*desc))) {
-                        return false;
-                    }
-                    break;
-                case arg_type::GROUP:
-                    if (!static_cast<arg_group const &>(*desc).for_each(
-                        func, iter_ex
-                    )) {
-                        return false;
-                    }
-                    break;
-                case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
-                    if (!iter_ex) {
-                        if (!func(static_cast<arg_description const &>(
-                            *desc
-                        ))) {
-                            return false;
-                        }
-                        continue;
-                    }
-                    if (!static_cast<arg_mutually_exclusive_group const &>(
-                        *desc
-                    ).for_each(func, iter_ex)) {
-                        return false;
-                    }
-                    break;
-                default:
-                    /* should never happen */
-                    throw arg_error{"invalid argument type"};
-            }
-        }
-        return true;
-    }
+    bool for_each_impl(F &func, bool iter_ex) const;
 
     std::vector<std::unique_ptr<arg_description>> p_opts;
 };
+
+struct arg_group: arg_description, arg_description_container {
+    template<typename HelpFormatter>
+    friend struct basic_arg_parser;
+
+    arg_type type() const {
+        return arg_type::GROUP;
+    }
+
+    string_range get_name() const {
+        return p_name;
+    }
+
+protected:
+    arg_group() = delete;
+    arg_group(string_range name):
+        arg_description(), arg_description_container(), p_name(name)
+    {}
+
+    arg_description *find_arg(
+        string_range name, std::optional<arg_type> tp, bool parsing
+    ) {
+        for (auto &opt: p_opts) {
+            if (auto *p = opt->find_arg(name, tp, parsing); p) {
+                return p;
+            }
+        }
+        return nullptr;
+    }
+
+private:
+    std::string p_name;
+    std::vector<std::unique_ptr<arg_description>> p_opts;
+};
+
+template<typename F>
+inline bool arg_description_container::for_each_impl(
+    F &func, bool iter_ex
+) const {
+    for (auto &desc: p_opts) {
+        switch (desc->type()) {
+            case arg_type::OPTIONAL:
+            case arg_type::POSITIONAL:
+                if (!func(static_cast<arg_description const &>(*desc))) {
+                    return false;
+                }
+                break;
+            case arg_type::GROUP:
+                if (!static_cast<arg_group const &>(*desc).for_each(
+                    func, iter_ex
+                )) {
+                    return false;
+                }
+                break;
+            case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
+                if (!iter_ex) {
+                    if (!func(static_cast<arg_description const &>(
+                        *desc
+                    ))) {
+                        return false;
+                    }
+                    continue;
+                }
+                if (!static_cast<arg_mutually_exclusive_group const &>(
+                    *desc
+                ).for_each(func, iter_ex)) {
+                    return false;
+                }
+                break;
+            default:
+                /* should never happen */
+                throw arg_error{"invalid argument type"};
+        }
+    }
+    return true;
+}
 
 template<typename HelpFormatter>
 struct basic_arg_parser: arg_description_container {
@@ -572,6 +520,12 @@ public:
     ):
         arg_description_container(), p_progname(progname), p_posix(posix)
     {}
+
+    template<typename ...A>
+    arg_group &add_group(A &&...args) {
+        arg_description *p = new arg_group(std::forward<A>(args)...);
+        return static_cast<arg_group &>(*p_opts.emplace_back(p));
+    }
 
     void parse(int argc, char **argv) {
         if (p_progname.empty()) {
