@@ -57,6 +57,7 @@ enum class arg_value {
 
 struct arg_description {
     friend struct arg_description_container;
+    friend struct arg_mutually_exclusive_group;
     friend struct arg_group;
 
     virtual ~arg_description() {}
@@ -316,8 +317,8 @@ struct arg_mutually_exclusive_group: arg_description {
 
     template<typename ...A>
     arg_optional &add_optional(A &&...args) {
-        arg_optional *o = new arg_optional(std::forward<A>(args)...);
-        return *p_opts.emplace_back(o);
+        arg_description *p = new arg_optional(std::forward<A>(args)...);
+        return static_cast<arg_optional &>(*p_opts.emplace_back(p));
     }
 
     template<typename F>
@@ -349,8 +350,9 @@ protected:
                 }
                 return p;
             }
-            if (opt->used()) {
-                for (auto &n: opt->get_names()) {
+            auto &optr = static_cast<arg_optional &>(*opt);
+            if (optr.used()) {
+                for (auto &n: optr.get_names()) {
                     if (n.size() > used.size()) {
                         used = n;
                     }
@@ -364,14 +366,14 @@ private:
     template<typename F>
     bool for_each_impl(F &func, bool) const {
         for (auto &desc: p_opts) {
-            if (!func(static_cast<arg_description const &>(*desc))) {
+            if (!func(*desc)) {
                 return false;
             }
         }
         return true;
     }
 
-    std::vector<std::unique_ptr<arg_optional>> p_opts;
+    std::vector<std::unique_ptr<arg_description>> p_opts;
     bool p_required;
 };
 
