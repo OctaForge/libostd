@@ -510,10 +510,23 @@ private:
 
 public:
     basic_arg_parser(
-        string_range progname = string_range{}, bool posix = false
+        string_range progname = string_range{},
+        string_range pfx_chars = "-",
+        string_range pos_sep = string_range{},
+        bool posix = false
     ):
-        arg_description_container(), p_progname(progname), p_posix(posix)
-    {}
+        arg_description_container(), p_progname(progname),
+        p_pfx_chars(pfx_chars), p_pos_sep(), p_posix(posix)
+    {
+        if (pfx_chars.empty()) {
+            throw arg_error{"at least one prefix character needed"};
+        }
+        if (pos_sep.empty()) {
+            p_pos_sep.append(2, pfx_chars[0]);
+        } else {
+            p_pos_sep.append(pos_sep.data(), pos_sep.size());
+        }
+    }
 
     template<typename ...A>
     arg_group &add_group(A &&...args) {
@@ -548,7 +561,7 @@ public:
         bool allow_optional = true;
         while (!args.empty()) {
             string_range s{args.front()};
-            if (s == "--") {
+            if (s == citer(p_pos_sep)) {
                 args.pop_front();
                 allow_optional = false;
                 continue;
@@ -659,8 +672,11 @@ public:
     }
 
 private:
-    static bool is_optarg(string_range arg) {
-        return (!arg.empty() && (arg[0] == '-') && (arg != "-"));
+    bool is_optarg(string_range arg) {
+        if (arg.size() <= 1) {
+            return false;
+        }
+        return (p_pfx_chars.find(arg[0]) != std::string::npos);
     }
 
     template<typename R>
@@ -807,7 +823,7 @@ private:
         desc.set_values(ostd::iter(&srvals[0], &srvals[srvals.size()]));
     }
 
-    std::string p_progname;
+    std::string p_progname, p_pfx_chars, p_pos_sep;
     HelpFormatter p_helpfmt{*this};
     bool p_posix = false;
 };
@@ -958,11 +974,12 @@ struct default_help_formatter {
         std::string mt{arg.get_metavar()};
         if (mt.empty()) {
             for (auto &s: names) {
-                if (!starts_with(s, "--")) {
+                if (s.size() <= 2) {
                     continue;
                 }
                 string_range mtr = s;
-                while (!mtr.empty() && (mtr.front() == '-')) {
+                char pfx = mtr[0];
+                while (!mtr.empty() && (mtr.front() == pfx)) {
                     mtr.pop_front();
                 }
                 mt = std::string{mtr};
