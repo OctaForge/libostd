@@ -379,6 +379,11 @@ protected:
         }
     }
 
+    /** @brief Resets the usage counter. */
+    void reset() {
+        p_used = 0;
+    }
+
 private:
     void validate_req(arg_value req) const noexcept {
         switch (req) {
@@ -461,6 +466,11 @@ struct arg_positional: arg_argument {
      */
     bool used() const noexcept {
         return p_used;
+    }
+
+    /** @brief Resets the usage flag. */
+    void reset() {
+        p_used = false;
     }
 
 protected:
@@ -1039,15 +1049,23 @@ public:
         std::size_t npos = 0;
         bool has_rest = false;
         for_each([&has_rest, &npos](auto const &arg) {
+            if (arg.type() == arg_type::OPTIONAL) {
+                const_cast<arg_optional &>(
+                    static_cast<arg_optional const &>(arg)
+                ).reset();
+            }
             if (arg.type() != arg_type::POSITIONAL) {
                 return true;
             }
             auto const &desc = static_cast<arg_positional const &>(arg);
+            const_cast<arg_positional &>(desc).reset();
             if (desc.needs_value() == arg_value::REST) {
                 has_rest = true;
-                return false;
+                return true;
             }
-            ++npos;
+            if (!has_rest) {
+                ++npos;
+            }
             return true;
         }, true, true);
         bool allow_optional = true;
@@ -1510,7 +1528,8 @@ struct default_help_formatter {
         allopt.clear();
         allpos.clear();
 
-        p_parser.for_each([&write_help, &out, &allopt, &allpos
+        p_parser.for_each([
+            &write_help, &out, &allopt, &allpos
         ](auto const &arg) {
             if (arg.type() != arg_type::GROUP) {
                 return true;
