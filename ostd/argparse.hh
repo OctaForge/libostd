@@ -25,6 +25,7 @@
 #include <stdexcept>
 #include <utility>
 #include <functional>
+#include <type_traits>
 
 #include "ostd/algorithm.hh"
 #include "ostd/format.hh"
@@ -323,7 +324,12 @@ struct arg_mutually_exclusive_group: arg_description {
 
     template<typename F>
     bool for_each(F &&func) const {
-        return for_each_impl(func);
+        for (auto &desc: p_opts) {
+            if (!func(*desc)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     bool required() const {
@@ -363,16 +369,6 @@ protected:
     }
 
 private:
-    template<typename F>
-    bool for_each_impl(F &func) const {
-        for (auto &desc: p_opts) {
-            if (!func(*desc)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     std::vector<std::unique_ptr<arg_description>> p_opts;
     bool p_required;
 };
@@ -401,9 +397,7 @@ struct arg_description_container {
     }
 
     template<typename F>
-    bool for_each(F &&func, bool iter_ex, bool iter_grp) const {
-        return for_each_impl(func, iter_ex, iter_grp);
-    }
+    bool for_each(F &&func, bool iter_ex, bool iter_grp) const;
 
 protected:
     arg_description_container() {}
@@ -424,9 +418,6 @@ protected:
             appender<std::string>(), "unknown argument '%s'", name
         ).get()};
     }
-
-    template<typename F>
-    bool for_each_impl(F &func, bool iter_ex, bool iter_grp) const;
 
     std::vector<std::unique_ptr<arg_description>> p_opts;
 };
@@ -466,40 +457,41 @@ private:
 };
 
 template<typename F>
-inline bool arg_description_container::for_each_impl(
-    F &func, bool iter_ex, bool iter_grp
+inline bool arg_description_container::for_each(
+    F &&func, bool iter_ex, bool iter_grp
 ) const {
+    std::remove_reference_t<F> &fref = func;
     for (auto &desc: p_opts) {
         switch (desc->type()) {
             case arg_type::OPTIONAL:
             case arg_type::POSITIONAL:
-                if (!func(*desc)) {
+                if (!fref(*desc)) {
                     return false;
                 }
                 break;
             case arg_type::GROUP:
                 if (!iter_grp) {
-                    if (!func(*desc)) {
+                    if (!fref(*desc)) {
                         return false;
                     }
                     continue;
                 }
                 if (!static_cast<arg_group const &>(*desc).for_each(
-                    func, iter_ex, iter_grp
+                    fref, iter_ex, iter_grp
                 )) {
                     return false;
                 }
                 break;
             case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
                 if (!iter_ex) {
-                    if (!func(*desc)) {
+                    if (!fref(*desc)) {
                         return false;
                     }
                     continue;
                 }
                 if (!static_cast<arg_mutually_exclusive_group const &>(
                     *desc
-                ).for_each(func)) {
+                ).for_each(fref)) {
                     return false;
                 }
                 break;
