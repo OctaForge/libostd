@@ -322,8 +322,8 @@ struct arg_mutually_exclusive_group: arg_description {
     }
 
     template<typename F>
-    bool for_each(F &&func, bool iter_ex, bool iter_grp) const {
-        return for_each_impl(func, iter_ex, iter_grp);
+    bool for_each(F &&func) const {
+        return for_each_impl(func);
     }
 
     bool required() const {
@@ -364,7 +364,7 @@ protected:
 
 private:
     template<typename F>
-    bool for_each_impl(F &func, bool, bool) const {
+    bool for_each_impl(F &func) const {
         for (auto &desc: p_opts) {
             if (!func(*desc)) {
                 return false;
@@ -499,7 +499,7 @@ inline bool arg_description_container::for_each_impl(
                 }
                 if (!static_cast<arg_mutually_exclusive_group const &>(
                     *desc
-                ).for_each(func, iter_ex, iter_grp)) {
+                ).for_each(func)) {
                     return false;
                 }
                 break;
@@ -610,7 +610,7 @@ public:
                         return false;
                     }
                     return true;
-                }, true, true);
+                });
                 if (!cont) {
                     throw arg_error{format(
                         appender<std::string>(),
@@ -882,7 +882,7 @@ struct default_help_formatter {
                                 arg_optional const *
                             >(&arg));
                             return true;
-                        }, true, true
+                        }
                     );
                     break;
                 default:
