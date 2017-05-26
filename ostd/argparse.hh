@@ -57,7 +57,7 @@ enum class arg_type {
  *
  * The value requirement is paired with an integer defining the actual
  * number of values. This number is valid for `EXACTLY` (defining the
- * actual number of value) and for `ALL` (defining the minimum number
+ * actual number of values) and for `ALL` (defining the minimum number
  * of values) but not for the other two.
  *
  * See ostd::basic_arg_parser for detailed behavior.
@@ -270,6 +270,14 @@ struct arg_optional: arg_argument {
         return iter(p_names);
     }
 
+    /** @brief Checks if the optional argument must be specified.
+     *
+     * In vast majority of cases, optional arguments are optional.
+     */
+    bool required() const noexcept {
+        return p_required;
+    }
+
 protected:
     arg_optional() = delete;
 
@@ -280,9 +288,16 @@ protected:
      * requirement can be `EXACTLY`, `OPTIONAL` or `ALL` but never
      * `REST`. If it's not one of the allowed ones, ostd::arg_error
      * is thrown.
+     *
+     * The `required` argument specifies whether this optional
+     * argument must be specified. In most cases optional
+     * arguments are optional, but not always.
      */
-    arg_optional(string_range name, arg_value req, std::size_t nargs = 1):
-        arg_argument(req, nargs)
+    arg_optional(
+        string_range name, arg_value req, std::size_t nargs = 1,
+        bool required = false
+    ):
+        arg_argument(req, nargs), p_required(required)
     {
         validate_req(req);
         p_names.emplace_back(name);
@@ -292,9 +307,13 @@ protected:
      *
      * This version takes only a number, see the appropriate
      * constructors of ostd::arg_argument.
+     *
+     * The `required` argument specifies whether this optional
+     * argument must be specified. In most cases optional
+     * arguments are optional, but not always.
      */
-    arg_optional(string_range name, std::size_t nargs):
-        arg_argument(nargs)
+    arg_optional(string_range name, std::size_t nargs, bool required = false):
+        arg_argument(nargs), p_required(required)
     {
         p_names.emplace_back(name);
     }
@@ -308,12 +327,16 @@ protected:
      * requirement can be `EXACTLY`, `OPTIONAL` or `ALL` but never
      * `REST`. If it's not one of the allowed ones, ostd::arg_error
      * is thrown.
+     *
+     * The `required` argument specifies whether this optional
+     * argument must be specified. In most cases optional
+     * arguments are optional, but not always.
      */
     arg_optional(
         string_range name1, string_range name2, arg_value req,
-        std::size_t nargs = 1
+        std::size_t nargs = 1, bool required = false
     ):
-        arg_argument(req, nargs)
+        arg_argument(req, nargs), p_required(required)
     {
         validate_req(req);
         p_names.emplace_back(name1);
@@ -326,9 +349,16 @@ protected:
      *
      * This version takes only a number, see the appropriate
      * constructors of ostd::arg_argument.
+     *
+     * The `required` argument specifies whether this optional
+     * argument must be specified. In most cases optional
+     * arguments are optional, but not always.
      */
-    arg_optional(string_range name1, string_range name2, std::size_t nargs):
-        arg_argument(nargs)
+    arg_optional(
+        string_range name1, string_range name2, std::size_t nargs,
+        bool required = false
+    ):
+        arg_argument(nargs), p_required(required)
     {
         p_names.emplace_back(name1);
         p_names.emplace_back(name2);
@@ -401,6 +431,7 @@ private:
     std::function<void(iterator_range<string_range const *>)> p_action;
     std::vector<std::string> p_names;
     std::size_t p_used = 0, p_limit = 0;
+    bool p_required;
 };
 
 /** @brief A positional argument class.
@@ -568,8 +599,16 @@ struct arg_mutually_exclusive_group: arg_description {
      */
     template<typename ...A>
     arg_optional &add_optional(A &&...args) {
-        arg_description *p = new arg_optional(std::forward<A>(args)...);
-        return static_cast<arg_optional &>(*p_opts.emplace_back(p));
+        auto *opt = new arg_optional(std::forward<A>(args)...);
+        std::unique_ptr<arg_description> p{opt};
+        if (opt->required()) {
+            throw arg_error{
+                "required optional arguments not allowed "
+                "in mutually exclusive groups"
+            };
+        }
+        p_opts.push_back(std::move(p));
+        return *opt;
     }
 
     /** @brief Calls `func` for each argument in the group.
@@ -660,8 +699,10 @@ struct arg_description_container {
      */
     template<typename ...A>
     arg_optional &add_optional(A &&...args) {
-        arg_description *p = new arg_optional(std::forward<A>(args)...);
-        return static_cast<arg_optional &>(*p_opts.emplace_back(p));
+        auto *opt = new arg_optional(std::forward<A>(args)...);
+        std::unique_ptr<arg_description> p{opt};
+        p_opts.push_back(std::move(p));
+        return *opt;
     }
 
     /** @brief Constructs a positional argument in the container.
@@ -672,8 +713,10 @@ struct arg_description_container {
      */
     template<typename ...A>
     arg_positional &add_positional(A &&...args) {
-        arg_description *p = new arg_positional(std::forward<A>(args)...);
-        return static_cast<arg_positional &>(*p_opts.emplace_back(p));
+        auto *pos = new arg_positional(std::forward<A>(args)...);
+        std::unique_ptr<arg_description> p{pos};
+        p_opts.push_back(std::move(p));
+        return *pos;
     }
 
     /** @brief Constructs a mutually exclusive group in the container.
@@ -684,12 +727,10 @@ struct arg_description_container {
      */
     template<typename ...A>
     arg_mutually_exclusive_group &add_mutually_exclusive_group(A &&...args) {
-        arg_description *p = new arg_mutually_exclusive_group(
-            std::forward<A>(args)...
-        );
-        return static_cast<arg_mutually_exclusive_group &>(
-            *p_opts.emplace_back(p)
-        );
+        auto *mgrp = new arg_mutually_exclusive_group(std::forward<A>(args)...);
+        std::unique_ptr<arg_description> p{mgrp};
+        p_opts.push_back(std::move(p));
+        return *mgrp;
     }
 
     /** @brief Calls `func` for each argument in the container.
@@ -1144,7 +1185,20 @@ public:
                 }
                 return true;
             }
-            if (arg.type() != arg_type::POSITIONAL) {
+            if (arg.type() == arg_type::OPTIONAL) {
+                auto const &oarg = static_cast<arg_optional const &>(arg);
+                if (oarg.required() && !oarg.used()) {
+                    string_range name;
+                    for (auto &s: oarg.get_names()) {
+                        if (s.size() > name.size()) {
+                            name = s;
+                        }
+                    }
+                    throw arg_error{format(
+                        appender<std::string>(),
+                        "argument '%s' is required", name
+                    ).get()};
+                }
                 return true;
             }
             auto const &desc = static_cast<arg_positional const &>(arg);
