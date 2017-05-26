@@ -30,7 +30,8 @@ using pathvec = std::vector<fs::path>;
 
 static pathvec EXAMPLES = {
     "format", "listdir", "range", "range_pipe", "signal",
-    "stream1", "stream2", "coroutine1", "coroutine2", "concurrency"
+    "stream1", "stream2", "coroutine1", "coroutine2", "concurrency",
+    "argparse"
 };
 
 static fs::path ASM_SOURCE_DIR = fs::path{"src"} / "asm";

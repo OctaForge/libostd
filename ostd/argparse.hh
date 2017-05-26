@@ -2,13 +2,15 @@
  * @{
  */
 
-/** @file argúparse.hh
+/** @file argparse.hh
  *
  * @brief Portable argument parsing.
  *
  * Provides a powerful argument parser that can handle a wide variety of
  * cases, including POSIX and GNU argument ordering, different argument
  * formats, optional values and type conversions.
+ *
+ * @include argparse.cc
  *
  * @copyright See COPYING.md in the project tree for further information.
  */

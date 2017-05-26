@@ -27,7 +27,8 @@ c++ build.cc -o build -std=c++1z
 On Unix-like systems, the `-pthread` option is necessary. C++17 is required
 to build it just like the library itself. If you're using libc++ and your
 version does not supply a stable `std::filesystem` module, you will also
-need to link `-lc++experimental`.
+need to link `-lc++experimental`. If you have the same issue with libstdc++,
+the necessary linker flag is `-lstdc++fs`.
 
 Using the tool should be straightforward. The `./build help` command lists
 the available options.
