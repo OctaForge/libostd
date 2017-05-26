@@ -38,85 +38,163 @@ namespace ostd {
  * @{
  */
 
+/** @brief The error thrown on parsing and other failures. */
 struct arg_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
+/** @brief The type of an argument class. */
 enum class arg_type {
-    OPTIONAL = 0,
-    POSITIONAL,
-    GROUP,
-    MUTUALLY_EXCLUSIVE_GROUP
+    OPTIONAL = 0,            ///< An optional argument.
+    POSITIONAL,              ///< A positional argument.
+    GROUP,                   ///< A group of arguments.
+    MUTUALLY_EXCLUSIVE_GROUP ///< A group of mutually exclusive optionals.
 };
 
+/** @brief Defines the value requirements of an argument.
+ *
+ * The value requirement is paired with an integer defining the actual
+ * number of values. This number is valid for `EXACTLY` (defining the
+ * actual number of value) and for `ALL` (defining the minimum number
+ * of values) but not for the other two.
+ *
+ * See ostd::basic_arg_parser for detailed behavior.
+ */
 enum class arg_value {
-    EXACTLY,
-    OPTIONAL,
-    ALL,
-    REST
+    EXACTLY,  ///< An exact number of arguments.
+    OPTIONAL, ///< A single optional argument.
+    ALL,      ///< All arguments until an optional.
+    REST      ///< The rest of the arguments.
 };
 
+/** @brief A base class for all argument types.
+ *
+ * This base class is abstract so it cannot be instantiated.
+ */
 struct arg_description {
     friend struct arg_description_container;
     friend struct arg_mutually_exclusive_group;
     friend struct arg_group;
 
+    /** @brief The base class contains no data. */
     virtual ~arg_description() {}
 
-    virtual arg_type type() const = 0;
+    /** @brief Gets an ostd::arg_type for the class. */
+    virtual arg_type type() const noexcept = 0;
 
 protected:
+    /** @brief Finds an argument within the argument including itself.
+     *
+     * Given a name and optionally a type, this finds an optional or
+     * a positional argument of the given name. If the argument itself
+     * matches the parameters, it may return itself. For groups, it
+     * will search in the group (recursively) until something is
+     * found. If nothing is found, `nullptr` is returned.
+     *
+     * The bool here indicates whether we're currently parsing.
+     */
     virtual arg_description *find_arg(
         string_range, std::optional<arg_type>, bool
     ) {
         return nullptr;
     }
 
+    /** @brief Does nothing. */
     arg_description() {}
 };
 
+/** @brief A base class for optional and positional arguments.
+ *
+ * Optionals and positionals derive from this but not groups. It implements
+ * things common for both positional and optional arguments, including
+ * handling of ostd::arg_value. help and metavars.
+ *
+ * It's not instantiated directly.
+ */
 struct arg_argument: arg_description {
+    /** @brief Sets the help for the argument.
+     *
+     * The help string is stored internally. Returns itself.
+     */
     arg_argument &help(string_range str) {
         p_helpstr = std::string{str};
         return *this;
     }
 
-    string_range get_help() const {
+    /** @brief Gets the help string set by help(). */
+    string_range get_help() const noexcept {
         return p_helpstr;
     }
 
+    /** @brief Sets the metavar for the argument.
+     *
+     * A metavar is a string displayed in help listing either in place
+     * of a value (for optionals) or as the argument name itself (for
+     * positionals). See ostd::default_help_formatter for more.
+     */
     arg_argument &metavar(string_range str) {
         p_metavar = std::string{str};
         return *this;
     }
 
-    string_range get_metavar() const {
+    /** @brief Gets the metavar string set by metavar(). */
+    string_range get_metavar() const noexcept {
         return p_metavar;
     }
 
-    arg_value needs_value() const {
+    /** @brief Gets the value requirement for the argument */
+    arg_value needs_value() const noexcept {
         return p_valreq;
     }
 
-    std::size_t get_nargs() const {
+    /** @brief Gets the number of values for needs_value(). */
+    std::size_t get_nargs() const noexcept {
         return p_nargs;
     }
 
 protected:
+    /** @brief A helper constructor with ostd::arg_value.
+     *
+     * This is called by ostd::arg_optional and ostd::arg_positional.
+     * This version specifies an explicit value requirement plus a
+     * number of arguments.
+     */
     arg_argument(arg_value req, std::size_t nargs):
         arg_description(), p_valreq(req), p_nargs(nargs)
     {}
+
+    /** @brief A helper constructor with a number of arguments.
+     *
+     * The ostd::arg_value requirement is always `EXACTLY`.
+     */
     arg_argument(std::size_t nargs):
         arg_description(),
         p_valreq(arg_value::EXACTLY),
         p_nargs(nargs)
     {}
 
+private:
     std::string p_helpstr, p_metavar;
     arg_value p_valreq;
     std::size_t p_nargs;
 };
 
+/** @brief An optional argument class.
+ *
+ * An optional argument is composed of a prefix (frequently `-` or `--`,
+ * but can be anything allowed by the parser), a name and optionally a
+ * value or several values. Optional arguments are called optional because
+ * they don't have to be present. You can however limit how many times they
+ * can be used.
+ *
+ * An optional argument can have multiple names defining short and long
+ * arguments. Short arguments frequently have a format like `-a` while
+ * long ones often look like `--arg`. There is no restriction here as
+ * long as the name begins with at least one allowed prefix character,
+ * so arguments like `-arg` or `--a` or even `---x` are allowed.
+ *
+ *See ostd::basic_arg_parser for more.
+ */
 struct arg_optional: arg_argument {
     template<typename HelpFormatter>
     friend struct basic_arg_parser;
@@ -124,59 +202,111 @@ struct arg_optional: arg_argument {
     friend struct arg_group;
     friend struct arg_mutually_exclusive_group;
 
-    arg_type type() const {
+    /** @brief Gets the argument class type (ostd::arg_type).
+     *
+     * The value is always `OPTIONAL`.
+     */
+    arg_type type() const noexcept {
         return arg_type::OPTIONAL;
     }
 
-    std::size_t used() const {
+    /** @brief Gets how many times the argument has been specified. */
+    std::size_t used() const noexcept {
         return p_used;
     }
 
+    /** @brief Sets the action to run when the argument is used.
+     *
+     * The function is called with a finite random access range
+     * of ostd::string_range, each containing a value.  It's not
+     * expected to return anything.
+     */
     template<typename F>
     arg_optional &action(F func) {
         p_action = func;
         return *this;
     }
 
+    /** @brief Like ostd::arg_argument::help(). */
     arg_optional &help(string_range str) {
         arg_argument::help(str);
         return *this;
     }
 
+    /** @brief Like ostd::arg_argument::metavar(). */
     arg_optional &metavar(string_range str) {
         arg_argument::metavar(str);
         return *this;
     }
 
-    arg_optional &limit(std::size_t n) {
+    /** @brief Sets the limit on how many times this can be used.
+     *
+     * By default there is no limit (the value is 0). You can use this
+     * to restrict this to for example 1 use. The parsing will then
+     * throw ostd::arg_error if it's used more.
+     */
+    arg_optional &limit(std::size_t n) noexcept {
         p_limit = n;
         return *this;
     }
 
+    /** @brief Adds an extra optional name.
+     *
+     * Using the constructor, you can add 1 or 2 names. If you want
+     * this argument to be accessible with more names, you use this.
+     */
     arg_optional &add_name(string_range name) {
         p_names.emplace_back(name);
         return *this;
     }
 
-    auto get_names() const {
+    /** @brief Gets a read-only finite random access range of names.
+     *
+     * The value type of this range is an `std::string const`.
+     */
+    auto get_names() const noexcept {
         return iter(p_names);
     }
 
 protected:
     arg_optional() = delete;
 
+    /** @brief Constructs the optional argument with one name.
+     *
+     * This version takes an explicit value requirement, see the
+     * appropriate constructors of ostd::arg_argument. The value
+     * requirement can be `EXACTLY`, `OPTIONAL` or `ALL` but never
+     * `REST`. If it's not one of the allowed ones, ostd::arg_error
+     * is thrown.
+     */
     arg_optional(string_range name, arg_value req, std::size_t nargs = 1):
         arg_argument(req, nargs)
     {
         validate_req(req);
         p_names.emplace_back(name);
     }
+
+    /** @brief Constructs the optional argument with one name.
+     *
+     * This version takes only a number, see the appropriate
+     * constructors of ostd::arg_argument.
+     */
     arg_optional(string_range name, std::size_t nargs):
         arg_argument(nargs)
     {
         p_names.emplace_back(name);
     }
 
+    /** @brief Constructs the optional argument with two names.
+     *
+     * The typical combination is a short and a long name.
+     *
+     * This version takes an explicit value requirement, see the
+     * appropriate constructors of ostd::arg_argument. The value
+     * requirement can be `EXACTLY`, `OPTIONAL` or `ALL` but never
+     * `REST`. If it's not one of the allowed ones, ostd::arg_error
+     * is thrown.
+     */
     arg_optional(
         string_range name1, string_range name2, arg_value req,
         std::size_t nargs = 1
@@ -187,6 +317,14 @@ protected:
         p_names.emplace_back(name1);
         p_names.emplace_back(name2);
     }
+
+    /** @brief Constructs the optional argument with two names.
+     *
+     * The typical combination is a short and a long name.
+     *
+     * This version takes only a number, see the appropriate
+     * constructors of ostd::arg_argument.
+     */
     arg_optional(string_range name1, string_range name2, std::size_t nargs):
         arg_argument(nargs)
     {
@@ -194,6 +332,12 @@ protected:
         p_names.emplace_back(name2);
     }
 
+    /** @brief See arg_description::find_arg().
+     *
+     * If `tp` is given, it will be checked. All names are iterated
+     * and compared against `name`. If any matches, `this` will be
+     * returned. Otherwise `nullptr` will be returned.
+     */
     arg_description *find_arg(
         string_range name, std::optional<arg_type> tp, bool
     ) {
@@ -208,6 +352,18 @@ protected:
         return nullptr;
     }
 
+    /** @brief Marks the argument as used.
+     *
+     * If the number of uses is limited and the limit has already been
+     * reached, ostd::arg_error is thrown. Otherwise, the usage counter
+     * is incremented and if an action has been set, it's called with
+     * the given range of values. How many values the range contains
+     * depends on the value requirement of the argument, so it can
+     * be anything - empty, a single value or several.
+     *
+     * The action can throw, it's not caught and gets propagated all
+     * the way to the outside.
+     */
     void set_values(
         string_range argname, iterator_range<string_range const *> vals
     ) {
@@ -224,7 +380,7 @@ protected:
     }
 
 private:
-    void validate_req(arg_value req) {
+    void validate_req(arg_value req) const noexcept {
         switch (req) {
             case arg_value::EXACTLY:
             case arg_value::OPTIONAL:
@@ -240,41 +396,81 @@ private:
     std::size_t p_used = 0, p_limit = 0;
 };
 
+/** @brief A positional argument class.
+ *
+ * A positional argument is not prefixed. It also doesn't have to always
+ * be used, so positional arguments with optional values are possible.
+ * The important part is that positional arguments have a strictly
+ * defined order and don't have a specific format. They simply capture
+ * values in the list that are in their positions. Also, obviously they
+ * are only used once so their usage is a boolean, not a counter.
+ *
+ *See ostd::basic_arg_parser for more.
+ */
 struct arg_positional: arg_argument {
     template<typename HelpFormatter>
     friend struct basic_arg_parser;
     friend struct arg_description_container;
 
-    arg_type type() const {
+    /** @brief Gets the argument class type (ostd::arg_type).
+     *
+     * The value is always `POSITIONAL`.
+     */
+    arg_type type() const noexcept {
         return arg_type::POSITIONAL;
     }
 
-    string_range get_name() const {
+    /** @brief Gets the name of the positional argument.
+     *
+     * A name is just a unique label. It's also used in place
+     * of metavar() when no metavar is explicitly set.
+     */
+    string_range get_name() const noexcept {
         return p_name;
     }
 
+    /** @brief Sets the action to run when the argument is used.
+     *
+     * The function is called with a finite random access range
+     * of ostd::string_range, each containing a value.  It's not
+     * expected to return anything.
+     */
     template<typename F>
     arg_positional &action(F func) {
         p_action = func;
         return *this;
     }
 
+    /** @brief Like ostd::arg_argument::help(). */
     arg_positional &help(string_range str) {
         arg_argument::help(str);
         return *this;
     }
 
+    /** @brief Like ostd::arg_argument::metavar(). */
     arg_positional &metavar(string_range str) {
         arg_argument::metavar(str);
         return *this;
     }
 
-    bool used() const {
+    /** @brief Checks if the positional arg has been used.
+     *
+     * If the argument requirement is `EXACTLY` or if it's `ALL` with at
+     * least 1 argument, this will always be true after parsing unless
+     * an error happens. In other cases it can be false.
+     */
+    bool used() const noexcept {
         return p_used;
     }
 
 protected:
     arg_positional() = delete;
+
+    /** @brief Constructs the positional argument.
+     *
+     * This version takes an explicit value requirement,
+     * see the appropriate constructors of ostd::arg_argument.
+     */
     arg_positional(
         string_range name, arg_value req = arg_value::EXACTLY,
         std::size_t nargs = 1
@@ -282,11 +478,23 @@ protected:
         arg_argument(req, nargs),
         p_name(name)
     {}
+
+    /** @brief Constructs the positional argument.
+     *
+     * This version takes only a number, see the appropriate
+     * constructors of ostd::arg_argument.
+     */
     arg_positional(string_range name, std::size_t nargs):
         arg_argument(nargs),
         p_name(name)
     {}
 
+    /** @brief See arg_description::find_arg().
+     *
+     * If `tp` is given, it will be checked. The given name is checked
+     * against the argument's name. Then it will appropriately return
+     * either `this` or `nullptr`.
+     */
     arg_description *find_arg(
         string_range name, std::optional<arg_type> tp, bool
     ) {
@@ -296,11 +504,21 @@ protected:
         return this;
     }
 
+    /** @brief Marks the argument as used.
+     *
+     * The used flag is set and if an action has been set, it's called
+     * with the given range of values. How many values the range contains
+     * depends on the value requirement of the argument, so it can be
+     * anything - empty, a single value or several.
+     *
+     * The action can throw, it's not caught and gets propagated all
+     * the way to the outside.
+     */
     void set_values(iterator_range<string_range const *> vals) {
+        p_used = true;
         if (p_action) {
             p_action(vals);
         }
-        p_used = true;
     }
 
 private:
@@ -309,19 +527,48 @@ private:
     bool p_used = false;
 };
 
+/** @brief A group of mutually exclusive optional arguments.
+ *
+ * This is a group of optional arguments that cannot be used together.
+ * Mutually exclusive groups allow all of their arguments to be used,
+ * but if more than one is used, an ostd::arg_error is thrown and
+ * parsing is aborted.
+ *
+ * A mutually exclusive group can also have the `required` flag set
+ * in which case one of the arguments must always be used.
+ */
 struct arg_mutually_exclusive_group: arg_description {
     friend struct arg_description_container;
 
-    arg_type type() const {
+    /** @brief Gets the argument class type (ostd::arg_type).
+     *
+     * The value is always `MUTUALLY_EXCLUSIVE_GROUP`.
+     */
+    arg_type type() const noexcept {
         return arg_type::MUTUALLY_EXCLUSIVE_GROUP;
     }
 
+    /** @brief Constructs an optional argument in the group.
+     *
+     * The arguments are perfect-forwarded to the ostd::arg_optional
+     * constructors. The constructors are protected but may be used
+     * from here.
+     */
     template<typename ...A>
     arg_optional &add_optional(A &&...args) {
         arg_description *p = new arg_optional(std::forward<A>(args)...);
         return static_cast<arg_optional &>(*p_opts.emplace_back(p));
     }
 
+    /** @brief Calls `func` for each argument in the group.
+     *
+     * The function takes a reference to ostd::arg_description `const`.
+     * It returns `true` if it's meant to continue or `false` if the
+     * loop should be aborted.
+     *
+     * This function returns `false` if the loop was aborted and `true`
+     * if it finished successfully.
+     */
     template<typename F>
     bool for_each(F &&func) const {
         for (auto &desc: p_opts) {
@@ -332,15 +579,27 @@ struct arg_mutually_exclusive_group: arg_description {
         return true;
     }
 
-    bool required() const {
+    /** Checks if at least one argument must be used. */
+    bool required() const noexcept {
         return p_required;
     }
 
 protected:
+    /** @brief Initializes the group. */
     arg_mutually_exclusive_group(bool required = false):
         p_required(required)
     {}
 
+    /** @brief See arg_description::find_arg().
+     *
+     * This iterates over its optional arguments and calls their
+     * own `find_arg()` on each, returning the first matching
+     * result. However, if `parsing` is set, it will also check
+     * whether any has been used and if one was and it isn't the
+     * one that was matched, it throws ostd::arg_error with the
+     * appropriate error message. That's how the mutual exclusion
+     * is dealt with.
+     */
     arg_description *find_arg(
         string_range name, std::optional<arg_type> tp, bool parsing
     ) {
@@ -373,19 +632,44 @@ private:
     bool p_required;
 };
 
+/** @brief A container for arguments and groups.
+ *
+ * Used as a base for ostd::arg_group as well as ostd::basic_arg_parser.
+ * It defines common methods for them as well as insertion calls. There
+ * is no insertion call for regular argument groups though as those
+ * may only be inserted from a parser.
+ */
 struct arg_description_container {
+    /** @brief Constructs an optional argument in the container.
+     *
+     * The arguments are perfect-forwarded to the ostd::arg_optional
+     * constructors. The constructors are protected but may be used
+     * from here.
+     */
     template<typename ...A>
     arg_optional &add_optional(A &&...args) {
         arg_description *p = new arg_optional(std::forward<A>(args)...);
         return static_cast<arg_optional &>(*p_opts.emplace_back(p));
     }
 
+    /** @brief Constructs a positional argument in the container.
+     *
+     * The arguments are perfect-forwarded to the ostd::arg_positional
+     * constructors. The constructors are protected but may be used
+     * from here.
+     */
     template<typename ...A>
     arg_positional &add_positional(A &&...args) {
         arg_description *p = new arg_positional(std::forward<A>(args)...);
         return static_cast<arg_positional &>(*p_opts.emplace_back(p));
     }
 
+    /** @brief Constructs a mutually exclusive group in the container.
+     *
+     * The arguments are perfect-forwarded to the
+     * ostd::arg_mutually_exclusive_group constructor. The
+     * constructor is protected but may be used from here.
+     */
     template<typename ...A>
     arg_mutually_exclusive_group &add_mutually_exclusive_group(A &&...args) {
         arg_description *p = new arg_mutually_exclusive_group(
@@ -396,12 +680,37 @@ struct arg_description_container {
         );
     }
 
+    /** @brief Calls `func` for each argument in the container.
+     *
+     * The iteration is optionally recursive. It goes through mutually
+     * exclusive groups when `iter_ex` is true and also through normal
+     * groups if `iter_grp` is true.
+     *
+     * The function takes a reference to ostd::arg_description `const`.
+     * It returns `true` if it's meant to continue or `false` if the
+     * loop should be aborted.
+     *
+     * This function returns `false` if the loop was aborted and `true`
+     * if it finished successfully.
+     */
     template<typename F>
     bool for_each(F &&func, bool iter_ex, bool iter_grp) const;
 
 protected:
+    /** @brief Initializes the data. */
     arg_description_container() {}
 
+    /** @brief Finds an argument in the container.
+     *
+     * Iterates through everything, calling their own `find_arg()`
+     * on each (see arg_description::find_arg()). If that returns
+     * something valid, it's dynamically cast to a pointer to `AT`
+     * and if that is still valid, it's dereferenced and returned.
+     * Otherwise it goes on to the next one.
+     *
+     * If nothing is found, ostd::arg_error is thrown with the
+     * appropriate error message.
+     */
     template<typename AT>
     AT &find_arg(string_range name, bool parsing) {
         for (auto &p: p_opts) {
@@ -422,24 +731,57 @@ protected:
     std::vector<std::unique_ptr<arg_description>> p_opts;
 };
 
+/** @brief A group of arguments.
+ *
+ * The arguments in the group can be whatever can be inserted into
+ * an ostd::arg_description_container. Actual argument groups show
+ * in help listing separately from each other and from general args.
+ *
+ * A group is named and can optionally have a title. The title is
+ * displayed in help listing. If not set, the name is displayed.
+ */
 struct arg_group: arg_description, arg_description_container {
     template<typename HelpFormatter>
     friend struct basic_arg_parser;
 
-    arg_type type() const {
+    /** @brief Gets the argument class type (ostd::arg_type).
+     *
+     * The value is always `GROUP`.
+     */
+    arg_type type() const noexcept {
         return arg_type::GROUP;
     }
 
-    string_range get_name() const {
+    /** @brief Gets the name of the group. */
+    string_range get_name() const noexcept {
         return p_name;
+    }
+
+    /** @brief Gets the title of the group.
+     *
+     * If title was not set properly, it's like get_name().
+     */
+    string_range get_title() const noexcept {
+        if (p_title.empty()) {
+            return p_name;
+        }
+        return p_title;
     }
 
 protected:
     arg_group() = delete;
-    arg_group(string_range name):
-        arg_description(), arg_description_container(), p_name(name)
+
+    /** @brief Constructs the group with a name and an optional title. */
+    arg_group(string_range name, string_range title = string_range{}):
+        arg_description(), arg_description_container(),
+        p_name(name), p_title(title)
     {}
 
+    /** @brief See arg_description::find_arg().
+     *
+     * This iterates over its arguments and calls their own `find_arg()`
+     * on each, returning the first matching result or `nullptr`.
+     */
     arg_description *find_arg(
         string_range name, std::optional<arg_type> tp, bool parsing
     ) {
@@ -452,7 +794,7 @@ protected:
     }
 
 private:
-    std::string p_name;
+    std::string p_name, p_title;
     std::vector<std::unique_ptr<arg_description>> p_opts;
 };
 
@@ -503,12 +845,139 @@ inline bool arg_description_container::for_each(
     return true;
 }
 
+/** @brief A command line argument parser.
+ *
+ * This implements a universal parser for command line arguments.
+ *
+ * It supports positional arguments, optional arguments, groups and mutually
+ * exclusive groups. It supports GNU and POSIX style argument ordering. Help
+ * formatting is provided using `HelpFormatter`.
+ *
+ * Optional arguments with arbitrary prefixes constrained by a constructor
+ * string are supported. By default, the only allowed prefix character is
+ * the `-` character as in POSIX style arguments.
+ *
+ * The system also supports a special argument that will be skipped but will
+ * indicate that all following arguments after it are positional. By default
+ * this is a string of two instances of the first allowed prefix character,
+ * therefore `--` by default.
+ *
+ * GNU style argument ordering (default) means that optional and positional
+ * arguments can be mixed. POSIX style argument ordering means that optional
+ * arguments come first and when a non-optional argument is encountered, any
+ * argument after that is considered positional no matter the prefix.
+ *
+ * Generally, the input command line arguments are like this:
+ *
+ * ~~~
+ * --opt1 --opt2 --opt3 pos1 pos2 pos3
+ * ~~~
+ *
+ * With mixed mode, you can do something like:
+ *
+ * ~~~
+ * --opt1 pos1 --opt2 pos2 --opt3 pos3
+ * ~~~
+ *
+ * Using the special argument you can do this:
+ *
+ * ~~~
+ * --opt1 pos1 -- --pos2 --pos3
+ * ~~~
+ *
+ * With POSIX style:
+ *
+ * ~~~
+ * --opt1 pos1 --pos2 --pos3
+ * ~~~
+ *
+ * Optional arguments are formatted like this:
+ *
+ * ~~~
+ * --opt-with-no-value --opt-with-value=VALUE --opt-with-value VALUE
+ * ~~~
+ *
+ * Keep in mind that if you use the version with a space, you have an
+ * argument that requires a value and that is followed by an argument
+ * detected as optional (i.e. having at least one optional prefix char),
+ * it will not be assuemd to be the value and you will get an error
+ * (the parser will throw ostd::arg_error with an appropriate message).
+ *
+ * ~~~
+ * # errors
+ * --arg-with-value --foo
+ * # passes
+ * --arg-with-value=--foo
+ * ~~~
+ *
+ * The reason for this is to avoid potential mistakes.
+ *
+ * If an argument optionally takes a value and is followed by a value that
+ * does not have an optional-like format, it will be used as the value.
+ * If the `=` style value assignment is used, it will be assigned to the
+ * argument no matter the value's format. If it's followed by a value
+ * that looks like an optional, the argument will have no value and the
+ * following value will be assumed to be another argument.
+ *
+ * If an argument takes multiple values, the following can be done:
+ *
+ * ~~~
+ * --arg val1 val2 val3 ...
+ * --arg=val1 val2 val3 ...
+ * ~~~
+ *
+ * The `REST` value of ostd::arg_value is useful when coupled with a
+ * positional argument. First, all positional arguments preceding the
+ * one with `REST` are filled and then every single value no matter the
+ * format following the last non-`REST` positional value is used for
+ * the `REST` argument. If there is no non-`REST` positional argument
+ * before the `REST` one, the first non-optional argument onwards will
+ * be used for the `REST` argument. This is also true with GNU style
+ * mixed argument ordering.
+ *
+ * ~~~
+ * # multiple positionals followed by REST
+ * --foo pos1 pos2 [--part-of-rest part_of_rest --also-part-of-rest]
+ * # only REST
+ * --foo [part_of_rest --also-part-of-rest]
+ * ~~~
+ *
+ * The parser also makes no distinction between short and long arguments,
+ * the only requiremnt is at least one prefix character. Thus you can have
+ * arguments like `-arg`, `--arg`, `-a`, `--a` and their value-taking
+ * syntax is identical. If you define extra prefix characaters, you can
+ * also have syntax like `/arg` (DOS/Windows-style) or `++arg` or anything.
+ *
+ * The `progname` is used for help formatting. It's passed in during
+ * construction, but if you don't and you use the parse() call with
+ * `argc` and `argv` rather than range, `argv[0]] will be assumed to
+ * be the progname if not already set.
+ */
 template<typename HelpFormatter>
 struct basic_arg_parser: arg_description_container {
 private:
     struct parse_stop {};
 
 public:
+    /** @brief Constructs the parser.
+     *
+     * The `progname` argument is used for help listing. If empty, it
+     * can also be filled using parse() with `argc`/`argv`. The range
+     * based parse() will not set it and a fallback will be used.
+     *
+     * The `pfx_chars` argument defines allowed characters for optional
+     * argument prefixes. By default, only `-` is allowed.
+     *
+     * When `pos_sep` is not empty, it's the special argument that makes
+     * all following values to be positional. When empty, it's set to
+     * two instances of the first `pfx_chars` character, i.e. `--` by
+     * default.
+     *
+     * When `pfx_chars` does not contain at least one character,
+     * ostd::arg_error is thrown with the appropriate error.
+     *
+     * The `posix` argument enforces POSIX style argument ordering.
+     */
     basic_arg_parser(
         string_range progname = string_range{},
         string_range pfx_chars = "-",
@@ -528,12 +997,26 @@ public:
         }
     }
 
+    /** @brief Constructs a group in the container.
+     *
+     * The arguments are perfect-forwarded to the ostd::arg_group constructor.
+     * The constructor is protected but may be used from here. Groups cannot
+     * be constructed inside ostd::arg_description_container itself.
+     */
     template<typename ...A>
     arg_group &add_group(A &&...args) {
         arg_description *p = new arg_group(std::forward<A>(args)...);
         return static_cast<arg_group &>(*p_opts.emplace_back(p));
     }
 
+    /** @brief Parses arguments using `argc` and `argv`.
+     *
+     * This is a convenience function for usage with standard C++ `main`.
+     * If `progname` was empty during construction, it's set from `argv[0]`.
+     * The arguments are `argv[1]` onwards.
+     *
+     * Otherwise the same as parse(InputRange).
+     */
     void parse(int argc, char **argv) {
         if (p_progname.empty()) {
             p_progname = argv[0];
@@ -541,6 +1024,15 @@ public:
         parse(ostd::iter(&argv[1], &argv[argc]));
     }
 
+    /** @brief Parses arguments.
+     *
+     * Parses arguments according to the rules. Actions are called where
+     * necessary and both positional and optional arguments are handled.
+     * If an error happens (action throws, mutually exclusive arguments
+     * are used or any other error condition), typically ostd::arg_error
+     * is thrown. The only times something else is thrown is when an
+     * action explicitly throws a different exception.
+     */
     template<typename InputRange>
     void parse(InputRange args) {
         /* count positional args until remainder */
@@ -577,7 +1069,11 @@ public:
             if (p_posix) {
                 allow_optional = false;
             }
-            parse_pos(s, args, allow_optional);
+            try {
+                parse_pos(s, args, allow_optional);
+            } catch (parse_stop) {
+                return;
+            }
             if (has_rest && npos) {
                 --npos;
                 if (!npos && !args.empty()) {
@@ -585,7 +1081,11 @@ public:
                      * if the only positional consumes rest, it will be filled
                      * by the above when the first non-optional is encountered
                      */
-                    parse_pos(string_range{args.front()}, args, false);
+                    try {
+                        parse_pos(string_range{args.front()}, args, false);
+                    } catch (parse_stop) {
+                        return;
+                    }
                 }
             }
         }
@@ -640,6 +1140,12 @@ public:
         }, false, true);
     }
 
+    /** @brief Formats help into the given output range.
+     *
+     * It does so using the help formatter. First `format_usage()`
+     * is called followed by `format_options()`. The range is then
+     * returned, forwarded.
+     */
     template<typename OutputRange>
     OutputRange &&print_help(OutputRange &&range) {
         p_helpfmt.format_usage(range);
@@ -647,26 +1153,46 @@ public:
         return std::forward<OutputRange>(range);
     }
 
+    /** @brief A convenience print_help() with ostd::cout. */
     void print_help() {
         print_help(cout.iter());
     }
 
+    /** @brief Gets an argument with the given name.
+     *
+     * It can be either optional or positional,
+     * ostd::arg_description_container::find_arg() is used
+     * in non-parsing mode.
+     */
     arg_argument &get(string_range name) {
         return find_arg<arg_argument>(name, false);
     }
 
-    string_range get_progname() const {
+    /** @brief Gets the previously set progname. */
+    string_range get_progname() const noexcept {
         return p_progname;
     }
 
-    bool posix_ordering() const {
+    /** @brief Checks is POSIX style ordering is used. */
+    bool posix_ordering() const noexcept {
         return p_posix;
     }
 
-    bool posix_ordering(bool v) {
+    /** @brief Sets if POSIX style ordering is used.
+     *
+     * The previous ordering style is returned.
+     */
+    bool posix_ordering(bool v) noexcept {
         return std::exchange(p_posix, v);
     }
 
+    /** @brief When called within an action, aborts parsing.
+     *
+     * Do not call outside, as this throws an exception that is internal
+     * and cannot be handled. It's handled internally in the parser, so
+     * only use from actions if you want to stop the parsing. This is
+     * useful when e.g. doing help printing.
+     */
     void stop_parsing() {
         throw parse_stop{};
     }
@@ -828,11 +1354,41 @@ private:
     bool p_posix = false;
 };
 
+/** @brief The default help formatter class for ostd::basic_arg_parser.
+ *
+ * It formats help with the following format:
+ *
+ * ~~~
+ * Usage: <progname> [opts] [args]
+ *
+ * Positional arguments:
+ *   <metavar or name>     <help string>
+ *   <...>                 <help string>
+ *
+ * Optional arguments:
+ *   -name1, --name2, ...  <help string>
+ *   -a ARG, --arg ARG     <help string>
+ *   -a [ARG]              <help string>
+ *   -a [ARG ...]          <help string>
+ *
+ * Group title:
+ *   <positional>         <help string>
+ *   <optional>           <help string>
+ * ~~~
+ *
+ * See the respective methods for more details.
+ */
 struct default_help_formatter {
+    /** @brief Constructs the formatter with a parser. */
     default_help_formatter(basic_arg_parser<default_help_formatter> &p):
         p_parser(p)
     {}
 
+    /** @brief Formats the usage line.
+     *
+     * If ostd::basic_arg_parser::get_progname() is empty, `program`
+     * is used as a fallback.
+     */
     template<typename OutputRange>
     void format_usage(OutputRange &out) {
         string_range progname = p_parser.get_progname();
@@ -842,6 +1398,25 @@ struct default_help_formatter {
         format(out, "Usage: %s [opts] [args]\n", progname);
     }
 
+    /** @brief Formats the options (after usage line).
+     *
+     * Positional arguments not belonging to any group are formatted
+     * first, with `\nPositional arguments:\n` header. Same goes with
+     * optional arguments, except with `\nOptional arguments:\n`.
+     *
+     * If either positional or optional arguments without group don't
+     * exist, the section is skipped.
+     *
+     * All arguments, in groups or not, are offset by 2 spaces. All
+     * help strings are aligned and offset by 2 spaces from the longest
+     * argument string.
+     *
+     * Group titles are formatted as `\nTITLE:\n`.
+     *
+     * Within groups, positional arguments come first and optional
+     * arguments second. Mutually exclusive groups are expanded.
+     * Actual arguments are formatted with format_option().
+     */
     template<typename OutputRange>
     void format_options(OutputRange &out) {
         std::size_t opt_namel = 0, pos_namel = 0, grp_namel = 0;
@@ -941,7 +1516,7 @@ struct default_help_formatter {
                 return true;
             }
             auto &garg = static_cast<arg_group const &>(arg);
-            format(out, "\n%s:\n", garg.get_name());
+            format(out, "\n%s:\n", garg.get_title());
             garg.for_each([
                 &write_help, &out, &allopt, &allpos
             ](auto const &marg) {
@@ -968,6 +1543,22 @@ struct default_help_formatter {
         }, false, false);
     }
 
+    /** @brief Formats an optional argument.
+     *
+     * If a metavar exists (ostd::arg_optional::get_metavar()) then it's
+     * used as-is. Otherwise, the first name longer than 1 character
+     * without prefix is uppercased (without prefix) and used as a
+     * metavar. If thta fails, `VALUE` is used as a fallback.
+     *
+     * The option is formatted as `<name> <value>` for each name separated
+     * by a comma followed by a space. If the argument does not take any
+     * values, ` <value>` is not used. The format of `<value>` is the
+     * metavar when taking exactly one value, a space separated list
+     * of metavars when taking multiple, `[<metavar>]` with one optional
+     * value, `[<metavar> ...]` with all values with no "at least" count,
+     * and `<metavar> <metavar> [<metavar> ...]` for example when at least
+     * two values are necessary.
+     */
     template<typename OutputRange>
     void format_option(OutputRange &out, arg_optional const &arg) {
         auto names = arg.get_names();
@@ -1020,6 +1611,13 @@ struct default_help_formatter {
         }
     }
 
+    /** @brief Formats a positional argument.
+     *
+     * If a metavar exists (ostd::arg_positional::get_metavar()) then it's
+     * used as-is. Otherwise, the argument's name is used as-is.
+     *
+     * The argument is formatted simply as `<metavar>`.
+     */
     template<typename OutputRange>
     void format_option(OutputRange &out, arg_positional const &arg) {
         auto mt = arg.get_metavar();
@@ -1029,6 +1627,11 @@ struct default_help_formatter {
         format(out, mt);
     }
 
+    /** @brief Formats either a positional or optional argument.
+     *
+     * The right call is decided according to arg_description::type().
+     * If it's neither, ostd::arg_error is thrown.
+     */
     template<typename OutputRange>
     void format_option(OutputRange &out, arg_description const &arg) {
         switch (arg.type()) {
@@ -1048,8 +1651,16 @@ private:
     basic_arg_parser<default_help_formatter> &p_parser;
 };
 
+/** @brief A default specialization of ostd::basic_arg_parser. */
 using arg_parser = basic_arg_parser<default_help_formatter>;
 
+/** @brief A help-printing argument action.
+ *
+ * When called with an output range and a reference to parser, this
+ * returns a function which can be passed as an argument action.
+ * The function prints help and aborts parsing, see
+ * ostd::arg_parser::stop_parsing().
+ */
 template<typename OutputRange>
 auto arg_print_help(OutputRange o, arg_parser &p) {
     return [o = std::move(o), &p](iterator_range<string_range const *>)
@@ -1060,10 +1671,17 @@ auto arg_print_help(OutputRange o, arg_parser &p) {
     };
 };
 
+/** @brief Like ostd::arg_print_help() with ostd::cout. */
 auto arg_print_help(arg_parser &p) {
     return arg_print_help(cout.iter(), p);
 }
 
+/** @brief A constant-storing argument action.
+ *
+ * Given a value and a reference, this returns a function that copies
+ * the value into the reference using assignment. Use with arguments
+ * with no values from command line.
+ */
 template<typename T, typename U>
 auto arg_store_const(T &&val, U &ref) {
     return [val, &ref](iterator_range<string_range const *>) mutable {
@@ -1071,6 +1689,10 @@ auto arg_store_const(T &&val, U &ref) {
     };
 }
 
+/** @brief A string-storing argument action.
+ *
+ * The returne function stores the first given value in the `ref`.
+ */
 template<typename T>
 auto arg_store_str(T &ref) {
     return [&ref](iterator_range<string_range const *> r) mutable {
@@ -1078,14 +1700,26 @@ auto arg_store_str(T &ref) {
     };
 }
 
+/** @brief Like ostd::arg_store_const() with a `true` value. */
 auto arg_store_true(bool &ref) {
     return arg_store_const(true, ref);
 }
 
+/** @brief Like ostd::arg_store_const() with a `false` value. */
 auto arg_store_false(bool &ref) {
     return arg_store_const(false, ref);
 }
 
+/** @brief An unformatting argument action.
+ *
+ * The returned function takes the first value and unformats it
+ * into all the given references using a format string. For example
+ * if the given value is `5:10` and you want to unformat it into
+ * two integers, you use `%d:%d` as the format string.
+ *
+ * If the string cannot be unfortmatted exactly, an ostd::arg_error
+ * with an appropriate message is thrown.
+ */
 template<typename ...A>
 auto arg_store_format(string_range fmt, A &...args) {
     /* TODO: use ostd::format once it supports reading */
