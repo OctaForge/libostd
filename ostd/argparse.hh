@@ -280,6 +280,20 @@ struct arg_optional: arg_argument {
         return iter(p_names);
     }
 
+    /** @brief Gets the longest name this option can be referred to by.
+     *
+     * This is used in error messages and fallback metavar in help listing.
+     */
+    string_range longest_name() const noexcept {
+        string_range ret;
+        for (auto &s: p_names) {
+            if (s.size() > ret.size()) {
+                ret = s;
+            }
+        }
+        return ret;
+    }
+
     /** @brief Checks if the optional argument must be specified.
      *
      * In vast majority of cases, optional arguments are optional.
@@ -686,14 +700,7 @@ protected:
                 }
                 return p;
             }
-            auto &optr = static_cast<arg_optional &>(*opt);
-            if (optr.used()) {
-                for (auto &n: optr.names()) {
-                    if (n.size() > used.size()) {
-                        used = n;
-                    }
-                }
-            }
+            used = static_cast<arg_optional &>(*opt).longest_name();
         }
         return nullptr;
     }
@@ -1181,20 +1188,12 @@ public:
                 std::vector<string_range> names;
                 bool cont = false;
                 mgrp.for_each([&names, &cont](auto const &marg) {
-                    string_range cn;
                     auto const &mopt = static_cast<arg_optional const &>(marg);
-                    for (auto &n: mopt.names()) {
-                        if (n.size() > cn.size()) {
-                            cn = n;
-                        }
-                    }
-                    if (!cn.empty()) {
-                        names.push_back(cn);
-                    }
                     if (mopt.used()) {
                         cont = true;
                         return false;
                     }
+                    names.push_back(mopt.longest_name());
                     return true;
                 });
                 if (!cont) {
@@ -1208,15 +1207,9 @@ public:
             if (arg.type() == arg_type::OPTIONAL) {
                 auto const &oarg = static_cast<arg_optional const &>(arg);
                 if (oarg.required() && !oarg.used()) {
-                    string_range name;
-                    for (auto &s: oarg.names()) {
-                        if (s.size() > name.size()) {
-                            name = s;
-                        }
-                    }
                     throw arg_error{format(
                         appender<std::string>(),
-                        "argument '%s' is required", name
+                        "argument '%s' is required", oarg.longest_name()
                     ).get()};
                 }
                 return true;
@@ -1656,29 +1649,24 @@ struct default_help_formatter {
      */
     template<typename OutputRange>
     void format_option(OutputRange &out, arg_optional const &arg) {
-        auto names = arg.names();
         std::string mt{arg.metavar()};
         if (mt.empty()) {
-            for (auto &s: names) {
-                if (s.size() <= 2) {
-                    continue;
+            string_range fb = arg.longest_name();
+            if (!fb.empty()) {
+                char pfx = fb[0];
+                while (!fb.empty() && (fb.front() == pfx)) {
+                    fb.pop_front();
                 }
-                string_range mtr = s;
-                char pfx = mtr[0];
-                while (!mtr.empty() && (mtr.front() == pfx)) {
-                    mtr.pop_front();
-                }
-                mt = std::string{mtr};
-                break;
             }
-            if (mt.empty()) {
+            if (fb.empty()) {
                 mt = "VALUE";
             } else {
+                mt.append(fb.data(), fb.size());
                 std::transform(mt.begin(), mt.end(), mt.begin(), toupper);
             }
         }
         bool first = true;
-        for (auto &s: names) {
+        for (auto &s: arg.names()) {
             if (!first) {
                 format(out, ", ");
             }
