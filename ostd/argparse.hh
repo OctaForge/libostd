@@ -1676,12 +1676,9 @@ struct default_help_formatter {
     template<typename OutputRange>
     void format_option(OutputRange &out, arg_optional const &arg) {
         std::string mt = arg.real_metavar();
-        bool first = true;
-        for (auto &s: arg.names()) {
-            if (!first) {
-                format(out, ", ");
-            }
-            format(out, s);
+        auto names = arg.names();
+        for (;;) {
+            format(out, names.front());
             switch (arg.needs_value()) {
                 case arg_value::EXACTLY: {
                     for (auto nargs = arg.nargs(); nargs; --nargs) {
@@ -1701,7 +1698,11 @@ struct default_help_formatter {
                 default:
                     break;
             }
-            first = false;
+            names.pop_front();
+            if (names.empty()) {
+                break;
+            }
+            format(out, ", ");
         }
     }
 
