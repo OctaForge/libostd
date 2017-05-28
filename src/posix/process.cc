@@ -306,7 +306,7 @@ OSTD_EXPORT int subprocess::close() {
         auto r = read(pd->errno_fd, &eno, sizeof(int));
         reset();
         if (r < 0) {
-            throw subprocess_error{"could not read from pipe"};
+            return retc;
         } else if (r == sizeof(int)) {
             auto ec = std::system_category().default_error_condition(eno);
             auto app = appender<std::string>();
