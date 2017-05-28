@@ -251,6 +251,32 @@ struct arg_optional: arg_argument {
         return arg_argument::metavar();
     }
 
+    /** @brief Gets the actual metavar used in help listing.
+     *
+     * Unlike just metavar(), it accounts for the case when the
+     * provided metavar is empty, falling back to transforming
+     * a suitable argument name into one.
+     */
+    std::string real_metavar() const {
+        std::string mt{metavar()};
+        if (mt.empty()) {
+            string_range fb = longest_name();
+            if (!fb.empty()) {
+                char pfx = fb[0];
+                while (!fb.empty() && (fb.front() == pfx)) {
+                    fb.pop_front();
+                }
+            }
+            if (fb.empty()) {
+                mt = "VALUE";
+            } else {
+                mt.append(fb.data(), fb.size());
+                std::transform(mt.begin(), mt.end(), mt.begin(), toupper);
+            }
+        }
+        return mt;
+    }
+
     /** @brief Sets the limit on how many times this can be used.
      *
      * By default there is no limit (the value is 0). You can use this
@@ -1649,22 +1675,7 @@ struct default_help_formatter {
      */
     template<typename OutputRange>
     void format_option(OutputRange &out, arg_optional const &arg) {
-        std::string mt{arg.metavar()};
-        if (mt.empty()) {
-            string_range fb = arg.longest_name();
-            if (!fb.empty()) {
-                char pfx = fb[0];
-                while (!fb.empty() && (fb.front() == pfx)) {
-                    fb.pop_front();
-                }
-            }
-            if (fb.empty()) {
-                mt = "VALUE";
-            } else {
-                mt.append(fb.data(), fb.size());
-                std::transform(mt.begin(), mt.end(), mt.begin(), toupper);
-            }
-        }
+        std::string mt = arg.real_metavar();
         bool first = true;
         for (auto &s: arg.names()) {
             if (!first) {
