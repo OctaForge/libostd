@@ -309,7 +309,7 @@ OSTD_EXPORT int subprocess::close() {
             return retc;
         } else if (r != sizeof(int)) {
             throw subprocess_error{"could not read from pipe"};
-        } else if (r == sizeof(int)) {
+        } else {
             auto ec = std::system_category().default_error_condition(eno);
             auto app = appender<std::string>();
             format(app, "could not execute subprocess (%s)", ec.message());
