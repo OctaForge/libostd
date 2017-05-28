@@ -124,7 +124,7 @@ struct arg_argument: arg_description {
     }
 
     /** @brief Gets the help string set by help(). */
-    string_range get_help() const noexcept {
+    string_range help() const noexcept {
         return p_helpstr;
     }
 
@@ -140,7 +140,7 @@ struct arg_argument: arg_description {
     }
 
     /** @brief Gets the metavar string set by metavar(). */
-    string_range get_metavar() const noexcept {
+    string_range metavar() const noexcept {
         return p_metavar;
     }
 
@@ -150,7 +150,7 @@ struct arg_argument: arg_description {
     }
 
     /** @brief Gets the number of values for needs_value(). */
-    std::size_t get_nargs() const noexcept {
+    std::size_t nargs() const noexcept {
         return p_nargs;
     }
 
@@ -235,10 +235,20 @@ struct arg_optional: arg_argument {
         return *this;
     }
 
+    /** @brief Gets the metavar string set by help(). */
+    string_range help() const noexcept {
+        return arg_argument::help();
+    }
+
     /** @brief Like ostd::arg_argument::metavar(). */
     arg_optional &metavar(string_range str) {
         arg_argument::metavar(str);
         return *this;
+    }
+
+    /** @brief Gets the metavar string set by metavar(). */
+    string_range metavar() const noexcept {
+        return arg_argument::metavar();
     }
 
     /** @brief Sets the limit on how many times this can be used.
@@ -266,7 +276,7 @@ struct arg_optional: arg_argument {
      *
      * The value type of this range is an `std::string const`.
      */
-    auto get_names() const noexcept {
+    auto names() const noexcept {
         return iter(p_names);
     }
 
@@ -463,7 +473,7 @@ struct arg_positional: arg_argument {
      * A name is just a unique label. It's also used in place
      * of metavar() when no metavar is explicitly set.
      */
-    string_range get_name() const noexcept {
+    string_range name() const noexcept {
         return p_name;
     }
 
@@ -485,10 +495,20 @@ struct arg_positional: arg_argument {
         return *this;
     }
 
+    /** @brief Gets the metavar string set by help(). */
+    string_range help() const noexcept {
+        return arg_argument::help();
+    }
+
     /** @brief Like ostd::arg_argument::metavar(). */
     arg_positional &metavar(string_range str) {
         arg_argument::metavar(str);
         return *this;
+    }
+
+    /** @brief Gets the metavar string set by metavar(). */
+    string_range metavar() const noexcept {
+        return arg_argument::metavar();
     }
 
     /** @brief Checks if the positional arg has been used.
@@ -668,7 +688,7 @@ protected:
             }
             auto &optr = static_cast<arg_optional &>(*opt);
             if (optr.used()) {
-                for (auto &n: optr.get_names()) {
+                for (auto &n: optr.names()) {
                     if (n.size() > used.size()) {
                         used = n;
                     }
@@ -806,15 +826,15 @@ struct arg_group: arg_description, arg_description_container {
     }
 
     /** @brief Gets the name of the group. */
-    string_range get_name() const noexcept {
+    string_range name() const noexcept {
         return p_name;
     }
 
     /** @brief Gets the title of the group.
      *
-     * If title was not set properly, it's like get_name().
+     * If title was not set properly, it's like name().
      */
-    string_range get_title() const noexcept {
+    string_range title() const noexcept {
         if (p_title.empty()) {
             return p_name;
         }
@@ -1163,7 +1183,7 @@ public:
                 mgrp.for_each([&names, &cont](auto const &marg) {
                     string_range cn;
                     auto const &mopt = static_cast<arg_optional const &>(marg);
-                    for (auto &n: mopt.get_names()) {
+                    for (auto &n: mopt.names()) {
                         if (n.size() > cn.size()) {
                             cn = n;
                         }
@@ -1189,7 +1209,7 @@ public:
                 auto const &oarg = static_cast<arg_optional const &>(arg);
                 if (oarg.required() && !oarg.used()) {
                     string_range name;
-                    for (auto &s: oarg.get_names()) {
+                    for (auto &s: oarg.names()) {
                         if (s.size() > name.size()) {
                             name = s;
                         }
@@ -1203,7 +1223,7 @@ public:
             }
             auto const &desc = static_cast<arg_positional const &>(arg);
             auto needs = desc.needs_value();
-            auto nargs = desc.get_nargs();
+            auto nargs = desc.nargs();
             if ((needs != arg_value::EXACTLY) && (needs != arg_value::ALL)) {
                 return true;
             }
@@ -1243,7 +1263,7 @@ public:
     }
 
     /** @brief Gets the previously set progname. */
-    string_range get_progname() const noexcept {
+    string_range progname() const noexcept {
         return p_progname;
     }
 
@@ -1292,7 +1312,7 @@ private:
 
         auto &desc = find_arg<arg_optional>(arg, true);
         auto needs = desc.needs_value();
-        auto nargs = desc.get_nargs();
+        auto nargs = desc.nargs();
 
         /* optional argument takes no values */
         if ((needs == arg_value::EXACTLY) && !nargs) {
@@ -1376,7 +1396,7 @@ private:
 
         arg_positional &desc = *descp;
         auto needs = desc.needs_value();
-        auto nargs = desc.get_nargs();
+        auto nargs = desc.nargs();
 
         std::vector<std::string> vals;
         vals.emplace_back(argr);
@@ -1398,7 +1418,7 @@ private:
                 throw arg_error{format(
                     appender<std::string>(),
                     "positional argument '%s' needs at least %d values",
-                    desc.get_name(), nargs
+                    desc.name(), nargs
                 ).get()};
             }
         } else if ((needs == arg_value::EXACTLY) && (nargs > 1)) {
@@ -1408,7 +1428,7 @@ private:
                     throw arg_error{format(
                         appender<std::string>(),
                         "positional argument '%s' needs exactly %d values",
-                        desc.get_name(), nargs
+                        desc.name(), nargs
                     ).get()};
                 }
                 vals.emplace_back(args.front());
@@ -1460,12 +1480,12 @@ struct default_help_formatter {
 
     /** @brief Formats the usage line.
      *
-     * If ostd::basic_arg_parser::get_progname() is empty, `program`
+     * If ostd::basic_arg_parser::progname() is empty, `program`
      * is used as a fallback.
      */
     template<typename OutputRange>
     void format_usage(OutputRange &out) {
-        string_range progname = p_parser.get_progname();
+        string_range progname = p_parser.progname();
         if (progname.empty()) {
             progname = "program";
         }
@@ -1558,7 +1578,7 @@ struct default_help_formatter {
                 auto cr = counting_sink(out);
                 this->format_option(cr, parg);
                 out = std::move(cr.get_range());
-                auto help = parg.get_help();
+                auto help = parg.help();
                 if (help.empty()) {
                     out.put('\n');
                 } else {
@@ -1591,7 +1611,7 @@ struct default_help_formatter {
                 return true;
             }
             auto &garg = static_cast<arg_group const &>(arg);
-            format(out, "\n%s:\n", garg.get_title());
+            format(out, "\n%s:\n", garg.title());
             garg.for_each([
                 &write_help, &out, &allopt, &allpos
             ](auto const &marg) {
@@ -1620,7 +1640,7 @@ struct default_help_formatter {
 
     /** @brief Formats an optional argument.
      *
-     * If a metavar exists (ostd::arg_optional::get_metavar()) then it's
+     * If a metavar exists (ostd::arg_optional::metavar()) then it's
      * used as-is. Otherwise, the first name longer than 1 character
      * without prefix is uppercased (without prefix) and used as a
      * metavar. If thta fails, `VALUE` is used as a fallback.
@@ -1636,8 +1656,8 @@ struct default_help_formatter {
      */
     template<typename OutputRange>
     void format_option(OutputRange &out, arg_optional const &arg) {
-        auto names = arg.get_names();
-        std::string mt{arg.get_metavar()};
+        auto names = arg.names();
+        std::string mt{arg.metavar()};
         if (mt.empty()) {
             for (auto &s: names) {
                 if (s.size() <= 2) {
@@ -1665,7 +1685,7 @@ struct default_help_formatter {
             format(out, s);
             switch (arg.needs_value()) {
                 case arg_value::EXACTLY: {
-                    for (auto nargs = arg.get_nargs(); nargs; --nargs) {
+                    for (auto nargs = arg.nargs(); nargs; --nargs) {
                         format(out, " %s", mt);
                     }
                     break;
@@ -1674,7 +1694,7 @@ struct default_help_formatter {
                     format(out, " [%s]", mt);
                     break;
                 case arg_value::ALL:
-                    for (auto nargs = arg.get_nargs(); nargs; --nargs) {
+                    for (auto nargs = arg.nargs(); nargs; --nargs) {
                         format(out, " %s", mt);
                     }
                     format(out, " [%s ...]", mt);
@@ -1688,16 +1708,16 @@ struct default_help_formatter {
 
     /** @brief Formats a positional argument.
      *
-     * If a metavar exists (ostd::arg_positional::get_metavar()) then it's
+     * If a metavar exists (ostd::arg_positional::metavar()) then it's
      * used as-is. Otherwise, the argument's name is used as-is.
      *
      * The argument is formatted simply as `<metavar>`.
      */
     template<typename OutputRange>
     void format_option(OutputRange &out, arg_positional const &arg) {
-        auto mt = arg.get_metavar();
+        auto mt = arg.metavar();
         if (mt.empty()) {
-            mt = arg.get_name();
+            mt = arg.name();
         }
         format(out, mt);
     }
