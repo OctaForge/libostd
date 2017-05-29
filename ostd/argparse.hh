@@ -43,6 +43,11 @@ namespace ostd {
 /** @brief The error thrown on parsing and other failures. */
 struct arg_error: std::runtime_error {
     using std::runtime_error::runtime_error;
+
+    template<typename ...A>
+    arg_error(string_range fmt, A const &...args):
+        arg_error(format(appender<std::string>(), fmt, args...).get())
+    {}
 };
 
 /** @brief The type of an argument class. */
@@ -450,10 +455,9 @@ protected:
         string_range argname, iterator_range<string_range const *> vals
     ) {
         if (p_limit && (p_used == p_limit)) {
-            throw arg_error{format(
-                appender<std::string>(),
+            throw arg_error{
                 "argument '%s' can be used at most %d times", argname, p_limit
-            ).get()};
+            };
         }
         ++p_used;
         if (p_action) {
@@ -718,11 +722,10 @@ protected:
         for (auto &opt: p_opts) {
             if (auto *p = opt->find_arg(name, tp, parsing); p) {
                 if (parsing && !used.empty()) {
-                    throw arg_error{format(
-                        appender<std::string>(),
+                    throw arg_error{
                         "argument '%s' not allowed with argument '%s'",
                         name, used
-                    ).get()};
+                    };
                 }
                 return p;
             }
@@ -829,9 +832,7 @@ protected:
             }
             break;
         }
-        throw arg_error{format(
-            appender<std::string>(), "unknown argument '%s'", name
-        ).get()};
+        throw arg_error{"unknown argument '%s'", name};
     }
 
     std::vector<std::unique_ptr<arg_description>> p_opts;
@@ -1223,20 +1224,18 @@ public:
                     return true;
                 });
                 if (!cont) {
-                    throw arg_error{format(
-                        appender<std::string>(),
+                    throw arg_error{
                         "one of the arguments %('%s'%|, %) is required", names
-                    ).get()};
+                    };
                 }
                 return true;
             }
             if (arg.type() == arg_type::OPTIONAL) {
                 auto const &oarg = static_cast<arg_optional const &>(arg);
                 if (oarg.required() && !oarg.used()) {
-                    throw arg_error{format(
-                        appender<std::string>(),
+                    throw arg_error{
                         "argument '%s' is required", oarg.longest_name()
-                    ).get()};
+                    };
                 }
                 return true;
             }
@@ -1337,10 +1336,7 @@ private:
         if ((needs == arg_value::EXACTLY) && !nargs) {
             /* value was provided through = */
             if (!vals.empty()) {
-                throw arg_error{format(
-                    appender<std::string>(), "argument '%s' takes no value",
-                    arg
-                ).get()};
+                throw arg_error{"argument '%s' takes no value", arg};
             }
             desc.set_values(arg, nullptr);
             return;
@@ -1357,11 +1353,10 @@ private:
             for (;;) {
                 bool pval = !args.empty() && !is_optarg(args.front());
                 if ((needs == arg_value::EXACTLY) && rargs && !pval) {
-                    throw arg_error{format(
-                        appender<std::string>(),
+                    throw arg_error{
                         "argument '%s' needs exactly %d values",
                         arg, nargs
-                    ).get()};
+                    };
                 }
                 if (!pval || ((needs == arg_value::EXACTLY) && !rargs)) {
                     break;
@@ -1374,10 +1369,9 @@ private:
             }
         }
         if ((needs == arg_value::ALL) && (nargs > vals.size())) {
-            throw arg_error{format(
-                appender<std::string>(),
+            throw arg_error{
                 "argument '%s' needs at least %d values", arg, nargs
-            ).get()};
+            };
         }
         if (!vals.empty()) {
             std::vector<string_range> srvals;
@@ -1408,9 +1402,7 @@ private:
         }
 
         if (!descp) {
-            throw arg_error{format(
-                appender<std::string>(), "unexpected argument '%s'", argr
-            ).get()};
+            throw arg_error{"unexpected argument '%s'", argr};
         }
 
         arg_positional &desc = *descp;
@@ -1434,21 +1426,19 @@ private:
                 vals.emplace_back(v);
             }
             if (nargs > vals.size()) {
-                throw arg_error{format(
-                    appender<std::string>(),
+                throw arg_error{
                     "positional argument '%s' needs at least %d values",
                     desc.name(), nargs
-                ).get()};
+                };
             }
         } else if ((needs == arg_value::EXACTLY) && (nargs > 1)) {
             auto reqargs = nargs - 1;
             while (reqargs) {
                 if (args.empty() || (allow_opt && is_optarg(args.front()))) {
-                    throw arg_error{format(
-                        appender<std::string>(),
+                    throw arg_error{
                         "positional argument '%s' needs exactly %d values",
                         desc.name(), nargs
-                    ).get()};
+                    };
                 }
                 vals.emplace_back(args.front());
                 args.pop_front();
@@ -1823,10 +1813,9 @@ auto arg_store_format(string_range fmt, A &...args) {
     ) mutable {
         std::apply([&fmts, istr = std::string{r[0]}](auto &...refs) {
             if (sscanf(istr.data(), fmts.data(), &refs...) != sizeof...(A)) {
-                throw arg_error{format(
-                    appender<std::string>(),
+                throw arg_error{
                     "argument requires format '%s' (got '%s')", fmts, istr
-                ).get()};
+                };
             }
         }, argst);
     };
