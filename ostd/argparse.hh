@@ -1747,7 +1747,7 @@ using arg_parser = basic_arg_parser<default_help_formatter>;
  * ostd::arg_parser::stop_parsing().
  */
 template<typename OutputRange>
-auto arg_print_help(OutputRange o, arg_parser &p) {
+inline auto arg_print_help(OutputRange o, arg_parser &p) {
     return [o = std::move(o), &p](iterator_range<string_range const *>)
         mutable
     {
@@ -1757,7 +1757,7 @@ auto arg_print_help(OutputRange o, arg_parser &p) {
 };
 
 /** @brief Like ostd::arg_print_help() with ostd::cout. */
-auto arg_print_help(arg_parser &p) {
+inline auto arg_print_help(arg_parser &p) {
     return arg_print_help(cout.iter(), p);
 }
 
@@ -1768,7 +1768,7 @@ auto arg_print_help(arg_parser &p) {
  * with no values from command line.
  */
 template<typename T, typename U>
-auto arg_store_const(T &&val, U &ref) {
+inline auto arg_store_const(T &&val, U &ref) {
     return [val, &ref](iterator_range<string_range const *>) mutable {
         ref = std::move(val);
     };
@@ -1779,19 +1779,19 @@ auto arg_store_const(T &&val, U &ref) {
  * The returne function stores the first given value in the `ref`.
  */
 template<typename T>
-auto arg_store_str(T &ref) {
+inline auto arg_store_str(T &ref) {
     return [&ref](iterator_range<string_range const *> r) mutable {
         ref = T{r[0]};
     };
 }
 
 /** @brief Like ostd::arg_store_const() with a `true` value. */
-auto arg_store_true(bool &ref) {
+inline auto arg_store_true(bool &ref) {
     return arg_store_const(true, ref);
 }
 
 /** @brief Like ostd::arg_store_const() with a `false` value. */
-auto arg_store_false(bool &ref) {
+inline auto arg_store_false(bool &ref) {
     return arg_store_const(false, ref);
 }
 
@@ -1806,7 +1806,7 @@ auto arg_store_false(bool &ref) {
  * with an appropriate message is thrown.
  */
 template<typename ...A>
-auto arg_store_format(string_range fmt, A &...args) {
+inline auto arg_store_format(string_range fmt, A &...args) {
     /* TODO: use ostd::format once it supports reading */
     return [fmts = std::string{fmt}, argst = std::tie(args...)](
         iterator_range<string_range const *> r
