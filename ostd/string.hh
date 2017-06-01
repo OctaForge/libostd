@@ -520,6 +520,128 @@ inline std::enable_if_t<
     return rhs.compare(lhs) <= 0;
 }
 
+/* comparisons between ranges and stdlib strings */
+
+/** @brief Like `!lhs.compare(rhs)`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator==(
+    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+) noexcept {
+    return !lhs.compare(rhs);
+}
+
+/** @brief Like `lhs.compare(rhs)`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator!=(
+    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+) noexcept {
+    return lhs.compare(rhs);
+}
+
+/** @brief Like `lhs.compare(rhs) < 0`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator<(
+    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+) noexcept {
+    return lhs.compare(rhs) < 0;
+}
+
+/** @brief Like `lhs.compare(rhs) > 0`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator>(
+    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+) noexcept {
+    return lhs.compare(rhs) > 0;
+}
+
+/** @brief Like `lhs.compare(rhs) <= 0`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator<=(
+    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+) noexcept {
+    return lhs.compare(rhs) <= 0;
+}
+
+/** @brief Like `lhs.compare(rhs) >= 0`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator>=(
+    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+) noexcept {
+    return lhs.compare(rhs) >= 0;
+}
+
+/** @brief Like `!rhs.compare(lhs)`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator==(
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+) noexcept {
+    return !rhs.compare(lhs);
+}
+
+/** @brief Like `rhs.compare(lhs)`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator!=(
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+) noexcept {
+    return rhs.compare(lhs);
+}
+
+/** @brief Like `rhs.compare(lhs) > 0`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator<(
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+) noexcept {
+    return rhs.compare(lhs) > 0;
+}
+
+/** @brief Like `rhs.compare(lhs) < 0`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator>(
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+) noexcept {
+    return rhs.compare(lhs) < 0;
+}
+
+/** @brief Like `rhs.compare(lhs) >= 0`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator<=(
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+) noexcept {
+    return rhs.compare(lhs) >= 0;
+}
+
+/** @brief Like `rhs.compare(lhs) <= 0`. */
+template<typename T, typename TR, typename U, typename A>
+inline std::enable_if_t<
+    std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
+> operator>=(
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+) noexcept {
+    return rhs.compare(lhs) <= 0;
+}
+
 /** @brief Checks if a string slice starts with another slice. */
 inline bool starts_with(string_range a, string_range b) noexcept {
     if (a.size() < b.size()) {

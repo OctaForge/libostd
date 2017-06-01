@@ -432,7 +432,7 @@ protected:
             return nullptr;
         }
         for (auto const &nm: p_names) {
-            if (name == iter(nm)) {
+            if (name == nm) {
                 return this;
             }
         }
@@ -1168,7 +1168,7 @@ public:
         bool allow_optional = true;
         while (!args.empty()) {
             string_range s{args.front()};
-            if (s == citer(p_pos_sep)) {
+            if (s == p_pos_sep) {
                 args.pop_front();
                 allow_optional = false;
                 continue;
