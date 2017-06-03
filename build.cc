@@ -217,6 +217,10 @@ int main(int argc, char **argv) {
     if (build_cfg == "debug") {
         cxxflags += ' ';
         cxxflags += DEBUG_CXXFLAGS;
+    } else if (build_cfg != "release") {
+        ostd::cerr.writefln("invalid build configuration: %s", build_cfg);
+        ap.print_help(ostd::cerr.iter());
+        return 1;
     }
 
     add_env(cxxflags, "CXXFLAGS");
