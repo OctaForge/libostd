@@ -50,6 +50,17 @@ struct arg_error: std::runtime_error {
     {}
 };
 
+/** @brief The range type passed to argument action callbacks.
+ *
+ * The `T` template argument is a character type. Usually it will be
+ * just `char` but you might want to do UTF-16 or UTF-32 input. The
+ * actual range type is an ostd::contiguous_range_tag and contains
+ * `const` ostd::basic_char_range with `T const` and the traits type
+ * which is std::char_traits for `T` by default.
+ */
+template<typename T, typename TR = std::char_traits<T>>
+using arg_value_range = iterator_range<basic_char_range<T const, TR> const *>;
+
 /** @brief The type of an argument class. */
 enum class arg_type {
     OPTIONAL = 0,            ///< An optional argument.
@@ -451,9 +462,7 @@ protected:
      * The action can throw, it's not caught and gets propagated all
      * the way to the outside.
      */
-    void set_values(
-        string_range argname, iterator_range<string_range const *> vals
-    ) {
+    void set_values(string_range argname, arg_value_range<char> vals) {
         if (p_limit && (p_used == p_limit)) {
             throw arg_error{
                 "argument '%s' can be used at most %d times", argname, p_limit
@@ -482,7 +491,7 @@ private:
         }
     }
 
-    std::function<void(iterator_range<string_range const *>)> p_action;
+    std::function<void(arg_value_range<char>)> p_action;
     std::vector<std::string> p_names;
     std::size_t p_used = 0, p_limit = 0;
     bool p_required;
@@ -621,7 +630,7 @@ protected:
      * The action can throw, it's not caught and gets propagated all
      * the way to the outside.
      */
-    void set_values(iterator_range<string_range const *> vals) {
+    void set_values(arg_value_range<char> vals) {
         p_used = true;
         if (p_action) {
             p_action(vals);
@@ -629,7 +638,7 @@ protected:
     }
 
 private:
-    std::function<void(iterator_range<string_range const *>)> p_action;
+    std::function<void(arg_value_range<char>)> p_action;
     std::string p_name;
     bool p_used = false;
 };
@@ -1748,9 +1757,7 @@ using arg_parser = basic_arg_parser<default_help_formatter>;
  */
 template<typename OutputRange>
 inline auto arg_print_help(OutputRange o, arg_parser &p) {
-    return [o = std::move(o), &p](iterator_range<string_range const *>)
-        mutable
-    {
+    return [o = std::move(o), &p](arg_value_range<char>) mutable {
         p.print_help(o);
         p.stop_parsing();
     };
@@ -1769,7 +1776,7 @@ inline auto arg_print_help(arg_parser &p) {
  */
 template<typename T, typename U>
 inline auto arg_store_const(T &&val, U &ref) {
-    return [val, &ref](iterator_range<string_range const *>) mutable {
+    return [val, &ref](arg_value_range<char>) mutable {
         ref = std::move(val);
     };
 }
@@ -1780,7 +1787,7 @@ inline auto arg_store_const(T &&val, U &ref) {
  */
 template<typename T>
 inline auto arg_store_str(T &ref) {
-    return [&ref](iterator_range<string_range const *> r) mutable {
+    return [&ref](arg_value_range<char> r) mutable {
         ref = T{r[0]};
     };
 }
@@ -1809,7 +1816,7 @@ template<typename ...A>
 inline auto arg_store_format(string_range fmt, A &...args) {
     /* TODO: use ostd::format once it supports reading */
     return [fmts = std::string{fmt}, argst = std::tie(args...)](
-        iterator_range<string_range const *> r
+        arg_value_range<char> r
     ) mutable {
         std::apply([&fmts, istr = std::string{r[0]}](auto &...refs) {
             if (sscanf(istr.data(), fmts.data(), &refs...) != sizeof...(A)) {
