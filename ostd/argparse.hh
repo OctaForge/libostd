@@ -50,16 +50,24 @@ struct arg_error: std::runtime_error {
     {}
 };
 
-/** @brief The range type passed to argument action callbacks.
+/** @brief A contiguous range type used for argument values.
  *
- * The `T` template argument is a character type. Usually it will be
- * just `char` but you might want to do UTF-16 or UTF-32 input. The
- * actual range type is an ostd::contiguous_range_tag and contains
- * `const` ostd::basic_char_range with `T const` and the traits type
- * which is std::char_traits for `T` by default.
+ * This range type has immutable contents and doesn't own its memory. It
+ * is represented as a regular string slice with the appropraite character
+ * and traits types. The `T` template type is a character type, usually
+ * a `char` but can be `wchar_t`, `char16_t`, `char32_t` as well. The
+ * `TR` template type is the traits type, by default std::char_traits
+ * for `T`.
  */
 template<typename T, typename TR = std::char_traits<T>>
-using arg_value_range = iterator_range<basic_char_range<T const, TR> const *>;
+using arg_value_type = basic_char_range<T const, TR>;
+
+/** @brief The range type passed to argument action callbacks.
+ *
+ * It's a contiguous range of `const` ostd::arg_value_type.
+ */
+template<typename T, typename TR = std::char_traits<T>>
+using arg_value_range = iterator_range<arg_value_type<T, TR> const *>;
 
 /** @brief The type of an argument class. */
 enum class arg_type {
