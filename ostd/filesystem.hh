@@ -167,13 +167,13 @@ namespace detail {
             auto *cs = cur.c_str();
             /* this part of the path might contain wildcards */
             for (auto c = *cs; c; c = *++cs) {
-                auto ip = pre;
-                if (ip.empty()) {
-                    ip = ".";
-                }
                 /* ** as a name does recursive expansion */
                 if ((c == '*') && (*(cs + 1) == '*') && !*(cs + 2)) {
                     ++beg;
+                    auto ip = pre.empty() ? "." : pre;
+                    if (!filesystem::is_directory(ip)) {
+                        return;
+                    }
                     filesystem::recursive_directory_iterator it{ip};
                     for (auto &de: it) {
                         /* followed by more path, only consider dirs */
@@ -189,13 +189,15 @@ namespace detail {
                 /* a regular * or ? wildcard */
                 if ((c == '*') || (c == '?')) {
                     ++beg;
+                    auto ip = pre.empty() ? "." : pre;
+                    if (!filesystem::is_directory(ip)) {
+                        return;
+                    }
                     filesystem::directory_iterator it{ip};
                     for (auto &de: it) {
                         auto dp = de.path();
                         auto p = dp.filename();
-                        if (
-                            !glob_matches_filename(p.c_str(), cur.c_str())
-                        ) {
+                        if (!glob_matches_filename(p.c_str(), cur.c_str())) {
                             continue;
                         }
                         glob_match_impl(out, beg, end, dp);
