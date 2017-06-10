@@ -108,7 +108,7 @@ struct format_traits<filesystem::path> {
 };
 
 namespace detail {
-    inline bool glob_matches_filename(
+    inline bool glob_match_filename_impl(
         typename filesystem::path::value_type const *fname,
         typename filesystem::path::value_type const *wname
     ) {
@@ -147,14 +147,22 @@ namespace detail {
         }
         /* keep incrementing filename until it matches */
         while (*fname) {
-            if (glob_matches_filename(fname, wname)) {
+            if (glob_match_filename_impl(fname, wname)) {
                 return true;
             }
             ++fname;
         }
         return false;
     }
+} /* namespace detail */
 
+inline bool glob_match_filename(
+    filesystem::path const &filename, filesystem::path const &pattern
+) {
+    return detail::glob_match_filename_impl(filename.c_str(), pattern.c_str());
+}
+
+namespace detail {
     template<typename OR>
     inline void glob_match_impl(
         OR &out,
@@ -197,7 +205,7 @@ namespace detail {
                     for (auto &de: it) {
                         auto dp = de.path();
                         auto p = dp.filename();
-                        if (!glob_matches_filename(p.c_str(), cur.c_str())) {
+                        if (!glob_match_filename(p, cur)) {
                             continue;
                         }
                         glob_match_impl(out, beg, end, dp);
