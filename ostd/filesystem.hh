@@ -108,6 +108,55 @@ struct format_traits<filesystem::path> {
 };
 
 namespace detail {
+    inline typename filesystem::path::value_type const *glob_match_brackets(
+        typename filesystem::path::value_type match,
+        typename filesystem::path::value_type const *wp
+    ) {
+        bool neg = (*wp == '!');
+        if (neg) {
+            ++wp;
+        }
+
+        /* grab the first character as it can be ] */
+        auto c = *wp++;
+        if (!c) {
+            /* unterminated */
+            return nullptr;
+        }
+
+        /* make sure it's terminated somewhere */
+        auto *eb = wp;
+        for (; *eb != ']'; ++eb) {
+            if (!*eb) {
+                return nullptr;
+            }
+        }
+        ++eb;
+
+        /* no need to worry about \0 from now on */
+        do {
+            /* character range */
+            if ((*wp == '-') && (*(wp + 1) != ']')) {
+                auto lc = *(wp + 1);
+                wp += 2;
+                bool within = ((match >= c) && (match <= lc));
+                if (neg ? !within : within) {
+                    return eb;
+                }
+                c = *wp++;
+                continue;
+            }
+            /* single-char match */
+            if (neg ? (match != c) : (match == c)) {
+                return eb;
+            }
+            c = *wp++;
+        } while (c != ']');
+
+        /* loop ended, so no match */
+        return nullptr;
+    }
+
     inline bool glob_match_filename_impl(
         typename filesystem::path::value_type const *fname,
         typename filesystem::path::value_type const *wname
@@ -117,7 +166,23 @@ namespace detail {
             if (!*wname || (*wname == '*')) {
                 break;
             }
-            /* ? wildcard matches any character */
+            if (*fname) {
+                /* ? wildcard matches any character */
+                if (*wname == '?') {
+                    ++wname;
+                    ++fname;
+                    continue;
+                }
+                /* [...] wildcard */
+                if (*wname == '[') {
+                    wname = glob_match_brackets(*fname, wname + 1);
+                    if (!wname) {
+                        return false;
+                    }
+                    ++fname;
+                    continue;
+                }
+            }
             if ((*wname == '?') && *fname) {
                 ++wname;
                 ++fname;
@@ -210,8 +275,8 @@ namespace detail {
                     }
                     return;
                 }
-                /* a regular * or ? wildcard */
-                if ((c == '*') || (c == '?')) {
+                /* wildcards *, ?, [...] */
+                if ((c == '*') || (c == '?') || (c == '[')) {
                     ++beg;
                     auto ip = pre.empty() ? "." : pre;
                     if (!filesystem::is_directory(ip)) {
