@@ -182,12 +182,6 @@ namespace detail {
                             continue;
                         }
                         /* otherwise also match files */
-                        auto p = dp.filename();
-                        if (
-                            !glob_matches_filename(p.c_str(), cur.c_str())
-                        ) {
-                            continue;
-                        }
                         glob_match_impl(out, beg, end, dp);
                     }
                     return;
