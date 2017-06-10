@@ -174,35 +174,44 @@ namespace detail {
                     }
                     continue;
                 }
-                /* either * or ** */
+                auto ip = pre;
+                if (ip.empty()) {
+                    ip = ".";
+                }
+                /* ** as a name does recursive expansion */
+                if ((c == '*') && (*(cs + 1) == '*') && !*(cs + 2)) {
+                    ++beg;
+                    filesystem::recursive_directory_iterator it{ip};
+                    for (auto &de: it) {
+                        /* followed by more path, only consider dirs */
+                        auto dp = de.path();
+                        if ((beg != end) && !filesystem::is_directory(dp)) {
+                            continue;
+                        }
+                        /* otherwise also match files */
+                        auto p = dp.filename();
+                        if (
+                            !glob_matches_filename(p.c_str(), cur.c_str())
+                        ) {
+                            continue;
+                        }
+                        glob_match_impl(out, beg, end, dp);
+                    }
+                    return;
+                }
+                /* a regular * wildcard */
                 if (c == '*') {
                     ++beg;
-                    auto ip = pre;
-                    if (ip.empty()) {
-                        ip = ".";
-                    }
-                    if (*(cs + 1) == '*') {
-                        filesystem::recursive_directory_iterator it{ip};
-                        for (auto &de: it) {
-                            auto p = de.path().filename();
-                            if (
-                                !glob_matches_filename(p.c_str(), cur.c_str())
-                            ) {
-                                continue;
-                            }
-                            glob_match_impl(out, beg, end, p);
+                    filesystem::directory_iterator it{ip};
+                    for (auto &de: it) {
+                        auto dp = de.path();
+                        auto p = dp.filename();
+                        if (
+                            !glob_matches_filename(p.c_str(), cur.c_str())
+                        ) {
+                            continue;
                         }
-                    } else {
-                        filesystem::directory_iterator it{ip};
-                        for (auto &de: it) {
-                            auto p = de.path().filename();
-                            if (
-                                !glob_matches_filename(p.c_str(), cur.c_str())
-                            ) {
-                                continue;
-                            }
-                            glob_match_impl(out, beg, end, p);
-                        }
+                        glob_match_impl(out, beg, end, dp);
                     }
                     return;
                 }
