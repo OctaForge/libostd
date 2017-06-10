@@ -113,13 +113,18 @@ namespace detail {
         typename filesystem::path::value_type const *wname
     ) {
         /* skip any matching prefix if present */
-        while (*wname && (*wname != '*')) {
-            /* wildcard/other escapes */
-            if ((*wname == '\\') && !*++wname) {
-                break;
-            }
-            if (!*fname || (*fname++ != *wname++)) {
-                return false;
+        if (*wname && (*wname != '*')) {
+            for (;;) {
+                /* wildcard/other escapes */
+                if (*wname == '\\') {
+                    ++wname;
+                }
+                if (!*wname || (*wname == '*')) {
+                    break;
+                }
+                if (*fname++ != *wname++) {
+                    return false;
+                }
             }
         }
         /* skip wildcards; a wildcard matches 0 or more */
@@ -135,6 +140,10 @@ namespace detail {
         /* prefix skipping matched entire filename */
         if (!*fname) {
             return true;
+        }
+        /* empty pattern and non-empty filename */
+        if (!*wname) {
+            return false;
         }
         /* keep incrementing filename until it matches */
         while (*fname) {
@@ -175,7 +184,7 @@ namespace detail {
                     if (*(cs + 1) == '*') {
                         filesystem::recursive_directory_iterator it{ip};
                         for (auto &de: it) {
-                            auto p = de.path();
+                            auto p = de.path().filename();
                             if (
                                 !glob_matches_filename(p.c_str(), cur.c_str())
                             ) {
@@ -186,7 +195,7 @@ namespace detail {
                     } else {
                         filesystem::directory_iterator it{ip};
                         for (auto &de: it) {
-                            auto p = de.path();
+                            auto p = de.path().filename();
                             if (
                                 !glob_matches_filename(p.c_str(), cur.c_str())
                             ) {
