@@ -122,12 +122,18 @@ namespace detail {
                 if (!*wname || (*wname == '*')) {
                     break;
                 }
+                /* ? wildcard matches any character */
+                if ((*wname == '?') && *fname) {
+                    ++wname;
+                    ++fname;
+                    continue;
+                }
                 if (*fname++ != *wname++) {
                     return false;
                 }
             }
         }
-        /* skip wildcards; a wildcard matches 0 or more */
+        /* skip * wildcards; a wildcard matches 0 or more */
         if (*wname == '*') {
             while (*wname == '*') {
                 ++wname;
@@ -199,8 +205,8 @@ namespace detail {
                     }
                     return;
                 }
-                /* a regular * wildcard */
-                if (c == '*') {
+                /* a regular * or ? wildcard */
+                if ((c == '*') || (c == '?')) {
                     ++beg;
                     filesystem::directory_iterator it{ip};
                     for (auto &de: it) {
