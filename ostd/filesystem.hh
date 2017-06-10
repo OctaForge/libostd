@@ -113,24 +113,18 @@ namespace detail {
         typename filesystem::path::value_type const *wname
     ) {
         /* skip any matching prefix if present */
-        if (*wname && (*wname != '*')) {
-            for (;;) {
-                /* wildcard/other escapes */
-                if (*wname == '\\') {
-                    ++wname;
-                }
-                if (!*wname || (*wname == '*')) {
-                    break;
-                }
-                /* ? wildcard matches any character */
-                if ((*wname == '?') && *fname) {
-                    ++wname;
-                    ++fname;
-                    continue;
-                }
-                if (*fname++ != *wname++) {
-                    return false;
-                }
+        while (*wname && (*wname != '*')) {
+            if (!*wname || (*wname == '*')) {
+                break;
+            }
+            /* ? wildcard matches any character */
+            if ((*wname == '?') && *fname) {
+                ++wname;
+                ++fname;
+                continue;
+            }
+            if (*fname++ != *wname++) {
+                return false;
             }
         }
         /* skip * wildcards; a wildcard matches 0 or more */
@@ -173,13 +167,6 @@ namespace detail {
             auto *cs = cur.c_str();
             /* this part of the path might contain wildcards */
             for (auto c = *cs; c; c = *++cs) {
-                /* escape sequences for wildcards */
-                if (c == '\\') {
-                    if (!*++cs) {
-                        break;
-                    }
-                    continue;
-                }
                 auto ip = pre;
                 if (ip.empty()) {
                     ip = ".";
