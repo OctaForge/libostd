@@ -190,7 +190,23 @@ namespace detail {
                             continue;
                         }
                         /* otherwise also match files */
-                        glob_match_impl(out, beg, end, dp);
+                        if (pre.empty()) {
+                            /* avoid ugly formatting, sadly we have to do
+                             * with experimental fs api so no better way...
+                             */
+                            auto dpb = dp.begin(), dpe = dp.end();
+                            if (*dpb == ".") {
+                                ++dpb;
+                            }
+                            filesystem::path ap;
+                            while (dpb != dpe) {
+                                ap /= *dpb;
+                                ++dpb;
+                            }
+                            glob_match_impl(out, beg, end, ap);
+                        } else {
+                            glob_match_impl(out, beg, end, dp);
+                        }
                     }
                     return;
                 }
@@ -203,12 +219,11 @@ namespace detail {
                     }
                     filesystem::directory_iterator it{ip};
                     for (auto &de: it) {
-                        auto dp = de.path();
-                        auto p = dp.filename();
+                        auto p = de.path().filename();
                         if (!glob_match_filename(p, cur)) {
                             continue;
                         }
-                        glob_match_impl(out, beg, end, dp);
+                        glob_match_impl(out, beg, end, pre / p);
                     }
                     return;
                 }
