@@ -1,6 +1,6 @@
 /** @example glob.cc
  *
- * An example of using glob patterns,
+ * An example of using glob patterns.
  */
 
 #include <vector>
