@@ -140,21 +140,21 @@ namespace detail {
                 auto lc = *(wp + 1);
                 wp += 2;
                 bool within = ((match >= c) && (match <= lc));
-                if (neg ? !within : within) {
-                    return eb;
+                if (within) {
+                    return neg ? nullptr : eb;
                 }
                 c = *wp++;
                 continue;
             }
             /* single-char match */
-            if (neg ? (match != c) : (match == c)) {
-                return eb;
+            if (match == c) {
+                return neg ? nullptr : eb;
             }
             c = *wp++;
         } while (c != ']');
 
         /* loop ended, so no match */
-        return nullptr;
+        return neg ? eb : nullptr;
     }
 
     inline bool glob_match_filename_impl(
