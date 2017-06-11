@@ -279,6 +279,10 @@ namespace detail {
                         return;
                     }
                     filesystem::recursive_directory_iterator it{ip};
+                    /* include "current" dir in the match */
+                    if (beg != end) {
+                        glob_match_impl(out, beg, end, pre);
+                    }
                     for (auto &de: it) {
                         /* followed by more path, only consider dirs */
                         auto dp = de.path();
