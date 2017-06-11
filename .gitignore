@@ -2,9 +2,12 @@
 *.core
 *.a
 *.so
+examples/argparse
+examples/concurrency
 examples/coroutine1
 examples/coroutine2
 examples/format
+examples/glob
 examples/listdir
 examples/range
 examples/range_pipe

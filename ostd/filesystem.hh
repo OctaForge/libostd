@@ -17,6 +17,7 @@
  * Additionally, it implements glob matching following POSIX with its
  * own extensions (mainly recursive glob matching via `**`).
  *
+ * @include glob.cc
  * @include listdir.cc
  *
  * @copyright See COPYING.md in the project tree for further information.
