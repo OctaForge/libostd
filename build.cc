@@ -28,21 +28,16 @@ using pathvec = std::vector<fs::path>;
 
 /* THESE VARIABLES CAN BE ALTERED */
 
-static pathvec EXAMPLES = {
-    "format", "listdir", "range", "range_pipe", "signal",
-    "stream1", "stream2", "coroutine1", "coroutine2", "concurrency",
-    "argparse"
-};
+/* all examples in the directory are built */
+static fs::path EXAMPLES_DIR = "examples";
 
 static fs::path ASM_SOURCE_DIR = fs::path{"src"} / "asm";
 static pathvec ASM_SOURCES = {
     "jump_all_gas", "make_all_gas", "ontop_all_gas"
 };
 
+/* all sources in the directory are built */
 static fs::path CXX_SOURCE_DIR = "src";
-static pathvec CXX_SOURCES = {
-    "context_stack", "environ", "io", "concurrency", "process"
-};
 
 static fs::path TEST_DIR = "tests";
 static pathvec TEST_CASES = {
@@ -227,11 +222,23 @@ int main(int argc, char **argv) {
     add_env(ldflags, "LDFLAGS");
     add_env(asflags, "ASFLAGS");
 
+    auto examples = ostd::appender<pathvec>();
+    ostd::glob_match(examples, EXAMPLES_DIR / "*.cc");
+    for (auto &ex: examples.get()) {
+        ex.replace_extension();
+    }
+
+    auto cxx_sources = ostd::appender<pathvec>();
+    ostd::glob_match(cxx_sources, CXX_SOURCE_DIR / "*.cc");
+    for (auto &cc: cxx_sources.get()) {
+        cc.replace_extension();
+    }
+
     if (clean) {
         ostd::writeln("Cleaning...");
 
-        for (auto &ex: EXAMPLES) {
-            auto rp = "examples" / ex;
+        for (auto &ex: examples.get()) {
+            auto rp = ex;
             try_remove(rp);
             rp.replace_extension(".o");
             try_remove(rp);
@@ -242,8 +249,8 @@ int main(int argc, char **argv) {
             rp.replace_filename(aso.string() + "_dyn.o");
             try_remove(rp);
         }
-        for (auto &cso: CXX_SOURCES) {
-            auto rp = path_with_ext(CXX_SOURCE_DIR / cso, ".o");
+        for (auto &cso: cxx_sources.get()) {
+            auto rp = path_with_ext(cso, ".o");
             try_remove(rp);
             rp.replace_filename(cso.string() + "_dyn.o");
             try_remove(rp);
@@ -404,7 +411,7 @@ int main(int argc, char **argv) {
     };
 
     auto build_example = [&](fs::path const &name) {
-        auto base = "examples" / name;
+        auto base = name;
         auto ccf = path_with_ext(base, ".cc");
         auto obf = path_with_ext(base, ".o");
 
@@ -472,7 +479,7 @@ int main(int argc, char **argv) {
             }));
         };
         for (auto &sf: list) {
-            auto sp = spath / sf;
+            auto sp = spath.empty() ? sf : (spath / sf);
             if (build_static) {
                 build_obj(sp, false);
             }
@@ -484,7 +491,7 @@ int main(int argc, char **argv) {
 
     echo_q("Building the library...");
     build_all(ASM_SOURCES, ASM_SOURCE_DIR, ".S", call_as);
-    build_all(CXX_SOURCES, CXX_SOURCE_DIR, ".cc", call_cxx);
+    build_all(cxx_sources.get(), fs::path{}, ".cc", call_cxx);
 
     if (build_static) {
         pathvec objs;
@@ -507,7 +514,7 @@ int main(int argc, char **argv) {
 
     if (build_examples) {
         echo_q("Building examples...");
-        for (auto &ex: EXAMPLES) {
+        for (auto &ex: examples.get()) {
             future_bin.push(tp.push([&build_example, ex]() {
                 build_example(ex);
             }));
