@@ -22,6 +22,7 @@ namespace fs = ostd::filesystem;
 /* ugly, but do not explicitly compile */
 #include "src/io.cc"
 #include "src/process.cc"
+#include "src/filesystem.cc"
 
 using strvec = std::vector<std::string>;
 using pathvec = std::vector<fs::path>;
