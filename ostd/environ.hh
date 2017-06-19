@@ -18,8 +18,8 @@
 #ifndef OSTD_ENVIRON_HH
 #define OSTD_ENVIRON_HH
 
-#include "ostd/platform.hh"
-#include "ostd/string.hh"
+#include <ostd/platform.hh>
+#include <ostd/string.hh>
 
 #include <optional>
 #include <string>

@@ -50,10 +50,10 @@
 #include <exception>
 #include <type_traits>
 
-#include "ostd/platform.hh"
-#include "ostd/coroutine.hh"
-#include "ostd/channel.hh"
-#include "ostd/generic_condvar.hh"
+#include <ostd/platform.hh>
+#include <ostd/coroutine.hh>
+#include <ostd/channel.hh>
+#include <ostd/generic_condvar.hh>
 
 namespace ostd {
 

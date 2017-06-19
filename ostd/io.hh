@@ -28,10 +28,10 @@
 #include <cstdio>
 #include <cerrno>
 
-#include "ostd/platform.hh"
-#include "ostd/string.hh"
-#include "ostd/stream.hh"
-#include "ostd/format.hh"
+#include <ostd/platform.hh>
+#include <ostd/string.hh>
+#include <ostd/stream.hh>
+#include <ostd/format.hh>
 
 namespace ostd {
 

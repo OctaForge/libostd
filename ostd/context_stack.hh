@@ -22,7 +22,7 @@
 #include <new>
 #include <algorithm>
 
-#include "ostd/platform.hh"
+#include <ostd/platform.hh>
 
 #ifdef OSTD_USE_VALGRIND
 #  include <valgrind/valgrind.h>

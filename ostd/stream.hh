@@ -42,15 +42,15 @@
 #include <stdexcept>
 #include <system_error>
 
-#include "ostd/platform.hh"
+#include <ostd/platform.hh>
 
 #ifndef OSTD_PLATFORM_WIN32
 #include <sys/types.h>
 #endif
 
-#include "ostd/range.hh"
-#include "ostd/string.hh"
-#include "ostd/format.hh"
+#include <ostd/range.hh>
+#include <ostd/string.hh>
+#include <ostd/format.hh>
 
 namespace ostd {
 

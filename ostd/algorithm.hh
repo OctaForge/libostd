@@ -18,6 +18,8 @@
 #ifndef OSTD_ALGORITHM_HH
 #define OSTD_ALGORITHM_HH
 
+#include <ostd/unit_test.hh>
+
 #include <cmath>
 #include <utility>
 #include <functional>
@@ -28,9 +30,7 @@
 #include <vector>
 #endif
 
-#include "ostd/unit_test.hh"
-
-#include "ostd/range.hh"
+#include <ostd/range.hh>
 
 #define OSTD_TEST_MODULE libostd_algorithm
 

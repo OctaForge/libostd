@@ -40,9 +40,9 @@ namespace ostd {
 #  error "Unsupported platform"
 #endif
 
-#include "ostd/platform.hh"
-#include "ostd/range.hh"
-#include "ostd/format.hh"
+#include <ostd/platform.hh>
+#include <ostd/range.hh>
+#include <ostd/format.hh>
 
 namespace ostd {
 

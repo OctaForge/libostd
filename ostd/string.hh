@@ -59,8 +59,8 @@
 #include <utility>
 #include <vector>
 
-#include "ostd/range.hh"
-#include "ostd/algorithm.hh"
+#include <ostd/range.hh>
+#include <ostd/algorithm.hh>
 
 namespace ostd {
 

@@ -29,10 +29,10 @@
 #include <functional>
 #include <type_traits>
 
-#include "ostd/algorithm.hh"
-#include "ostd/format.hh"
-#include "ostd/string.hh"
-#include "ostd/io.hh"
+#include <ostd/algorithm.hh>
+#include <ostd/format.hh>
+#include <ostd/string.hh>
+#include <ostd/io.hh>
 
 namespace ostd {
 

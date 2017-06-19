@@ -24,7 +24,7 @@
 #include <stdexcept>
 #include <memory>
 
-#include "ostd/generic_condvar.hh"
+#include <ostd/generic_condvar.hh>
 
 namespace ostd {
 

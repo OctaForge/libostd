@@ -26,8 +26,8 @@
 #include <locale>
 #include <ios>
 
-#include "ostd/algorithm.hh"
-#include "ostd/string.hh"
+#include <ostd/algorithm.hh>
+#include <ostd/string.hh>
 
 namespace ostd {
 

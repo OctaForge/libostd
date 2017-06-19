@@ -29,7 +29,7 @@
 #include <SDL2/SDL.h>
 #endif
 
-#include "ostd/stream.hh"
+#include <ostd/stream.hh>
 
 namespace ostd {
 namespace sdl {
