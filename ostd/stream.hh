@@ -301,7 +301,7 @@ struct stream {
      * @see get()
      */
     template<typename T = char, typename R>
-    void get_line(R &&writer, bool keep_nl = false) {
+    R &&get_line(R &&writer, bool keep_nl = false) {
         bool cr = false;
         /* read one char, if it fails to read at all just propagate errors */
         T c = get<T>();
@@ -327,6 +327,7 @@ struct stream {
         if (gotc && keep_nl) {
             writer.put('\n');
         }
+        return std::forward<R>(writer);
     }
 
     /** @brief Writes all given values into the stream.
