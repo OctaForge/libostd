@@ -25,8 +25,8 @@ auto second_half = iter(input_array).slice(input_array.size() / 2);
  */
 static void test_channel() {
     auto c = make_channel<int>();
-    auto f = [](auto c, auto half) {
-        c.put(foldl(half, 0));
+    auto f = [](auto ch, auto half) {
+        ch.put(foldl(half, 0));
     };
     spawn(f, c, first_half);
     spawn(f, c, second_half);

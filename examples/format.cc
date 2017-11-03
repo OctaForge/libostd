@@ -21,7 +21,7 @@ struct Foo {
 
 /* implementing formatting for custom objects */
 template<>
-struct format_traits<Foo> {
+struct ostd::format_traits<Foo> {
     template<typename R>
     static void to_format(Foo const &, R &writer, format_spec const &fs) {
         switch (fs.spec()) {

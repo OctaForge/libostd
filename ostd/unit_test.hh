@@ -47,7 +47,6 @@ namespace test {
 
 namespace detail {
     static std::vector<void (*)()> test_cases;
-    static void (*test_dummy)() = nullptr;
 
     static bool add_test(std::string testn, void (*func)()) {
         if (testn == OSTD_TEST_MODULE_CURRENT) {

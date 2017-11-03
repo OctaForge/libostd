@@ -36,6 +36,8 @@
 #include <tuple>
 #include <type_traits>
 #include <optional>
+#include <functional>
+#include <memory>
 
 #include <ostd/platform.hh>
 #include <ostd/range.hh>
@@ -390,8 +392,8 @@ namespace detail {
         using yield_type = std::tuple<A...>;
 
         static yield_type get(std::tuple<coro_arg<A>...> &args) {
-            return std::apply([](auto ...args) {
-                return std::make_tuple(std::forward<A>(*args)...);
+            return std::apply([](auto ...targs) {
+                return std::make_tuple(std::forward<A>(*targs)...);
             }, args);
         }
     };

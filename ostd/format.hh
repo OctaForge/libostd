@@ -19,8 +19,10 @@
 #ifndef OSTD_FORMAT_HH
 #define OSTD_FORMAT_HH
 
+#include <cstring>
 #include <cstddef>
 #include <climits>
+#include <cmath>
 #include <utility>
 #include <stdexcept>
 #include <locale>
@@ -990,8 +992,8 @@ private:
             if (esc) {
                 char buf[6];
                 buf[0] = '\'';
-                std::size_t elen = strlen(esc);
-                memcpy(buf + 1, esc, elen);
+                std::size_t elen = std::strlen(esc);
+                std::memcpy(buf + 1, esc, elen);
                 buf[elen + 1] = '\'';
                 write_val(writer, false, ostd::string_range{
                     buf, buf + elen + 2
@@ -1115,7 +1117,7 @@ private:
         st.width(width());
         st.precision(has_precision() ? precision() : 6);
 
-        typename std::ios_base::fmtflags fl = 0;
+        typename std::ios_base::fmtflags fl{};
         if (!(isp & 32)) {
             fl |= std::ios_base::uppercase;
         }
@@ -1132,7 +1134,7 @@ private:
         }
         if (p_flags & FMT_FLAG_PLUS) {
             fl |= std::ios_base::showpos;
-        } else if ((p_flags & FMT_FLAG_SPACE) && !signbit(val)) {
+        } else if ((p_flags & FMT_FLAG_SPACE) && !std::signbit(val)) {
             /* only if no sign is shown... num_put does not
              * support this so we have to do it on our own
              */
@@ -1151,6 +1153,8 @@ private:
 
     template<typename R, typename T>
     void write_val(R &writer, bool escape, T const &val) const {
+        /* avoid false-positive warning with GCC */
+        static_cast<void>(escape);
         /* stuff fhat can be custom-formatted goes first */
         if constexpr(detail::fmt_tofmt_test<T, decltype(noop_sink<char>())>) {
             format_traits<T>::to_format(val, writer, *this);
@@ -1214,7 +1218,7 @@ private:
             return;
         }
         /* integers */
-        if constexpr(std::is_integral_v<T>) {
+        if constexpr(std::is_integral_v<T> && !std::is_same_v<T, bool>) {
             if constexpr(std::is_signed_v<T>) {
                 /* signed integers */
                 using UT = std::make_unsigned_t<T>;
@@ -1257,6 +1261,8 @@ private:
     inline void write_range_item(
         R &writer, bool escape, bool expandval, string_range fmt, T const &item
     ) const {
+        /* avoid false-positive warning with GCC */
+        static_cast<void>(expandval);
         if constexpr(detail::is_tuple_like<T>) {
             if (expandval) {
                 std::apply([&writer, escape, &fmt, this](
@@ -1282,6 +1288,8 @@ private:
     void write_range_val(
         R &writer, F &&func, string_range sep, T const &val
     ) const {
+        /* avoid false-positive warning with GCC */
+        static_cast<void>(sep);
         if constexpr(detail::iterable_test<T>) {
             auto range = ostd::iter(val);
             if (range.empty()) {
@@ -1328,6 +1336,8 @@ private:
     void write_tuple_val(
         R &writer, bool escape, string_range sep, T const &tup
     ) const {
+        /* avoid false-positive warning with GCC */
+        static_cast<void>(sep);
         format_spec sp{'s', p_loc, escape ? FMT_FLAG_AT : 0};
         sp.write_arg(writer, 0, std::get<I>(tup));
         if constexpr(I < (N - 1)) {

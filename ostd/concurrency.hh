@@ -89,7 +89,7 @@ namespace detail {
             }
         }
 
-        void wait() const {
+        void wait() {
             std::unique_lock<std::mutex> l{p_lock};
             while (!p_stor) {
                 p_cond.wait(l);
@@ -188,7 +188,7 @@ struct tid {
      *
      * The behavior is undefined when valid() is not true.
      */
-    void wait() const {
+    void wait() {
         p_state->wait();
     }
 
@@ -909,8 +909,8 @@ public:
             R ret;
             spawn_add(
                 std::forward<TSA>(sa),
-                [&ret, func = std::move(func)](auto &&...args) {
-                    ret = func(std::forward<A>(args)...);
+                [&ret, func = std::move(func)](auto &&...fargs) {
+                    ret = func(std::forward<A>(fargs)...);
                 },
                 std::forward<A>(args)...
             );

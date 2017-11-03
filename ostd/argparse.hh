@@ -488,7 +488,7 @@ protected:
     }
 
 private:
-    void validate_req(arg_value req) const noexcept {
+    void validate_req(arg_value req) const {
         switch (req) {
             case arg_value::EXACTLY:
             case arg_value::OPTIONAL:
@@ -1595,8 +1595,8 @@ struct default_help_formatter {
         }, false, false);
         std::size_t maxpad = std::max({opt_namel, pos_namel, grp_namel});
 
-        auto write_help = [maxpad, this](
-            auto &out, std::vector<arg_argument const *> const &args
+        auto write_help = [&out, maxpad, this](
+            std::vector<arg_argument const *> const &args
         ) {
             for (auto p: args) {
                 format(out, "  ");
@@ -1619,12 +1619,12 @@ struct default_help_formatter {
 
         if (!allpos.empty()) {
             format(out, "\nPositional arguments:\n");
-            write_help(out, allpos);
+            write_help(allpos);
         }
 
         if (!allopt.empty()) {
             format(out, "\nOptional arguments:\n");
-            write_help(out, allopt);
+            write_help(allopt);
         }
 
         allopt.clear();
@@ -1658,8 +1658,8 @@ struct default_help_formatter {
                 }
                 return true;
             }, true, false);
-            write_help(out, allpos);
-            write_help(out, allopt);
+            write_help(allpos);
+            write_help(allopt);
             return true;
         }, false, false);
     }

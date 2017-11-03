@@ -380,6 +380,8 @@ public:
         stack_node *nd = request();
         std::size_t ss = p_stacksize - sizeof(stack_node);
         auto *p = reinterpret_cast<unsigned char *>(nd) - ss;
+        /* avoid false-positive warning with GCC */
+        static_cast<void>(p);
         if constexpr(Protected) {
             detail::stack_protect(p, Traits::page_size());
         }
