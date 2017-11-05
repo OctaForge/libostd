@@ -461,13 +461,16 @@ struct basic_thread_scheduler: scheduler {
     }
 
     void do_spawn(std::function<void()> func) {
-        std::lock_guard<std::mutex> l{p_lock};
-        p_threads.emplace_front();
-        auto it = p_threads.begin();
-        *it = std::thread{[this, it, lfunc = std::move(func)]() {
-            lfunc();
-            remove_thread(it);
-        }};
+        {
+            std::lock_guard<std::mutex> l{p_lock};
+            p_threads.emplace_front();
+            auto it = p_threads.begin();
+            *it = std::thread{[this, it, lfunc = std::move(func)]() {
+                lfunc();
+                remove_thread(it);
+            }};
+        }
+        yield();
     }
 
     void yield() noexcept {
@@ -719,6 +722,7 @@ public:
 
     void do_spawn(std::function<void()> func) {
         p_coros.emplace_back(std::move(func), p_stacks.get_allocator());
+        yield();
     }
 
     void yield() noexcept {
