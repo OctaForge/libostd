@@ -402,10 +402,9 @@ public:
 private:
     template<typename InputRange1, typename InputRange2>
     void open_full(
-        string_range cmd, InputRange1 args, InputRange2 env, bool use_path
+        string_range cmd, InputRange1 args, [[maybe_unused]] InputRange2 env,
+        bool use_path
     ) {
-        /* avoid false-positive warning with GCC */
-        static_cast<void>(env);
         static_assert(
             std::is_constructible_v<
                 string_range, range_reference_t<InputRange1>

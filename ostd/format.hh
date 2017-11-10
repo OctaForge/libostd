@@ -1152,9 +1152,9 @@ private:
     }
 
     template<typename R, typename T>
-    void write_val(R &writer, bool escape, T const &val) const {
-        /* avoid false-positive warning with GCC */
-        static_cast<void>(escape);
+    void write_val(
+        R &writer, [[maybe_unused]] bool escape, T const &val
+    ) const {
         /* stuff fhat can be custom-formatted goes first */
         if constexpr(detail::fmt_tofmt_test<T, decltype(noop_sink<char>())>) {
             format_traits<T>::to_format(val, writer, *this);
@@ -1259,10 +1259,9 @@ private:
 
     template<typename R, typename T>
     inline void write_range_item(
-        R &writer, bool escape, bool expandval, string_range fmt, T const &item
+        R &writer, bool escape, [[maybe_unused]] bool expandval,
+        string_range fmt, T const &item
     ) const {
-        /* avoid false-positive warning with GCC */
-        static_cast<void>(expandval);
         if constexpr(detail::is_tuple_like<T>) {
             if (expandval) {
                 std::apply([&writer, escape, &fmt, this](
@@ -1286,10 +1285,8 @@ private:
 
     template<typename R, typename F, typename T>
     void write_range_val(
-        R &writer, F &&func, string_range sep, T const &val
+        R &writer, F &&func, [[maybe_unused]] string_range sep, T const &val
     ) const {
-        /* avoid false-positive warning with GCC */
-        static_cast<void>(sep);
         if constexpr(detail::iterable_test<T>) {
             auto range = ostd::iter(val);
             if (range.empty()) {
@@ -1334,10 +1331,8 @@ private:
 
     template<std::size_t I, std::size_t N, typename R, typename T>
     void write_tuple_val(
-        R &writer, bool escape, string_range sep, T const &tup
+        R &writer, bool escape, [[maybe_unused]] string_range sep, T const &tup
     ) const {
-        /* avoid false-positive warning with GCC */
-        static_cast<void>(sep);
         format_spec sp{'s', p_loc, escape ? FMT_FLAG_AT : 0};
         sp.write_arg(writer, 0, std::get<I>(tup));
         if constexpr(I < (N - 1)) {
