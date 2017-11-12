@@ -523,7 +523,7 @@ private:
         }
     }
 
-    std::locale p_loc;
+    std::locale p_loc = std::locale::classic();
 };
 
 /** @brief A range type for streams.

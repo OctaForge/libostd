@@ -440,10 +440,10 @@ namespace detail {
  *
  * # Locale awareness
  *
- * The system also makes use of locales. When formatting integers, thousands
- * grouping rules from the locale apply (no matter the base). When formatting
- * floats, a locale specific decimal separator is used and thousands grouping
- * also applies.
+ * The system is locale-aware but uses the C locale by default. Provide an
+ * explicit locale object when you want things formatted using a specific
+ * locale. This will affect formatting of decimal separators and thousands
+ * grouping particularly.
  *
  * # Errors
  *
@@ -457,10 +457,10 @@ struct format_spec {
      * but you will be able to format into a range with some arguments.
      * You can also manually parse the format string, see read_until_spec().
      *
-     * The locale used here is the default (global) locale.
+     * The locale used here is the C locale.
      */
     format_spec(string_range fmt):
-        p_fmt(fmt), p_loc()
+        p_fmt{fmt}, p_loc{std::locale::classic()}
     {}
 
     /** @brief Constructs with a format string and a locale.
