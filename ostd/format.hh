@@ -233,6 +233,9 @@ namespace detail {
 
     template<typename T, typename R>
     inline constexpr bool fmt_tofmt_test = decltype(test_tofmt<T, R>(0))::value;
+
+    /* any unicode character can be encoded in 6 bytes */
+    constexpr std::size_t MaxMultibyte = 6;
 }
 
 /** @brief A structure implementing type safe C-style formatting.
@@ -1015,7 +1018,7 @@ private:
     template<typename R, typename T>
     void write_int(R &writer, bool ptr, bool neg, T val) const {
         /* binary representation is the biggest, assume grouping */
-        char buf[sizeof(T) * CHAR_BIT * (MB_CUR_MAX + 1)];
+        char buf[sizeof(T) * CHAR_BIT * (detail::MaxMultibyte + 1)];
         std::size_t n = 0;
 
         char isp = spec();
@@ -1038,7 +1041,7 @@ private:
         /* this is bullshit */
         auto const &fac = std::use_facet<std::numpunct<wchar_t>>(p_loc);
         auto const &grp = fac.grouping();
-        char tseps[MB_CUR_MAX];
+        char tseps[detail::MaxMultibyte];
         int ntsep = wctomb(tseps, fac.thousands_sep());
         auto grpp = reinterpret_cast<unsigned char const *>(grp.data());
         unsigned char grpn = *grpp;
@@ -1440,7 +1443,7 @@ private:
         using difference_type = typename std::char_traits<wchar_t>::off_type;
 
         fmt_out &operator=(wchar_t c) {
-            char buf[MB_CUR_MAX];
+            char buf[detail::MaxMultibyte];
             for (int i = 0, j = wctomb(buf, c); i < j; ++i) {
                 p_out->put(buf[i]);
             }
