@@ -1015,7 +1015,7 @@ private:
     template<typename R, typename T>
     void write_int(R &writer, bool ptr, bool neg, T val) const {
         /* binary representation is the biggest, assume grouping */
-        char buf[sizeof(T) * CHAR_BIT * 2];
+        char buf[sizeof(T) * CHAR_BIT * (MB_CUR_MAX + 1)];
         std::size_t n = 0;
 
         char isp = spec();
@@ -1035,15 +1035,19 @@ private:
             buf[n++] = '0';
         }
 
-        auto const &fac = std::use_facet<std::numpunct<char>>(p_loc);
+        /* this is bullshit */
+        auto const &fac = std::use_facet<std::numpunct<wchar_t>>(p_loc);
         auto const &grp = fac.grouping();
-        char tsep = fac.thousands_sep();
+        char tseps[MB_CUR_MAX];
+        int ntsep = wctomb(tseps, fac.thousands_sep());
         auto grpp = reinterpret_cast<unsigned char const *>(grp.data());
         unsigned char grpn = *grpp;
         for (; val; val /= base) {
             if (!ptr && *grpp) {
                 if (!grpn) {
-                    buf[n++] = tsep;
+                    for (int i = ntsep - 1; i >= 0; --i) {
+                        buf[n++] = tseps[i];
+                    }
                     if (*(grpp + 1)) {
                         ++grpp;
                     }
@@ -1145,9 +1149,11 @@ private:
         }
         st.flags(fl);
 
+        /* this is also bullshit */
         fmt_num_put<R> nump;
         nump.put(
-            fmt_out<R>{&writer}, st, (p_flags & FMT_FLAG_ZERO) ? '0' : ' ', val
+            fmt_out<R>{&writer}, st,
+            (p_flags & FMT_FLAG_ZERO) ? L'0' : L' ', val
         );
     }
 
@@ -1424,16 +1430,20 @@ private:
         }
     }
 
+    /* but most of all, this part is the biggest bullshit */
     template<typename R>
     struct fmt_out {
         using iterator_category = std::output_iterator_tag;
-        using value_type = char;
-        using pointer = char *;
-        using reference = char &;
-        using difference_type = typename std::char_traits<char>::off_type;
+        using value_type = wchar_t;
+        using pointer = wchar_t *;
+        using reference = wchar_t &;
+        using difference_type = typename std::char_traits<wchar_t>::off_type;
 
-        fmt_out &operator=(char c) {
-            p_out->put(c);
+        fmt_out &operator=(wchar_t c) {
+            char buf[MB_CUR_MAX];
+            for (int i = 0, j = wctomb(buf, c); i < j; ++i) {
+                p_out->put(buf[i]);
+            }
             return *this;
         }
 
@@ -1445,9 +1455,9 @@ private:
     };
 
     template<typename R>
-    struct fmt_num_put final: std::num_put<char, fmt_out<R>> {
+    struct fmt_num_put final: std::num_put<wchar_t, fmt_out<R>> {
         fmt_num_put(std::size_t refs = 0):
-            std::num_put<char, fmt_out<R>>(refs)
+            std::num_put<wchar_t, fmt_out<R>>(refs)
         {}
         ~fmt_num_put() {}
     };
