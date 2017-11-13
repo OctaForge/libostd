@@ -1017,9 +1017,9 @@ private:
 
     template<typename R, typename T>
     void write_int(R &writer, bool ptr, bool neg, T val) const {
-        /* binary representation is the biggest, assume grouping */
-        char buf[sizeof(T) * CHAR_BIT * (detail::MaxMultibyte + 1)];
-        std::size_t n = 0;
+        /* binary representation is the longest */
+        char buf[sizeof(T) * CHAR_BIT];
+        std::size_t ndig = 0;
 
         char isp = spec();
         if (isp == 's') {
@@ -1033,45 +1033,55 @@ private:
         int cmask = ((isp >= 'a') << 5);
 
         int base = detail::fmt_bases[specn];
-        bool zval = !val;
-        if (zval) {
-            buf[n++] = '0';
+        if (!val) {
+            ndig = 1;
+            buf[0] = '0';
+        } else {
+            for (; val; val /= base) {
+                T vb = val % base;
+                buf[ndig++] = (vb + "70"[vb < 10]) | cmask;
+            }
         }
 
-        /* this is bullshit */
-        auto const &fac = std::use_facet<std::numpunct<wchar_t>>(p_loc);
-        auto const &grp = fac.grouping();
-        char tseps[detail::MaxMultibyte];
-        int ntsep = wctomb(tseps, fac.thousands_sep());
-        auto grpp = reinterpret_cast<unsigned char const *>(grp.data());
-        unsigned char grpn = *grpp;
-        for (; val; val /= base) {
-            if (!ptr && *grpp) {
-                if (!grpn) {
-                    for (int i = ntsep - 1; i >= 0; --i) {
-                        buf[n++] = tseps[i];
-                    }
-                    if (*(grpp + 1)) {
-                        ++grpp;
-                    }
-                    grpn = *grpp;
-                }
-                if (grpn) {
-                    --grpn;
-                }
-            }
-            T vb = val % base;
-            buf[n++] = (vb + "70"[vb < 10]) | cmask;
-        }
-        std::size_t tn = n;
+        std::size_t tdig = ndig;
         if (has_precision()) {
             int prec = precision();
-            if (std::size_t(prec) > tn) {
-                tn = std::size_t(prec);
-            } else if (!prec && zval) {
-                tn = 0;
+            if (std::size_t(prec) > tdig) {
+                tdig = std::size_t(prec);
+            } else if (!prec && !val) {
+                tdig = 0;
             }
         }
+
+        /* here starts the bullshit */
+        auto const &fac = std::use_facet<std::numpunct<wchar_t>>(p_loc);
+
+        char tseps[detail::MaxMultibyte];
+        int ntsep = wctomb(tseps, fac.thousands_sep());
+
+        auto const &grp = fac.grouping();
+        auto grpp = reinterpret_cast<unsigned char const *>(grp.data());
+
+        std::size_t nseps = 0, sreps = 0;
+        std::size_t total = tdig;
+        if (!ptr && (ntsep >= 0)) {
+            int cndig = int(ndig);
+            while (*grpp) {
+                cndig -= *grpp;
+                if (cndig > 0) {
+                    ++nseps;
+                    if (!grpp[1]) {
+                        ++sreps;
+                        continue;
+                    }
+                } else {
+                    break;
+                }
+                ++grpp;
+            }
+            total += nseps * ntsep;
+        }
+        /* here ends the bullshit */
 
         int fl = flags();
         bool lsgn = fl & FMT_FLAG_PLUS;
@@ -1084,28 +1094,53 @@ private:
             pfx = ("XB"[(specn == 3)]) | cmask;
         }
 
+        /* leading spaces if they apply */
         if (!zero) {
-            write_spaces(writer, tn + (!!pfx * 2) + sign, true, ' ');
+            write_spaces(writer, total + (!!pfx * 2) + sign, true, ' ');
         }
+        /* sign (either forced or a minus) */
         if (sign) {
             writer.put(neg ? '-' : *((" \0+") + lsgn * 2));
         }
+        /* prefix such as 0x */
         if (pfx) {
             writer.put('0');
             writer.put(pfx);
         }
+        /* if we chose to pad with leading zeroes instead */
         if (zero) {
-            write_spaces(writer, tn + (!!pfx * 2) + sign, true, '0');
+            write_spaces(writer, total + (!!pfx * 2) + sign, true, '0');
         }
-        if (tn) {
-            for (std::size_t i = 0; i < (tn - n); ++i) {
+        /* number itself (with potential thousands grouping) */
+        if (total) {
+            /* potential higher precision, no grouping applies */
+            for (std::size_t i = 0; i < (tdig - ndig); ++i) {
                 writer.put('0');
             }
-            for (std::size_t i = 0; i < n; ++i) {
-                writer.put(buf[n - i - 1]);
+            /* the rest of the number, with thousands grouping */
+            unsigned char grpn = *grpp;
+            for (std::size_t i = 0; i < ndig; ++i) {
+                if (nseps) {
+                    if (!grpn) {
+                        for (int j = 0; j < ntsep; ++j) {
+                            writer.put(tseps[j]);
+                        }
+                        if (sreps) {
+                            --sreps;
+                        } else {
+                            --grpp;
+                        }
+                        grpn = *grpp;
+                        --nseps;
+                    }
+                    if (grpn) {
+                        --grpn;
+                    }
+                }
+                writer.put(buf[ndig - i - 1]);
             }
         }
-        write_spaces(writer, tn + sign + (!!pfx * 2), false);
+        write_spaces(writer, total + sign + (!!pfx * 2), false);
     }
 
     /* floating point */

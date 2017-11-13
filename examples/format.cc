@@ -142,7 +142,8 @@ int main() {
     writefln(
         "\"%d\", \"%f\", \"%X\"", 123456789, 12345.6789123, 0x123456789ABCDEF
     );
-    cout.imbue(std::locale{""});
+    std::locale::global(std::locale{""});
+    cout.imbue(std::locale{});
     writefln("\n-- number format with system locale --");
     writefln(
         "\"%d\", \"%f\", \"%X\"", 123456789, 12345.6789123, 0x123456789ABCDEF
