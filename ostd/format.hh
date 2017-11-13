@@ -23,6 +23,8 @@
 #include <cstddef>
 #include <climits>
 #include <cmath>
+#include <cctype>
+#include <climits>
 #include <utility>
 #include <stdexcept>
 #include <locale>
@@ -234,8 +236,17 @@ namespace detail {
     template<typename T, typename R>
     inline constexpr bool fmt_tofmt_test = decltype(test_tofmt<T, R>(0))::value;
 
-    /* any unicode character can be encoded in 6 bytes */
-    constexpr std::size_t MaxMultibyte = 6;
+    inline int wc_to_mb_loc(wchar_t c, char *buf, std::locale const &loc) {
+        auto &f = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(loc);
+        std::mbstate_t mb{};
+        wchar_t const *fromn;
+        char *ton;
+        auto ret = f.out(mb, &c, &c + 1, fromn, buf, &buf[MB_LEN_MAX], ton);
+        if (ret != std::codecvt_base::ok) {
+            return -1;
+        }
+        return ton - &buf[0];
+    }
 }
 
 /** @brief A structure implementing type safe C-style formatting.
@@ -1056,8 +1067,8 @@ private:
         /* here starts the bullshit */
         auto const &fac = std::use_facet<std::numpunct<wchar_t>>(p_loc);
 
-        char tseps[detail::MaxMultibyte];
-        int ntsep = wctomb(tseps, fac.thousands_sep());
+        char tseps[MB_LEN_MAX];
+        int ntsep = detail::wc_to_mb_loc(fac.thousands_sep(), tseps, p_loc);
 
         auto const &grp = fac.grouping();
         auto grpp = reinterpret_cast<unsigned char const *>(grp.data());
@@ -1190,7 +1201,7 @@ private:
         /* this is also bullshit */
         fmt_num_put<R> nump;
         nump.put(
-            fmt_out<R>{&writer}, st,
+            fmt_out<R>{&writer, &p_loc}, st,
             (p_flags & FMT_FLAG_ZERO) ? L'0' : L' ', val
         );
     }
@@ -1478,8 +1489,9 @@ private:
         using difference_type = typename std::char_traits<wchar_t>::off_type;
 
         fmt_out &operator=(wchar_t c) {
-            char buf[detail::MaxMultibyte];
-            for (int i = 0, j = wctomb(buf, c); i < j; ++i) {
+            char buf[MB_LEN_MAX];
+            int j = detail::wc_to_mb_loc(c, buf, *p_loc);
+            for (int i = 0; i < j; ++i) {
                 p_out->put(buf[i]);
             }
             return *this;
@@ -1490,6 +1502,7 @@ private:
         fmt_out &operator++(int) { return *this; }
 
         R *p_out;
+        std::locale const *p_loc;
     };
 
     template<typename R>
