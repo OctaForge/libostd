@@ -55,19 +55,17 @@ struct arg_error: std::runtime_error {
  * This range type has immutable contents and doesn't own its memory. It
  * is represented as a regular string slice with the appropraite character
  * and traits types. The `T` template type is a character type, usually
- * a `char` but can be `wchar_t`, `char16_t`, `char32_t` as well. The
- * `TR` template type is the traits type, by default std::char_traits
- * for `T`.
+ * a `char` but can be `wchar_t`, `char16_t`, `char32_t` as well.
  */
-template<typename T, typename TR = std::char_traits<T>>
-using arg_value_type = basic_char_range<T const, TR>;
+template<typename T>
+using arg_value_type = basic_char_range<T const>;
 
 /** @brief The range type passed to argument action callbacks.
  *
  * It's a contiguous range of `const` ostd::arg_value_type.
  */
-template<typename T, typename TR = std::char_traits<T>>
-using arg_value_range = iterator_range<arg_value_type<T, TR> const *>;
+template<typename T>
+using arg_value_range = iterator_range<arg_value_type<T> const *>;
 
 /** @brief The type of an argument class. */
 enum class arg_type {

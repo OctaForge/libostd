@@ -1486,7 +1486,7 @@ private:
         using value_type = wchar_t;
         using pointer = wchar_t *;
         using reference = wchar_t &;
-        using difference_type = typename std::char_traits<wchar_t>::off_type;
+        using difference_type = std::streamoff;
 
         fmt_out &operator=(wchar_t c) {
             char buf[MB_LEN_MAX];

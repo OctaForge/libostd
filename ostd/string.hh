@@ -73,21 +73,19 @@ namespace ostd {
  * This is a contiguous range over a character type. The character type
  * can be any of the standard character types, of any size - for example
  * you would use `char32_t` to represent UTF-32 slices. The std::char_traits
- * structure (or its equivalent) is used for the basic string operations
- * where possible.
+ * structure is used for the basic string operations where possible.
  *
  * The range is mutable, i.e. it implements the output range interface.
  */
-template<typename T, typename TR = std::char_traits<std::remove_const_t<T>>>
+template<typename T>
 struct basic_char_range: input_range<basic_char_range<T>> {
     using range_category = contiguous_range_tag;
     using value_type     = T;
     using reference      = T &;
     using size_type      = std::size_t;
 
-    using traits_type = TR;
-
 private:
+    using TR = std::char_traits<std::remove_const_t<T>>;
     struct nat {};
 
 public:
@@ -115,8 +113,7 @@ public:
      * if the input is a static array of `T`, the entire array is used to
      * create the slice, minus the potential zero at the end. If there is
      * no zero at the end, nothing is removed and the array is used whole.
-     * If the input is not an array, the size is not known at compile time
-     * and the traits_type is used to check the length.
+     * If the input is not an array, the size is checked at runtime.
      */
     template<typename U>
     basic_char_range(U &&beg, std::enable_if_t<
@@ -148,10 +145,10 @@ public:
      * the new slice's value type, otherwise the constructor will not
      * be enabled.
      */
-    template<typename U, typename TTR, typename = std::enable_if_t<
+    template<typename U, typename = std::enable_if_t<
         std::is_convertible_v<U *, value_type *>
     >>
-    basic_char_range(basic_char_range<U, TTR> const &v) noexcept:
+    basic_char_range(basic_char_range<U> const &v) noexcept:
         p_beg(&v[0]), p_end(&v[v.size()])
     {}
 
@@ -174,7 +171,6 @@ public:
     /** @brief Assigns the slice's data from a pointer.
      *
      * The data pointed to by the argument must be zero terminated.
-     * The traits_type is used to check the length of the string.
      */
     basic_char_range &operator=(value_type *s) noexcept {
         p_beg = s; p_end = s + (s ? TR::length(s) : 0); return *this;
@@ -288,8 +284,8 @@ public:
      *
      * If this slice is empty and the other is not, this method returns
      * -1. If it's the other way around, it returns 1. If both are empty,
-     * 0 is returned. Otherwise, the `compare` method of traits_type
-     * to compare the data, using the smaller of the lengths as the
+     * 0 is returned. Otherwise, the `compare` method of std::char_traits
+     * is used to compare the data, using the smaller of the lengths as the
      * count.
      *
      * It is not a part of the range interface, just the string slice
@@ -318,8 +314,7 @@ diffsize:
      *
      * Returns a negative value when this slice is less than the other
      * slice and a positive value when the other way around. Zero is
-     * returned when they're equal. The traits_type is not used to
-     * compare here, as it provides no case-insensitive comparison.
+     * returned when they're equal.
      */
     int case_compare(basic_char_range<value_type const> s) const noexcept {
         size_type s1 = size(), s2 = s.size();
@@ -363,61 +358,61 @@ using string_range = basic_char_range<char const>;
 /* comparisons between ranges */
 
 /** @brief Like `!lhs.compare(rhs)`. */
-template<typename T, typename U, typename TR>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator==(
-    basic_char_range<T, TR> lhs, basic_char_range<U, TR> rhs
+    basic_char_range<T> lhs, basic_char_range<U> rhs
 ) noexcept {
     return !lhs.compare(rhs);
 }
 
 /** @brief Like `lhs.compare(rhs)`. */
-template<typename T, typename U, typename TR>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator!=(
-    basic_char_range<T, TR> lhs, basic_char_range<U, TR> rhs
+    basic_char_range<T> lhs, basic_char_range<U> rhs
 ) noexcept {
     return lhs.compare(rhs);
 }
 
 /** @brief Like `lhs.compare(rhs) < 0`. */
-template<typename T, typename U, typename TR>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator<(
-    basic_char_range<T, TR> lhs, basic_char_range<U, TR> rhs
+    basic_char_range<T> lhs, basic_char_range<U> rhs
 ) noexcept {
     return lhs.compare(rhs) < 0;
 }
 
 /** @brief Like `lhs.compare(rhs) > 0`. */
-template<typename T, typename U, typename TR>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator>(
-    basic_char_range<T, TR> lhs, basic_char_range<U, TR> rhs
+    basic_char_range<T> lhs, basic_char_range<U> rhs
 ) noexcept {
     return lhs.compare(rhs) > 0;
 }
 
 /** @brief Like `lhs.compare(rhs) <= 0`. */
-template<typename T, typename U, typename TR>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator<=(
-    basic_char_range<T, TR> lhs, basic_char_range<U, TR> rhs
+    basic_char_range<T> lhs, basic_char_range<U> rhs
 ) noexcept {
     return lhs.compare(rhs) <= 0;
 }
 
 /** @brief Like `lhs.compare(rhs) >= 0`. */
-template<typename T, typename U, typename TR>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator>=(
-    basic_char_range<T, TR> lhs, basic_char_range<U, TR> rhs
+    basic_char_range<T> lhs, basic_char_range<U> rhs
 ) noexcept {
     return lhs.compare(rhs) >= 0;
 }
@@ -425,98 +420,98 @@ inline std::enable_if_t<
 /* comparisons between ranges and char arrays */
 
 /** @brief Like `!lhs.compare(rhs)`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator==(basic_char_range<T, TR> lhs, U *rhs) noexcept {
+> operator==(basic_char_range<T> lhs, U *rhs) noexcept {
     return !lhs.compare(rhs);
 }
 
 /** @brief Like `lhs.compare(rhs)`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator!=(basic_char_range<T, TR> lhs, U *rhs) noexcept {
+> operator!=(basic_char_range<T> lhs, U *rhs) noexcept {
     return lhs.compare(rhs);
 }
 
 /** @brief Like `lhs.compare(rhs) < 0`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator<(basic_char_range<T, TR> lhs, U *rhs) noexcept {
+> operator<(basic_char_range<T> lhs, U *rhs) noexcept {
     return lhs.compare(rhs) < 0;
 }
 
 /** @brief Like `lhs.compare(rhs) > 0`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator>(basic_char_range<T, TR> lhs, U *rhs) noexcept {
+> operator>(basic_char_range<T> lhs, U *rhs) noexcept {
     return lhs.compare(rhs) > 0;
 }
 
 /** @brief Like `lhs.compare(rhs) <= 0`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator<=(basic_char_range<T, TR> lhs, U *rhs) noexcept {
+> operator<=(basic_char_range<T> lhs, U *rhs) noexcept {
     return lhs.compare(rhs) <= 0;
 }
 
 /** @brief Like `lhs.compare(rhs) >= 0`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator>=(basic_char_range<T, TR> lhs, U *rhs) noexcept {
+> operator>=(basic_char_range<T> lhs, U *rhs) noexcept {
     return lhs.compare(rhs) >= 0;
 }
 
 /** @brief Like `!rhs.compare(lhs)`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator==(U *lhs, basic_char_range<T, TR> rhs) noexcept {
+> operator==(U *lhs, basic_char_range<T> rhs) noexcept {
     return !rhs.compare(lhs);
 }
 
 /** @brief Like `rhs.compare(lhs)`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator!=(U *lhs, basic_char_range<T, TR> rhs) noexcept {
+> operator!=(U *lhs, basic_char_range<T> rhs) noexcept {
     return rhs.compare(lhs);
 }
 
 /** @brief Like `rhs.compare(lhs) > 0`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator<(U *lhs, basic_char_range<T, TR> rhs) noexcept {
+> operator<(U *lhs, basic_char_range<T> rhs) noexcept {
     return rhs.compare(lhs) > 0;
 }
 
 /** @brief Like `rhs.compare(lhs) < 0`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator>(U *lhs, basic_char_range<T, TR> rhs) noexcept {
+> operator>(U *lhs, basic_char_range<T> rhs) noexcept {
     return rhs.compare(lhs) < 0;
 }
 
 /** @brief Like `rhs.compare(lhs) >= 0`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator<=(U *lhs, basic_char_range<T, TR> rhs) noexcept {
+> operator<=(U *lhs, basic_char_range<T> rhs) noexcept {
     return rhs.compare(lhs) >= 0;
 }
 
 /** @brief Like `rhs.compare(lhs) <= 0`. */
-template<typename T, typename TR, typename U>
+template<typename T, typename U>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
-> operator>=(U *lhs, basic_char_range<T, TR> rhs) noexcept {
+> operator>=(U *lhs, basic_char_range<T> rhs) noexcept {
     return rhs.compare(lhs) <= 0;
 }
 
@@ -527,7 +522,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator==(
-    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+    basic_char_range<T> lhs, std::basic_string<U, TR, A> const &rhs
 ) noexcept {
     return !lhs.compare(rhs);
 }
@@ -537,7 +532,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator!=(
-    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+    basic_char_range<T> lhs, std::basic_string<U, TR, A> const &rhs
 ) noexcept {
     return lhs.compare(rhs);
 }
@@ -547,7 +542,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator<(
-    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+    basic_char_range<T> lhs, std::basic_string<U, TR, A> const &rhs
 ) noexcept {
     return lhs.compare(rhs) < 0;
 }
@@ -557,7 +552,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator>(
-    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+    basic_char_range<T> lhs, std::basic_string<U, TR, A> const &rhs
 ) noexcept {
     return lhs.compare(rhs) > 0;
 }
@@ -567,7 +562,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator<=(
-    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+    basic_char_range<T> lhs, std::basic_string<U, TR, A> const &rhs
 ) noexcept {
     return lhs.compare(rhs) <= 0;
 }
@@ -577,7 +572,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator>=(
-    basic_char_range<T, TR> lhs, std::basic_string<U, TR, A> const &rhs
+    basic_char_range<T> lhs, std::basic_string<U, TR, A> const &rhs
 ) noexcept {
     return lhs.compare(rhs) >= 0;
 }
@@ -587,7 +582,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator==(
-    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T> rhs
 ) noexcept {
     return !rhs.compare(lhs);
 }
@@ -597,7 +592,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator!=(
-    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T> rhs
 ) noexcept {
     return rhs.compare(lhs);
 }
@@ -607,7 +602,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator<(
-    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T> rhs
 ) noexcept {
     return rhs.compare(lhs) > 0;
 }
@@ -617,7 +612,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator>(
-    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T> rhs
 ) noexcept {
     return rhs.compare(lhs) < 0;
 }
@@ -627,7 +622,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator<=(
-    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T> rhs
 ) noexcept {
     return rhs.compare(lhs) >= 0;
 }
@@ -637,7 +632,7 @@ template<typename T, typename TR, typename U, typename A>
 inline std::enable_if_t<
     std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>, bool
 > operator>=(
-    std::basic_string<U, TR, A> const &lhs, basic_char_range<T, TR> rhs
+    std::basic_string<U, TR, A> const &lhs, basic_char_range<T> rhs
 ) noexcept {
     return rhs.compare(lhs) <= 0;
 }
@@ -658,7 +653,7 @@ inline bool starts_with(string_range a, string_range b) noexcept {
 template<typename T, typename TR, typename A>
 struct ranged_traits<std::basic_string<T, TR, A>> {
     /** @brief The range type. */
-    using range = basic_char_range<T, TR>;
+    using range = basic_char_range<T>;
 
     /** @brief Creates a range. */
     static range iter(std::basic_string<T, TR, A> &v) noexcept {
@@ -674,7 +669,7 @@ struct ranged_traits<std::basic_string<T, TR, A>> {
 template<typename T, typename TR, typename A>
 struct ranged_traits<std::basic_string<T, TR, A> const> {
     /** @brief The range type. */
-    using range = basic_char_range<T const, TR>;
+    using range = basic_char_range<T const>;
 
     /** @brief Creates a range. */
     static range iter(std::basic_string<T, TR, A> const &v) noexcept {
@@ -723,12 +718,12 @@ namespace std {
  * It uses the hashing used for matching std::basic_string_view,
  * so the algorithm (and thus result) will always match standard strings.
  */
-template<typename T, typename TR>
-struct hash<ostd::basic_char_range<T, TR>> {
-    std::size_t operator()(ostd::basic_char_range<T, TR> const &v)
+template<typename T>
+struct hash<ostd::basic_char_range<T>> {
+    std::size_t operator()(ostd::basic_char_range<T> const &v)
         const noexcept
     {
-        return hash<std::basic_string_view<std::remove_const_t<T>, TR>>{}(v);
+        return hash<std::basic_string_view<std::remove_const_t<T>>>{}(v);
     }
 };
 

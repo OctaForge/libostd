@@ -161,7 +161,7 @@ OSTD_EXPORT void subprocess::open_impl(
     for (string_range r; func(r, datap);) {
         auto sz = r.size();
         char *str = new char[sz + 1];
-        string_range::traits_type::copy(str, r.data(), sz)[sz] = '\0';
+        std::char_traits<char>::copy(str, r.data(), sz)[sz] = '\0';
         argp.vec.push_back(str);
     }
 
@@ -177,7 +177,7 @@ OSTD_EXPORT void subprocess::open_impl(
     } else {
         auto sz = cmd.size();
         char *str = new char[sz + 1];
-        string_range::traits_type::copy(str, cmd.data(), sz)[sz] = '\0';
+        std::char_traits<char>::copy(str, cmd.data(), sz)[sz] = '\0';
         argp.cmd = str;
     }
 
@@ -192,7 +192,7 @@ OSTD_EXPORT void subprocess::open_impl(
         for (string_range r; efunc(r, edatap);) {
             auto sz = r.size();
             char *str = new char[sz + 1];
-            string_range::traits_type::copy(str, r.data(), sz)[sz] = '\0';
+            std::char_traits<char>::copy(str, r.data(), sz)[sz] = '\0';
             argp.vec.push_back(str);
         }
         /* terminate environment */
