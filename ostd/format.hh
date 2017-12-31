@@ -223,6 +223,13 @@ namespace detail {
     template<typename T>
     inline constexpr bool is_tuple_like = decltype(tuple_like_test<T>(0))::value;
 
+    /* character type tests */
+    template<typename C>
+    inline constexpr bool is_character = std::is_same_v<C, char> ||
+                                         std::is_same_v<C, wchar_t> ||
+                                         std::is_same_v<C, char16_t> ||
+                                         std::is_same_v<C, char32_t>;
+
     /* test if format traits are available for the type */
     template<typename T, typename R>
     static std::true_type test_tofmt(decltype(format_traits<T>::to_format(
@@ -236,16 +243,22 @@ namespace detail {
     template<typename T, typename R>
     inline constexpr bool fmt_tofmt_test = decltype(test_tofmt<T, R>(0))::value;
 
-    inline int wc_to_mb_loc(wchar_t c, char *buf, std::locale const &loc) {
-        auto &f = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(loc);
+    template<typename C, typename F>
+    inline int ac_to_mb(C c, F const &f, char *buf) {
         std::mbstate_t mb{};
-        wchar_t const *fromn;
+        C const *fromn;
         char *ton;
         auto ret = f.out(mb, &c, &c + 1, fromn, buf, &buf[MB_LEN_MAX], ton);
         if (ret != std::codecvt_base::ok) {
             return -1;
         }
         return ton - &buf[0];
+    }
+
+    inline int wc_to_mb_loc(wchar_t c, char *buf, std::locale const &loc) {
+        auto &f = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(loc);
+        std::mbstate_t mb{};
+        return ac_to_mb(c, f, buf);
     }
 }
 
@@ -998,10 +1011,38 @@ private:
         write_spaces(writer, n, false);
     }
 
+    template<typename R, typename C>
+    void write_char_raw(R &writer, C val) const {
+        if constexpr(std::is_same_v<C, char>) {
+            writer.put(val);
+        } else {
+            /* TODO: replace this ugly thing with custom unicode APIs */
+            char buf[MB_LEN_MAX];
+            int n;
+            if constexpr(std::is_same_v<C, wchar_t>) {
+                /* convert according to locale */
+                n = detail::wc_to_mb_loc(val, buf, p_loc);
+            } else {
+                fmt_codecvt<C> fac{};
+                n = detail::ac_to_mb(val, fac, buf);
+            }
+            if (n < 0) {
+                /* replacement character */
+                writer.put(0xEF);
+                writer.put(0xBF);
+                writer.put(0xBD);
+            } else {
+                for (int i = 0; i < n; ++i) {
+                    writer.put(buf[i]);
+                }
+            }
+        }
+    }
+
     /* char values */
-    template<typename R>
-    void write_char(R &writer, bool escape, char val) const {
-        if (escape) {
+    template<typename R, typename C>
+    void write_char(R &writer, bool escape, C val) const {
+        if (escape && (val <= 0x7F)) {
             char const *esc = detail::escape_fmt_char(val, '\'');
             if (esc) {
                 char buf[6];
@@ -1018,10 +1059,10 @@ private:
         write_spaces(writer, 1 + escape * 2, true);
         if (escape) {
             writer.put('\'');
-            writer.put(val);
+            write_char_raw(writer, val);
             writer.put('\'');
         } else {
-            writer.put(val);
+            write_char_raw(writer, val);
         }
         write_spaces(writer, 1 + escape * 2, false);
     }
@@ -1258,7 +1299,7 @@ private:
             return;
         }
         /* character values */
-        if constexpr(std::is_same_v<T, char>) {
+        if constexpr(detail::is_character<T>) {
             if (spec() != 's' && spec() != 'c') {
                 throw format_error{"cannot format chars with the given spec"};
             }
@@ -1511,6 +1552,14 @@ private:
             std::num_put<wchar_t, fmt_out<R>>(refs)
         {}
         ~fmt_num_put() {}
+    };
+
+    template<typename C>
+    struct fmt_codecvt final: std::codecvt<C, char, std::mbstate_t> {
+        fmt_codecvt(std::size_t refs = 0):
+            std::codecvt<C, char, std::mbstate_t>(refs)
+        {}
+        ~fmt_codecvt() {}
     };
 
     string_range p_fmt;
