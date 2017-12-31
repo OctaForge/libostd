@@ -257,7 +257,6 @@ namespace detail {
 
     inline int wc_to_mb_loc(wchar_t c, char *buf, std::locale const &loc) {
         auto &f = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(loc);
-        std::mbstate_t mb{};
         return ac_to_mb(c, f, buf);
     }
 }

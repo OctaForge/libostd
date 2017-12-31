@@ -11,7 +11,7 @@ namespace utf {
 
 constexpr std::uint32_t MaxCodepoint = 0x10FFFF;
 
-static inline bool codepoint_dec(string_range &r, char32_t &cret) {
+static inline bool codepoint_dec(string_range &r, char32_t &cret) noexcept {
     static const std::uint32_t ulim[] = { 0xFF, 0x7F, 0x7FF, 0xFFFF };
     if (r.empty()) {
         return false;
@@ -61,11 +61,11 @@ static inline bool codepoint_dec(string_range &r, char32_t &cret) {
     return true;
 }
 
-bool codepoint(string_range &r, char32_t &ret) {
+bool codepoint(string_range &r, char32_t &ret) noexcept {
     return codepoint_dec(r, ret);
 }
 
-std::size_t length(string_range r, string_range &cont) {
+std::size_t length(string_range r, string_range &cont) noexcept {
     std::size_t ret = 0;
     for (char32_t ch = U'\0'; codepoint_dec(r, ch); ++ret) {
         continue;
@@ -74,7 +74,7 @@ std::size_t length(string_range r, string_range &cont) {
     return ret;
 }
 
-std::size_t length(string_range r) {
+std::size_t length(string_range r) noexcept {
     return length(r, r);
 }
 

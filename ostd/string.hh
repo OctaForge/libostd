@@ -89,7 +89,7 @@ namespace utf {
      * The string is advanced past the UTF-8 character in the front.
      * If the decoding fails, `false` is returned, otherwise it's `true`.
      */
-    bool codepoint(string_range &r, char32_t &ret);
+    bool codepoint(string_range &r, char32_t &ret) noexcept;
 
     /* @brief Get the number of Unicode code points in a string.
      *
@@ -102,7 +102,7 @@ namespace utf {
      * If you're sure the string is valid or you don't need to handle the
      * error, you can use the more convenient overload below.
      */
-    std::size_t length(string_range r, string_range &cont);
+    std::size_t length(string_range r, string_range &cont) noexcept;
 
     /* @brief Get the number of Unicode code points in a valid UTF-8 string.
      *
@@ -112,7 +112,7 @@ namespace utf {
      * If you need to get the continuation string, use the general
      * error-handling overload of the function.
      */
-    std::size_t length(string_range r);
+    std::size_t length(string_range r) noexcept;
 } /* namespace utf */
 
 /** @brief A string slice type.
@@ -279,6 +279,22 @@ public:
     /** @brief Gets the number of value_type in the slice. */
     size_type size() const noexcept { return p_end - p_beg; }
 
+    /** @brief Gets the number of code points in the slice.
+     *
+     * Effectively the same as utf::length().
+     */
+    size_type length() const noexcept {
+        return utf::length(*this);
+    }
+
+    /** @brief Gets the number of code points in the slice.
+     *
+     * Effectively the same as utf::length().
+     */
+    size_type length(basic_char_range &cont) const noexcept {
+        return utf::length(*this, cont);
+    }
+
     /** @brief Creates a sub-slice of the slice.
      *
      * Behavior is undefined if `start` and `end` are not within the
@@ -373,6 +389,12 @@ diffsize:
         }
         return (s1 < s2) ? -1 : ((s1 > s2) ? 1 : 0);
     }
+
+    /** @brief Iterate over the code points of the string.
+     *
+     * Like utf::iter_codes().
+     */
+    inline auto iter_codes() const;
 
     /** @brief Implicitly converts a string slice to std::basic_string_view.
      *
@@ -786,6 +808,11 @@ namespace utf {
 /** @} */
 
 } /* namespace utf */
+
+template<typename T>
+inline auto basic_char_range<T>::iter_codes() const {
+    return utf::iter_codes(*this);
+}
 
 /* string literals */
 
