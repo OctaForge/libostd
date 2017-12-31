@@ -83,38 +83,6 @@ using char_range = basic_char_range<char>;
  */
 using string_range = basic_char_range<char const>;
 
-namespace utf {
-    /* @brief Get the Unicode code point for a multibyte sequence.
-     *
-     * The string is advanced past the UTF-8 character in the front.
-     * If the decoding fails, `false` is returned, otherwise it's `true`.
-     */
-    bool codepoint(string_range &r, char32_t &ret) noexcept;
-
-    /* @brief Get the number of Unicode code points in a string.
-     *
-     * This function keeps reading Unicode code points while it can and
-     * once it can't it returns the number of valid ones with the rest
-     * of the input string range being in `cont`. That means if the entire
-     * string is a valid UTF-8 string, `cont` will be empty, otherwise it
-     * will begin at the first invalid UTF-8 code point.
-     *
-     * If you're sure the string is valid or you don't need to handle the
-     * error, you can use the more convenient overload below.
-     */
-    std::size_t length(string_range r, string_range &cont) noexcept;
-
-    /* @brief Get the number of Unicode code points in a valid UTF-8 string.
-     *
-     * If an invalid UTF-8 sequence is encountered, it returns the length
-     * until that sequence.
-     *
-     * If you need to get the continuation string, use the general
-     * error-handling overload of the function.
-     */
-    std::size_t length(string_range r) noexcept;
-} /* namespace utf */
-
 /** @brief A string slice type.
  *
  * This is a contiguous range over a character type. The character type
@@ -283,17 +251,13 @@ public:
      *
      * Effectively the same as utf::length().
      */
-    size_type length() const noexcept {
-        return utf::length(*this);
-    }
+    inline size_type length() const noexcept;
 
     /** @brief Gets the number of code points in the slice.
      *
      * Effectively the same as utf::length().
      */
-    size_type length(basic_char_range &cont) const noexcept {
-        return utf::length(*this, cont);
-    }
+    inline size_type length(basic_char_range &cont) const noexcept;
 
     /** @brief Creates a sub-slice of the slice.
      *
@@ -748,6 +712,36 @@ namespace utf {
         using std::runtime_error::runtime_error;
     };
 
+    /* @brief Get the Unicode code point for a multibyte sequence.
+     *
+     * The string is advanced past the UTF-8 character in the front.
+     * If the decoding fails, `false` is returned, otherwise it's `true`.
+     */
+    bool codepoint(string_range &r, char32_t &ret) noexcept;
+
+    /* @brief Get the number of Unicode code points in a string.
+     *
+     * This function keeps reading Unicode code points while it can and
+     * once it can't it returns the number of valid ones with the rest
+     * of the input string range being in `cont`. That means if the entire
+     * string is a valid UTF-8 string, `cont` will be empty, otherwise it
+     * will begin at the first invalid UTF-8 code point.
+     *
+     * If you're sure the string is valid or you don't need to handle the
+     * error, you can use the more convenient overload below.
+     */
+    std::size_t length(string_range r, string_range &cont) noexcept;
+
+    /* @brief Get the number of Unicode code points in a valid UTF-8 string.
+     *
+     * If an invalid UTF-8 sequence is encountered, it returns the length
+     * until that sequence.
+     *
+     * If you need to get the continuation string, use the general
+     * error-handling overload of the function.
+     */
+    std::size_t length(string_range r) noexcept;
+
     namespace detail {
         struct codepoint_range: input_range<codepoint_range> {
             using range_category = forward_range_tag;
@@ -808,6 +802,18 @@ namespace utf {
 /** @} */
 
 } /* namespace utf */
+
+template<typename T>
+inline std::size_t basic_char_range<T>::length() const noexcept {
+    return utf::length(*this);
+}
+
+template<typename T>
+inline std::size_t basic_char_range<T>::length(
+    basic_char_range<T> &cont
+) const noexcept {
+    return utf::length(*this, cont);
+}
 
 template<typename T>
 inline auto basic_char_range<T>::iter_codes() const {
