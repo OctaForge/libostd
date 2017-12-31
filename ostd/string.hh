@@ -715,7 +715,7 @@ namespace utf {
      * The string is advanced past the UTF-8 character in the front.
      * If the decoding fails, `false` is returned, otherwise it's `true`.
      */
-    bool codepoint(string_range &r, char32_t &ret) noexcept;
+    bool decode(string_range &r, char32_t &ret) noexcept;
 
     /* @brief Get the number of Unicode code points in a string.
      *
@@ -774,7 +774,7 @@ namespace utf {
 
         private:
             void advance() {
-                if (char32_t ret; !codepoint(p_range, ret)) {
+                if (char32_t ret; !decode(p_range, ret)) {
                     /* range is unchanged */
                     p_current = -1;
                     throw utf_error{"UTF-8 decoding failed"};
