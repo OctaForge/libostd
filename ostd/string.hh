@@ -738,7 +738,9 @@ namespace utf {
      * If you need to get the continuation string, use the general
      * error-handling overload of the function.
      */
-    std::size_t length(string_range r) noexcept;
+    inline std::size_t length(string_range r) noexcept {
+        return utf::length(r, r);
+    }
 
     namespace detail {
         struct codepoint_range: input_range<codepoint_range> {

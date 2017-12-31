@@ -74,9 +74,5 @@ std::size_t length(string_range r, string_range &cont) noexcept {
     return ret;
 }
 
-std::size_t length(string_range r) noexcept {
-    return length(r, r);
-}
-
 } /* namespace utf */
 } /* namespace ostd */
