@@ -70,19 +70,6 @@ namespace ostd {
  * @{
  */
 
-template<typename T> struct basic_char_range;
-
-/** @brief A mutable slice over `char`. */
-using char_range = basic_char_range<char>;
-
-/** @brief An immutable slice over `char`.
- *
- * This is used in most libostd APIs that read strings. More or less
- * anything is convertible to it, including mutable slices, so it's
- * a perfect fit as long as modifications are not necessary.
- */
-using string_range = basic_char_range<char const>;
-
 /** @brief A string slice type.
  *
  * This is a contiguous range over a character type. The character type
@@ -376,6 +363,17 @@ diffsize:
 private:
     T *p_beg, *p_end;
 };
+
+/** @brief A mutable slice over `char`. */
+using char_range = basic_char_range<char>;
+
+/** @brief An immutable slice over `char`.
+ *
+ * This is used in most libostd APIs that read strings. More or less
+ * anything is convertible to it, including mutable slices, so it's
+ * a perfect fit as long as modifications are not necessary.
+ */
+using string_range = basic_char_range<char const>;
 
 /* comparisons between ranges */
 
