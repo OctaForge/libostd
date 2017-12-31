@@ -50,6 +50,7 @@
 #ifndef OSTD_STRING_HH
 #define OSTD_STRING_HH
 
+#include <cstdint>
 #include <cstddef>
 #include <cctype>
 #include <string>
@@ -58,6 +59,7 @@
 #include <functional>
 #include <utility>
 #include <vector>
+#include <stdexcept>
 
 #include <ostd/range.hh>
 #include <ostd/algorithm.hh>
@@ -710,6 +712,80 @@ struct ranged_traits<std::basic_string<T, TR, A> const> {
         return range{v.data(), v.data() + v.size()};
     }
 };
+
+/* more UTF utilities beyond basic API */
+
+namespace utf {
+
+/** @addtogroup Strings
+ * @{
+ */
+
+    /** @brief Thrown on UTF-8 decoding failure. */
+    struct utf_error: std::runtime_error {
+        using std::runtime_error::runtime_error;
+    };
+
+    namespace detail {
+        struct codepoint_range: input_range<codepoint_range> {
+            using range_category = forward_range_tag;
+            using value_type = char32_t;
+            using reference = char32_t;
+            using size_type = std::size_t;
+
+            codepoint_range() = delete;
+            codepoint_range(string_range r): p_range(r) {
+                if (r.empty()) {
+                    p_current = -1;
+                } else {
+                    advance();
+                }
+            }
+
+            bool empty() const { return (p_current < 0); }
+
+            void pop_front() {
+                if (p_current > 0 && p_range.empty()) {
+                    p_current = -1;
+                    return;
+                }
+                advance();
+            }
+
+            char32_t front() const {
+                return p_current;
+            }
+
+        private:
+            void advance() {
+                if (char32_t ret; !codepoint(p_range, ret)) {
+                    /* range is unchanged */
+                    p_current = -1;
+                    throw utf_error{"UTF-8 decoding failed"};
+                } else {
+                    p_current = ret;
+                }
+            }
+
+            string_range p_range;
+            std::int32_t p_current;
+        };
+    } /* namespace detail */
+
+    /** @brief Iterate over the code points of a string.
+     *
+     * The resulting range is ostd::forward_range_tag. The range will
+     * contain the code points of the given string. On error, which may
+     * be during any string advancement (the constructor or `pop_front()`),
+     * an ostd::utf_error is raised.
+     */
+    inline auto iter_codes(string_range r) {
+        return detail::codepoint_range{r};
+    }
+
+/** @} */
+
+} /* namespace utf */
 
 /* string literals */
 

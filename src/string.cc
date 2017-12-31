@@ -45,7 +45,7 @@ static inline bool codepoint_dec(string_range &r, char32_t &cret) {
         ret = (ret << 6) | bch;
     }
     /* number of continuation bytes */
-    std::size_t n = sr.data() - r.data();
+    std::size_t n = sr.data() - r.data() - 1;
     /* invalid sequence - too many continuation bits */
     if (n > 3) {
         return false;
