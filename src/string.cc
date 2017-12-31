@@ -11,11 +11,7 @@ namespace utf {
 
 constexpr std::uint32_t MaxCodepoint = 0x10FFFF;
 
-static inline bool is_u8cont(std::uint32_t ch) {
-    return (ch & 0xC0) == 0x80;
-}
-
-static inline bool codepoint(string_range &r, char32_t &cret) {
+static inline bool codepoint_dec(string_range &r, char32_t &cret) {
     static const std::uint32_t ulim[] = { 0xFF, 0x7F, 0x7FF, 0xFFFF };
     if (r.empty()) {
         return false;
@@ -65,9 +61,13 @@ static inline bool codepoint(string_range &r, char32_t &cret) {
     return true;
 }
 
+bool codepoint(string_range &r, char32_t &ret) {
+    return codepoint_dec(r, ret);
+}
+
 std::size_t length(string_range r, string_range &cont) {
     std::size_t ret = 0;
-    for (char32_t ch = U'\0'; codepoint(r, ch); ++ret) {
+    for (char32_t ch = U'\0'; codepoint_dec(r, ch); ++ret) {
         continue;
     }
     cont = r;

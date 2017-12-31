@@ -82,15 +82,12 @@ using char_range = basic_char_range<char>;
 using string_range = basic_char_range<char const>;
 
 namespace utf {
-    /* @brief Get the number of Unicode code points in a valid UTF-8 string.
+    /* @brief Get the Unicode code point for a multibyte sequence.
      *
-     * If an invalid UTF-8 sequence is encountered, it returns the length
-     * until that sequence.
-     *
-     * If you need to get the continuation string, use the error-handling
-     * overload of the function.
+     * The string is advanced past the UTF-8 character in the front.
+     * If the decoding fails, `false` is returned, otherwise it's `true`.
      */
-    std::size_t length(string_range r);
+    bool codepoint(string_range &r, char32_t &ret);
 
     /* @brief Get the number of Unicode code points in a string.
      *
@@ -98,12 +95,22 @@ namespace utf {
      * once it can't it returns the number of valid ones with the rest
      * of the input string range being in `cont`. That means if the entire
      * string is a valid UTF-8 string, `cont` will be empty, otherwise it
-     * will begin at the first unvalid UTF-8 code point.
+     * will begin at the first invalid UTF-8 code point.
      *
      * If you're sure the string is valid or you don't need to handle the
-     * error, you can use the more convenient overload above.
+     * error, you can use the more convenient overload below.
      */
     std::size_t length(string_range r, string_range &cont);
+
+    /* @brief Get the number of Unicode code points in a valid UTF-8 string.
+     *
+     * If an invalid UTF-8 sequence is encountered, it returns the length
+     * until that sequence.
+     *
+     * If you need to get the continuation string, use the general
+     * error-handling overload of the function.
+     */
+    std::size_t length(string_range r);
 } /* namespace utf */
 
 /** @brief A string slice type.
