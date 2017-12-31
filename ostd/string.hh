@@ -367,6 +367,15 @@ private:
 /** @brief A mutable slice over `char`. */
 using char_range = basic_char_range<char>;
 
+/** @brief A mutable slice over `wchar_t`. */
+using wchar_range = basic_char_range<wchar_t>;
+
+/** @brief A mutable slice over `char16_t`. */
+using char16_range = basic_char_range<char16_t>;
+
+/** @brief A mutable slice over `char32_t`. */
+using char32_range = basic_char_range<char32_t>;
+
 /** @brief An immutable slice over `char`.
  *
  * This is used in most libostd APIs that read strings. More or less
@@ -374,6 +383,24 @@ using char_range = basic_char_range<char>;
  * a perfect fit as long as modifications are not necessary.
  */
 using string_range = basic_char_range<char const>;
+
+/** @brief An immutable slice over `wchar_t`.
+ *
+ * Included primarily for compatibility with other APIs.
+ */
+using wstring_range = basic_char_range<wchar_t const>;
+
+/** @brief An immutable slice over `char16_t`.
+ *
+ * Included for basic UTF-16 compatibility.
+ */
+using u16string_range = basic_char_range<char16_t const>;
+
+/** @brief An immutable slice over `char32_t`.
+ *
+ * Can represent UTF-32 strings.
+ */
+using u32string_range = basic_char_range<char32_t const>;
 
 /* comparisons between ranges */
 
