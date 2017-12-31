@@ -68,6 +68,44 @@ namespace ostd {
  * @{
  */
 
+template<typename T> struct basic_char_range;
+
+/** @brief A mutable slice over `char`. */
+using char_range = basic_char_range<char>;
+
+/** @brief An immutable slice over `char`.
+ *
+ * This is used in most libostd APIs that read strings. More or less
+ * anything is convertible to it, including mutable slices, so it's
+ * a perfect fit as long as modifications are not necessary.
+ */
+using string_range = basic_char_range<char const>;
+
+namespace utf {
+    /* @brief Get the number of Unicode code points in a valid UTF-8 string.
+     *
+     * If an invalid UTF-8 sequence is encountered, it returns the length
+     * until that sequence.
+     *
+     * If you need to get the continuation string, use the error-handling
+     * overload of the function.
+     */
+    std::size_t length(string_range r);
+
+    /* @brief Get the number of Unicode code points in a string.
+     *
+     * This function keeps reading Unicode code points while it can and
+     * once it can't it returns the number of valid ones with the rest
+     * of the input string range being in `cont`. That means if the entire
+     * string is a valid UTF-8 string, `cont` will be empty, otherwise it
+     * will begin at the first unvalid UTF-8 code point.
+     *
+     * If you're sure the string is valid or you don't need to handle the
+     * error, you can use the more convenient overload above.
+     */
+    std::size_t length(string_range r, string_range &cont);
+} /* namespace utf */
+
 /** @brief A string slice type.
  *
  * This is a contiguous range over a character type. The character type
@@ -343,17 +381,6 @@ diffsize:
 private:
     T *p_beg, *p_end;
 };
-
-/** @brief A mutable slice over `char`. */
-using char_range = basic_char_range<char>;
-
-/** @brief An immutable slice over `char`.
- *
- * This is used in most libostd APIs that read strings. More or less
- * anything is convertible to it, including mutable slices, so it's
- * a perfect fit as long as modifications are not necessary.
- */
-using string_range = basic_char_range<char const>;
 
 /* comparisons between ranges */
 
