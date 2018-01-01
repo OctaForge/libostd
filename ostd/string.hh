@@ -744,6 +744,34 @@ namespace utf {
      */
     bool decode(string_range &r, char32_t &ret) noexcept;
 
+    namespace detail {
+        std::uint8_t u8_encode(
+            std::uint8_t (&ret)[4], std::uint32_t ch
+        ) noexcept;
+    }
+
+    /* @brief Encode a UTF-32 code point into UTF-8 code units.
+     *
+     * The units are written in `sink` which is an ostd::output_range_tag.
+     * The written values are of type `char` and up to 4 are written. The
+     * number of bytes written is returned from the function. In case of
+     * failure, `0` is returned.
+     *
+     * This function is allowed to fail only in two cases, when a surrogate
+     * code point is provided or when the code point is out of bounds as
+     * defined by Unicode (i.e. 0x10FFFF). It does not throw exceptions
+     * other than those thrown by `sink`.
+     */
+    template<typename R>
+    std::uint8_t encode_u8(R &sink, char32_t ch) {
+        std::uint8_t buf[4];
+        std::uint8_t n = detail::u8_encode(buf, ch);
+        for (std::uint8_t i = 0; i < n; ++i) {
+            sink.put(buf[i]);
+        }
+        return n;
+    }
+
     /* @brief Get the number of Unicode code points in a string.
      *
      * This function keeps reading Unicode code points while it can and
