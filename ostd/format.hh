@@ -980,36 +980,6 @@ private:
         for (int w = p_width - int(n); --w >= 0; writer.put(c));
     }
 
-    /* string base writer */
-    template<typename R>
-    void write_str(R &writer, bool escape, string_range val) const {
-        std::size_t n = val.size();
-        if (has_precision()) {
-            n = std::min(n, std::size_t(precision()));
-        }
-        write_spaces(writer, n, true);
-        if (escape) {
-            writer.put('"');
-            for (std::size_t i = 0; i < n; ++i) {
-                if (val.empty()) {
-                    break;
-                }
-                char c = val.front();
-                char const *esc = detail::escape_fmt_char(c, '"');
-                if (esc) {
-                    range_put_all(writer, string_range{esc});
-                } else {
-                    writer.put(c);
-                }
-                val.pop_front();
-            }
-            writer.put('"');
-        } else {
-            range_put_all(writer, val.slice(0, n));
-        }
-        write_spaces(writer, n, false);
-    }
-
     template<typename R, typename C>
     void write_char_raw(R &writer, C val) const {
         if constexpr(sizeof(C) == sizeof(std::uint8_t)) {
@@ -1028,6 +998,46 @@ private:
                 writer.put(0xBD);
             }
         }
+    }
+
+    /* string base writer */
+    template<typename C, typename R>
+    void write_str(R &writer, bool escape, basic_char_range<C const> val) const {
+        std::size_t n = val.size();
+        if (has_precision()) {
+            n = std::min(n, std::size_t(precision()));
+        }
+        write_spaces(writer, n, true);
+        if (escape) {
+            writer.put('"');
+            for (std::size_t i = 0; i < n; ++i) {
+                if (val.empty()) {
+                    break;
+                }
+                C c = val.front();
+                if (c <= 0x7F) {
+                    char const *esc = detail::escape_fmt_char(c, '"');
+                    if (esc) {
+                        range_put_all(writer, string_range{esc});
+                    } else {
+                        write_char_raw(writer, c);
+                    }
+                } else {
+                    write_char_raw(writer, c);
+                }
+                val.pop_front();
+            }
+            writer.put('"');
+        } else {
+            if constexpr(sizeof(C) == sizeof(std::uint8_t)) {
+                range_put_all(writer, val.slice(0, n));
+            } else {
+                for (std::size_t i = 0; i < n; ++i) {
+                    write_char_raw(writer, val[i]);
+                }
+            }
+        }
+        write_spaces(writer, n, false);
     }
 
     /* char values */
@@ -1252,7 +1262,15 @@ private:
             if (spec() != 's') {
                 throw format_error{"strings need the '%s' spec"};
             }
-            write_str(writer, escape, val);
+            write_str<char>(writer, escape, val);
+            return;
+        }
+        /* third best, we can convert to UTF-32 slice */
+        if constexpr(std::is_constructible_v<u32string_range, T const &>) {
+            if (spec() != 's') {
+                throw format_error{"strings need the '%s' spec"};
+            }
+            write_str<char32_t>(writer, escape, val);
             return;
         }
         /* tuples */

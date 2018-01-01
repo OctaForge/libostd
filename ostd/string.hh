@@ -797,6 +797,16 @@ namespace utf {
         return utf::length(r, r);
     }
 
+    /* @brief Get the number of Unicode code points in a UTF-32 string.
+     *
+     * As a UTF-32 string encodes entire code points, this function
+     * never fails, so there is no need for an error-handling version
+     * and this is equivalent to simply calling `r.size()`.
+     */
+    inline std::size_t length(u32string_range r) noexcept {
+        return r.size();
+    }
+
     namespace detail {
         struct codepoint_range: input_range<codepoint_range> {
             using range_category = forward_range_tag;
