@@ -2036,6 +2036,22 @@ namespace detail {
     };
 }
 
+/** @brief Creates a `Container` from `range`.
+ *
+ * Standard sequence containers usually support construction from an
+ * iterator pair. This is a utility function that will create a sequence
+ * container of the given type using an ostd::input_range's `iter_begin()`
+ * and `iter_end()` methods.
+ *
+ * The remaining arguments are passed after the two iterators.
+ */
+template<typename Container, typename InputRange, typename ...Args>
+inline Container from_range(InputRange range, Args &&...args) {
+    return Container(
+        range.iter_begin(), range.iter_end(), std::forward<Args>(args)...
+    );
+}
+
 /** @} */
 
 } /* namespace ostd */
