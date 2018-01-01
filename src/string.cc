@@ -57,6 +57,10 @@ namespace detail {
         if ((ret > MaxCodepoint) || (ret <= ulim[n])) {
             return false;
         }
+        /* invalid sequence - surrogate code point */
+        if ((ret & 0xD800) == 0xD800) {
+            return false;
+        }
         cret = ret;
         r = sr;
         return true;
