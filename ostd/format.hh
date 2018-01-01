@@ -1012,28 +1012,20 @@ private:
 
     template<typename R, typename C>
     void write_char_raw(R &writer, C val) const {
-        if constexpr(std::is_same_v<C, char>) {
+        if constexpr(sizeof(C) == sizeof(std::uint8_t)) {
             writer.put(val);
         } else {
-            /* TODO: replace this ugly thing with custom unicode APIs */
-            char buf[MB_LEN_MAX];
-            int n;
-            if constexpr(std::is_same_v<C, wchar_t>) {
-                /* convert according to locale */
-                n = detail::wc_to_mb_loc(val, buf, p_loc);
+            char32_t enc;
+            if constexpr(sizeof(C) == sizeof(std::uint16_t)) {
+                enc = static_cast<std::uint16_t>(val);
             } else {
-                fmt_codecvt<C> fac{};
-                n = detail::ac_to_mb(val, fac, buf);
+                enc = static_cast<std::uint32_t>(val);
             }
-            if (n < 0) {
-                /* replacement character */
+            if (!utf::encode_u8(writer, enc)) {
+                /* replacement character on failure */
                 writer.put(0xEF);
                 writer.put(0xBF);
                 writer.put(0xBD);
-            } else {
-                for (int i = 0; i < n; ++i) {
-                    writer.put(buf[i]);
-                }
             }
         }
     }
@@ -1551,14 +1543,6 @@ private:
             std::num_put<wchar_t, fmt_out<R>>(refs)
         {}
         ~fmt_num_put() {}
-    };
-
-    template<typename C>
-    struct fmt_codecvt final: std::codecvt<C, char, std::mbstate_t> {
-        fmt_codecvt(std::size_t refs = 0):
-            std::codecvt<C, char, std::mbstate_t>(refs)
-        {}
-        ~fmt_codecvt() {}
     };
 
     string_range p_fmt;
