@@ -739,10 +739,24 @@ namespace utf {
 
     /* @brief Get the Unicode code point for a multibyte sequence.
      *
-     * The string is advanced past the UTF-8 character in the front.
+     * The string is advanced past the Unicode character in the front.
      * If the decoding fails, `false` is returned, otherwise it's `true`.
      */
     bool decode(string_range &r, char32_t &ret) noexcept;
+
+    /* @brief Get the Unicode code point from a UTF-32 string.
+     *
+     * The string is advanced by one. This can only fail if the string
+     * is empty, `false` is returned in that case.
+     */
+    inline bool decode(u32string_range &r, char32_t &ret) noexcept {
+        if (r.empty()) {
+            return false;
+        }
+        ret = r.front();
+        r.pop_front();
+        return true;
+    }
 
     namespace detail {
         std::uint8_t u8_encode(
@@ -808,14 +822,15 @@ namespace utf {
     }
 
     namespace detail {
-        struct codepoint_range: input_range<codepoint_range> {
+        template<typename C>
+        struct codepoint_range: input_range<codepoint_range<C>> {
             using range_category = forward_range_tag;
             using value_type = char32_t;
             using reference = char32_t;
             using size_type = std::size_t;
 
             codepoint_range() = delete;
-            codepoint_range(string_range r): p_range(r) {
+            codepoint_range(basic_char_range<C const> r): p_range(r) {
                 if (r.empty()) {
                     p_current = -1;
                 } else {
@@ -848,12 +863,12 @@ namespace utf {
                 }
             }
 
-            string_range p_range;
+            basic_char_range<C const> p_range;
             std::int32_t p_current;
         };
     } /* namespace detail */
 
-    /** @brief Iterate over the code points of a string.
+    /** @brief Iterate over the code points of a UTF-8 string.
      *
      * The resulting range is ostd::forward_range_tag. The range will
      * contain the code points of the given string. On error, which may
@@ -861,7 +876,16 @@ namespace utf {
      * an ostd::utf_error is raised.
      */
     inline auto iter_codes(string_range r) {
-        return detail::codepoint_range{r};
+        return detail::codepoint_range<char>{r};
+    }
+
+    /** @brief Iterate over the code points of a UTF-32 string.
+     *
+     * The resulting range is ostd::forward_range_tag. This cannot fail
+     * as it's essentially an identity range.
+     */
+    inline auto iter_codes(u32string_range r) noexcept {
+        return detail::codepoint_range<char32_t>{r};
     }
 
 /** @} */
