@@ -59,7 +59,7 @@ namespace detail {
             return false;
         }
         /* invalid sequence - surrogate code point */
-        if ((ret & 0xD800) == 0xD800) {
+        if ((ret >= 0xD800) && (ret <= 0xDFFF)) {
             return false;
         }
         cret = ret;
@@ -83,7 +83,7 @@ namespace detail {
             /* TODO: optional WTF-8 semantics
              * for now simply reject surrogate code points
              */
-            if ((ch & 0xD800) == 0xD800) {
+            if ((ch >= 0xD800) && (ch <= 0xDFFF)) {
                 return 0;
             }
             ret[0] = 0xE0 |  (ch >> 12);
@@ -189,12 +189,19 @@ inline int codepoint_cmp2(void const *a, void const *b) {
 }
 
 template<
-    std::size_t RangesN, std::size_t RangesS,
-    std::size_t Laces1N, std::size_t Laces1S,
-    std::size_t Laces2N, std::size_t Laces2S,
-    std::size_t SinglesN, std::size_t SinglesS
+    std::size_t RN, std::size_t RS,
+    std::size_t L1N, std::size_t L1S,
+    std::size_t L2N, std::size_t L2S,
+    std::size_t SN, std::size_t SS
 >
 struct uctype_func {
+    template<std::size_t N, std::size_t S>
+    static char32_t *search(
+        char32_t c, void const *arr, int (*cmp)(void const *, void const *)
+    ) {
+        return static_cast<char32_t *>(std::bsearch(&c, arr, N / S, S, cmp));
+    }
+
     static bool do_is(
         char32_t c,
         void const *ranges  [[maybe_unused]],
@@ -202,38 +209,26 @@ struct uctype_func {
         void const *laces2  [[maybe_unused]],
         void const *singles [[maybe_unused]]
     ) {
-        if constexpr(RangesN != 0) {
-            char32_t *found = static_cast<char32_t *>(std::bsearch(
-                &c, ranges, RangesN / RangesS, RangesS / sizeof(char32_t),
-                codepoint_cmp2
-            ));
+        if constexpr(RN != 0) {
+            char32_t *found = search<RN, RS>(c, ranges, codepoint_cmp2);
             if (found) {
                 return true;
             }
         }
-        if constexpr(Laces1N != 0) {
-            char32_t *found = static_cast<char32_t *>(std::bsearch(
-                &c, laces1, Laces1N / Laces1S, Laces1S / sizeof(char32_t),
-                codepoint_cmp2
-            ));
+        if constexpr(L1N != 0) {
+            char32_t *found = search<L1N, L1S>(c, laces1, codepoint_cmp2);
             if (found) {
                 return !((c - found[0]) % 2);
             }
         }
-        if constexpr(Laces2N != 0) {
-            char32_t *found = static_cast<char32_t *>(std::bsearch(
-                &c, laces2, Laces2N / Laces2S, Laces2S / sizeof(char32_t),
-                codepoint_cmp2
-            ));
+        if constexpr(L2N != 0) {
+            char32_t *found = search<L2N, L2S>(c, laces2, codepoint_cmp2);
             if (found) {
                 return !((c - found[0]) % 2);
             }
         }
-        if constexpr(SinglesN != 0) {
-            char32_t *found = static_cast<char32_t *>(std::bsearch(
-                &c, singles, SinglesN / SinglesS, SinglesS / sizeof(char32_t),
-                codepoint_cmp1
-            ));
+        if constexpr(SN != 0) {
+            char32_t *found = search<SN, SS>(c, singles, codepoint_cmp1);
             if (found) {
                 return true;
             }
@@ -248,18 +243,14 @@ struct uctype_func {
         void const *laces2  [[maybe_unused]],
         void const *singles [[maybe_unused]]
     ) {
-        if constexpr(RangesN != 0) {
-            char32_t *found = static_cast<char32_t *>(std::bsearch(
-                &c, ranges, RangesN >> 4, RangesN & 0xF, codepoint_cmp2
-            ));
+        if constexpr(RN != 0) {
+            char32_t *found = search<RN, RS>(c, ranges, codepoint_cmp2);
             if (found) {
                 return (found[2] + (c - found[0]));
             }
         }
-        if constexpr(Laces1N != 0) {
-            char32_t *found = static_cast<char32_t *>(std::bsearch(
-                &c, laces1, Laces1N >> 4, Laces1N & 0xF, codepoint_cmp2
-            ));
+        if constexpr(L1N != 0) {
+            char32_t *found = search<L1N, L1S>(c, laces1, codepoint_cmp2);
             if (found) {
                 if ((c - found[0]) % 2) {
                     return c;
@@ -267,10 +258,8 @@ struct uctype_func {
                 return c + 1;
             }
         }
-        if constexpr(Laces2N != 0) {
-            char32_t *found = static_cast<char32_t *>(std::bsearch(
-                &c, laces2, Laces2N >> 4, Laces2N & 0xF, codepoint_cmp2
-            ));
+        if constexpr(L2N != 0) {
+            char32_t *found = search<L2N, L2S>(c, laces2, codepoint_cmp2);
             if (found) {
                 if ((c - found[0]) % 2) {
                     return c;
@@ -278,10 +267,8 @@ struct uctype_func {
                 return c - 1;
             }
         }
-        if constexpr(SinglesN != 0) {
-            char32_t *found = static_cast<char32_t *>(std::bsearch(
-                &c, singles, SinglesN >> 4, SinglesN & 0xF, codepoint_cmp1
-            ));
+        if constexpr(SN != 0) {
+            char32_t *found = search<SN, SS>(c, singles, codepoint_cmp1);
             if (found) {
                 return found[1];
             }
