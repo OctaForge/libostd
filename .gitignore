@@ -16,3 +16,4 @@ examples/stream1
 examples/stream2
 test_runner
 doc/output
+src/string_utf.hh

@@ -888,6 +888,23 @@ namespace utf {
         return detail::codepoint_range<char32_t>{r};
     }
 
+    bool isalnum(char32_t c);
+    bool isalpha(char32_t c);
+    bool isblank(char32_t c);
+    bool iscntrl(char32_t c);
+    bool isdigit(char32_t c);
+    bool isgraph(char32_t c);
+    bool islower(char32_t c);
+    bool isprint(char32_t c);
+    bool ispunct(char32_t c);
+    bool isspace(char32_t c);
+    bool istitle(char32_t c);
+    bool isupper(char32_t c);
+    bool isvalid(char32_t c);
+    bool isxdigit(char32_t c);
+    char32_t tolower(char32_t c);
+    char32_t toupper(char32_t c);
+
 /** @} */
 
 } /* namespace utf */

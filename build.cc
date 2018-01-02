@@ -29,6 +29,9 @@ namespace fs = ostd::filesystem;
 #include "src/process.cc"
 #include "src/filesystem.cc"
 
+#define OSTD_GEN_UNICODE_INCLUDE
+#include "gen_unicode.cc"
+
 using strvec = std::vector<std::string>;
 using pathvec = std::vector<fs::path>;
 
@@ -49,6 +52,9 @@ static fs::path TEST_DIR = "tests";
 static pathvec TEST_CASES = {
     "algorithm", "range"
 };
+
+static fs::path OSTD_UNICODE_DATA = "data/UnicodeData-10.0.txt";
+static fs::path OSTD_UNICODE_SRC  = CXX_SOURCE_DIR / "string_utf.hh";
 
 static fs::path OSTD_SHARED_LIB = "libostd.so";
 static fs::path OSTD_STATIC_LIB = "libostd.a";
@@ -261,6 +267,7 @@ int main(int argc, char **argv) {
             rp.replace_filename(cso.string() + "_dyn.o");
             try_remove(rp);
         }
+        try_remove(OSTD_UNICODE_SRC);
         try_remove(OSTD_STATIC_LIB);
         try_remove(OSTD_SHARED_LIB);
         try_remove("test_runner.o");
@@ -494,6 +501,11 @@ int main(int argc, char **argv) {
             }
         }
     };
+
+    echo_q("Generating Unicode tables...");
+    ostd::unicode_gen::parse_state{}.build_all_from_file(
+        OSTD_UNICODE_DATA.string(), OSTD_UNICODE_SRC.string()
+    );
 
     echo_q("Building the library...");
     build_all(ASM_SOURCES, ASM_SOURCE_DIR, ".S", call_as);

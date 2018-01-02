@@ -9,20 +9,23 @@
 
 #include <cstdint>
 #include <cctype>
+#include <ctime>
 #include <vector>
 #include <array>
 #include <stdexcept>
+#include <initializer_list>
 
 #include <ostd/io.hh>
 #include <ostd/string.hh>
 #include <ostd/algorithm.hh>
 
-using ostd::string_range;
+namespace ostd {
+namespace unicode_gen {
 
 using code_t = std::uint32_t;
 using code_vec = std::vector<code_t>;
 
-code_t hex_to_code(string_range hs) {
+inline code_t hex_to_code(string_range hs) {
     code_t ret = 0;
     for (char c: hs) {
         if (!std::isxdigit(c |= 32)) {
@@ -65,7 +68,6 @@ struct parse_state {
         }
         assert_line(!bits[0].empty() && (bits[2].size() == 2));
         code_t n = hex_to_code(bits[0]);
-
         /* control chars */
         if (bits[2] == "Cc") {
             controls.push_back(n);
@@ -109,7 +111,11 @@ struct parse_state {
         /* good enough for now, ignore the rest */
     }
 
-    void build(code_vec const &codes, code_vec const &cases = code_vec{}) {
+    template<typename R>
+    void build(
+        R &writer, string_range name,
+        code_vec const &codes, code_vec const &cases = code_vec{}
+    ) {
         code_vec singles;
         code_vec singles_cases;
         code_vec ranges_beg;
@@ -134,14 +140,18 @@ struct parse_state {
         };
         auto match_lace = [
             &codes, &cases, &match_pair
-        ](std::size_t i, int off) {
+        ](std::size_t i, std::size_t offs) {
+            int off = (!int(offs) * 2) - 1;
             return match_pair(i, 2) && (cases.empty() || (
                 (cases[i + 1] == (codes[i + 1] + off)) &&
                 (cases[i    ] == (codes[i    ] + off))
             ));
         };
 
-        for (std::size_t i = 0, ncodes = codes.size(); i < ncodes; ++i) {
+        bool endseq = false;
+        std::size_t i = 0;
+        std::size_t ncodes = codes.size();
+        while (i < ncodes) {
             if (match_range(i)) {
                 ranges_beg.push_back(codes[i]);
                 if (!cases.empty()) {
@@ -153,42 +163,54 @@ struct parse_state {
                 }
                 /* end of range, try others */
                 ranges_end.push_back(codes[i]);
+                endseq = true;
                 continue;
             }
-            if (size_t j = 0; match_lace(i, 1) || match_lace(i, -1)) {
+            if (size_t j = 0; match_lace(i, j) || match_lace(i, ++j)) {
                 laces_beg[j].push_back(codes[i]);
                 for (++i; match_lace(i, j); ++i) {
                     continue;
                 }
                 laces_end[j].push_back(codes[i]);
+                endseq = true;
                 continue;
             }
-            singles.push_back(codes[i]);
-            if (!cases.empty()) {
-                singles_cases.push_back(cases[i]);
+            if (!endseq) {
+                singles.push_back(codes[i]);
+                if (!cases.empty()) {
+                    singles_cases.push_back(cases[i]);
+                }
             }
+            endseq = false;
+            ++i;
         }
 
-        auto build_list = [](
-            string_range name, std::size_t ncol,
+        auto build_list = [&writer, &name](
+            string_range aname, std::size_t ncol,
             code_vec const &col1, code_vec const &col2, code_vec const &col3
         ) {
             if (col1.empty()) {
                 return;
             }
-            ostd::writefln("%s:", name);
-            for (std::size_t i = 0; i < col1.size(); ++i) {
+            format(
+                writer, "static char32_t %s_%s[][%d] = {\n",
+                name, aname, ncol
+            );
+            for (std::size_t j = 0; j < col1.size(); ++j) {
                 switch (ncol) {
                     case 1:
-                        ostd::writefln("  0x%06X", col1[i]);
+                        format(writer, "    { 0x%06X },\n", col1[j]);
                         break;
                     case 2:
-                        ostd::writefln("  0x%06X, 0x%06X", col1[i], col2[i]);
+                        format(
+                            writer, "    { 0x%06X, 0x%06X },\n",
+                            col1[j], col2[j]
+                        );
                         break;
                     case 3:
-                        ostd::writefln(
-                            "  0x%06X, 0x%06X, 0x%06X",
-                            col1[i], col2[i], col3[i]
+                        format(
+                            writer, "    { 0x%06X, 0x%06X, 0x%06X },\n",
+                            col1[j], col2[j], col3[j]
                         );
                         break;
                     default:
@@ -196,7 +218,14 @@ struct parse_state {
                         break;
                 }
             }
+            format(writer, "};\n\n");
         };
+
+        if (cases.empty()) {
+            format(writer, "\n/* is%s */\n\n", name);
+        } else {
+            format(writer, "\n/* is%s, to%s */\n\n", name, name);
+        }
 
         build_list(
             "ranges", !cases.empty() + 2, ranges_beg, ranges_end, ranges_cases
@@ -206,45 +235,132 @@ struct parse_state {
         build_list(
             "singles", !cases.empty() + 1, singles, singles_cases, singles
         );
+
+        /* is_CTYPE(c) */
+        build_func(
+            writer, name, "is", "bool",
+            ranges_beg, laces_beg[0], laces_beg[1], singles
+        );
+
+        /* to_CTYPE(c) */
+        if (!cases.empty()) {
+            build_func(
+                writer, name, "to", "char32_t",
+                ranges_beg, laces_beg[0], laces_beg[1], singles
+            );
+        }
+    }
+
+    template<typename R>
+    void build_header(R &writer) {
+        char buf[64];
+        time_t curt;
+        std::time(&curt);
+        strftime(buf, sizeof(buf), "%c", std::localtime(&curt));
+        format(
+            writer, "/* Generated on %s by gen_unicode (libostd) */\n",
+            static_cast<char *>(buf)
+        );
+    }
+
+    template<typename R>
+    void build_func(
+        R &writer,
+        string_range name,
+        string_range prefix,
+        string_range ret_type,
+        code_vec const &ranges,
+        code_vec const &laces1,
+        code_vec const &laces2,
+        code_vec const &singles
+    ) {
+        format(
+            writer, "%s %s%s(char32_t c) {\n", ret_type, prefix, name
+        );
+        format(writer, "    return utf::uctype_func<\n");
+        auto it1 = { &ranges, &laces1, &laces2, &singles };
+        auto it2 = { "ranges", "laces1", "laces2", "singles" };
+        for (std::size_t i = 0; i < it1.size(); ++i) {
+            if (it1.begin()[i]->empty()) {
+                format(writer, "        0, 0");
+            } else {
+                format(
+                    writer, "        sizeof(%s_%s), sizeof(*%s_%s)",
+                    name, it2.begin()[i], name, it2.begin()[i]
+                );
+            }
+            if ((i + 1) != it1.size()) {
+                format(writer, ",\n");
+            } else {
+                format(writer, "\n");
+            }
+        }
+        format(writer, "    >::do_%s(\n        c, ", prefix);
+        for (std::size_t i = 0; i < it1.size(); ++i) {
+            if (i != 0) {
+                format(writer, ", ");
+            }
+            if (it1.begin()[i]->empty()) {
+                format(writer, "nullptr");
+            } else {
+                format(writer, "%s_%s", name, it2.begin()[i]);
+            }
+        }
+        format(writer, "\n    );\n}\n\n");
+    }
+
+    template<typename R, typename IR>
+    void build_all(R &writer, IR lines) {
+            for (auto const &line: lines) {
+                parse_line(line);
+            }
+
+            build_header(writer);
+
+            build(writer, "alpha", alphas);
+            build(writer, "cntrl", controls);
+            build(writer, "digit", digits);
+            build(writer, "lower", lowers, touppers);
+            build(writer, "space", spaces);
+            build(writer, "title", titles);
+            build(writer, "upper", uppers, tolowers);
+    }
+
+    void build_all_from_file(string_range input, string_range output) {
+        file_stream ifs{input};
+        if (!ifs.is_open()) {
+            throw std::runtime_error{"could not open input file"};
+        }
+        file_stream ofs{output, stream_mode::WRITE};
+        if (!ofs.is_open()) {
+            throw std::runtime_error{"could not open output file"};
+        }
+        auto writer = ofs.iter();
+        build_all(writer, ifs.iter_lines());
     }
 };
 
+} /* namespace unicode_gen */
+} /* namespace ostd */
+
+#ifndef OSTD_GEN_UNICODE_INCLUDE
 int main(int argc, char **argv) {
     if (argc <= 1) {
         ostd::writeln("not enough arguments");
         return 1;
     }
-
-    string_range fname = argv[1];
-    ostd::file_stream f{fname};
-    if (!f.is_open()) {
-        ostd::writefln("cannot open file '%s'", fname);
-        return 1;
+    ostd::string_range fname = argv[1];
+    ostd::string_range outname = "src/string_utf.hh";
+    if (argc >= 3) {
+        outname = argv[2];
     }
 
-    parse_state ps;
-
+    ostd::unicode_gen::parse_state ps;
     try {
-        for (auto const &line: f.iter_lines()) {
-            ps.parse_line(line);
-        }
+        ps.build_all_from_file(fname, outname);
     } catch (std::runtime_error const &e) {
         ostd::writeln(e.what());
         return 1;
     }
-
-    ostd::writeln("ALPHAS:");
-    ps.build(ps.alphas);
-    ostd::writeln("CONTROL:");
-    ps.build(ps.controls);
-    ostd::writeln("DIGITS:");
-    ps.build(ps.digits);
-    ostd::writeln("LOWERCASE:");
-    ps.build(ps.lowers, ps.touppers);
-    ostd::writeln("SPACES:");
-    ps.build(ps.spaces);
-    ostd::writeln("TITLES:");
-    ps.build(ps.titles);
-    ostd::writeln("UPPERCASE:");
-    ps.build(ps.uppers, ps.tolowers);
 }
+#endif

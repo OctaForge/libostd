@@ -4,6 +4,7 @@
  */
 
 #include <cstdint>
+#include <cstdlib>
 #include "ostd/string.hh"
 
 namespace ostd {
@@ -113,6 +114,194 @@ std::size_t length(string_range r, string_range &cont) noexcept {
     cont = r;
     return ret;
 }
+
+/* unicode-aware ctype
+ * the other ones use custom tables for lookups
+ */
+
+bool isalnum(char32_t c) {
+    return (utf::isalpha(c) || utf::isdigit(c));
+}
+
+bool isblank(char32_t c) {
+    return ((c == ' ') || (c == '\t'));
+}
+
+bool isgraph(char32_t c) {
+    return (!utf::isspace(c) && utf::isprint(c));
+}
+
+bool isprint(char32_t c) {
+    switch (std::uint32_t(c)) {
+        case 0x2028:
+        case 0x2029:
+        case 0xFFF9:
+        case 0xFFFA:
+        case 0xFFFB:
+            return false;
+        default:
+            return !utf::iscntrl(c);
+    }
+}
+
+bool ispunct(char32_t c) {
+    return (utf::isgraph(c) && !utf::isalnum(c));
+}
+
+bool isvalid(char32_t c) {
+    /* surrogate code points */
+    if ((c >= 0xD800) && (c <= 0xDFFF)) {
+        return false;
+    }
+    /* non-characters */
+    if ((c >= 0xFDD0) && (c <= 0xFDEF)) {
+        return false;
+    }
+    /* end of plane */
+    if ((c & 0xFFFE) == 0xFFFE) {
+        return false;
+    }
+    /* must be within range */
+    return (c <= MaxCodepoint);
+}
+
+bool isxdigit(char32_t c) {
+    if ((c >= '0') && (c <= '9')) {
+        return true;
+    }
+    auto uc = std::uint32_t(c) | 32;
+    return ((uc >= 'a') && (uc <= 'f'));
+}
+
+inline int codepoint_cmp1(void const *a, void const *b) {
+    char32_t c1 = *static_cast<char32_t const *>(a);
+    char32_t c2 = *static_cast<char32_t const *>(b);
+    return (c1 - c2);
+}
+
+inline int codepoint_cmp2(void const *a, void const *b) {
+    char32_t        c = *static_cast<char32_t const *>(a);
+    char32_t const *p =  static_cast<char32_t const *>(b);
+    if ((c >= p[0]) && (c <= p[1])) {
+        return 0;
+    }
+    return (c - p[0]);
+}
+
+template<
+    std::size_t RangesN, std::size_t RangesS,
+    std::size_t Laces1N, std::size_t Laces1S,
+    std::size_t Laces2N, std::size_t Laces2S,
+    std::size_t SinglesN, std::size_t SinglesS
+>
+struct uctype_func {
+    static bool do_is(
+        char32_t c,
+        void const *ranges  [[maybe_unused]],
+        void const *laces1  [[maybe_unused]],
+        void const *laces2  [[maybe_unused]],
+        void const *singles [[maybe_unused]]
+    ) {
+        if constexpr(RangesN != 0) {
+            char32_t *found = static_cast<char32_t *>(std::bsearch(
+                &c, ranges, RangesN / RangesS, RangesS / sizeof(char32_t),
+                codepoint_cmp2
+            ));
+            if (found) {
+                return true;
+            }
+        }
+        if constexpr(Laces1N != 0) {
+            char32_t *found = static_cast<char32_t *>(std::bsearch(
+                &c, laces1, Laces1N / Laces1S, Laces1S / sizeof(char32_t),
+                codepoint_cmp2
+            ));
+            if (found) {
+                return !((c - found[0]) % 2);
+            }
+        }
+        if constexpr(Laces2N != 0) {
+            char32_t *found = static_cast<char32_t *>(std::bsearch(
+                &c, laces2, Laces2N / Laces2S, Laces2S / sizeof(char32_t),
+                codepoint_cmp2
+            ));
+            if (found) {
+                return !((c - found[0]) % 2);
+            }
+        }
+        if constexpr(SinglesN != 0) {
+            char32_t *found = static_cast<char32_t *>(std::bsearch(
+                &c, singles, SinglesN / SinglesS, SinglesS / sizeof(char32_t),
+                codepoint_cmp1
+            ));
+            if (found) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static char32_t do_to(
+        char32_t c,
+        void const *ranges  [[maybe_unused]],
+        void const *laces1  [[maybe_unused]],
+        void const *laces2  [[maybe_unused]],
+        void const *singles [[maybe_unused]]
+    ) {
+        if constexpr(RangesN != 0) {
+            char32_t *found = static_cast<char32_t *>(std::bsearch(
+                &c, ranges, RangesN >> 4, RangesN & 0xF, codepoint_cmp2
+            ));
+            if (found) {
+                return (found[2] + (c - found[0]));
+            }
+        }
+        if constexpr(Laces1N != 0) {
+            char32_t *found = static_cast<char32_t *>(std::bsearch(
+                &c, laces1, Laces1N >> 4, Laces1N & 0xF, codepoint_cmp2
+            ));
+            if (found) {
+                if ((c - found[0]) % 2) {
+                    return c;
+                }
+                return c + 1;
+            }
+        }
+        if constexpr(Laces2N != 0) {
+            char32_t *found = static_cast<char32_t *>(std::bsearch(
+                &c, laces2, Laces2N >> 4, Laces2N & 0xF, codepoint_cmp2
+            ));
+            if (found) {
+                if ((c - found[0]) % 2) {
+                    return c;
+                }
+                return c - 1;
+            }
+        }
+        if constexpr(SinglesN != 0) {
+            char32_t *found = static_cast<char32_t *>(std::bsearch(
+                &c, singles, SinglesN >> 4, SinglesN & 0xF, codepoint_cmp1
+            ));
+            if (found) {
+                return found[1];
+            }
+        }
+        return c;
+    }
+};
+
+/* these are geneated */
+bool isalpha(char32_t c);
+bool iscntrl(char32_t c);
+bool isdigit(char32_t c);
+bool islower(char32_t c);
+bool isspace(char32_t c);
+bool istitle(char32_t c);
+bool isupper(char32_t c);
+char32_t tolower(char32_t c);
+char32_t toupper(char32_t c);
+
+#include "string_utf.hh"
 
 } /* namespace utf */
 } /* namespace ostd */
