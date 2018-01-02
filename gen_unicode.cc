@@ -195,7 +195,7 @@ struct parse_state {
                 return;
             }
             format(
-                writer, "static char32_t %s_%s[][%d] = {\n",
+                writer, "static char32_t const %s_%s[][%d] = {\n",
                 name, aname, ncol
             );
             for (std::size_t j = 0; j < col1.size(); ++j) {
