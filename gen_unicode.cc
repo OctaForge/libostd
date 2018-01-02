@@ -114,7 +114,9 @@ struct parse_state {
     template<typename R>
     void build(
         R &writer, string_range name,
-        code_vec const &codes, code_vec const &cases = code_vec{}
+        code_vec const &codes,
+        string_range cname = string_range{},
+        code_vec const &cases = code_vec{}
     ) {
         code_vec singles;
         code_vec singles_cases;
@@ -224,7 +226,7 @@ struct parse_state {
         if (cases.empty()) {
             format(writer, "\n/* is%s */\n\n", name);
         } else {
-            format(writer, "\n/* is%s, to%s */\n\n", name, name);
+            format(writer, "\n/* is%s, to%s */\n\n", name, cname);
         }
 
         build_list(
@@ -238,14 +240,14 @@ struct parse_state {
 
         /* is_CTYPE(c) */
         build_func(
-            writer, name, "is", "bool",
+            writer, name, name, "is", "bool",
             ranges_beg, laces_beg[0], laces_beg[1], singles
         );
 
         /* to_CTYPE(c) */
         if (!cases.empty()) {
             build_func(
-                writer, name, "to", "char32_t",
+                writer, name, cname, "to", "char32_t",
                 ranges_beg, laces_beg[0], laces_beg[1], singles
             );
         }
@@ -267,6 +269,7 @@ struct parse_state {
     void build_func(
         R &writer,
         string_range name,
+        string_range fname,
         string_range prefix,
         string_range ret_type,
         code_vec const &ranges,
@@ -275,7 +278,7 @@ struct parse_state {
         code_vec const &singles
     ) {
         format(
-            writer, "%s %s%s(char32_t c) {\n", ret_type, prefix, name
+            writer, "%s %s%s(char32_t c) {\n", ret_type, prefix, fname
         );
         format(writer, "    return utf::uctype_func<\n");
         auto it1 = { &ranges, &laces1, &laces2, &singles };
@@ -320,10 +323,10 @@ struct parse_state {
             build(writer, "alpha", alphas);
             build(writer, "cntrl", controls);
             build(writer, "digit", digits);
-            build(writer, "lower", lowers, touppers);
+            build(writer, "lower", lowers, "upper", touppers);
             build(writer, "space", spaces);
             build(writer, "title", titles);
-            build(writer, "upper", uppers, tolowers);
+            build(writer, "upper", uppers, "lower", tolowers);
     }
 
     void build_all_from_file(string_range input, string_range output) {
