@@ -288,7 +288,57 @@ bool isupper(char32_t c);
 char32_t tolower(char32_t c);
 char32_t toupper(char32_t c);
 
+#if __has_include("string_utf.hh")
 #include "string_utf.hh"
+#else
+
+/* break the cycle (build system and generator use libostd, but string_utf.hh
+ * is generated during build) by providing a bunch of ASCII only fallbacks
+ */
+
+bool isalpha(char32_t c) {
+    return (utf::isupper(c) || utf::islower(c));
+}
+
+bool iscntrl(char32_t c) {
+    return ((c <= 0x1F) || (c == 0x7F));
+}
+
+bool isdigit(char32_t c) {
+    return ((c >= '0') && (c <= '9'));
+}
+
+bool islower(char32_t c) {
+    return ((c >= 'a') && (c <= 'z'));
+}
+
+bool isspace(char32_t c) {
+    return ((c == ' ') || ((c >= 0x09) && (c <= 0x0D)));
+}
+
+bool istitle(char32_t) {
+    return false;
+}
+
+bool isupper(char32_t c) {
+    return ((c >= 'A') && (c <= 'Z'));
+}
+
+char32_t tolower(char32_t c) {
+    if (utf::isupper(c)) {
+        return c | 32;
+    }
+    return c;
+}
+
+char32_t toupper(char32_t c) {
+    if (utf::islower(c)) {
+        return c ^ 32;
+    }
+    return c;
+}
+
+#endif /* __has_include("string_utf.hh") */
 
 } /* namespace utf */
 } /* namespace ostd */
