@@ -1,4 +1,9 @@
-/* A build system for libostd. */
+/* A simple build system to build libostd.
+ *
+ * This file is a part of the libostd project. Libostd is licensed under the
+ * University of Illinois/NCSA Open Source License, as is this file. See the
+ * COPYING.md file further information.
+ */
 
 /* for Windows so that we avoid dllimport/dllexport */
 #define OSTD_BUILD_LIB

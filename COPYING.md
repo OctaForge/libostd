@@ -32,6 +32,12 @@ SOFTWARE.**
 Additionally some code from the libc++ project has been used as a reference;
 libc++ is a part of the LLVM project.
 
+The libutf project (https://github.com/cls/libutf) was used as an inspiration
+for some of the Unicode implementation bits within libostd and the gen\_unicode
+program used to generate the necessary ctype tables, but all of the code was
+written from scratch; nevertheless, I would like to give some credit and thanks
+to the project here.
+
 Additional thanks to Dale Weiler aka graphitemaster (reference code in the
 Neothyne project) and cppreference.com.
 
