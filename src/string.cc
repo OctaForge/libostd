@@ -119,19 +119,19 @@ std::size_t length(string_range r, string_range &cont) noexcept {
  * the other ones use custom tables for lookups
  */
 
-bool isalnum(char32_t c) {
+bool isalnum(char32_t c) noexcept {
     return (utf::isalpha(c) || utf::isdigit(c));
 }
 
-bool isblank(char32_t c) {
+bool isblank(char32_t c) noexcept {
     return ((c == ' ') || (c == '\t'));
 }
 
-bool isgraph(char32_t c) {
+bool isgraph(char32_t c) noexcept {
     return (!utf::isspace(c) && utf::isprint(c));
 }
 
-bool isprint(char32_t c) {
+bool isprint(char32_t c) noexcept {
     switch (std::uint32_t(c)) {
         case 0x2028:
         case 0x2029:
@@ -144,11 +144,11 @@ bool isprint(char32_t c) {
     }
 }
 
-bool ispunct(char32_t c) {
+bool ispunct(char32_t c) noexcept {
     return (utf::isgraph(c) && !utf::isalnum(c));
 }
 
-bool isvalid(char32_t c) {
+bool isvalid(char32_t c) noexcept {
     /* surrogate code points */
     if ((c >= 0xD800) && (c <= 0xDFFF)) {
         return false;
@@ -165,7 +165,7 @@ bool isvalid(char32_t c) {
     return (c <= MaxCodepoint);
 }
 
-bool isxdigit(char32_t c) {
+bool isxdigit(char32_t c) noexcept {
     if ((c >= '0') && (c <= '9')) {
         return true;
     }
@@ -173,13 +173,13 @@ bool isxdigit(char32_t c) {
     return ((uc >= 'a') && (uc <= 'f'));
 }
 
-inline int codepoint_cmp1(void const *a, void const *b) {
+inline int codepoint_cmp1(void const *a, void const *b) noexcept {
     char32_t c1 = *static_cast<char32_t const *>(a);
     char32_t c2 = *static_cast<char32_t const *>(b);
     return (c1 - c2);
 }
 
-inline int codepoint_cmp2(void const *a, void const *b) {
+inline int codepoint_cmp2(void const *a, void const *b) noexcept {
     char32_t        c = *static_cast<char32_t const *>(a);
     char32_t const *p =  static_cast<char32_t const *>(b);
     if ((c >= p[0]) && (c <= p[1])) {
@@ -198,7 +198,7 @@ struct uctype_func {
     template<std::size_t N, std::size_t S>
     static char32_t *search(
         char32_t c, void const *arr, int (*cmp)(void const *, void const *)
-    ) {
+    ) noexcept {
         return static_cast<char32_t *>(std::bsearch(&c, arr, N / S, S, cmp));
     }
 
@@ -208,7 +208,7 @@ struct uctype_func {
         void const *laces1  [[maybe_unused]],
         void const *laces2  [[maybe_unused]],
         void const *singles [[maybe_unused]]
-    ) {
+    ) noexcept {
         if constexpr(RN != 0) {
             char32_t *found = search<RN, RS>(c, ranges, codepoint_cmp2);
             if (found) {
@@ -242,7 +242,7 @@ struct uctype_func {
         void const *laces1  [[maybe_unused]],
         void const *laces2  [[maybe_unused]],
         void const *singles [[maybe_unused]]
-    ) {
+    ) noexcept {
         if constexpr(RN != 0) {
             char32_t *found = search<RN, RS>(c, ranges, codepoint_cmp2);
             if (found) {
@@ -278,15 +278,15 @@ struct uctype_func {
 };
 
 /* these are geneated */
-bool isalpha(char32_t c);
-bool iscntrl(char32_t c);
-bool isdigit(char32_t c);
-bool islower(char32_t c);
-bool isspace(char32_t c);
-bool istitle(char32_t c);
-bool isupper(char32_t c);
-char32_t tolower(char32_t c);
-char32_t toupper(char32_t c);
+bool isalpha(char32_t c) noexcept;
+bool iscntrl(char32_t c) noexcept;
+bool isdigit(char32_t c) noexcept;
+bool islower(char32_t c) noexcept;
+bool isspace(char32_t c) noexcept;
+bool istitle(char32_t c) noexcept;
+bool isupper(char32_t c) noexcept;
+char32_t tolower(char32_t c) noexcept;
+char32_t toupper(char32_t c) noexcept;
 
 #if __has_include("string_utf.hh")
 #include "string_utf.hh"
@@ -296,42 +296,42 @@ char32_t toupper(char32_t c);
  * is generated during build) by providing a bunch of ASCII only fallbacks
  */
 
-bool isalpha(char32_t c) {
+bool isalpha(char32_t c) noexcept {
     return (utf::isupper(c) || utf::islower(c));
 }
 
-bool iscntrl(char32_t c) {
+bool iscntrl(char32_t c) noexcept {
     return ((c <= 0x1F) || (c == 0x7F));
 }
 
-bool isdigit(char32_t c) {
+bool isdigit(char32_t c) noexcept {
     return ((c >= '0') && (c <= '9'));
 }
 
-bool islower(char32_t c) {
+bool islower(char32_t c) noexcept {
     return ((c >= 'a') && (c <= 'z'));
 }
 
-bool isspace(char32_t c) {
+bool isspace(char32_t c) noexcept {
     return ((c == ' ') || ((c >= 0x09) && (c <= 0x0D)));
 }
 
-bool istitle(char32_t) {
+bool istitle(char32_t) noexcept {
     return false;
 }
 
-bool isupper(char32_t c) {
+bool isupper(char32_t c) noexcept {
     return ((c >= 'A') && (c <= 'Z'));
 }
 
-char32_t tolower(char32_t c) {
+char32_t tolower(char32_t c) noexcept {
     if (utf::isupper(c)) {
         return c | 32;
     }
     return c;
 }
 
-char32_t toupper(char32_t c) {
+char32_t toupper(char32_t c) noexcept {
     if (utf::islower(c)) {
         return c ^ 32;
     }
