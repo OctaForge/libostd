@@ -340,5 +340,36 @@ char32_t toupper(char32_t c) {
 
 #endif /* __has_include("string_utf.hh") */
 
+int case_compare(string_range s1, string_range s2) noexcept {
+    std::size_t s1l = s1.size(), s2l = s2.size(), ms = std::min(s1l, s2l);
+    s1 = s1.slice(0, ms);
+    s2 = s2.slice(0, ms);
+    for (;;) {
+        char32_t ldec = s1.front(), rdec = s2.front();
+        if ((ldec <= 0x7F) || !utf::decode(s1, ldec)) {
+            s1.pop_front();
+        }
+        if ((rdec <= 0x7F) || !utf::decode(s2, rdec)) {
+            s2.pop_front();
+        }
+        int d = int(utf::tolower(ldec)) - int(utf::tolower(rdec));
+        if (d) {
+            return d;
+        }
+    }
+    return (s1l < s2l) ? -1 : ((s1 > s2) ? 1 : 0);
+}
+
+int case_compare(u32string_range s1, u32string_range s2) noexcept {
+    std::size_t s1l = s1.size(), s2l = s2.size();
+    for (std::size_t i = 0, ms = std::min(s1l, s2l); i < ms; ++i) {
+        int d = int(utf::tolower(s1[i])) - int(utf::tolower(s2[i]));
+        if (d) {
+            return d;
+        }
+    }
+    return (s1l < s2l) ? -1 : ((s1l > s2l) ? 1 : 0);
+}
+
 } /* namespace utf */
 } /* namespace ostd */

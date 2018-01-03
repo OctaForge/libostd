@@ -296,11 +296,20 @@ public:
      * method of std::char_traits, but does not depend on the strings
      * to be terminated.
      *
-     * If this slice is empty and the other is not, this method returns
-     * -1. If it's the other way around, it returns 1. If both are empty,
-     * 0 is returned. Otherwise, the `compare` method of std::char_traits
-     * is used to compare the data, using the smaller of the lengths as the
-     * count.
+     * It performs an ordinary lexicographical comparison, the values
+     * are compared and the first string to have a lesser value is
+     * considered lexicographically less. If they are equal up to a
+     * point but one of them terminates early, it's also less.
+     *
+     * If the `this` slice is the lesser one, a negative value is
+     * returned. If they are equal (if they're both zero length,
+     * it counts as equal) then `0` is returned. Otherwise, a
+     * positive value is returned.
+     *
+     * This works with the slice's native unit values, i.e. bytes
+     * for UTF-8, `char16_t` for UTF-16 and `char32_t` for UTF-32.
+     * These units are compared by getting the difference between
+     * them (i.e. `this[index] - other[index]`).
      *
      * It is not a part of the range interface, just the string slice
      * interface.
@@ -309,37 +318,28 @@ public:
      */
     int compare(basic_char_range<value_type const> s) const noexcept {
         size_type s1 = size(), s2 = s.size();
-        int ret;
-        if (!s1 || !s2) {
-            goto diffsize;
-        }
-        if ((ret = TR::compare(data(), s.data(), std::min(s1, s2)))) {
-            return ret;
-        }
-diffsize:
-        return (s1 < s2) ? -1 : ((s1 > s2) ? 1 : 0);
-    }
-
-    /** @brief Compares two slices in a case insensitive manner.
-     *
-     * Lexicographically compares the strings like compare(), but in
-     * a case insensitive way. The std::toupper() function is used to
-     * convert the characters to uppercase when comparing.
-     *
-     * Returns a negative value when this slice is less than the other
-     * slice and a positive value when the other way around. Zero is
-     * returned when they're equal.
-     */
-    int case_compare(basic_char_range<value_type const> s) const noexcept {
-        size_type s1 = size(), s2 = s.size();
         for (size_type i = 0, ms = std::min(s1, s2); i < ms; ++i) {
-            int d = std::toupper(p_beg[i]) - std::toupper(s[i]);
+            int d = p_beg[i] - s[i];
             if (d) {
                 return d;
             }
         }
         return (s1 < s2) ? -1 : ((s1 > s2) ? 1 : 0);
     }
+
+    /** @brief Compares two slices in a case insensitive manner.
+     *
+     * Works exactly the same as compare(), but in a case insensitive
+     * way, i.e. it lowercases the characters and compares them after
+     * that.
+     *
+     * For UTF-8, it decodes the string on the fly, then lowercases the
+     * decoded code points and uses their difference (without encoding
+     * them back). If the decoding fails, the failing code unit is used
+     * as-is, so this function never fails. Identical treatment is given
+     * to UTF-16.
+     */
+    inline int case_compare(basic_char_range<value_type const> s) const noexcept;
 
     /** @brief Iterate over the code points of the string.
      *
@@ -905,6 +905,15 @@ namespace utf {
     char32_t tolower(char32_t c);
     char32_t toupper(char32_t c);
 
+    inline int compare(string_range s1, string_range s2) noexcept {
+        return s1.compare(s2);
+    }
+    inline int compare(u32string_range s1, u32string_range s2) noexcept {
+        return s1.compare(s2);
+    }
+
+    int case_compare(string_range s1, string_range s2) noexcept;
+    int case_compare(u32string_range s1, u32string_range s2) noexcept;
 /** @} */
 
 } /* namespace utf */
@@ -924,6 +933,13 @@ inline std::size_t basic_char_range<T>::length(
 template<typename T>
 inline auto basic_char_range<T>::iter_codes() const {
     return utf::iter_codes(*this);
+}
+
+template<typename T>
+inline int basic_char_range<T>::case_compare(
+    basic_char_range<T const> s
+) const noexcept {
+    return utf::case_compare(*this, s);
 }
 
 /* string literals */
