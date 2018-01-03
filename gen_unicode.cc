@@ -246,6 +246,7 @@ struct parse_state {
 
         /* to_CTYPE(c) */
         if (!cases.empty()) {
+            writer.put('\n');
             build_func(
                 writer, name, cname, "to", "char32_t",
                 ranges_beg, laces_beg[0], laces_beg[1], singles
