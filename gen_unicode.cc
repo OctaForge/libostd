@@ -309,7 +309,7 @@ struct parse_state {
                 format(writer, "%s_%s", name, it2.begin()[i]);
             }
         }
-        format(writer, "\n    );\n}\n\n");
+        format(writer, "\n    );\n}\n");
     }
 
     template<typename R, typename IR>
