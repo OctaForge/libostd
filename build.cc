@@ -473,7 +473,7 @@ int main(int argc, char **argv) {
         try_remove("test_runner.o");
     };
 
-    ostd::thread_pool tp;
+    ostd::thread_pool tp{};
     tp.start();
 
     std::queue<std::future<fs::path>> future_obj, future_dynobj;

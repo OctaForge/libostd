@@ -40,7 +40,7 @@ namespace detail {
     OSTD_EXPORT void *stack_alloc(std::size_t sz) {
         if constexpr(CONTEXT_USE_MMAP) {
             void *p = mmap(
-                0, sz, PROT_READ | PROT_WRITE,
+                nullptr, sz, PROT_READ | PROT_WRITE,
                 MAP_PRIVATE | CONTEXT_MAP_ANON, -1, 0
             );
             if (p == MAP_FAILED) {

@@ -34,6 +34,35 @@ namespace ostd {
  * @{
  */
 
+struct coroutine_context;
+
+namespace detail {
+    /* from boost.fcontext */
+    using fcontext_t = void *;
+
+    struct transfer_t {
+        fcontext_t ctx;
+        void *data;
+    };
+
+    extern "C" OSTD_EXPORT
+    transfer_t OSTD_CDECL ostd_jump_fcontext(
+        fcontext_t const to, void *vp
+    );
+
+    extern "C" OSTD_EXPORT
+    fcontext_t OSTD_CDECL ostd_make_fcontext(
+        void *sp, std::size_t size, void (*fn)(transfer_t)
+    );
+
+    extern "C" OSTD_EXPORT
+    transfer_t OSTD_CDECL ostd_ontop_fcontext(
+        fcontext_t const to, void *vp, transfer_t (*fn)(transfer_t)
+    );
+
+    OSTD_EXPORT extern thread_local coroutine_context *coro_current;
+} /* namespace detail */
+
 /** @brief An allocated stack.
  *
  * This represents a stack allocated by a stack allocator. It doesn't

@@ -28,7 +28,7 @@ int main() {
 
     /* prints ABCDEF (ASCII 65, 66, 67, 68, 69, 70) */
     writeln("string gen test");
-    auto mr = range(6) | map([](int v) -> char { return v + 65; });
+    auto mr = range(6) | map([](int v) { return char(v + 65); });
     std::string s{mr.iter_begin(), mr.iter_end()};
     writeln(s);
 
@@ -73,7 +73,7 @@ int main() {
     /* more complex pipe */
     writeln("several piped algorithms");
 
-    srand(time(0));
+    srand(static_cast<unsigned int>(time(0)));
     std::array<int, 100> arr;
     generate(iter(arr), []() { return rand() % 128; });
 

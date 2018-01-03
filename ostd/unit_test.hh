@@ -46,9 +46,9 @@ namespace test {
 #define OSTD_TEST_MODULE_CURRENT OSTD_TEST_MODULE_STR(OSTD_BUILD_TESTS)
 
 namespace detail {
-    static std::vector<void (*)()> test_cases;
+    static inline std::vector<void (*)()> test_cases;
 
-    static bool add_test(std::string testn, void (*func)()) {
+    inline bool add_test(std::string testn, void (*func)()) {
         if (testn == OSTD_TEST_MODULE_CURRENT) {
             test_cases.push_back(func);
         }
@@ -73,13 +73,13 @@ namespace detail {
  * after including any headers and undefined at the end of the file.
  */
 #define OSTD_UNIT_TEST \
-static void OSTD_TEST_FUNC_NAME(test_func, OSTD_TEST_MODULE, __LINE__)(); \
-static bool OSTD_TEST_FUNC_NAME(test_case, OSTD_TEST_MODULE, __LINE__) = \
+inline void OSTD_TEST_FUNC_NAME(test_func, OSTD_TEST_MODULE, __LINE__)(); \
+static inline bool OSTD_TEST_FUNC_NAME(test_case, OSTD_TEST_MODULE, __LINE__) = \
     ostd::test::detail::add_test( \
         OSTD_TEST_MODULE_STR(OSTD_TEST_MODULE), \
         &OSTD_TEST_FUNC_NAME(test_func, OSTD_TEST_MODULE, __LINE__) \
     ); \
-static void OSTD_TEST_FUNC_NAME(test_func, OSTD_TEST_MODULE, __LINE__)()
+inline void OSTD_TEST_FUNC_NAME(test_func, OSTD_TEST_MODULE, __LINE__)()
 
 /** @brief Makes the test fail if the given value is true.
  *
@@ -90,7 +90,7 @@ static void OSTD_TEST_FUNC_NAME(test_func, OSTD_TEST_MODULE, __LINE__)()
  *
  * @see ostd::test::fail(), ostd::test::fail_if_not()
  */
-void fail_if(bool b) {
+inline void fail_if(bool b) {
     if (b) {
         throw detail::test_error{};
     }
@@ -100,7 +100,7 @@ void fail_if(bool b) {
  *
  * The test will fail if the given value is false.
  */
-void fail_if_not(bool b) {
+inline void fail_if_not(bool b) {
     if (!b) {
         throw detail::test_error{};
     }
@@ -112,7 +112,7 @@ void fail_if_not(bool b) {
  *
  * @see ostd::test::fail_if()
  */
-void fail() {
+[[noreturn]] inline void fail() {
     throw detail::test_error{};
 }
 
@@ -121,7 +121,7 @@ void fail() {
  * @returns An std::pair containing the number of tests that succeeded
  *          as the first value and failed as the second value.
  */
-std::pair<std::size_t, std::size_t> run() {
+inline std::pair<std::size_t, std::size_t> run() {
     std::size_t succ = 0, fail = 0;
     for (auto &f: detail::test_cases) {
         try {

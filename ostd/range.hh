@@ -186,7 +186,8 @@ namespace detail {
     };
 
     template<typename R>
-    inline constexpr bool test_range_category = range_category_test<R>::value;
+    static inline constexpr bool const test_range_category =
+        range_category_test<R>::value;
 
     template<typename R, bool, bool>
     struct range_traits_base {
@@ -199,7 +200,7 @@ namespace detail {
     };
 
     template<typename R>
-    inline constexpr bool test_elem_reference =
+    static inline constexpr bool const test_elem_reference =
         std::is_convertible_v<typename R::range_category, input_range_tag> &&
         std::is_lvalue_reference_v<typename R::reference> &&
         std::is_same_v<
@@ -388,7 +389,7 @@ using range_reference_t = typename range_traits<R>::reference;
  *
  */
 template<typename R1, typename R2>
-inline constexpr bool is_range_element_swappable_with =
+static inline constexpr bool const is_range_element_swappable_with =
     range_traits<R1>::template is_element_swappable_with<R2>;
 
 /** @brief Checks whether a range can swap elements within itself.
@@ -401,7 +402,7 @@ inline constexpr bool is_range_element_swappable_with =
  *
  */
 template<typename R>
-inline constexpr bool is_range_element_swappable =
+static inline constexpr bool const is_range_element_swappable =
     range_traits<R>::is_element_swappable;
 
 /** @brief Checks whether two ranges can nothrow swap elements with each other.
@@ -414,7 +415,7 @@ inline constexpr bool is_range_element_swappable =
  *
  */
 template<typename R1, typename R2>
-inline constexpr bool is_range_element_nothrow_swappable_with =
+static inline constexpr bool const is_range_element_nothrow_swappable_with =
     range_traits<R1>::template is_element_nothrow_swappable_with<R2>;
 
 /** @brief Checks whether a range can nothrow swap elements within itself.
@@ -427,21 +428,21 @@ inline constexpr bool is_range_element_nothrow_swappable_with =
  *
  */
 template<typename R>
-inline constexpr bool is_range_element_nothrow_swappable =
+static inline constexpr bool const is_range_element_nothrow_swappable =
     range_traits<R>::is_element_nothrow_swappable;
 
 // is input range
 
 namespace detail {
     template<typename T>
-    inline constexpr bool is_input_range_core =
+    static inline constexpr bool const is_input_range_core =
         std::is_convertible_v<range_category_t<T>, input_range_tag>;
 
     template<typename T, bool = detail::test_range_category<T>>
-    inline constexpr bool is_input_range_base = false;
+    static inline constexpr bool const is_input_range_base = false;
 
     template<typename T>
-    inline constexpr bool is_input_range_base<T, true> =
+    static inline constexpr bool const is_input_range_base<T, true> =
         detail::is_input_range_core<T>;
 }
 
@@ -453,20 +454,21 @@ namespace detail {
  * @see ostd::is_forward_range, ostd::is_output_range
  */
 template<typename T>
-inline constexpr bool is_input_range = detail::is_input_range_base<T>;
+static inline constexpr bool const is_input_range =
+    detail::is_input_range_base<T>;
 
 // is forward range
 
 namespace detail {
     template<typename T>
-    inline constexpr bool is_forward_range_core =
+    static inline constexpr bool const is_forward_range_core =
         std::is_convertible_v<range_category_t<T>, forward_range_tag>;
 
     template<typename T, bool = detail::test_range_category<T>>
-    inline constexpr bool is_forward_range_base = false;
+    static inline constexpr bool const is_forward_range_base = false;
 
     template<typename T>
-    inline constexpr bool is_forward_range_base<T, true> =
+    static inline constexpr bool const is_forward_range_base<T, true> =
         detail::is_forward_range_core<T>;
 }
 
@@ -478,20 +480,21 @@ namespace detail {
  * @see ostd::is_input_range, ostd::is_bidirectional_range
  */
 template<typename T>
-inline constexpr bool is_forward_range = detail::is_forward_range_base<T>;
+static inline constexpr bool const is_forward_range =
+    detail::is_forward_range_base<T>;
 
 // is bidirectional range
 
 namespace detail {
     template<typename T>
-    inline constexpr bool is_bidirectional_range_core =
+    static inline constexpr bool const is_bidirectional_range_core =
         std::is_convertible_v<range_category_t<T>, bidirectional_range_tag>;
 
     template<typename T, bool = detail::test_range_category<T>>
-    inline constexpr bool is_bidirectional_range_base = false;
+    static inline constexpr bool const is_bidirectional_range_base = false;
 
     template<typename T>
-    inline constexpr bool is_bidirectional_range_base<T, true> =
+    static inline constexpr bool const is_bidirectional_range_base<T, true> =
         detail::is_bidirectional_range_core<T>;
 }
 
@@ -503,21 +506,21 @@ namespace detail {
  * @see ostd::is_forward_range, ostd::is_random_access_range
  */
 template<typename T>
-inline constexpr bool is_bidirectional_range =
+static inline constexpr bool const is_bidirectional_range =
     detail::is_bidirectional_range_base<T>;
 
 // is random access range
 
 namespace detail {
     template<typename T>
-    inline constexpr bool is_random_access_range_core =
+    static inline constexpr bool const is_random_access_range_core =
         std::is_convertible_v<range_category_t<T>, random_access_range_tag>;
 
     template<typename T, bool = detail::test_range_category<T>>
-    inline constexpr bool is_random_access_range_base = false;
+    static inline constexpr bool const is_random_access_range_base = false;
 
     template<typename T>
-    inline constexpr bool is_random_access_range_base<T, true> =
+    static inline constexpr bool const is_random_access_range_base<T, true> =
         detail::is_random_access_range_core<T>;
 }
 
@@ -530,21 +533,21 @@ namespace detail {
  * @see ostd::is_bidirectional_range, ostd::is_finite_random_access_range
  */
 template<typename T>
-inline constexpr bool is_random_access_range =
+static inline constexpr bool const is_random_access_range =
     detail::is_random_access_range_base<T>;
 
 // is finite random access range
 
 namespace detail {
     template<typename T>
-    inline constexpr bool is_finite_random_access_range_core =
+    static inline constexpr bool const is_finite_random_access_range_core =
         std::is_convertible_v<range_category_t<T>, finite_random_access_range_tag>;
 
     template<typename T, bool = detail::test_range_category<T>>
-    inline constexpr bool is_finite_random_access_range_base = false;
+    static inline constexpr bool const is_finite_random_access_range_base = false;
 
     template<typename T>
-    inline constexpr bool is_finite_random_access_range_base<T, true> =
+    static inline constexpr bool const is_finite_random_access_range_base<T, true> =
         detail::is_finite_random_access_range_core<T>;
 }
 
@@ -557,21 +560,21 @@ namespace detail {
  * @see ostd::is_random_access_range, ostd::is_contiguous_range
  */
 template<typename T>
-inline constexpr bool is_finite_random_access_range =
+static inline constexpr bool const is_finite_random_access_range =
     detail::is_finite_random_access_range_base<T>;
 
 // is contiguous range
 
 namespace detail {
     template<typename T>
-    inline constexpr bool is_contiguous_range_core =
+    static inline constexpr bool const is_contiguous_range_core =
         std::is_convertible_v<range_category_t<T>, contiguous_range_tag>;
 
     template<typename T, bool = detail::test_range_category<T>>
-    inline constexpr bool is_contiguous_range_base = false;
+    static inline constexpr bool const is_contiguous_range_base = false;
 
     template<typename T>
-    inline constexpr bool is_contiguous_range_base<T, true> =
+    static inline constexpr bool const is_contiguous_range_base<T, true> =
         detail::is_contiguous_range_core<T>;
 }
 
@@ -582,25 +585,26 @@ namespace detail {
  * @see ostd::is_finite_random_access_range
  */
 template<typename T>
-inline constexpr bool is_contiguous_range = detail::is_contiguous_range_base<T>;
+static inline constexpr bool const is_contiguous_range =
+    detail::is_contiguous_range_base<T>;
 
 // is output range
 
 namespace detail {
     template<typename R, typename T>
-    static std::true_type test_outrange(typename std::is_same<
+    inline std::true_type test_outrange(typename std::is_same<
         decltype(std::declval<R &>().put(std::declval<T>())), void
     >::type *);
 
     template<typename, typename>
-    static std::false_type test_outrange(...);
+    inline std::false_type test_outrange(...);
 
     template<typename R, typename T>
-    inline constexpr bool output_range_test =
+    static inline constexpr bool const output_range_test =
         decltype(test_outrange<R, T>())::value;
 
     template<typename T>
-    inline constexpr bool is_output_range_core =
+    static inline constexpr bool const is_output_range_core =
         std::is_convertible_v<range_category_t<T>, output_range_tag> || (
             is_input_range<T> && (
                 output_range_test<T, range_value_t<T> const &> ||
@@ -610,10 +614,10 @@ namespace detail {
         );
 
     template<typename T, bool = detail::test_range_category<T>>
-    inline constexpr bool is_output_range_base = false;
+    static inline constexpr bool const is_output_range_base = false;
 
     template<typename T>
-    inline constexpr bool is_output_range_base<T, true> =
+    static inline constexpr bool const is_output_range_base<T, true> =
         detail::is_output_range_core<T>;
 }
 
@@ -627,7 +631,8 @@ namespace detail {
  * @see ostd::is_input_range
  */
 template<typename T>
-inline constexpr bool is_output_range = detail::is_output_range_base<T>;
+static inline constexpr bool const is_output_range =
+    detail::is_output_range_base<T>;
 
 namespace detail {
     // range iterator
@@ -1203,28 +1208,28 @@ inline auto zip(R1 &&r1, R &&...rr) {
 
 namespace detail {
     template<typename C>
-    static std::true_type test_direct_iter(
+    inline std::true_type test_direct_iter(
         decltype(std::declval<C &>().iter()) *
     );
 
     template<typename>
-    static std::false_type test_direct_iter(...);
+    inline std::false_type test_direct_iter(...);
 
     template<typename C>
-    inline constexpr bool direct_iter_test =
+    static inline constexpr bool const direct_iter_test =
         decltype(test_direct_iter<C>(0))::value;
 
     template<typename C>
-    static std::true_type test_std_iter(
+    inline std::true_type test_std_iter(
         decltype(std::begin(std::declval<C &>())) *,
         decltype(std::end(std::declval<C &>())) *
     );
 
     template<typename>
-    static std::false_type test_std_iter(...);
+    inline std::false_type test_std_iter(...);
 
     template<typename C>
-    inline constexpr bool std_iter_test =
+    static inline constexpr bool const std_iter_test =
         decltype(test_std_iter<C>(0, 0))::value;
 
     /* direct iter and std iter; the case for std iter is
@@ -1298,14 +1303,15 @@ inline auto citer(T const &r) -> decltype(ranged_traits<T const>::iter(r)) {
 
 namespace detail {
     template<typename T>
-    static std::true_type test_iterable(
+    inline std::true_type test_iterable(
         decltype(ostd::iter(std::declval<T>())) *
     );
     template<typename>
-    static std::false_type test_iterable(...);
+    inline std::false_type test_iterable(...);
 
     template<typename T>
-    inline constexpr bool iterable_test = decltype(test_iterable<T>(0))::value;
+    static inline constexpr bool const iterable_test =
+        decltype(test_iterable<T>(0))::value;
 }
 
 namespace detail {
@@ -1387,7 +1393,7 @@ OSTD_UNIT_TEST {
     fail_if(r.empty() || (r.front() != 9));
     r.pop_front();
     fail_if(!r.empty());
-};
+}
 #endif
 
 namespace detail {
@@ -1894,7 +1900,8 @@ struct iterator_range: input_range<iterator_range<T>> {
      * If the indexes are not within bounds, the behavior is undefined.
      */
     iterator_range slice(size_type start, size_type end) const {
-        return iterator_range(p_beg + start, p_beg + end);
+        using DT = typename std::iterator_traits<T>::difference_type;
+        return iterator_range(p_beg + DT(start), p_beg + DT(end));
     }
 
     /** @brief Slices the range with size() for the second argument.
@@ -1911,7 +1918,10 @@ struct iterator_range: input_range<iterator_range<T>> {
      * Only valid if the range is at least finite random access.
      * If the index is not within bounds, the behavior is undefined.
      */
-    reference operator[](size_type i) const { return p_beg[i]; }
+    reference operator[](size_type i) const {
+        using DT = typename std::iterator_traits<T>::difference_type;
+        return p_beg[DT(i)];
+        }
 
     /** @brief Gets the pointer to the first element.
      *

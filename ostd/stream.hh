@@ -567,6 +567,13 @@ struct stream_range<T, true>: input_range<stream_range<T>> {
         p_stream(r.p_stream), p_item(r.p_item)
     {}
 
+    /** @brief Stream ranges can be copied, the cached value is also copied. */
+    stream_range &operator=(stream_range const &r) {
+        p_stream = r.p_stream;
+        p_item = r.p_item;
+        return *this;
+    }
+
     /** @brief Checks if the range (stream) is empty.
      *
      * If there is a value cached in this range, this returns false.

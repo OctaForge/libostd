@@ -9,7 +9,7 @@
 
 using namespace ostd;
 
-void print_result(uint32_t x) {
+inline void print_result(uint32_t x) {
     writefln("got x: 0x%X", x);
 }
 

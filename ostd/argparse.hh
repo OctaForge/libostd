@@ -492,7 +492,7 @@ private:
             case arg_value::OPTIONAL:
             case arg_value::ALL:
                 break;
-            default:
+            case arg_value::REST:
                 throw arg_error{"invalid argument requirement"};
         }
     }
@@ -917,7 +917,6 @@ protected:
 
 private:
     std::string p_name, p_title;
-    std::vector<std::unique_ptr<arg_description>> p_opts;
 };
 
 template<typename F>
@@ -959,9 +958,6 @@ inline bool arg_description_container::for_each(
                     return false;
                 }
                 break;
-            default:
-                /* should never happen */
-                throw arg_error{"invalid argument type"};
         }
     }
     return true;
@@ -1519,8 +1515,8 @@ struct default_help_formatter {
     /** @brief Formats the options (after usage line).
      *
      * Positional arguments not belonging to any group are formatted
-     * first, with `\nPositional arguments:\n` header. Same goes with
-     * optional arguments, except with `\nOptional arguments:\n`.
+     * first, with `\\nPositional arguments:\\n` header. Same goes with
+     * optional arguments, except with `\\nOptional arguments:\\n`.
      *
      * If either positional or optional arguments without group don't
      * exist, the section is skipped.
@@ -1529,7 +1525,7 @@ struct default_help_formatter {
      * help strings are aligned and offset by 2 spaces from the longest
      * argument string.
      *
-     * Group titles are formatted as `\nTITLE:\n`.
+     * Group titles are formatted as `\\nTITLE:\\n`.
      *
      * Within groups, positional arguments come first and optional
      * arguments second. Mutually exclusive groups are expanded.
@@ -1586,8 +1582,6 @@ struct default_help_formatter {
                         }
                     );
                     break;
-                default:
-                    break;
             }
             return true;
         }, false, false);
@@ -1636,9 +1630,7 @@ struct default_help_formatter {
             }
             auto &garg = static_cast<arg_group const &>(arg);
             format(out, "\n%s:\n", garg.title());
-            garg.for_each([
-                &write_help, &out, &allopt, &allpos
-            ](auto const &marg) {
+            garg.for_each([&allopt, &allpos](auto const &marg) {
                 switch (marg.type()) {
                     case arg_type::OPTIONAL:
                         allopt.push_back(
@@ -1650,7 +1642,8 @@ struct default_help_formatter {
                             static_cast<arg_positional const *>(&marg)
                         );
                         break;
-                    default:
+                    case arg_type::GROUP:
+                    case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
                         /* should never happen */
                         throw arg_error{"invalid argument type"};
                 }
@@ -1700,7 +1693,7 @@ struct default_help_formatter {
                     }
                     format(out, " [%s ...]", mt);
                     break;
-                default:
+                case arg_value::REST:
                     break;
             }
             names.pop_front();
@@ -1741,7 +1734,8 @@ struct default_help_formatter {
             case arg_type::POSITIONAL:
                 format_option(out, static_cast<arg_positional const &>(arg));
                 break;
-            default:
+            case arg_type::GROUP:
+            case arg_type::MUTUALLY_EXCLUSIVE_GROUP:
                 /* should never happen */
                 throw arg_error{"invalid argument type"};
         }
@@ -1767,7 +1761,7 @@ inline auto arg_print_help(OutputRange o, arg_parser &p) {
         p.print_help(o);
         p.stop_parsing();
     };
-};
+}
 
 /** @brief Like ostd::arg_print_help() with ostd::cout. */
 inline auto arg_print_help(arg_parser &p) {

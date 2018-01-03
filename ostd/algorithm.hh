@@ -146,7 +146,7 @@ OSTD_UNIT_TEST {
 
 namespace detail {
     template<typename R, typename C>
-    static void insort(R range, C &compare) {
+    inline void insort(R range, C &compare) {
         range_size_t<R> rlen = range.size();
         for (range_size_t<R> i = 1; i < rlen; ++i) {
             range_size_t<R> j = i;
@@ -160,7 +160,7 @@ namespace detail {
     }
 
     template<typename R, typename C>
-    static void hs_sift_down(
+    inline void hs_sift_down(
         R range, range_size_t<R> s, range_size_t<R> e, C &compare
     ) {
         range_size_t<R> r = s;
@@ -184,7 +184,7 @@ namespace detail {
     }
 
     template<typename R, typename C>
-    static void heapsort(R range, C &compare) {
+    inline void heapsort(R range, C &compare) {
         range_size_t<R> len = range.size();
         range_size_t<R> st = (len - 2) / 2;
         for (;;) {
@@ -203,7 +203,7 @@ namespace detail {
     }
 
     template<typename R, typename C>
-    static void introloop(R range, C &compare, range_size_t<R> depth) {
+    inline void introloop(R range, C &compare, range_size_t<R> depth) {
         using std::swap;
         if (range.size() <= 10) {
             detail::insort(range, compare);
@@ -594,7 +594,7 @@ inline auto none_of(Predicate &&pred) {
  * Iterates the range and as soon as `range.front()` is equal to `v`,
  * returns `range`. The `range` is at least ostd::input_range_tag.
  *
- * @sse ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
+ * @see ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
  *      ostd::find_one_of()
  */
 template<typename InputRange, typename Value>
@@ -625,7 +625,7 @@ inline auto find(Value &&v) {
  * the previous result of ostd::find() in case nothing is found next, this
  * algortihm requires `range` to be at least ostd::forward_range_tag.
  *
- * @sse ostd::find(), ostd::find_if(), ostd::find_if_not(),
+ * @see ostd::find(), ostd::find_if(), ostd::find_if_not(),
  *      ostd::find_one_of()
  */
 template<typename ForwardRange, typename Value>
@@ -661,7 +661,7 @@ inline auto find_last(Value &&v) {
  * Iterates the range and as soon as `pred(range.front())` is true,
  * returns `range`. The `range` is at least ostd::input_range_tag.
  *
- * @sse ostd::find(), ostd::find_last(), ostd::find_if_not(),
+ * @see ostd::find(), ostd::find_last(), ostd::find_if_not(),
  *      ostd::find_one_of()
  */
 template<typename InputRange, typename Predicate>
@@ -690,7 +690,7 @@ inline auto find_if(Predicate &&pred) {
  * Iterates the range and as soon as `!pred(range.front())` is true,
  * returns `range`. The `range` is at least ostd::input_range_tag.
  *
- * @sse ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_one_of()
+ * @see ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_one_of()
  */
 template<typename InputRange, typename Predicate>
 inline InputRange find_if_not(InputRange range, Predicate pred) {
@@ -729,7 +729,7 @@ inline auto find_if_not(Predicate &&pred) {
  * Use ostd::find_one_of() if you want to use the `==` operator
  * instead of calling `compare`.
  *
- * @sse ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
+ * @see ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
  *      ostd::find_one_of()
  */
 template<typename InputRange, typename ForwardRange, typename Compare>
@@ -779,7 +779,7 @@ inline auto find_one_of_cmp(ForwardRange &&values, Compare &&compare) {
  * Use ostd::find_one_of_cmp() if you want to use a comparison
  * function instead of the `==` operator.
  *
- * @sse ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
+ * @see ostd::find(), ostd::find_last(), ostd::find_if(), ostd::find_if_not(),
  *      ostd::find_one_of_cmp()
  */
 template<typename InputRange, typename ForwardRange>

@@ -33,7 +33,7 @@ int main() {
 
     /* prints ABCDEF (ASCII 65, 66, 67, 68, 69, 70) */
     writeln("string gen test");
-    auto mr = map(range(6), [](int v) -> char { return v + 65; });
+    auto mr = map(range(6), [](int v) { return char(v + 65); });
     std::string s{mr.iter_begin(), mr.iter_end()};
     writeln(s);
 

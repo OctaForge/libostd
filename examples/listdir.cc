@@ -9,7 +9,7 @@
 
 using namespace ostd;
 
-void list_dirs(filesystem::path const &path, int off = 0) {
+inline void list_dirs(filesystem::path const &path, int off = 0) {
     filesystem::directory_iterator ds{path};
     for (auto &v: ds) {
         auto p = filesystem::path{v};

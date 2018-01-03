@@ -47,7 +47,7 @@ namespace detail {
             ret = (ret << 6) | bch;
         }
         /* number of continuation bytes */
-        std::size_t n = sr.data() - r.data() - 1;
+        auto n = sr.data() - r.data() - 1;
         /* invalid sequence - too many continuation bits */
         if (n > 3) {
             return false;
@@ -71,12 +71,12 @@ namespace detail {
         std::uint8_t (&ret)[4], std::uint32_t ch
     ) noexcept {
         if (ch <= 0x7F) {
-            ret[0] = ch;
+            ret[0] = std::uint8_t(ch);
             return 1;
         }
         if (ch <= 0x7FF) {
-            ret[0] = 0xC0 | (ch >> 6);
-            ret[1] = 0x80 | (ch & 0x3F);
+            ret[0] = std::uint8_t(0xC0 | (ch >> 6));
+            ret[1] = std::uint8_t(0x80 | (ch & 0x3F));
             return 2;
         }
         if (ch <= 0xFFFF) {
@@ -86,16 +86,16 @@ namespace detail {
             if ((ch >= 0xD800) && (ch <= 0xDFFF)) {
                 return 0;
             }
-            ret[0] = 0xE0 |  (ch >> 12);
-            ret[1] = 0x80 | ((ch >> 6) & 0x3F);
-            ret[2] = 0x80 |  (ch       & 0x3F);
+            ret[0] = std::uint8_t(0xE0 |  (ch >> 12));
+            ret[1] = std::uint8_t(0x80 | ((ch >> 6) & 0x3F));
+            ret[2] = std::uint8_t(0x80 |  (ch       & 0x3F));
             return 3;
         }
         if (ch <= MaxCodepoint) {
-            ret[0] = 0xF0 |  (ch >> 18);
-            ret[1] = 0x80 | ((ch >> 12) | 0x3F);
-            ret[2] = 0x80 | ((ch >>  6) | 0x3F);
-            ret[3] = 0x80 |  (ch        | 0x3F);
+            ret[0] = std::uint8_t(0xF0 |  (ch >> 18));
+            ret[1] = std::uint8_t(0x80 | ((ch >> 12) | 0x3F));
+            ret[2] = std::uint8_t(0x80 | ((ch >>  6) | 0x3F));
+            ret[3] = std::uint8_t(0x80 |  (ch        | 0x3F));
             return 4;
         }
         return 0;
@@ -176,7 +176,7 @@ bool isxdigit(char32_t c) noexcept {
 inline int codepoint_cmp1(void const *a, void const *b) noexcept {
     char32_t c1 = *static_cast<char32_t const *>(a);
     char32_t c2 = *static_cast<char32_t const *>(b);
-    return (c1 - c2);
+    return (int(c1) - int(c2));
 }
 
 inline int codepoint_cmp2(void const *a, void const *b) noexcept {
@@ -185,7 +185,7 @@ inline int codepoint_cmp2(void const *a, void const *b) noexcept {
     if ((c >= p[0]) && (c <= p[1])) {
         return 0;
     }
-    return (c - p[0]);
+    return (int(c) - int(p[0]));
 }
 
 template<
@@ -345,7 +345,12 @@ int case_compare(string_range s1, string_range s2) noexcept {
     s1 = s1.slice(0, ms);
     s2 = s2.slice(0, ms);
     for (;;) {
-        char32_t ldec = s1.front(), rdec = s2.front();
+        /* enforce correct semantics with signed chars; first convert to
+         * 8-bit unsigned and then to char32_t (which is always unsigned)
+         * in order to not get large values from 32-bit unsigned underflow
+         */
+        auto ldec = char32_t(std::uint8_t(s1.front()));
+        auto rdec = char32_t(std::uint8_t(s2.front()));
         if ((ldec <= 0x7F) || !utf::decode(s1, ldec)) {
             s1.pop_front();
         }
@@ -356,8 +361,13 @@ int case_compare(string_range s1, string_range s2) noexcept {
         if (d) {
             return d;
         }
+        if (s1.empty() || s2.empty()) {
+            s1l = s1.size();
+            s2l = s2.size();
+            break;
+        }
     }
-    return (s1l < s2l) ? -1 : ((s1 > s2) ? 1 : 0);
+    return (s1l < s2l) ? -1 : ((s1l > s2l) ? 1 : 0);
 }
 
 int case_compare(u32string_range s1, u32string_range s2) noexcept {

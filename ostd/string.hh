@@ -92,7 +92,7 @@ private:
 
 public:
     /** @brief Constructs an empty slice. */
-    basic_char_range() noexcept: p_beg(nullptr), p_end(nullptr) {};
+    basic_char_range() noexcept: p_beg(nullptr), p_end(nullptr) {}
 
     /** @brief Constructs a slice from two pointers.
      *
@@ -106,6 +106,11 @@ public:
     /** @brief Constructs an empty slice. */
     basic_char_range(std::nullptr_t) noexcept:
         p_beg(nullptr), p_end(nullptr)
+    {}
+
+    /** @brief Slices are arbitrarily copy constructible. */
+    basic_char_range(basic_char_range const &v) noexcept:
+        p_beg(v.p_beg), p_end(v.p_end)
     {}
 
     /** @brief Constructs a slice from a pointer or a static array.
@@ -232,7 +237,7 @@ public:
     reference back() const noexcept { return *(p_end - 1); }
 
     /** @brief Gets the number of value_type in the slice. */
-    size_type size() const noexcept { return p_end - p_beg; }
+    size_type size() const noexcept { return size_type(p_end - p_beg); }
 
     /** @brief Gets the number of code points in the slice.
      *
@@ -319,7 +324,7 @@ public:
     int compare(basic_char_range<value_type const> s) const noexcept {
         size_type s1 = size(), s2 = s.size();
         for (size_type i = 0, ms = std::min(s1, s2); i < ms; ++i) {
-            int d = p_beg[i] - s[i];
+            int d = int(p_beg[i]) - int(s[i]);
             if (d) {
                 return d;
             }
@@ -859,7 +864,7 @@ namespace utf {
                     p_current = -1;
                     throw utf_error{"UTF-8 decoding failed"};
                 } else {
-                    p_current = ret;
+                    p_current = std::int32_t(ret);
                 }
             }
 

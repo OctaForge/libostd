@@ -110,7 +110,37 @@ struct OSTD_EXPORT subprocess {
 private:
     struct nat {};
 
+    std::aligned_storage_t<2 * sizeof(void *), alignof(void *)> p_data;
+    void *p_current = nullptr;
+
 public:
+    /** @brief The standard input stream when redirected.
+     *
+     * If no redirection is done (see ostd::subprocess::use_in) then
+     * this stream will not be opened.
+     *
+     * @see ostd::subprocess::out, ostd::subprocess::err
+     */
+    file_stream in = file_stream{};
+
+    /** @brief The standard output stream when redirected.
+     *
+     * If no redirection is done (see ostd::subprocess::use_out) then
+     * this stream will not be opened.
+     *
+     * @see ostd::subprocess::in, ostd::subprocess::err
+     */
+    file_stream out = file_stream{};
+
+    /** @brief The standard error stream when redirected.
+     *
+     * If no redirection is done (see ostd::subprocess::use_err) then
+     * this stream will not be opened.
+     *
+     * @see ostd::subprocess::in, ostd::subprocess::out
+     */
+    file_stream err = file_stream{};
+
     /** @brief The standard input redirection mode.
      *
      * The value is one of ostd::subprocess_stream. Set this before opening
@@ -153,33 +183,6 @@ public:
      *      ostd::subprocess::use_out
      */
     subprocess_stream use_err = subprocess_stream::DEFAULT;
-
-    /** @brief The standard input stream when redirected.
-     *
-     * If no redirection is done (see ostd::subprocess::use_in) then
-     * this stream will not be opened.
-     *
-     * @see ostd::subprocess::out, ostd::subprocess::err
-     */
-    file_stream in = file_stream{};
-
-    /** @brief The standard output stream when redirected.
-     *
-     * If no redirection is done (see ostd::subprocess::use_out) then
-     * this stream will not be opened.
-     *
-     * @see ostd::subprocess::in, ostd::subprocess::err
-     */
-    file_stream out = file_stream{};
-
-    /** @brief The standard error stream when redirected.
-     *
-     * If no redirection is done (see ostd::subprocess::use_err) then
-     * this stream will not be opened.
-     *
-     * @see ostd::subprocess::in, ostd::subprocess::out
-     */
-    file_stream err = file_stream{};
 
     /** @brief Initializes the structure with the given stream redirections. */
     subprocess(
@@ -232,8 +235,8 @@ public:
 
     /** @brief Moves the subprocess data. */
     subprocess(subprocess &&i) noexcept:
-        use_in(i.use_in), use_out(i.use_out), use_err(i.use_err),
-        in(std::move(i.in)), out(std::move(i.out)), err(std::move(i.err))
+        in(std::move(i.in)), out(std::move(i.out)), err(std::move(i.err)),
+        use_in(i.use_in), use_out(i.use_out), use_err(i.use_err)
     {
         move_data(i);
     }
@@ -460,9 +463,6 @@ private:
     void reset();
     void move_data(subprocess &i);
     void swap_data(subprocess &i);
-
-    std::aligned_storage_t<2 * sizeof(void *)> p_data;
-    void *p_current = nullptr;
 };
 
 /** @} */

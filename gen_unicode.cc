@@ -135,7 +135,7 @@ struct parse_state {
                 ((i + 1) < codes.size()) && (codes[i + 1] == (codes[i] + off))
             );
         };
-        auto match_range = [&codes, &cases, &match_pair](std::size_t i) {
+        auto match_range = [&cases, &match_pair](std::size_t i) {
             return match_pair(i, 1) && (
                 cases.empty() || (cases[i + 1] == (cases[i] + 1))
             );

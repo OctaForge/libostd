@@ -58,35 +58,6 @@ struct coroutine_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 };
 
-struct coroutine_context;
-
-namespace detail {
-    /* from boost.fcontext */
-    using fcontext_t = void *;
-
-    struct transfer_t {
-        fcontext_t ctx;
-        void *data;
-    };
-
-    extern "C" OSTD_EXPORT
-    transfer_t OSTD_CDECL ostd_jump_fcontext(
-        fcontext_t const to, void *vp
-    );
-
-    extern "C" OSTD_EXPORT
-    fcontext_t OSTD_CDECL ostd_make_fcontext(
-        void *sp, std::size_t size, void (*fn)(transfer_t)
-    );
-
-    extern "C" OSTD_EXPORT
-    transfer_t OSTD_CDECL ostd_ontop_fcontext(
-        fcontext_t const to, void *vp, transfer_t (*fn)(transfer_t)
-    );
-
-    OSTD_EXPORT extern thread_local coroutine_context *coro_current;
-} /* namespace detail */
-
 /** @brief An encapsulated context any coroutine-type inherits from.
  *
  * Internally, this provides some basic infrastructure for creating and
@@ -135,7 +106,7 @@ protected:
      */
     coroutine_context(coroutine_context &&c):
         p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
-        p_except(std::move(c.p_except)), p_state(c.p_state), p_free(c.p_free)
+        p_free(c.p_free), p_except(std::move(c.p_except)), p_state(c.p_state)
     {
         c.p_coro = c.p_orig = nullptr;
         c.p_stack = { nullptr, 0 };
@@ -249,9 +220,9 @@ protected:
         swap(p_stack, other.p_stack);
         swap(p_coro, other.p_coro);
         swap(p_orig, other.p_orig);
+        swap(p_free, other.p_free);
         swap(p_except, other.p_except);
         swap(p_state, other.p_state);
-        swap(p_free, other.p_free);
     }
 
     /** @brief Allocates a stack and creates a context.
@@ -276,10 +247,10 @@ protected:
         p_stack = sa.allocate();
 
         void *sp = get_stack_ptr<SA>();
-        std::size_t asize = p_stack.size - (
+        auto asize = std::size_t(p_stack.size - std::size_t(
             static_cast<unsigned char *>(p_stack.ptr) -
             static_cast<unsigned char *>(sp)
-        );
+        ));
 
         p_coro = detail::ostd_make_fcontext(sp, asize, &context_call<C, SA>);
         new (sp) SA(std::move(sa));
@@ -374,9 +345,9 @@ release:
     stack_context p_stack;
     detail::fcontext_t p_coro = nullptr;
     detail::fcontext_t p_orig = nullptr;
+    void (*p_free)(void *) = nullptr;
     std::exception_ptr p_except;
     state p_state = state::HOLD;
-    void (*p_free)(void *) = nullptr;
 };
 
 template<typename T>
@@ -653,7 +624,7 @@ namespace detail {
  * as they were passed, exactly as if they were passed as regular args.
  *
  * @tparam R The return template type.
- * @tparam A... The argument template types.
+ * @tparam A The argument template types.
  */
 template<typename R, typename ...A>
 struct coroutine<R(A...)>: coroutine_context {

@@ -134,7 +134,7 @@ namespace detail {
      * 7 .. string
      * 8 .. custom object
      */
-    inline constexpr unsigned char const fmt_specs[] = {
+    static inline constexpr unsigned char const fmt_specs[] = {
         /* uppercase spec set */
         1, 3, 8, 8, /* A B C D */
         1, 1, 1, 8, /* E F G H */
@@ -160,12 +160,12 @@ namespace detail {
         0, 0, 0, 0, 0
     };
 
-    inline constexpr int const fmt_bases[] = {
+    static inline constexpr int const fmt_bases[] = {
         0, 0, 0, 2, 8, 10, 16, 0
     };
 
     /* non-printable escapes up to 0x20 (space) */
-    inline constexpr char const *fmt_escapes[] = {
+    static inline constexpr char const *fmt_escapes[] = {
         "\\0"  , "\\x01", "\\x02", "\\x03", "\\x04", "\\x05",
         "\\x06", "\\a"  , "\\b"  , "\\t"  , "\\n"  , "\\v"  ,
         "\\f"  , "\\r"  , "\\x0E", "\\x0F", "\\x10", "\\x11",
@@ -215,33 +215,35 @@ namespace detail {
      * pair, array, possibly other types added later or overridden...
      */
     template<typename T>
-    std::true_type tuple_like_test(typename std::tuple_size<T>::type *);
+    inline std::true_type tuple_like_test(typename std::tuple_size<T>::type *);
 
     template<typename>
-    std::false_type tuple_like_test(...);
+    inline std::false_type tuple_like_test(...);
 
     template<typename T>
-    inline constexpr bool is_tuple_like = decltype(tuple_like_test<T>(0))::value;
+    static inline constexpr bool is_tuple_like =
+        decltype(tuple_like_test<T>(0))::value;
 
     /* character type tests */
     template<typename C>
-    inline constexpr bool is_character = std::is_same_v<C, char> ||
-                                         std::is_same_v<C, wchar_t> ||
-                                         std::is_same_v<C, char16_t> ||
-                                         std::is_same_v<C, char32_t>;
+    static inline constexpr bool is_character = std::is_same_v<C, char> ||
+                                                std::is_same_v<C, wchar_t> ||
+                                                std::is_same_v<C, char16_t> ||
+                                                std::is_same_v<C, char32_t>;
 
     /* test if format traits are available for the type */
     template<typename T, typename R>
-    static std::true_type test_tofmt(decltype(format_traits<T>::to_format(
+    inline std::true_type test_tofmt(decltype(format_traits<T>::to_format(
         std::declval<T const &>(), std::declval<R &>(),
         std::declval<format_spec const &>()
     )) *);
 
     template<typename, typename>
-    static std::false_type test_tofmt(...);
+    inline std::false_type test_tofmt(...);
 
     template<typename T, typename R>
-    inline constexpr bool fmt_tofmt_test = decltype(test_tofmt<T, R>(0))::value;
+    static inline constexpr bool fmt_tofmt_test =
+        decltype(test_tofmt<T, R>(0))::value;
 
     template<typename C, typename F>
     inline int ac_to_mb(C c, F const &f, char *buf) {
@@ -252,7 +254,7 @@ namespace detail {
         if (ret != std::codecvt_base::ok) {
             return -1;
         }
-        return ton - &buf[0];
+        return int(ton - &buf[0]);
     }
 
     inline int wc_to_mb_loc(wchar_t c, char *buf, std::locale const &loc) {
@@ -847,14 +849,16 @@ private:
             if (p.front() == need) {
                 p_is_tuple = tuple;
                 if (tuple) {
-                    p_nested = begin_inner.slice(0, &p[0] - &begin_inner[0] - 1);
+                    p_nested = begin_inner.slice(
+                        0, std::size_t(&p[0] - &begin_inner[0] - 1)
+                    );
                     p_nested_sep = nullptr;
                 } else {
                     p_nested = begin_inner.slice(
-                        0, &begin_delim[0] - &begin_inner[0]
+                        0, std::size_t(&begin_delim[0] - &begin_inner[0])
                     );
                     p_nested_sep = begin_delim.slice(
-                        0, &p[0] - &begin_delim[0] - 1
+                        0, std::size_t(&p[0] - &begin_delim[0] - 1)
                     );
                 }
                 p.pop_front();
@@ -864,14 +868,16 @@ private:
             }
             /* found actual delimiter start... */
             if ((p.front() == '|') && !tuple) {
-                p_nested = begin_inner.slice(0, &p[0] - &begin_inner[0] - 1);
+                p_nested = begin_inner.slice(
+                    0, std::size_t(&p[0] - &begin_inner[0] - 1)
+                );
                 p.pop_front();
                 p_nested_sep = p;
                 for (p = find(p, '%'); !p.empty(); p = find(p, '%')) {
                     p.pop_front();
                     if (p.front() == ')') {
                         p_nested_sep = p_nested_sep.slice(
-                            0, &p[0] - &p_nested_sep[0] - 1
+                            0, std::size_t(&p[0] - &p_nested_sep[0] - 1)
                         );
                         p.pop_front();
                         p_fmt = p;
@@ -1083,15 +1089,15 @@ private:
             throw format_error{"cannot format integers with the given spec"};
         }
         /* 32 for lowercase variants, 0 for uppercase */
-        int cmask = ((isp >= 'a') << 5);
+        char cmask = char((isp >= 'a') << 5);
 
-        int base = detail::fmt_bases[specn];
+        T base = T(detail::fmt_bases[specn]);
         if (!val) {
             ndig = 1;
             buf[0] = '0';
         } else {
             for (; val; val /= base) {
-                T vb = val % base;
+                auto vb = char(val % base);
                 buf[ndig++] = (vb + "70"[vb < 10]) | cmask;
             }
         }
@@ -1132,7 +1138,7 @@ private:
                 }
                 ++grpp;
             }
-            total += nseps * ntsep;
+            total += nseps * std::size_t(ntsep);
         }
         /* here ends the bullshit */
 
@@ -1244,7 +1250,8 @@ private:
         fmt_num_put<R> nump;
         nump.put(
             fmt_out<R>{&writer, &p_loc}, st,
-            (p_flags & FMT_FLAG_ZERO) ? L'0' : L' ', val
+            (p_flags & FMT_FLAG_ZERO) ? L'0' : L' ',
+            std::conditional_t<std::is_same_v<T, long double>, T, double>(val)
         );
     }
 
@@ -1291,10 +1298,10 @@ private:
                 throw format_error{"tuples need the '%s' spec"};
             }
             writer.put('{');
-            write_range_val(writer, [&writer, escape, this](auto const &rval) {
-                format_spec sp{'s', p_loc, escape ? FMT_FLAG_AT : 0};
+            write_range_val(writer, [&writer, this](auto const &rval, bool esc) {
+                format_spec sp{'s', p_loc, esc ? FMT_FLAG_AT : 0};
                 sp.write_arg(writer, 0, rval);
-            }, ", ", val);
+            }, ", ", val, escape);
             writer.put('}');
             return;
         }
@@ -1369,13 +1376,11 @@ private:
     ) const {
         if constexpr(detail::is_tuple_like<T>) {
             if (expandval) {
-                std::apply([&writer, escape, &fmt, this](
-                    auto const &...args
-                ) mutable {
+                std::apply([
+                    this, &writer, &fmt,  flags = escape ? FMT_FLAG_AT : 0
+                ](auto const &...args) mutable {
                     format_spec sp{fmt, p_loc};
-                    if (escape) {
-                        sp.p_gflags |= FMT_FLAG_AT;
-                    }
+                    sp.p_gflags |= flags;
                     sp.write_fmt(writer, args...);
                 }, item);
                 return;
@@ -1388,9 +1393,10 @@ private:
         sp.write_fmt(writer, item);
     }
 
-    template<typename R, typename F, typename T>
+    template<typename R, typename F, typename T, typename ...A>
     void write_range_val(
-        R &writer, F &&func, [[maybe_unused]] string_range sep, T const &val
+        R &writer, F &&func, [[maybe_unused]] string_range sep, T const &val,
+        A const &...args
     ) const {
         if constexpr(detail::iterable_test<T>) {
             auto range = ostd::iter(val);
@@ -1398,7 +1404,7 @@ private:
                 return;
             }
             for (;;) {
-                func(range.front());
+                func(range.front(), args...);
                 range.pop_front();
                 if (range.empty()) {
                     break;
@@ -1424,13 +1430,12 @@ private:
             }
         } else {
             write_range_val(writer, [
-                this, &writer, escape = p_gflags & FMT_FLAG_AT, expandval,
-                fmt = rest()
-            ](auto const &rval) {
+                fmt = rest(), this, &writer
+            ](auto const &rval, bool expval, bool escape) {
                 this->write_range_item(
-                    writer, escape, expandval, fmt, rval
+                    writer, escape, expval, fmt, rval
                 );
-            }, sep, val);
+            }, sep, val, expandval, p_gflags & FMT_FLAG_AT);
         }
     }
 
@@ -1458,7 +1463,7 @@ private:
             }
         } else {
             if constexpr(detail::is_tuple_like<T>) {
-                std::apply([this, &writer, &val](auto const &...vals) mutable {
+                std::apply([this, &writer](auto const &...vals) mutable {
                     this->write_fmt(writer, vals...);
                 }, val);
             } else {
