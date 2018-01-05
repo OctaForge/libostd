@@ -986,23 +986,85 @@ private:
         for (int w = p_width - int(n); --w >= 0; writer.put(c));
     }
 
-    template<typename R, typename C>
-    void write_char_raw(R &writer, C val) const {
-        if constexpr(sizeof(C) == sizeof(std::uint8_t)) {
-            writer.put(val);
+    template<typename R>
+    void write_replacement(R &writer) const {
+        /* Unicode replacement character */
+        writer.put(0xEF);
+        writer.put(0xBF);
+        writer.put(0xBD);
+    }
+
+    template<typename R>
+    void write_char_raw(R &writer, char val) const {
+        writer.put(val);
+    }
+
+    template<typename R>
+    void write_char_raw(R &writer, char16_t val) const {
+        write_char_raw(writer, char32_t(val));
+    }
+
+    template<typename R>
+    void write_char_raw(R &writer, char32_t val) const {
+        if (!utf::encode_u8(writer, val)) {
+            write_replacement(writer);
+        }
+    }
+
+    template<typename R>
+    void write_char_raw(R &writer, wchar_t val) const {
+        if constexpr(sizeof(wchar_t) == sizeof(char32_t)) {
+            write_char_raw(writer, char32_t(val));
+        } else if constexpr(sizeof(wchar_t) == sizeof(char16_t)) {
+            write_char_raw(writer, char16_t(val));
         } else {
-            char32_t enc;
-            if constexpr(sizeof(C) == sizeof(std::uint16_t)) {
-                enc = static_cast<std::uint16_t>(val);
+            write_char_raw(writer, char(val));
+        }
+    }
+
+    template<typename R>
+    void write_seq(R &writer, string_range &val) const {
+        writer.put(val.front());
+        val.pop_front();
+    }
+
+    template<typename R>
+    void write_seq(R &writer, u16string_range &val) const {
+        if (char32_t ret; !utf::decode(val, ret)) {
+            write_replacement(writer);
+            val.pop_front();
+        } else {
+             if (!utf::encode_u8(writer, ret)) {
+                write_replacement(writer);
+             }
+        }
+    }
+
+    template<typename R>
+    void write_seq(R &writer, u32string_range &val) const {
+        if (!utf::encode_u8(writer, val.front())) {
+            write_replacement(writer);
+        }
+        val.pop_front();
+    }
+
+    template<typename R>
+    void write_seq(R &writer, wstring_range &val) const {
+        if constexpr(
+            (sizeof(wchar_t) == sizeof(char32_t)) ||
+            (sizeof(wchar_t) == sizeof(char16_t))
+        ) {
+            if (char32_t ret; !utf::decode(val, ret)) {
+                write_replacement(writer);
+                val.pop_front();
             } else {
-                enc = static_cast<std::uint32_t>(val);
+                if (!utf::encode_u8(writer, ret)) {
+                    write_replacement(writer);
+                }
             }
-            if (!utf::encode_u8(writer, enc)) {
-                /* replacement character on failure */
-                writer.put(0xEF);
-                writer.put(0xBF);
-                writer.put(0xBD);
-            }
+        } else {
+            writer.put(char(val.front()));
+            val.pop_front();
         }
     }
 
@@ -1028,10 +1090,10 @@ private:
                     } else {
                         write_char_raw(writer, c);
                     }
+                    val.pop_front();
                 } else {
-                    write_char_raw(writer, c);
+                    write_seq(writer, val);
                 }
-                val.pop_front();
             }
             writer.put('"');
         } else {
@@ -1272,12 +1334,28 @@ private:
             write_str<char>(writer, escape, val);
             return;
         }
-        /* third best, we can convert to UTF-32 slice */
+        /* we can convert to UTF-32 slice */
         if constexpr(std::is_constructible_v<u32string_range, T const &>) {
             if (spec() != 's') {
                 throw format_error{"strings need the '%s' spec"};
             }
             write_str<char32_t>(writer, escape, val);
+            return;
+        }
+        /* we can convert to UTF-16 slice */
+        if constexpr(std::is_constructible_v<u16string_range, T const &>) {
+            if (spec() != 's') {
+                throw format_error{"strings need the '%s' spec"};
+            }
+            write_str<char16_t>(writer, escape, val);
+            return;
+        }
+        /* we can convert to wide slice */
+        if constexpr(std::is_constructible_v<wstring_range, T const &>) {
+            if (spec() != 's') {
+                throw format_error{"strings need the '%s' spec"};
+            }
+            write_str<wchar_t>(writer, escape, val);
             return;
         }
         /* tuples */
