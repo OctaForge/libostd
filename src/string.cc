@@ -67,6 +67,31 @@ namespace detail {
         return true;
     }
 
+    static inline bool u16_decode(u16string_range &r, char32_t &cret) noexcept {
+        if (r.empty()) {
+            return false;
+        }
+        std::uint32_t ch = r.front();
+        /* lead surrogate code point */
+        if ((ch >= 0xD800) && (ch <= 0xDBFF)) {
+            /* unpaired */
+            if (r.size() < 2) {
+                return false;
+            }
+            std::uint32_t nch = r[1];
+            /* trail surrogate code point */
+            bool trail = ((nch >= 0xDC00) && (nch <= 0xDFFF));
+            if (trail) {
+                r = r.slice(2, r.size());
+                cret = 0x10000 + (((ch - 0xD800) << 10) | (nch - 0xDC00));
+            }
+            return trail;
+        }
+        r.pop_front();
+        cret = ch;
+        return true;
+    }
+
     std::uint8_t u8_encode(
         std::uint8_t (&ret)[4], std::uint32_t ch
     ) noexcept {
@@ -100,10 +125,32 @@ namespace detail {
         }
         return 0;
     }
+
+    std::uint8_t u16_encode(
+        std::uint16_t (&ret)[2], std::uint32_t ch
+    ) noexcept {
+        /* surrogate code point or out of bounds */
+        if (((ch >= 0xD800) && (ch <= 0xDFFF)) || (ch > MaxCodepoint)) {
+            return 0;
+        }
+        if (ch <= 0xFFFF) {
+            ret[0] = std::uint16_t(ch);
+            return 1;
+        }
+        /* 20-bit number */
+        ch -= 0x10000;
+        ret[0] = std::uint16_t(0xD800 + (ch >> 10));
+        ret[1] = std::uint16_t(0xDC00 + (ch & 0x3FF));
+        return 2;
+    }
 } /* namespace detail */
 
 bool decode(string_range &r, char32_t &ret) noexcept {
     return detail::u8_decode(r, ret);
+}
+
+bool decode(u16string_range &r, char32_t &ret) noexcept {
+    return detail::u16_decode(r, ret);
 }
 
 std::size_t length(string_range r, string_range &cont) noexcept {

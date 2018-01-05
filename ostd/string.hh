@@ -742,12 +742,19 @@ namespace utf {
         using std::runtime_error::runtime_error;
     };
 
-    /* @brief Get the Unicode code point for a multibyte sequence.
+    /* @brief Get the Unicode code point for a UTF-8 sequence.
      *
      * The string is advanced past the Unicode character in the front.
      * If the decoding fails, `false` is returned, otherwise it's `true`.
      */
     bool decode(string_range &r, char32_t &ret) noexcept;
+
+    /* @brief Get the Unicode code point for a UTF-16 sequence.
+     *
+     * The string is advanced past the Unicode character in the front.
+     * If the decoding fails, `false` is returned, otherwise it's `true`.
+     */
+    bool decode(u16string_range &r, char32_t &ret) noexcept;
 
     /* @brief Get the Unicode code point from a UTF-32 string.
      *
@@ -767,6 +774,9 @@ namespace utf {
         std::uint8_t u8_encode(
             std::uint8_t (&ret)[4], std::uint32_t ch
         ) noexcept;
+        std::uint8_t u16_encode(
+            std::uint16_t (&ret)[2], std::uint32_t ch
+        ) noexcept;
     }
 
     /* @brief Encode a UTF-32 code point into UTF-8 code units.
@@ -782,9 +792,31 @@ namespace utf {
      * other than those thrown by `sink`.
      */
     template<typename R>
-    std::uint8_t encode_u8(R &sink, char32_t ch) {
+    inline std::uint8_t encode_u8(R &sink, char32_t ch) {
         std::uint8_t buf[4];
         std::uint8_t n = detail::u8_encode(buf, ch);
+        for (std::uint8_t i = 0; i < n; ++i) {
+            sink.put(buf[i]);
+        }
+        return n;
+    }
+
+    /* @brief Encode a UTF-32 code point into UTF-16.
+     *
+     * The values are written in `sink` which is an ostd::output_range_tag.
+     * The written values are of type `char16_t` and up to 2 are written.
+     * The number of values written is returned from the function. In case
+     * of failure, `0` is returned.
+     *
+     * This function is allowed to fail only in two cases, when a surrogate
+     * code point is provided or when the code point is out of bounds as
+     * defined by Unicode (i.e. 0x10FFFF). It does not throw exceptions
+     * other than those thrown by `sink`.
+     */
+    template<typename R>
+    inline std::uint8_t encode_u16(R &sink, char32_t ch) {
+        std::uint16_t buf[2];
+        std::uint8_t n = detail::u16_encode(buf, ch);
         for (std::uint8_t i = 0; i < n; ++i) {
             sink.put(buf[i]);
         }
