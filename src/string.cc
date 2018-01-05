@@ -146,8 +146,7 @@ namespace detail {
 bool decode(string_range &r, char32_t &ret) noexcept {
     auto tn = r.size();
     auto *beg = reinterpret_cast<unsigned char const *>(r.data());
-    auto *end = beg + tn;
-    if (std::size_t n; (n = detail::u8_decode(beg, end, ret))) {
+    if (std::size_t n; (n = detail::u8_decode(beg, beg + tn, ret))) {
         r = r.slice(n, tn);
         return true;
     }
@@ -156,9 +155,30 @@ bool decode(string_range &r, char32_t &ret) noexcept {
 
 bool decode(u16string_range &r, char32_t &ret) noexcept {
     auto tn = r.size();
-    auto *beg = reinterpret_cast<char16_t const *>(r.data());
-    auto *end = beg + tn;
-    if (std::size_t n; (n = detail::u16_decode(beg, end, ret))) {
+    auto *beg = r.data();
+    if (std::size_t n; (n = detail::u16_decode(beg, beg + tn, ret))) {
+        r = r.slice(n, tn);
+        return true;
+    }
+    return false;
+}
+
+bool decode(wstring_range &r, char32_t &ret) noexcept {
+    std::size_t n, tn = r.size();
+    if constexpr(sizeof(wchar_t) == sizeof(char32_t)) {
+        if (!tn) {
+            return false;
+        }
+        ret = char32_t(r.front());
+        return true;
+    } else if constexpr(sizeof(wchar_t) == sizeof(char16_t)) {
+        auto *beg = reinterpret_cast<char16_t const *>(r.data());
+        n = detail::u16_decode(beg, beg + tn, ret);
+    } else {
+        auto *beg = reinterpret_cast<unsigned char const *>(r.data());
+        n = detail::u8_decode(beg, beg + tn, ret);
+    }
+    if (n) {
         r = r.slice(n, tn);
         return true;
     }

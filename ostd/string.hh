@@ -777,6 +777,16 @@ namespace utf {
         return true;
     }
 
+    /* @brief Get the Unicode code point for a wide Unicode char/sequence.
+     *
+     * The input is treated as either UTF-8, UTF-16 or UTF-32 depending
+     * on the size of the wide character. Typically, it will be UTF-16
+     * on Windows and UTF-32 on Unix-like systems, with UTF-32 taking
+     * priority (on systems where two or more of the types are the same
+     * size).
+     */
+    bool decode(wstring_range &r, char32_t &ret) noexcept;
+
     namespace detail {
         std::size_t u8_encode(
             char (&ret)[4], char32_t ch
@@ -826,6 +836,48 @@ namespace utf {
         std::size_t n = detail::u16_encode(buf, ch);
         for (std::size_t i = 0; i < n; ++i) {
             sink.put(buf[i]);
+        }
+        return n;
+    }
+
+    /* @brief Encode a UTF-32 code point into a wide Unicode char/sequence.
+     *
+     * The value(s) are written in `sink` which is an ostd::output_range_tag.
+     * The written values are of type `wchar_t` and the amount written depends
+     * on the size of `wchar_t`.
+     *
+     * If `wchar_t` has equal size to `char32_t`, the input is simply type
+     * cast and written into the sink, treating `wchar_t` as UTF-32. If it
+     * has equal size to `char16_t` instead, `wchar_t` is treated as UTF-16
+     * and the input code point is encoded into one or two UTF-16 values.
+     * If neither of these happens, `wchar_t` is treated the same as `char`
+     * and the encoding is UTF-8, writing up to 4 code units.
+     *
+     * This function does not throw exceptions other than those thrown by
+     * `sink`. As for errors, with UTF-32 `wchar_t` it isn't allowed to
+     * fail; with UTF-8 or UTF-16, the failure points are the usual ones
+     * (surrogate code point as input or input greater than 0x10FFFF).
+     *
+     * The return value is the number of values written into the sink.
+     */
+    template<typename R>
+    inline std::size_t encode_uw(R &sink, char32_t ch) {
+        std::size_t n;
+        if constexpr(sizeof(wchar_t) == sizeof(char32_t)) {
+            n = 1;
+            sink.put(wchar_t(ch));
+        } else if constexpr(sizeof(wchar_t) == sizeof(char16_t)) {
+            char16_t buf[2];
+            n = detail::u16_encode(buf, ch);
+            for (std::size_t i = 0; i < n; ++i) {
+                sink.put(wchar_t(buf[i]));
+            }
+        } else {
+            char buf[4];
+            n = detail::u8_encode(buf, ch);
+            for (std::size_t i = 0; i < n; ++i) {
+                sink.put(wchar_t(buf[i]));
+            }
         }
         return n;
     }
