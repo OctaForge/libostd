@@ -818,6 +818,15 @@ namespace utf {
         return n;
     }
 
+    template<typename R>
+    inline std::size_t encode_u8(R &sink, u32string_range &r) {
+        std::size_t n = 0;
+        if (!r.empty() && (n = utf::encode_u8(sink, r.front()))) {
+            r.pop_front();
+        }
+        return n;
+    }
+
     /* @brief Encode a UTF-32 code point into UTF-16.
      *
      * The values are written in `sink` which is an ostd::output_range_tag.
@@ -836,6 +845,15 @@ namespace utf {
         std::size_t n = detail::u16_encode(buf, ch);
         for (std::size_t i = 0; i < n; ++i) {
             sink.put(buf[i]);
+        }
+        return n;
+    }
+
+    template<typename R>
+    inline std::size_t encode_u16(R &sink, u32string_range &r) {
+        std::size_t n = 0;
+        if (!r.empty() && (n = utf::encode_u16(sink, r.front()))) {
+            r.pop_front();
         }
         return n;
     }
@@ -878,6 +896,15 @@ namespace utf {
             for (std::size_t i = 0; i < n; ++i) {
                 sink.put(wchar_t(buf[i]));
             }
+        }
+        return n;
+    }
+
+    template<typename R>
+    inline std::size_t encode_uw(R &sink, u32string_range &r) {
+        std::size_t n = 0;
+        if (!r.empty() && (n = utf::encode_uw(sink, r.front()))) {
+            r.pop_front();
         }
         return n;
     }
