@@ -66,6 +66,13 @@
 
 namespace ostd {
 
+static_assert(
+    (sizeof(wchar_t) == sizeof(char)) ||
+    (sizeof(wchar_t) == sizeof(char16_t)) ||
+    (sizeof(wchar_t) == sizeof(char32_t)),
+    "wchar_t must correspond to either char, char16_t or char32_t"
+);
+
 /** @addtogroup Strings
  * @{
  */
