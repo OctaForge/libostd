@@ -145,6 +145,39 @@ namespace detail {
         ret[1] = char16_t(0xDC00 + (ch & 0x3FF));
         return 2;
     }
+
+    template<typename C>
+    inline std::size_t length(
+        basic_char_range<C const> &r, basic_char_range<C const> &cont
+    ) noexcept {
+        std::size_t ret = 0;
+        for (char32_t ch; utf::decode(r, ch); ++ret) {
+            continue;
+        }
+        cont = r;
+        return ret;
+    }
+
+    template<typename C>
+    inline std::size_t length(basic_char_range<C const> &r) noexcept {
+        std::size_t ret = 0;
+        if constexpr(std::is_same_v<C, char32_t> || (
+            std::is_same_v<C, wchar_t> &&
+            (sizeof(wchar_t) == sizeof(char32_t))
+        )) {
+            ret = r.size();
+        } else {
+            for (;; ++ret) {
+                if (char32_t ch; !utf::decode(r, ch)) {
+                    if (r.empty()) {
+                        break;
+                    }
+                    r.pop_front();
+                }
+            }
+        }
+        return ret;
+    }
 } /* namespace detail */
 
 bool decode(string_range &r, char32_t &ret) noexcept {
@@ -190,25 +223,35 @@ bool decode(wstring_range &r, char32_t &ret) noexcept {
 }
 
 std::size_t length(string_range r, string_range &cont) noexcept {
-    std::size_t ret = 0;
-    for (char32_t ch; utf::decode(r, ch); ++ret) {
-        continue;
-    }
-    cont = r;
-    return ret;
+    return detail::length(r, cont);
+}
+
+std::size_t length(u16string_range r, u16string_range &cont) noexcept {
+    return detail::length(r, cont);
+}
+
+std::size_t length(u32string_range r, u32string_range &cont) noexcept {
+    return detail::length(r, cont);
+}
+
+std::size_t length(wstring_range r, wstring_range &cont) noexcept {
+    return detail::length(r, cont);
 }
 
 std::size_t length(string_range r) noexcept {
-    std::size_t ret = 0;
-    for (;; ++ret) {
-        if (char32_t ch; !utf::decode(r, ch)) {
-            if (r.empty()) {
-                break;
-            }
-            r.pop_front();
-        }
-    }
-    return ret;
+    return detail::length(r);
+}
+
+std::size_t length(u16string_range r) noexcept {
+    return detail::length(r);
+}
+
+std::size_t length(u32string_range r) noexcept {
+    return detail::length(r);
+}
+
+std::size_t length(wstring_range r) noexcept {
+    return detail::length(r);
 }
 
 /* unicode-aware ctype

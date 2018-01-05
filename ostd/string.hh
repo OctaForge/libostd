@@ -1102,6 +1102,10 @@ namespace utf {
      */
     std::size_t length(string_range r, string_range &cont) noexcept;
 
+    std::size_t length(u16string_range r, u16string_range &cont) noexcept;
+    std::size_t length(u32string_range r, u32string_range &cont) noexcept;
+    std::size_t length(wstring_range r, wstring_range &cont) noexcept;
+
     /* @brief Get the number of Unicode code points in a valid UTF-8 string.
      *
      * If an invalid UTF-8 sequence is encountered, it's considered
@@ -1114,15 +1118,9 @@ namespace utf {
      */
     std::size_t length(string_range r) noexcept;
 
-    /* @brief Get the number of Unicode code points in a UTF-32 string.
-     *
-     * As a UTF-32 string encodes entire code points, this function
-     * never fails, so there is no need for an error-handling version
-     * and this is equivalent to simply calling `r.size()`.
-     */
-    inline std::size_t length(u32string_range r) noexcept {
-        return r.size();
-    }
+    std::size_t length(u16string_range r) noexcept;
+    std::size_t length(u32string_range r) noexcept;
+    std::size_t length(wstring_range r) noexcept;
 
     namespace detail {
         template<typename C>
