@@ -820,11 +820,63 @@ namespace utf {
 
     template<typename R>
     inline std::size_t encode_u8(R &sink, u32string_range &r) {
+        /* just a wrapper; does the same thing but advances */
         std::size_t n = 0;
         if (!r.empty() && (n = utf::encode_u8(sink, r.front()))) {
             r.pop_front();
         }
         return n;
+    }
+
+    template<typename R>
+    inline std::size_t encode_u8(R &sink, u16string_range &r) {
+        /* decodes to code point and encodes */
+        auto rr = r;
+        if (char32_t ch; utf::decode(rr, ch)) {
+            if (std::size_t ret; (ret = utf::encode_u8(sink, ch))) {
+                r = rr;
+                return ret;
+            }
+        }
+        return 0;
+    }
+
+    template<typename R>
+    inline std::size_t encode_u8(R &sink, string_range &r) {
+        /* identity match, advances */
+        if (!r.empty()) {
+            sink.put(r.front());
+            r.pop_front();
+            return 1;
+        }
+        return 0;
+    }
+
+    template<typename R>
+    inline std::size_t encode_u8(R &sink, wstring_range &r) {
+        /* for utf-32, decode is just a swapper, for utf-16 it
+         * actually decodes; in both cases it encodes to utf-8,
+         * for utf-8 the whole thing is just an advancing wrapper
+         */
+        if constexpr(
+            (sizeof(wchar_t) == sizeof(char32_t)) ||
+            (sizeof(wchar_t) == sizeof(char16_t))
+        ) {
+            auto rr = r;
+            if (char32_t ch; utf::decode(rr, ch)) {
+                if (std::size_t ret; (ret = utf::encode_u8(sink, ch))) {
+                    r = rr;
+                    return ret;
+                }
+            }
+        } else {
+            if (!r.empty()) {
+                sink.put(char(r.front()));
+                r.pop_front();
+                return 1;
+            }
+        }
+        return 0;
     }
 
     /* @brief Encode a UTF-32 code point into UTF-16.
@@ -851,11 +903,62 @@ namespace utf {
 
     template<typename R>
     inline std::size_t encode_u16(R &sink, u32string_range &r) {
+        /* just a wrapper; does the same thing but advances */
         std::size_t n = 0;
         if (!r.empty() && (n = utf::encode_u16(sink, r.front()))) {
             r.pop_front();
         }
         return n;
+    }
+
+    template<typename R>
+    inline std::size_t encode_u16(R &sink, u16string_range &r) {
+        /* identity match, advances */
+        if (!r.empty()) {
+            sink.put(r.front());
+            r.pop_front();
+            return 1;
+        }
+        return 0;
+    }
+
+    template<typename R>
+    inline std::size_t encode_u16(R &sink, string_range &r) {
+        /* has to decode and encode */
+        auto rr = r;
+        if (char32_t ch; utf::decode(rr, ch)) {
+            if (std::size_t ret; (ret = utf::encode_u16(sink, ch))) {
+                r = rr;
+                return ret;
+            }
+        }
+        return 0;
+    }
+
+    template<typename R>
+    inline std::size_t encode_u16(R &sink, wstring_range &r) {
+        /* when wchar_t is guaranteed utf-16, we have an identity
+         * match so we just advance; otherwise decode and encode
+         */
+        if constexpr(
+            (sizeof(wchar_t) != sizeof(char32_t)) &&
+            (sizeof(wchar_t) == sizeof(char16_t))
+        ) {
+            if (!r.empty()) {
+                sink.put(char16_t(r.front()));
+                r.pop_front();
+                return 1;
+            }
+        } else {
+            auto rr = r;
+            if (char32_t ch; utf::decode(rr, ch)) {
+                if (std::size_t ret; (ret = utf::encode_u16(sink, ch))) {
+                    r = rr;
+                    return ret;
+                }
+            }
+        }
+        return 0;
     }
 
     /* @brief Encode a UTF-32 code point into a wide Unicode char/sequence.
@@ -902,11 +1005,77 @@ namespace utf {
 
     template<typename R>
     inline std::size_t encode_uw(R &sink, u32string_range &r) {
+        /* just a wrapper; does the same thing but advances */
         std::size_t n = 0;
         if (!r.empty() && (n = utf::encode_uw(sink, r.front()))) {
             r.pop_front();
         }
         return n;
+    }
+
+    template<typename R>
+    inline std::size_t encode_uw(R &sink, u16string_range &r) {
+        /* when wchar_t is guaranteed utf-16, we have an identity
+         * match much like encode_u16 with wstring, otherwise
+         * decode and encode
+         */
+        if constexpr(
+            (sizeof(wchar_t) != sizeof(char32_t)) &&
+            (sizeof(wchar_t) == sizeof(char16_t))
+        ) {
+            if (!r.empty()) {
+                sink.put(wchar_t(r.front()));
+                r.pop_front();
+                return 1;
+            }
+        } else {
+            auto rr = r;
+            if (char32_t ch; utf::decode(rr, ch)) {
+                if (std::size_t ret; (ret = utf::encode_uw(sink, ch))) {
+                    r = rr;
+                    return ret;
+                }
+            }
+        }
+        return 0;
+    }
+
+    template<typename R>
+    inline std::size_t encode_uw(R &sink, string_range &r) {
+        /* when wchar_t is guaranteed utf-8, we have an identity
+         * match so there is no reencoding, otherwise decode and
+         * encode...
+         */
+        if constexpr(
+            (sizeof(wchar_t) != sizeof(char32_t)) &&
+            (sizeof(wchar_t) != sizeof(char16_t))
+        ) {
+            if (!r.empty()) {
+                sink.put(wchar_t(r.front()));
+                r.pop_front();
+                return 1;
+            }
+        } else {
+            auto rr = r;
+            if (char32_t ch; utf::decode(rr, ch)) {
+                if (std::size_t ret; (ret = utf::encode_uw(sink, ch))) {
+                    r = rr;
+                    return ret;
+                }
+            }
+        }
+        return 0;
+    }
+
+    template<typename R>
+    inline std::size_t encode_uw(R &sink, wstring_range &r) {
+        /* identity match, advances */
+        if (!r.empty()) {
+            sink.put(wchar_t(r.front()));
+            r.pop_front();
+            return 1;
+        }
+        return 0;
     }
 
     /* @brief Get the number of Unicode code points in a string.

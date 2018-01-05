@@ -1022,52 +1022,6 @@ private:
         }
     }
 
-    template<typename R>
-    void write_seq(R &writer, string_range &val) const {
-        writer.put(val.front());
-        val.pop_front();
-    }
-
-    template<typename R>
-    void write_seq(R &writer, u16string_range &val) const {
-        if (char32_t ret; !utf::decode(val, ret)) {
-            write_replacement(writer);
-            val.pop_front();
-        } else {
-             if (!utf::encode_u8(writer, ret)) {
-                write_replacement(writer);
-             }
-        }
-    }
-
-    template<typename R>
-    void write_seq(R &writer, u32string_range &val) const {
-        if (!utf::encode_u8(writer, val.front())) {
-            write_replacement(writer);
-        }
-        val.pop_front();
-    }
-
-    template<typename R>
-    void write_seq(R &writer, wstring_range &val) const {
-        if constexpr(
-            (sizeof(wchar_t) == sizeof(char32_t)) ||
-            (sizeof(wchar_t) == sizeof(char16_t))
-        ) {
-            if (char32_t ret; !utf::decode(val, ret)) {
-                write_replacement(writer);
-                val.pop_front();
-            } else {
-                if (!utf::encode_u8(writer, ret)) {
-                    write_replacement(writer);
-                }
-            }
-        } else {
-            writer.put(char(val.front()));
-            val.pop_front();
-        }
-    }
-
     /* string base writer */
     template<typename C, typename R>
     void write_str(R &writer, bool escape, basic_char_range<C const> val) const {
@@ -1091,8 +1045,9 @@ private:
                         write_char_raw(writer, c);
                     }
                     val.pop_front();
-                } else {
-                    write_seq(writer, val);
+                } else if (!utf::encode_u8(writer, val)) {
+                    write_replacement(writer);
+                    val.pop_front();
                 }
             }
             writer.put('"');
