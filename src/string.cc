@@ -200,13 +200,31 @@ bool decode(u16string_range &r, char32_t &ret) noexcept {
     return false;
 }
 
+bool decode(u32string_range &r, char32_t &ret) noexcept {
+    if (r.empty()) {
+        return false;
+    }
+    auto c = r.front();
+    if (!utf::isvalid(c)) {
+        return false;
+    }
+    ret = c;
+    r.pop_front();
+    return true;
+}
+
 bool decode(wstring_range &r, char32_t &ret) noexcept {
     std::size_t n, tn = r.size();
     if constexpr(sizeof(wchar_t) == sizeof(char32_t)) {
         if (!tn) {
             return false;
         }
-        ret = char32_t(r.front());
+        auto c = char32_t(r.front());
+        if (!utf::isvalid(c)) {
+            return false;
+        }
+        ret = c;
+        r.pop_front();
         return true;
     } else if constexpr(sizeof(wchar_t) == sizeof(char16_t)) {
         auto *beg = reinterpret_cast<char16_t const *>(r.data());

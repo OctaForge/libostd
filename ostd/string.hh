@@ -767,17 +767,11 @@ namespace utf {
 
     /* @brief Get the Unicode code point from a UTF-32 string.
      *
-     * The string is advanced by one. This can only fail if the string
-     * is empty, `false` is returned in that case.
+     * The string is advanced by one. It can also fail if utf::isvalid()
+     * returns `false` for the front character, in which case the string
+     * will not be advanced.
      */
-    inline bool decode(u32string_range &r, char32_t &ret) noexcept {
-        if (r.empty()) {
-            return false;
-        }
-        ret = r.front();
-        r.pop_front();
-        return true;
-    }
+     bool decode(u32string_range &r, char32_t &ret) noexcept;
 
     /* @brief Get the Unicode code point for a wide Unicode char/sequence.
      *
