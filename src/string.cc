@@ -10,35 +10,34 @@
 namespace ostd {
 namespace utf {
 
-constexpr std::uint32_t MaxCodepoint = 0x10FFFF;
+constexpr char32_t MaxCodepoint = 0x10FFFF;
 
 namespace detail {
-    static inline bool u8_decode(string_range &r, char32_t &cret) noexcept {
-        static std::uint32_t const ulim[] = { 0xFF, 0x7F, 0x7FF, 0xFFFF };
-        if (r.empty()) {
-            return false;
+    static inline std::size_t u8_decode(
+        unsigned char const *beg, unsigned char const *end, char32_t &cret
+    ) noexcept {
+        static char32_t const ulim[] = { 0xFF, 0x7F, 0x7FF, 0xFFFF };
+        if (beg == end) {
+            return 0;
         }
-        std::uint32_t ch = static_cast<unsigned char const>(r.front());
+        char32_t ch = *beg;
         if (ch <= 0x7F) {
             /* ASCII */
             cret = ch;
-            r.pop_front();
-            return true;
+            return 1;
         }
-        std::uint32_t ret = 0;
-        string_range sr = r;
-        sr.pop_front();
+        char32_t ret = 0;
+        unsigned char const *sbeg = beg + 1;
         /* continuation bytes */
         for (; ch & 0x40; ch <<= 1) {
             /* need a continuation byte but nothing left in the string */
-            if (sr.empty()) {
-                return false;
+            if (sbeg == end) {
+                return 0;
             }
             /* the continuation byte */
-            std::uint32_t nch = static_cast<unsigned char const>(sr.front());
-            sr.pop_front();
+            char32_t nch = *sbeg++;
             /* lower 6 bits */
-            std::uint32_t bch = nch & 0x3F;
+            char32_t bch = nch & 0x3F;
             /* not a continuation byte */
             if ((nch ^ bch) != 0x80) {
                 return false;
@@ -46,62 +45,61 @@ namespace detail {
             /* the 6 bits go in the result */
             ret = (ret << 6) | bch;
         }
-        /* number of continuation bytes */
-        auto n = sr.data() - r.data() - 1;
+        /* by how many bytes we advance (continuation bytes + 1) */
+        auto adv = std::size_t(sbeg - beg);
         /* invalid sequence - too many continuation bits */
-        if (n > 3) {
-            return false;
+        if (adv > 4) {
+            return 0;
         }
         /* add the up to 7 bits from the first byte, already shifted left by n */
-        ret |= (ch & 0x7F) << (n * 5);
+        ret |= (ch & 0x7F) << ((adv - 1) * 5);
         /* invalid sequence - out of bounds */
-        if ((ret > MaxCodepoint) || (ret <= ulim[n])) {
-            return false;
+        if ((ret > MaxCodepoint) || (ret <= ulim[adv - 1])) {
+            return 0;
         }
         /* invalid sequence - surrogate code point */
         if ((ret >= 0xD800) && (ret <= 0xDFFF)) {
-            return false;
+            return 0;
         }
         cret = ret;
-        r = sr;
-        return true;
+        return adv;
     }
 
-    static inline bool u16_decode(u16string_range &r, char32_t &cret) noexcept {
-        if (r.empty()) {
-            return false;
+    static inline std::size_t u16_decode(
+        char16_t const *beg, char16_t const *end, char32_t &cret
+    ) noexcept {
+        if (beg == end) {
+            return 0;
         }
-        std::uint32_t ch = r.front();
+        char32_t ch = *beg;
         /* lead surrogate code point */
         if ((ch >= 0xD800) && (ch <= 0xDBFF)) {
             /* unpaired */
-            if (r.size() < 2) {
-                return false;
+            if ((end - beg) < 2) {
+                return 0;
             }
-            std::uint32_t nch = r[1];
+            char32_t nch = beg[1];
             /* trail surrogate code point */
-            bool trail = ((nch >= 0xDC00) && (nch <= 0xDFFF));
-            if (trail) {
-                r = r.slice(2, r.size());
+            if ((nch >= 0xDC00) && (nch <= 0xDFFF)) {
                 cret = 0x10000 + (((ch - 0xD800) << 10) | (nch - 0xDC00));
+                return 2;
             }
-            return trail;
+            return 0;
         }
-        r.pop_front();
         cret = ch;
-        return true;
+        return 1;
     }
 
-    std::uint8_t u8_encode(
-        std::uint8_t (&ret)[4], std::uint32_t ch
+    std::size_t u8_encode(
+        char (&ret)[4], char32_t ch
     ) noexcept {
         if (ch <= 0x7F) {
-            ret[0] = std::uint8_t(ch);
+            ret[0] = char(ch);
             return 1;
         }
         if (ch <= 0x7FF) {
-            ret[0] = std::uint8_t(0xC0 | (ch >> 6));
-            ret[1] = std::uint8_t(0x80 | (ch & 0x3F));
+            ret[0] = char(0xC0 | (ch >> 6));
+            ret[1] = char(0x80 | (ch & 0x3F));
             return 2;
         }
         if (ch <= 0xFFFF) {
@@ -111,51 +109,65 @@ namespace detail {
             if ((ch >= 0xD800) && (ch <= 0xDFFF)) {
                 return 0;
             }
-            ret[0] = std::uint8_t(0xE0 |  (ch >> 12));
-            ret[1] = std::uint8_t(0x80 | ((ch >> 6) & 0x3F));
-            ret[2] = std::uint8_t(0x80 |  (ch       & 0x3F));
+            ret[0] = char(0xE0 |  (ch >> 12));
+            ret[1] = char(0x80 | ((ch >> 6) & 0x3F));
+            ret[2] = char(0x80 |  (ch       & 0x3F));
             return 3;
         }
         if (ch <= MaxCodepoint) {
-            ret[0] = std::uint8_t(0xF0 |  (ch >> 18));
-            ret[1] = std::uint8_t(0x80 | ((ch >> 12) | 0x3F));
-            ret[2] = std::uint8_t(0x80 | ((ch >>  6) | 0x3F));
-            ret[3] = std::uint8_t(0x80 |  (ch        | 0x3F));
+            ret[0] = char(0xF0 |  (ch >> 18));
+            ret[1] = char(0x80 | ((ch >> 12) | 0x3F));
+            ret[2] = char(0x80 | ((ch >>  6) | 0x3F));
+            ret[3] = char(0x80 |  (ch        | 0x3F));
             return 4;
         }
         return 0;
     }
 
-    std::uint8_t u16_encode(
-        std::uint16_t (&ret)[2], std::uint32_t ch
+    std::size_t u16_encode(
+        char16_t (&ret)[2], char32_t ch
     ) noexcept {
         /* surrogate code point or out of bounds */
         if (((ch >= 0xD800) && (ch <= 0xDFFF)) || (ch > MaxCodepoint)) {
             return 0;
         }
         if (ch <= 0xFFFF) {
-            ret[0] = std::uint16_t(ch);
+            ret[0] = char16_t(ch);
             return 1;
         }
         /* 20-bit number */
         ch -= 0x10000;
-        ret[0] = std::uint16_t(0xD800 + (ch >> 10));
-        ret[1] = std::uint16_t(0xDC00 + (ch & 0x3FF));
+        ret[0] = char16_t(0xD800 + (ch >> 10));
+        ret[1] = char16_t(0xDC00 + (ch & 0x3FF));
         return 2;
     }
 } /* namespace detail */
 
 bool decode(string_range &r, char32_t &ret) noexcept {
-    return detail::u8_decode(r, ret);
+    auto tn = r.size();
+    auto *beg = reinterpret_cast<unsigned char const *>(r.data());
+    auto *end = beg + tn;
+    if (std::size_t n; (n = detail::u8_decode(beg, end, ret))) {
+        r = r.slice(n, tn);
+        return true;
+    }
+    return false;
 }
 
 bool decode(u16string_range &r, char32_t &ret) noexcept {
-    return detail::u16_decode(r, ret);
+    auto tn = r.size();
+    auto *beg = reinterpret_cast<char16_t const *>(r.data());
+    auto *end = beg + tn;
+    if (std::size_t n; (n = detail::u16_decode(beg, end, ret))) {
+        r = r.slice(n, tn);
+        return true;
+    }
+    return false;
 }
 
 std::size_t length(string_range r, string_range &cont) noexcept {
     std::size_t ret = 0;
-    for (char32_t ch = U'\0'; detail::u8_decode(r, ch); ++ret) {
+    for (char32_t ch = U'\0'; utf::decode(r, ch); ++ret) {
         continue;
     }
     cont = r;
@@ -179,7 +191,7 @@ bool isgraph(char32_t c) noexcept {
 }
 
 bool isprint(char32_t c) noexcept {
-    switch (std::uint32_t(c)) {
+    switch (c) {
         case 0x2028:
         case 0x2029:
         case 0xFFF9:
@@ -216,7 +228,7 @@ bool isxdigit(char32_t c) noexcept {
     if ((c >= '0') && (c <= '9')) {
         return true;
     }
-    auto uc = std::uint32_t(c) | 32;
+    auto uc = c | 32;
     return ((uc >= 'a') && (uc <= 'f'));
 }
 
@@ -396,8 +408,8 @@ int case_compare(string_range s1, string_range s2) noexcept {
          * 8-bit unsigned and then to char32_t (which is always unsigned)
          * in order to not get large values from 32-bit unsigned underflow
          */
-        auto ldec = char32_t(std::uint8_t(s1.front()));
-        auto rdec = char32_t(std::uint8_t(s2.front()));
+        auto ldec = char32_t(static_cast<unsigned char>(s1.front()));
+        auto rdec = char32_t(static_cast<unsigned char>(s2.front()));
         if ((ldec <= 0x7F) || !utf::decode(s1, ldec)) {
             s1.pop_front();
         }

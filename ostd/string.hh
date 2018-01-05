@@ -778,11 +778,11 @@ namespace utf {
     }
 
     namespace detail {
-        std::uint8_t u8_encode(
-            std::uint8_t (&ret)[4], std::uint32_t ch
+        std::size_t u8_encode(
+            char (&ret)[4], char32_t ch
         ) noexcept;
-        std::uint8_t u16_encode(
-            std::uint16_t (&ret)[2], std::uint32_t ch
+        std::size_t u16_encode(
+            char16_t (&ret)[2], char32_t ch
         ) noexcept;
     }
 
@@ -799,10 +799,10 @@ namespace utf {
      * other than those thrown by `sink`.
      */
     template<typename R>
-    inline std::uint8_t encode_u8(R &sink, char32_t ch) {
-        std::uint8_t buf[4];
-        std::uint8_t n = detail::u8_encode(buf, ch);
-        for (std::uint8_t i = 0; i < n; ++i) {
+    inline std::size_t encode_u8(R &sink, char32_t ch) {
+        char buf[4];
+        std::size_t n = detail::u8_encode(buf, ch);
+        for (std::size_t i = 0; i < n; ++i) {
             sink.put(buf[i]);
         }
         return n;
@@ -821,10 +821,10 @@ namespace utf {
      * other than those thrown by `sink`.
      */
     template<typename R>
-    inline std::uint8_t encode_u16(R &sink, char32_t ch) {
-        std::uint16_t buf[2];
-        std::uint8_t n = detail::u16_encode(buf, ch);
-        for (std::uint8_t i = 0; i < n; ++i) {
+    inline std::size_t encode_u16(R &sink, char32_t ch) {
+        char16_t buf[2];
+        std::size_t n = detail::u16_encode(buf, ch);
+        for (std::size_t i = 0; i < n; ++i) {
             sink.put(buf[i]);
         }
         return n;
