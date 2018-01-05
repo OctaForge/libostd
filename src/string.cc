@@ -6,9 +6,13 @@
 #include <cstdint>
 #include <cstdlib>
 #include "ostd/string.hh"
+#include "ostd/format.hh"
 
 namespace ostd {
 namespace utf {
+
+/* place the vtable in here */
+utf_error::~utf_error() {}
 
 constexpr char32_t MaxCodepoint = 0x10FFFF;
 
@@ -461,4 +465,8 @@ int case_compare(u32string_range s1, u32string_range s2) noexcept {
 }
 
 } /* namespace utf */
+
+/* place the vtable in here */
+format_error::~format_error() {}
+
 } /* namespace ostd */

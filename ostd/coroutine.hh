@@ -56,6 +56,8 @@ namespace ostd {
  */
 struct coroutine_error: std::runtime_error {
     using std::runtime_error::runtime_error;
+    /* empty, for vtable placement */
+    virtual ~coroutine_error();
 };
 
 /** @brief An encapsulated context any coroutine-type inherits from.
@@ -91,10 +93,7 @@ protected:
      * stack is freed (if present) using the same stack allocator it was
      * allocated with.
      */
-    virtual ~coroutine_context() {
-        unwind();
-        free_stack();
-    }
+    virtual ~coroutine_context();
 
     coroutine_context(coroutine_context const &) = delete;
 

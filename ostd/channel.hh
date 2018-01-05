@@ -35,6 +35,8 @@ namespace ostd {
 /** @brief Thrown when manipulating a channel that has been closed. */
 struct channel_error: std::logic_error {
     using std::logic_error::logic_error;
+    /* empty, for vtable placement */
+    virtual ~channel_error();
 };
 
 /** @brief A thread-safe message queue.

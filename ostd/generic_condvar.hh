@@ -25,7 +25,7 @@ namespace ostd {
 namespace detail {
     struct cond_iface {
         cond_iface() {}
-        virtual ~cond_iface() {}
+        virtual ~cond_iface();
         virtual void notify_one() = 0;
         virtual void notify_all() = 0;
         virtual void wait(std::unique_lock<std::mutex> &) = 0;

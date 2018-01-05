@@ -12,3 +12,11 @@
 #else
 #  error "Unsupported platform"
 #endif
+
+namespace ostd {
+
+/* place the vtable in here */
+word_error::~word_error() {}
+subprocess_error::~subprocess_error() {}
+
+} /* namespace ostd */

@@ -8,9 +8,14 @@
 #include <cstdlib>
 #include <cerrno>
 
+#include "ostd/stream.hh"
 #include "ostd/io.hh"
 
 namespace ostd {
+
+/* place the vtable in here */
+stream_error::~stream_error() {}
+stream::~stream() {}
 
 static char const *filemodes[] = {
     "rb", "wb", "ab", "rb+", "wb+", "ab+"

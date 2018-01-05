@@ -90,6 +90,8 @@ struct stream_range;
 /** @brief Thrown on stream errors. */
 struct stream_error: std::system_error {
     using std::system_error::system_error;
+    /* empty, for vtable placement */
+    virtual ~stream_error();
 };
 
 template<typename T = char, typename TC = std::basic_string<T>>
@@ -105,7 +107,7 @@ struct stream {
     using offset_type = stream_off_t;
 
     /** @brief Does nothing by default. */
-    virtual ~stream() {}
+    virtual ~stream();
 
     /** @brief Closes the stream.
      *

@@ -747,6 +747,8 @@ namespace utf {
     /** @brief Thrown on UTF-8 decoding failure. */
     struct utf_error: std::runtime_error {
         using std::runtime_error::runtime_error;
+        /* empty, for vtable placement */
+        virtual ~utf_error();
     };
 
     /* @brief Get the Unicode code point for a UTF-8 sequence.

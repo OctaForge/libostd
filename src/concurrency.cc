@@ -6,10 +6,24 @@
 #include "ostd/concurrency.hh"
 
 namespace ostd {
+
+/* place the vtable in here */
+coroutine_error::~coroutine_error() {}
+
+/* non-inline for vtable placement */
+coroutine_context::~coroutine_context() {
+    unwind();
+    free_stack();
+}
+
 namespace detail {
+    /* place the vtable here, derived from coroutine_context */
+    csched_task::~csched_task() {}
 
-OSTD_EXPORT scheduler *current_scheduler = nullptr;
-OSTD_EXPORT thread_local csched_task *current_csched_task = nullptr;
-
+    OSTD_EXPORT scheduler *current_scheduler = nullptr;
+    OSTD_EXPORT thread_local csched_task *current_csched_task = nullptr;
 } /* namespace detail */
+
+scheduler::~scheduler() {}
+
 } /* namespace ostd */

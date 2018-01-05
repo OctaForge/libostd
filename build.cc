@@ -28,6 +28,9 @@ namespace fs = ostd::filesystem;
 #include "src/io.cc"
 #include "src/process.cc"
 #include "src/filesystem.cc"
+#include "src/channel.cc"
+#include "src/string.cc"
+#include "src/argparse.cc"
 
 #define OSTD_GEN_UNICODE_INCLUDE
 #include "gen_unicode.cc"
@@ -60,15 +63,15 @@ static fs::path OSTD_SHARED_LIB = "libostd.so";
 static fs::path OSTD_STATIC_LIB = "libostd.a";
 
 static std::string DEFAULT_CXXFLAGS = "-std=c++1z -I. -O2 -Wall -Wextra "
-                                      "-Wshadow -Wold-style-cast";
+                                      "-Wshadow -Wold-style-cast -fPIC";
 static std::string DEFAULT_LDFLAGS  = "-pthread";
-static std::string DEFAULT_ASFLAGS  = "";
+static std::string DEFAULT_ASFLAGS  = "-fPIC";
 
 static std::string DEBUG_CXXFLAGS = "-g";
 
-static std::string SHARED_CXXFLAGS = "-fPIC";
+static std::string SHARED_CXXFLAGS = "";
 static std::string SHARED_LDFLAGS  = "-shared";
-static std::string SHARED_ASFLAGS  = "-fPIC";
+static std::string SHARED_ASFLAGS  = "";
 
 /* DO NOT CHANGE PAST THIS POINT */
 

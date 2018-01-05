@@ -236,7 +236,7 @@ protected:
 
 public:
     /** @brief Does nothing, this base class is empty. */
-    virtual ~scheduler() {}
+    virtual ~scheduler();
 
     scheduler(scheduler const &) = delete;
     scheduler(scheduler &&) = delete;
@@ -552,6 +552,9 @@ namespace detail {
         csched_task(csched_task &&) = delete;
         csched_task &operator=(csched_task const &) = delete;
         csched_task &operator=(csched_task &&) = delete;
+
+        /* empty, for vtable placement */
+        virtual ~csched_task();
 
         template<typename F, typename SA>
         csched_task(F &&f, SA &&sa): p_func(std::forward<F>(f)) {

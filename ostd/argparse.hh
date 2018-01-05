@@ -44,6 +44,9 @@ namespace ostd {
 struct arg_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 
+    /* empty, for vtable placement */
+    virtual ~arg_error();
+
     template<typename ...A>
     arg_error(string_range fmt, A const &...args):
         arg_error(format(appender<std::string>(), fmt, args...).get())
@@ -101,7 +104,7 @@ struct arg_description {
     friend struct arg_group;
 
     /** @brief The base class contains no data. */
-    virtual ~arg_description() {}
+    virtual ~arg_description();
 
     /** @brief Gets an ostd::arg_type for the class. */
     virtual arg_type type() const noexcept = 0;
@@ -136,6 +139,9 @@ protected:
  * It's not instantiated directly.
  */
 struct arg_argument: arg_description {
+    /* empty, for vtable placement */
+    virtual ~arg_argument();
+
     /** @brief Sets the help for the argument.
      *
      * The help string is stored internally. Returns itself.
@@ -225,6 +231,9 @@ struct arg_optional: arg_argument {
     friend struct arg_description_container;
     friend struct arg_group;
     friend struct arg_mutually_exclusive_group;
+
+    /* empty, for vtable placement */
+    virtual ~arg_optional();
 
     /** @brief Gets the argument class type (ostd::arg_type).
      *
@@ -519,6 +528,9 @@ struct arg_positional: arg_argument {
     friend struct basic_arg_parser;
     friend struct arg_description_container;
 
+    /* empty, for vtable placement */
+    virtual ~arg_positional();
+
     /** @brief Gets the argument class type (ostd::arg_type).
      *
      * The value is always `POSITIONAL`.
@@ -661,6 +673,9 @@ private:
  */
 struct arg_mutually_exclusive_group: arg_description {
     friend struct arg_description_container;
+
+    /* empty, for vtable placement */
+    virtual ~arg_mutually_exclusive_group();
 
     /** @brief Gets the argument class type (ostd::arg_type).
      *
@@ -865,6 +880,9 @@ protected:
 struct arg_group: arg_description, arg_description_container {
     template<typename HelpFormatter>
     friend struct basic_arg_parser;
+
+    /* empty, for vtable placement */
+    virtual ~arg_group();
 
     /** @brief Gets the argument class type (ostd::arg_type).
      *
