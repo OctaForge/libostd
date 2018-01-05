@@ -1104,15 +1104,15 @@ namespace utf {
 
     /* @brief Get the number of Unicode code points in a valid UTF-8 string.
      *
-     * If an invalid UTF-8 sequence is encountered, it returns the length
-     * until that sequence.
+     * If an invalid UTF-8 sequence is encountered, it's considered
+     * 1 character and therefore the resulting length will be the
+     * number of valid code points plus the number of invalid
+     * code units as if they were replaced with valid code points.
      *
-     * If you need to get the continuation string, use the general
-     * error-handling overload of the function.
+     * If you need to stop at an invalid code unit and get the
+     * continuation string, use the overload above.
      */
-    inline std::size_t length(string_range r) noexcept {
-        return utf::length(r, r);
-    }
+    std::size_t length(string_range r) noexcept;
 
     /* @brief Get the number of Unicode code points in a UTF-32 string.
      *

@@ -191,10 +191,23 @@ bool decode(wstring_range &r, char32_t &ret) noexcept {
 
 std::size_t length(string_range r, string_range &cont) noexcept {
     std::size_t ret = 0;
-    for (char32_t ch = U'\0'; utf::decode(r, ch); ++ret) {
+    for (char32_t ch; utf::decode(r, ch); ++ret) {
         continue;
     }
     cont = r;
+    return ret;
+}
+
+std::size_t length(string_range r) noexcept {
+    std::size_t ret = 0;
+    for (;; ++ret) {
+        if (char32_t ch; !utf::decode(r, ch)) {
+            if (r.empty()) {
+                break;
+            }
+            r.pop_front();
+        }
+    }
     return ret;
 }
 
