@@ -52,7 +52,7 @@
 
 #include <cstdint>
 #include <cstddef>
-#include <cctype>
+#include <cstring>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -81,8 +81,7 @@ static_assert(
  *
  * This is a contiguous range over a character type. The character type
  * can be any of the standard character types, of any size - for example
- * you would use `char32_t` to represent UTF-32 slices. The std::char_traits
- * structure is used for the basic string operations where possible.
+ * you would use `char32_t` to represent UTF-32 slices.
  *
  * The range is mutable, i.e. it implements the output range interface.
  */
@@ -94,7 +93,6 @@ struct basic_char_range: input_range<basic_char_range<T>> {
     using size_type      = std::size_t;
 
 private:
-    using TR = std::char_traits<std::remove_const_t<T>>;
     struct nat {};
 
 public:
@@ -137,7 +135,7 @@ public:
             std::size_t N = std::extent_v<std::remove_reference_t<U>>;
             p_end = beg + N - (beg[N - 1] == '\0');
         } else {
-            p_end = beg + (beg ? TR::length(beg) : 0);
+            p_end = beg + (beg ? std::strlen(beg) : 0);
         }
     }
 
@@ -154,10 +152,9 @@ public:
 
     /** @brief Constructs a slice from a different but compatible slice.
      *
-     * The other slice can use any traits type, but a pointer to the
-     * other slice's value type must be convertible to a pointer to
-     * the new slice's value type, otherwise the constructor will not
-     * be enabled.
+     * A pointer to the other slice's value type must be convertible to
+     * a pointer to the new slice's value type, otherwise the constructor
+     * will not be enabled.
      */
     template<typename U, typename = std::enable_if_t<
         std::is_convertible_v<U *, value_type *>
@@ -171,10 +168,7 @@ public:
         p_beg = v.p_beg; p_end = v.p_end; return *this;
     }
 
-    /** @brief Assigns the slice's data from a matching std::basic_string.
-     *
-     * The string does not have to be using a matching traits type.
-     */
+    /** @brief Assigns the slice's data from a matching std::basic_string. */
     template<typename STR, typename A>
     basic_char_range &operator=(
         std::basic_string<value_type, STR, A> const &s
@@ -187,7 +181,7 @@ public:
      * The data pointed to by the argument must be zero terminated.
      */
     basic_char_range &operator=(value_type *s) noexcept {
-        p_beg = s; p_end = s + (s ? TR::length(s) : 0); return *this;
+        p_beg = s; p_end = s + (s ? std::strlen(s) : 0); return *this;
     }
 
     /** @brief Checks if the slice is empty. */
