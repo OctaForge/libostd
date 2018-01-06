@@ -349,15 +349,15 @@ public:
 
     /** @brief Iterate over the code points of the string.
      *
-     * Like utf::iter_codes().
+     * Like utf::iter_u32().
      */
-    inline auto iter_codes() const;
+    inline auto iter_u32() const;
 
     /** @brief Iterate over the UTF-8 code units of the string.
      *
-     * Like utf::iter_bytes().
+     * Like utf::iter_u8().
      */
-    inline auto iter_bytes() const;
+    inline auto iter_u8() const;
 
     /** @brief Implicitly converts a string slice to std::basic_string_view.
      *
@@ -1084,7 +1084,7 @@ namespace utf {
      * be during any string advancement (the constructor or `pop_front()`),
      * an ostd::utf_error is raised.
      */
-    inline auto iter_codes(string_range r) {
+    inline auto iter_u32(string_range r) {
         return detail::codepoint_range<char>{r};
     }
 
@@ -1095,18 +1095,18 @@ namespace utf {
      * be during any string advancement (the constructor or `pop_front()`),
      * an ostd::utf_error is raised.
      */
-    inline auto iter_codes(u16string_range r) noexcept {
+    inline auto iter_u32(u16string_range r) noexcept {
         return detail::codepoint_range<char16_t>{r};
     }
 
     /** @brief Iterate over the code points of a UTF-32 string.
      *
      * The resulting range is ostd::forward_range_tag. This can actually
-     * fail just like the other ostd::iter_codes() variants if the string
+     * fail just like the other ostd::iter_u32() variants if the string
      * contains surrogates or code points that are out of bounds. If that
      * happens, an ostd::utf_error is raised.
      */
-    inline auto iter_codes(u32string_range r) noexcept {
+    inline auto iter_u32(u32string_range r) noexcept {
         return detail::codepoint_range<char32_t>{r};
     }
 
@@ -1117,23 +1117,23 @@ namespace utf {
      * be during any string advancement (the constructor or `pop_front()`),
      * an ostd::utf_error is raised.
      */
-    inline auto iter_codes(wstring_range r) noexcept {
+    inline auto iter_u32(wstring_range r) noexcept {
         return detail::codepoint_range<wchar_t>{r};
     }
 
-    inline auto iter_bytes(string_range r) {
+    inline auto iter_u8(string_range r) {
         return detail::codeunit_range<char>(r);
     }
 
-    inline auto iter_bytes(u16string_range r) {
+    inline auto iter_u8(u16string_range r) {
         return detail::codeunit_range<char16_t>(r);
     }
 
-    inline auto iter_bytes(u32string_range r) {
+    inline auto iter_u8(u32string_range r) {
         return detail::codeunit_range<char32_t>(r);
     }
 
-    inline auto iter_bytes(wstring_range r) {
+    inline auto iter_u8(wstring_range r) {
         return detail::codeunit_range<wchar_t>(r);
     }
 
@@ -1180,13 +1180,13 @@ inline std::size_t basic_char_range<T>::length(
 }
 
 template<typename T>
-inline auto basic_char_range<T>::iter_codes() const {
-    return utf::iter_codes(*this);
+inline auto basic_char_range<T>::iter_u32() const {
+    return utf::iter_u32(*this);
 }
 
 template<typename T>
-inline auto basic_char_range<T>::iter_bytes() const {
-    return utf::iter_bytes(*this);
+inline auto basic_char_range<T>::iter_u8() const {
+    return utf::iter_u8(*this);
 }
 
 template<typename T>
