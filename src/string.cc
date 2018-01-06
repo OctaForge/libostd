@@ -17,6 +17,10 @@ utf_error::~utf_error() {}
 constexpr char32_t MaxCodepoint = 0x10FFFF;
 
 namespace detail {
+    inline bool is_invalid_u32(char32_t c) {
+        return (((c >= 0xD800) && (c <= 0xDFFF)) || (c > MaxCodepoint));
+    }
+
     static inline std::size_t u8_decode(
         unsigned char const *beg, unsigned char const *end, char32_t &cret
     ) noexcept {
@@ -57,12 +61,8 @@ namespace detail {
         }
         /* add the up to 7 bits from the first byte, already shifted left by n */
         ret |= (ch & 0x7F) << ((adv - 1) * 5);
-        /* invalid sequence - out of bounds */
-        if ((ret > MaxCodepoint) || (ret <= ulim[adv - 1])) {
-            return 0;
-        }
-        /* invalid sequence - surrogate code point */
-        if ((ret >= 0xD800) && (ret <= 0xDFFF)) {
+        /* invalid sequence */
+        if (is_invalid_u32(ret) || (ret <= ulim[adv - 1])) {
             return 0;
         }
         cret = ret;
@@ -205,7 +205,7 @@ bool decode(u32string_range &r, char32_t &ret) noexcept {
         return false;
     }
     auto c = r.front();
-    if (!utf::isvalid(c)) {
+    if (detail::is_invalid_u32(c)) {
         return false;
     }
     ret = c;
@@ -220,7 +220,7 @@ bool decode(wstring_range &r, char32_t &ret) noexcept {
             return false;
         }
         auto c = char32_t(r.front());
-        if (!utf::isvalid(c)) {
+        if (detail::is_invalid_u32(c)) {
             return false;
         }
         ret = c;
