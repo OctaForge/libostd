@@ -903,13 +903,15 @@ namespace utf {
 
             void pop_front() {
                 std::size_t n = p_left.size();
-                if (n > 1) {
-                    p_left.pop_front();
-                    return;
-                }
-                if ((n == 1) && p_range.empty()) {
-                    p_left = basic_char_range<OC>{};
-                    return;
+                if (n) {
+                    bool done = false;
+                    if constexpr(max_units<OC> > 1) {
+                        done = (n > 1);
+                    }
+                    if (done || p_range.empty()) {
+                        p_left.pop_front();
+                        return;
+                    }
                 }
                 advance();
             }
