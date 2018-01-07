@@ -48,7 +48,7 @@ namespace detail {
             char32_t bch = nch & 0x3F;
             /* not a continuation byte */
             if ((nch ^ bch) != 0x80) {
-                return false;
+                return 0;
             }
             /* the 6 bits go in the result */
             ret = (ret << 6) | bch;
@@ -497,45 +497,85 @@ char32_t toupper(char32_t c) noexcept {
 
 #endif /* __has_include("string_utf.hh") */
 
-int case_compare(string_range s1, string_range s2) noexcept {
-    std::size_t s1l = s1.size(), s2l = s2.size(), ms = std::min(s1l, s2l);
-    s1 = s1.slice(0, ms);
-    s2 = s2.slice(0, ms);
-    for (;;) {
-        /* enforce correct semantics with signed chars; first convert to
-         * 8-bit unsigned and then to char32_t (which is always unsigned)
-         * in order to not get large values from 32-bit unsigned underflow
-         */
-        auto ldec = char32_t(static_cast<unsigned char>(s1.front()));
-        auto rdec = char32_t(static_cast<unsigned char>(s2.front()));
-        if ((ldec <= 0x7F) || !utf::decode(s1, ldec)) {
-            s1.pop_front();
+namespace detail {
+    template<typename C>
+    inline int case_compare(
+        C const *beg1, C const *end1,
+        C const *beg2, C const *end2
+    ) {
+        auto s1l = std::size_t(end1 - beg1);
+        auto s2l = std::size_t(end2 - beg2);
+
+        auto ms = std::min(s1l, s2l);
+        end1 = beg1 + ms;
+        end2 = beg2 + ms;
+
+        while (beg1 != end1) {
+            auto ldec = char32_t(*beg1);
+            auto rdec = char32_t(*beg2);
+            if constexpr(std::is_same_v<C, char16_t>) {
+                std::size_t ndec;
+                if ((ldec <= 0x7F) || !(ndec = u16_decode(beg1, end1, ldec))) {
+                    ++beg1;
+                } else {
+                    beg1 += ndec;
+                }
+                if ((rdec <= 0x7F) || !(ndec = u16_decode(beg2, end2, rdec))) {
+                    ++beg2;
+                } else {
+                    beg2 += ndec;
+                }
+            } else if constexpr(std::is_same_v<C, unsigned char>) {
+                std::size_t ndec;
+                if ((ldec <= 0x7F) || !(ndec = u8_decode(beg1, end1, ldec))) {
+                    ++beg1;
+                } else {
+                    beg1 += ndec;
+                }
+                if ((rdec <= 0x7F) || !(ndec = u8_decode(beg2, end2, rdec))) {
+                    ++beg2;
+                } else {
+                    beg2 += ndec;
+                }
+            }
+            int d = int(utf::tolower(ldec)) - int(utf::tolower(rdec));
+            if (d) {
+                return d;
+            }
         }
-        if ((rdec <= 0x7F) || !utf::decode(s2, rdec)) {
-            s2.pop_front();
-        }
-        int d = int(utf::tolower(ldec)) - int(utf::tolower(rdec));
-        if (d) {
-            return d;
-        }
-        if (s1.empty() || s2.empty()) {
-            s1l = s1.size();
-            s2l = s2.size();
-            break;
-        }
+        return (s1l < s2l) ? -1 : ((s1l > s2l) ? 1 : 0);
     }
-    return (s1l < s2l) ? -1 : ((s1l > s2l) ? 1 : 0);
+}
+
+int case_compare(string_range s1, string_range s2) noexcept {
+    auto *beg1 = reinterpret_cast<unsigned char const *>(s1.data());
+    auto *beg2 = reinterpret_cast<unsigned char const *>(s2.data());
+    return detail::case_compare(beg1, beg1 + s1.size(), beg2, beg2 + s2.size());
+}
+
+int case_compare(u16string_range s1, u16string_range s2) noexcept {
+    auto *beg1 = s1.data(), *beg2 = s2.data();
+    return detail::case_compare(beg1, beg1 + s1.size(), beg2, beg2 + s2.size());
 }
 
 int case_compare(u32string_range s1, u32string_range s2) noexcept {
-    std::size_t s1l = s1.size(), s2l = s2.size();
-    for (std::size_t i = 0, ms = std::min(s1l, s2l); i < ms; ++i) {
-        int d = int(utf::tolower(s1[i])) - int(utf::tolower(s2[i]));
-        if (d) {
-            return d;
-        }
-    }
-    return (s1l < s2l) ? -1 : ((s1l > s2l) ? 1 : 0);
+    auto *beg1 = s1.data(), *beg2 = s2.data();
+    return detail::case_compare(beg1, beg1 + s1.size(), beg2, beg2 + s2.size());
+}
+
+int case_compare(wstring_range s1, wstring_range s2) noexcept {
+    using C = std::conditional_t<
+        sizeof(wchar_t) == sizeof(char32_t),
+        char32_t,
+        std::conditional_t<
+            sizeof(wchar_t) == sizeof(char16_t),
+            char16_t,
+            unsigned char
+        >
+    >;
+    auto *beg1 = reinterpret_cast<C const *>(s1.data());
+    auto *beg2 = reinterpret_cast<C const *>(s2.data());
+    return detail::case_compare(beg1, beg1 + s1.size(), beg2, beg2 + s2.size());
 }
 
 } /* namespace utf */

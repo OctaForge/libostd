@@ -1157,12 +1157,20 @@ namespace utf {
     inline int compare(string_range s1, string_range s2) noexcept {
         return s1.compare(s2);
     }
+    inline int compare(u16string_range s1, u16string_range s2) noexcept {
+        return s1.compare(s2);
+    }
     inline int compare(u32string_range s1, u32string_range s2) noexcept {
+        return s1.compare(s2);
+    }
+    inline int compare(wstring_range s1, wstring_range s2) noexcept {
         return s1.compare(s2);
     }
 
     int case_compare(string_range s1, string_range s2) noexcept;
+    int case_compare(u16string_range s1, u16string_range s2) noexcept;
     int case_compare(u32string_range s1, u32string_range s2) noexcept;
+    int case_compare(wstring_range s1, wstring_range s2) noexcept;
 /** @} */
 
 } /* namespace utf */
