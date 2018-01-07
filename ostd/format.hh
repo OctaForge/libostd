@@ -989,14 +989,6 @@ private:
     }
 
     template<typename R>
-    void write_replacement(R &writer) const {
-        /* Unicode replacement character */
-        writer.put(0xEF);
-        writer.put(0xBF);
-        writer.put(0xBD);
-    }
-
-    template<typename R>
     void write_char_raw(R &writer, char val) const {
         writer.put(val);
     }
@@ -1009,7 +1001,7 @@ private:
     template<typename R>
     void write_char_raw(R &writer, char32_t val) const {
         if (!utf::encode<char>(writer, val)) {
-            write_replacement(writer);
+            utf::replace<char>(writer);
         }
     }
 
@@ -1048,7 +1040,7 @@ private:
                     }
                     val.pop_front();
                 } else if (!utf::encode<char>(writer, val)) {
-                    write_replacement(writer);
+                    utf::replace<char>(writer);
                     val.pop_front();
                 }
             }

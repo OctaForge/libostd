@@ -851,6 +851,24 @@ namespace utf {
         return encode<unicode_t<N>>(sink, r);
     }
 
+    template<typename C, typename R>
+    inline std::size_t replace(R &sink) {
+        if constexpr(max_units<C> > 2) {
+            sink.put(0xEF);
+            sink.put(0xBF);
+            sink.put(0xBD);
+            return 3;
+        } else {
+            sink.put(0xFFFD);
+        }
+        return 1;
+    }
+
+    template<std::size_t N, typename R>
+    inline std::size_t replace(R &sink) {
+        return replace<unicode_t<N>>(sink);
+    }
+
     /* @brief Get the number of Unicode code points in a string.
      *
      * This function keeps reading Unicode code points while it can and
