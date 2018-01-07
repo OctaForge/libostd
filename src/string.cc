@@ -513,7 +513,10 @@ namespace detail {
         while (beg1 != end1) {
             auto ldec = char32_t(*beg1);
             auto rdec = char32_t(*beg2);
-            if constexpr(std::is_same_v<C, char16_t>) {
+            if constexpr(std::is_same_v<C, char32_t>) {
+                ++beg1;
+                ++beg2;
+            } else if constexpr(std::is_same_v<C, char16_t>) {
                 std::size_t ndec;
                 if ((ldec <= 0x7F) || !(ndec = u16_decode(beg1, end1, ldec))) {
                     ++beg1;

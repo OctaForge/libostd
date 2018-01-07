@@ -347,17 +347,36 @@ public:
      */
     inline int case_compare(basic_char_range<value_type const> s) const noexcept;
 
+    /** @brief Iterate over the UTF-8 code units of the string.
+     *
+     * Like utf::iter_u8().
+     */
+    inline auto iter_u8() const;
+
+    /** @brief Iterate over the UTF-16 units of the string.
+     *
+     * Like utf::iter_u16().
+     */
+    inline auto iter_u16() const;
+
     /** @brief Iterate over the code points of the string.
      *
      * Like utf::iter_u32().
      */
     inline auto iter_u32() const;
 
-    /** @brief Iterate over the UTF-8 code units of the string.
+    /** @brief Iterate over the Unicode wide characters of the string.
      *
-     * Like utf::iter_u8().
+     * Like utf::iter_uw().
      */
-    inline auto iter_u8() const;
+    inline auto iter_uw() const;
+
+    /** @brief Iterate over the Unicode units of the given type.
+     *
+     * Like utf::iter_u().
+     */
+    template<typename C>
+    inline auto iter_u() const;
 
     /** @brief Implicitly converts a string slice to std::basic_string_view.
      *
@@ -832,6 +851,15 @@ namespace utf {
         return 0;
     }
 
+    template<typename OR, typename IR>
+    inline std::size_t encode_u32(OR &sink, IR &r) {
+        if (char32_t ret; decode(r, ret)) {
+            sink.put(ret);
+            return 1;
+        }
+        return 0;
+    }
+
     /* @brief Encode a UTF-32 code point into a wide Unicode char/sequence.
      *
      * The value(s) are written in `sink` which is an ostd::output_range_tag.
@@ -949,6 +977,28 @@ namespace utf {
         return 0;
     }
 
+    template<typename C, typename OR, typename IR>
+    inline std::size_t encode(
+        [[maybe_unused]] OR &sink, [[maybe_unused]] IR &r
+    ) {
+        static_assert(
+            std::is_same_v<C, char32_t> ||
+            std::is_same_v<C, char16_t> ||
+            std::is_same_v<C, char> ||
+            std::is_same_v<C, wchar_t>, "Invalid input type"
+        );
+        if constexpr(std::is_same_v<C, char32_t>) {
+            return encode_u32(sink, r);
+        } else if constexpr(std::is_same_v<C, char16_t>) {
+            return encode_u16(sink, r);
+        } else if constexpr(std::is_same_v<C, char>) {
+            return encode_u8(sink, r);
+        } else if constexpr(std::is_same_v<C, wchar_t>) {
+            return encode_uw(sink, r);
+        }
+        return 0;
+    }
+
     /* @brief Get the number of Unicode code points in a string.
      *
      * This function keeps reading Unicode code points while it can and
@@ -983,58 +1033,15 @@ namespace utf {
     std::size_t length(wstring_range r) noexcept;
 
     namespace detail {
-        template<typename C>
-        struct codepoint_range: input_range<codepoint_range<C>> {
+        template<typename IC, typename OC>
+        struct unicode_range: input_range<unicode_range<IC, OC>> {
             using range_category = forward_range_tag;
-            using value_type = char32_t;
-            using reference = char32_t;
+            using value_type = OC;
+            using reference = OC;
             using size_type = std::size_t;
 
-            codepoint_range() = delete;
-            codepoint_range(basic_char_range<C const> r): p_range(r) {
-                if (!r.empty()) {
-                    advance();
-                }
-            }
-
-            bool empty() const { return (p_current < 0); }
-
-            void pop_front() {
-                if (p_current > 0 && p_range.empty()) {
-                    p_current = -1;
-                    return;
-                }
-                advance();
-            }
-
-            char32_t front() const {
-                return p_current;
-            }
-
-        private:
-            void advance() {
-                if (char32_t ret; !decode(p_range, ret)) {
-                    /* range is unchanged */
-                    p_current = -1;
-                    throw utf_error{"UTF-8 decoding failed"};
-                } else {
-                    p_current = std::int32_t(ret);
-                }
-            }
-
-            basic_char_range<C const> p_range;
-            std::int32_t p_current = -1;
-        };
-
-        template<typename C>
-        struct codeunit_range: input_range<codeunit_range<C>> {
-            using range_category = forward_range_tag;
-            using value_type = char;
-            using reference = char;
-            using size_type = std::size_t;
-
-            codeunit_range() = delete;
-            codeunit_range(basic_char_range<C const> r): p_range(r) {
+            unicode_range() = delete;
+            unicode_range(basic_char_range<IC const> r): p_range(r) {
                 if (!r.empty()) {
                     advance();
                 }
@@ -1049,33 +1056,65 @@ namespace utf {
                     return;
                 }
                 if ((n == 1) && p_range.empty()) {
-                    p_left = char_range{};
+                    p_left = basic_char_range<OC>{};
                     return;
                 }
                 advance();
             }
 
-            char front() const {
+            OC front() const {
                 return p_left.front();
             }
 
         private:
             void advance() {
-                auto r = ostd::char_range(p_buf, p_buf + sizeof(p_buf));
-                if (std::size_t n; !(n = encode_u8(r, p_range))) {
+                auto r = basic_char_range<OC>(p_buf, p_buf + sizeof(p_buf));
+                if (std::size_t n; !(n = utf::encode<OC>(r, p_range))) {
                     /* range is unchanged */
-                    p_left = char_range{};
-                    throw utf_error{"UTF-8 encoding failed"};
+                    p_left = basic_char_range<OC>{};
+                    throw utf_error{"Unicode encoding failed"};
                 } else {
-                    p_left = ostd::char_range{p_buf, p_buf + n};
+                    p_left = basic_char_range<OC>{p_buf, p_buf + n};
                 }
             }
 
-            basic_char_range<C const> p_range;
-            char_range p_left = char_range{};
-            char p_buf[4];
+            basic_char_range<IC const> p_range;
+            basic_char_range<OC> p_left{};
+            OC p_buf[4];
         };
     } /* namespace detail */
+
+    inline auto iter_u8(string_range r) {
+        return detail::unicode_range<char, char>(r);
+    }
+
+    inline auto iter_u8(u16string_range r) {
+        return detail::unicode_range<char16_t, char>(r);
+    }
+
+    inline auto iter_u8(u32string_range r) {
+        return detail::unicode_range<char32_t, char>(r);
+    }
+
+    inline auto iter_u8(wstring_range r) {
+        return detail::unicode_range<wchar_t, char>(r);
+    }
+
+    inline auto iter_u16(string_range r) {
+        return detail::unicode_range<char, char16_t>(r);
+    }
+
+    inline auto iter_u16(u16string_range r) {
+        return detail::unicode_range<char16_t, char16_t>(r);
+    }
+
+    inline auto iter_u16(u32string_range r) {
+        return detail::unicode_range<char32_t, char16_t>(r);
+    }
+
+    inline auto iter_u16(wstring_range r) {
+        return detail::unicode_range<wchar_t, char16_t>(r);
+    }
 
     /** @brief Iterate over the code points of a UTF-8 string.
      *
@@ -1085,7 +1124,7 @@ namespace utf {
      * an ostd::utf_error is raised.
      */
     inline auto iter_u32(string_range r) {
-        return detail::codepoint_range<char>{r};
+        return detail::unicode_range<char, char32_t>{r};
     }
 
     /** @brief Iterate over the code points of a UTF-16 string.
@@ -1096,7 +1135,7 @@ namespace utf {
      * an ostd::utf_error is raised.
      */
     inline auto iter_u32(u16string_range r) noexcept {
-        return detail::codepoint_range<char16_t>{r};
+        return detail::unicode_range<char16_t, char32_t>{r};
     }
 
     /** @brief Iterate over the code points of a UTF-32 string.
@@ -1107,7 +1146,7 @@ namespace utf {
      * happens, an ostd::utf_error is raised.
      */
     inline auto iter_u32(u32string_range r) noexcept {
-        return detail::codepoint_range<char32_t>{r};
+        return detail::unicode_range<char32_t, char32_t>{r};
     }
 
     /** @brief Iterate over the code points of a wide Unicode string.
@@ -1118,23 +1157,43 @@ namespace utf {
      * an ostd::utf_error is raised.
      */
     inline auto iter_u32(wstring_range r) noexcept {
-        return detail::codepoint_range<wchar_t>{r};
+        return detail::unicode_range<wchar_t, char32_t>{r};
     }
 
-    inline auto iter_u8(string_range r) {
-        return detail::codeunit_range<char>(r);
+    inline auto iter_uw(string_range r) {
+        return detail::unicode_range<char, wchar_t>(r);
     }
 
-    inline auto iter_u8(u16string_range r) {
-        return detail::codeunit_range<char16_t>(r);
+    inline auto iter_uw(u16string_range r) {
+        return detail::unicode_range<char16_t, wchar_t>(r);
     }
 
-    inline auto iter_u8(u32string_range r) {
-        return detail::codeunit_range<char32_t>(r);
+    inline auto iter_uw(u32string_range r) {
+        return detail::unicode_range<char32_t, wchar_t>(r);
     }
 
-    inline auto iter_u8(wstring_range r) {
-        return detail::codeunit_range<wchar_t>(r);
+    inline auto iter_uw(wstring_range r) {
+        return detail::unicode_range<wchar_t, wchar_t>(r);
+    }
+
+    template<typename C>
+    inline auto iter_u(string_range r) {
+        return detail::unicode_range<char, C>(r);
+    }
+
+    template<typename C>
+    inline auto iter_u(u16string_range r) {
+        return detail::unicode_range<char16_t, C>(r);
+    }
+
+    template<typename C>
+    inline auto iter_u(u32string_range r) {
+        return detail::unicode_range<char32_t, C>(r);
+    }
+
+    template<typename C>
+    inline auto iter_u(wstring_range r) {
+        return detail::unicode_range<wchar_t, C>(r);
     }
 
     bool isalnum(char32_t c) noexcept;
@@ -1188,13 +1247,29 @@ inline std::size_t basic_char_range<T>::length(
 }
 
 template<typename T>
+inline auto basic_char_range<T>::iter_u8() const {
+    return utf::iter_u8(*this);
+}
+
+template<typename T>
+inline auto basic_char_range<T>::iter_u16() const {
+    return utf::iter_u16(*this);
+}
+
+template<typename T>
 inline auto basic_char_range<T>::iter_u32() const {
     return utf::iter_u32(*this);
 }
 
 template<typename T>
-inline auto basic_char_range<T>::iter_u8() const {
-    return utf::iter_u8(*this);
+inline auto basic_char_range<T>::iter_uw() const {
+    return utf::iter_uw(*this);
+}
+
+template<typename T>
+template<typename C>
+inline auto basic_char_range<T>::iter_u() const {
+    return utf::iter_u<C>(*this);
 }
 
 template<typename T>
