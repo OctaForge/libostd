@@ -778,55 +778,24 @@ namespace utf {
         return n;
     }
 
-    template<typename R>
-    inline std::size_t encode_u8(R &sink, u32string_range &r) {
-        /* just a wrapper; does the same thing but advances */
-        std::size_t n = 0;
-        if (!r.empty() && (n = utf::encode_u8(sink, r.front()))) {
-            r.pop_front();
-        }
-        return n;
-    }
-
-    template<typename R>
-    inline std::size_t encode_u8(R &sink, u16string_range &r) {
-        /* decodes to code point and encodes */
-        auto rr = r;
-        if (char32_t ch; utf::decode(rr, ch)) {
-            if (std::size_t ret; (ret = utf::encode_u8(sink, ch))) {
-                r = rr;
-                return ret;
+    template<typename R, typename C>
+    inline std::size_t encode_u8(R &sink, basic_char_range<C const> &r) {
+        if constexpr(max_units<C> == 1) {
+            std::size_t n = 0;
+            if (!r.empty() && (n = utf::encode_u8(sink, char32_t(r.front())))) {
+                r.pop_front();
             }
-        }
-        return 0;
-    }
-
-    template<typename R>
-    inline std::size_t encode_u8(R &sink, string_range &r) {
-        /* identity match, advances */
-        if (!r.empty()) {
-            sink.put(r.front());
-            r.pop_front();
-            return 1;
-        }
-        return 0;
-    }
-
-    template<typename R>
-    inline std::size_t encode_u8(R &sink, wstring_range &r) {
-        /* for utf-32, decode is just a swapper, for utf-16 it
-         * actually decodes; in both cases it encodes to utf-8,
-         * for utf-8 the whole thing is just an advancing wrapper
-         */
-        if constexpr(is_wchar_u32 || is_wchar_u16) {
+            return n;
+        } else if constexpr(max_units<C> == 2) {
             auto rr = r;
             if (char32_t ch; utf::decode(rr, ch)) {
-                if (std::size_t ret; (ret = utf::encode_u8(sink, ch))) {
+                if (std::size_t n; (n = utf::encode_u8(sink, ch))) {
                     r = rr;
-                    return ret;
+                    return n;
                 }
             }
         } else {
+            /* FIXME: advance by a whole character */
             if (!r.empty()) {
                 sink.put(char(r.front()));
                 r.pop_front();
@@ -858,46 +827,16 @@ namespace utf {
         return n;
     }
 
-    template<typename R>
-    inline std::size_t encode_u16(R &sink, u32string_range &r) {
-        /* just a wrapper; does the same thing but advances */
-        std::size_t n = 0;
-        if (!r.empty() && (n = utf::encode_u16(sink, r.front()))) {
-            r.pop_front();
-        }
-        return n;
-    }
-
-    template<typename R>
-    inline std::size_t encode_u16(R &sink, u16string_range &r) {
-        /* identity match, advances */
-        if (!r.empty()) {
-            sink.put(r.front());
-            r.pop_front();
-            return 1;
-        }
-        return 0;
-    }
-
-    template<typename R>
-    inline std::size_t encode_u16(R &sink, string_range &r) {
-        /* has to decode and encode */
-        auto rr = r;
-        if (char32_t ch; utf::decode(rr, ch)) {
-            if (std::size_t ret; (ret = utf::encode_u16(sink, ch))) {
-                r = rr;
-                return ret;
+    template<typename R, typename C>
+    inline std::size_t encode_u16(R &sink, basic_char_range<C const> &r) {
+        if constexpr(max_units<C> == 1) {
+            std::size_t n = 0;
+            if (!r.empty() && (n = utf::encode_u16(sink, char32_t(r.front())))) {
+                r.pop_front();
             }
-        }
-        return 0;
-    }
-
-    template<typename R>
-    inline std::size_t encode_u16(R &sink, wstring_range &r) {
-        /* when wchar_t is guaranteed utf-16, we have an identity
-         * match so we just advance; otherwise decode and encode
-         */
-        if constexpr(is_wchar_u16) {
+            return n;
+        } else if constexpr(max_units<C> == 2) {
+            /* FIXME: advance by a whole character */
             if (!r.empty()) {
                 sink.put(char16_t(r.front()));
                 r.pop_front();
@@ -906,17 +845,23 @@ namespace utf {
         } else {
             auto rr = r;
             if (char32_t ch; utf::decode(rr, ch)) {
-                if (std::size_t ret; (ret = utf::encode_u16(sink, ch))) {
+                if (std::size_t n; (n = utf::encode_u16(sink, ch))) {
                     r = rr;
-                    return ret;
+                    return n;
                 }
             }
         }
         return 0;
     }
 
-    template<typename OR, typename IR>
-    inline std::size_t encode_u32(OR &sink, IR &r) {
+    template<typename R>
+    inline std::size_t encode_u32(R &sink, char32_t ch) {
+        sink.put(ch);
+        return 1;
+    }
+
+    template<typename R, typename C>
+    inline std::size_t encode_u32(R &sink, basic_char_range<C const> &r) {
         if (char32_t ret; decode(r, ret)) {
             sink.put(ret);
             return 1;
@@ -966,23 +911,16 @@ namespace utf {
         return n;
     }
 
-    template<typename R>
-    inline std::size_t encode_uw(R &sink, u32string_range &r) {
-        /* just a wrapper; does the same thing but advances */
-        std::size_t n = 0;
-        if (!r.empty() && (n = utf::encode_uw(sink, r.front()))) {
-            r.pop_front();
-        }
-        return n;
-    }
-
-    template<typename R>
-    inline std::size_t encode_uw(R &sink, u16string_range &r) {
-        /* when wchar_t is guaranteed utf-16, we have an identity
-         * match much like encode_u16 with wstring, otherwise
-         * decode and encode
-         */
-        if constexpr(is_wchar_u16) {
+    template<typename R, typename C>
+    inline std::size_t encode_uw(R &sink, basic_char_range<C const> &r) {
+        if constexpr(max_units<C> == 1) {
+            std::size_t n = 0;
+            if (!r.empty() && (n = utf::encode_uw(sink, char32_t(r.front())))) {
+                r.pop_front();
+            }
+            return n;
+        } else if constexpr(max_units<C> == max_units<wchar_t>) {
+            /* FIXME: advance by a whole character */
             if (!r.empty()) {
                 sink.put(wchar_t(r.front()));
                 r.pop_front();
@@ -991,46 +929,11 @@ namespace utf {
         } else {
             auto rr = r;
             if (char32_t ch; utf::decode(rr, ch)) {
-                if (std::size_t ret; (ret = utf::encode_uw(sink, ch))) {
+                if (std::size_t n; (n = utf::encode_uw(sink, ch))) {
                     r = rr;
-                    return ret;
+                    return n;
                 }
             }
-        }
-        return 0;
-    }
-
-    template<typename R>
-    inline std::size_t encode_uw(R &sink, string_range &r) {
-        /* when wchar_t is guaranteed utf-8, we have an identity
-         * match so there is no reencoding, otherwise decode and
-         * encode...
-         */
-        if constexpr(is_wchar_u8) {
-            if (!r.empty()) {
-                sink.put(wchar_t(r.front()));
-                r.pop_front();
-                return 1;
-            }
-        } else {
-            auto rr = r;
-            if (char32_t ch; utf::decode(rr, ch)) {
-                if (std::size_t ret; (ret = utf::encode_uw(sink, ch))) {
-                    r = rr;
-                    return ret;
-                }
-            }
-        }
-        return 0;
-    }
-
-    template<typename R>
-    inline std::size_t encode_uw(R &sink, wstring_range &r) {
-        /* identity match, advances */
-        if (!r.empty()) {
-            sink.put(wchar_t(r.front()));
-            r.pop_front();
-            return 1;
         }
         return 0;
     }
