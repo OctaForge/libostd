@@ -615,6 +615,19 @@ namespace utf {
  * @{
  */
 
+    /** @brief A Unicode type of the same size as `wchar_t`.
+     *
+     * This can be an alias to either `char32_t`, `char16_t` or `char`
+     * representing UTF-32, UTF-16 or UTF-8 respectively. It represents
+     * a Unicode character type that in a platform specific way represents
+     * one of the 3 encodings. It follows the same order so if `wchar_t`
+     * can fit UTF-32, it's UTF-32, otherwise it tries UTF-16 and UTF-8
+     * as the next best thing.
+     *
+     * On most platforms and all platforms that we care about, this does
+     * the right thing; UTF-32 on most Unix-like systems (with 32-bit
+     * `wchar_t`), UTF-16 on Windows (with 16-bit `wchar_t`).
+     */
     using wchar_fixed_t = std::conditional_t<
         sizeof(wchar_t) == sizeof(char32_t),
         char32_t,
@@ -651,10 +664,24 @@ namespace utf {
         struct max_units_base<wchar_t>: max_units_base<wchar_fixed_t> {};
     } /* namespace detail */
 
+    /** @brief The maximum number of code units to represent a code point.
+     *
+     * The allowed input types are `char`, `char16_t`, `char32_t`, `wchar_t`.
+     * The result is 4, 2, 1 and platform-dependent (usually 1 or 2). It
+     * makes use of utf::wchar_fixed_t for `wchar_t`.
+     */
     template<typename C>
     static inline constexpr std::size_t const max_units =
         detail::max_units_base<C>::value;
 
+    /** @brief The number of bits for a code unit type.
+     *
+     * Keep in mind that this does not represent the *actual* number of bits
+     * in the type, just the smallest number of bits for an integer type that
+     * can hold all code units of the encoding. So for `char` it's 8, for
+     * `char16_t` it's 16, for `char32_t` it's 32, for `wchar_t` it's
+     * platform defined.
+     */
     template<typename C>
     static inline constexpr std::size_t const unit_bits =
         detail::max_units_base<C>::bits;
@@ -679,18 +706,39 @@ namespace utf {
         };
     }
 
+    /** @brief The UTF unit type according to utf::unit_bits.
+     *
+     * For 8 this will be `char`, for 16 `char16_t`, for 32 `char32_t`.
+     */
     template<std::size_t N>
     using unicode_t = typename detail::unicode_t_base<N>::type;
 
+    /** @brief A normalized Unicode type for the given character type.
+     *
+     * This will map to itself for all character types but `wchar_t`,
+     * which maps to utf::wchar_fixed_t.
+     */
     template<typename T>
     using unicode_base_t = unicode_t<unit_bits<T>>;
 
+    /** @brief A constant to tell if `wchar_t` is UTF-32.
+     *
+     * No actual checks are performed, utf::wchar_fixed_t is used to tell.
+     */
     static inline constexpr bool const is_wchar_u32 =
         std::is_same_v<wchar_fixed_t, char32_t>;
 
+    /** @brief A constant to tell if `wchar_t` is UTF-16.
+     *
+     * No actual checks are performed, utf::wchar_fixed_t is used to tell.
+     */
     static inline constexpr bool const is_wchar_u16 =
         std::is_same_v<wchar_fixed_t, char16_t>;
 
+    /** @brief A constant to tell if `wchar_t` is UTF-8.
+     *
+     * No actual checks are performed, utf::wchar_fixed_t is used to tell.
+     */
     static inline constexpr bool const is_wchar_u8 =
         std::is_same_v<wchar_fixed_t, char>;
 
@@ -721,10 +769,16 @@ namespace utf {
         };
     }
 
+    /** @brief Check whether the input type is a character type.
+     *
+     * For `char`, `char16_t`, `char32_t` and `wchar_t` this is true,
+     * otherwise it's false.
+     */
     template<typename C>
     static inline constexpr bool const is_character =
         detail::is_character_base<C>::value;
 
+    /** @brief The maximum value a Unicode code point can have. */
     static inline constexpr char32_t const max_unicode = 0x10FFFF;
 
     /** @brief Thrown on UTF-8 decoding failure. */
@@ -846,11 +900,23 @@ namespace utf {
         return 0;
     }
 
+    /** @brief Encode a Unicode code point from a string in the given encoding.
+     *
+     * This is the same as utf::encode() but takes the number of bits as in
+     * utf::unit_bits as an input instead of a type, mapping 8 to `char`,
+     * 16 to `char16_t` and 32 to `char32_t`.
+     */
     template<std::size_t N, typename OR, typename IR>
     inline std::size_t encode(OR &sink, IR &r) {
         return encode<unicode_t<N>>(sink, r);
     }
 
+    /** @brief Write a Unicode replacement character into the sink.
+     *
+     * Depending on the type input, this encodes the replacement character
+     * into the sink as either UTF-8, UTF-16 or UTF-32. ALl 4 character types
+     * are allowed.
+     */
     template<typename C, typename R>
     inline std::size_t replace(R &sink) {
         if constexpr(max_units<C> > 2) {
@@ -864,29 +930,73 @@ namespace utf {
         return 1;
     }
 
+    /** @brief Write a Unicode replacement character into the sink.
+     *
+     * This is the same as utf::replace() but takes the number of bits as in
+     * utf::unit_bits as an input instead of a type, mapping 8 to `char`,
+     * 16 to `char16_t` and 32 to `char32_t`.
+     */
     template<std::size_t N, typename R>
     inline std::size_t replace(R &sink) {
         return replace<unicode_t<N>>(sink);
     }
 
-    /* @brief Get the number of Unicode code points in a string.
+    /** @brief Get the number of Unicode code points in a string.
      *
      * This function keeps reading Unicode code points while it can and
      * once it can't it returns the number of valid ones with the rest
      * of the input string range being in `cont`. That means if the entire
      * string is a valid UTF-8 string, `cont` will be empty, otherwise it
-     * will begin at the first invalid UTF-8 code point.
+     * will begin at the first invalid UTF-8 code unit.
      *
      * If you're sure the string is valid or you don't need to handle the
      * error, you can use the more convenient overload below.
      */
     std::size_t length(string_range r, string_range &cont) noexcept;
 
+    /** @brief Get the number of Unicode code points in a string.
+     *
+     * This function keeps reading Unicode code points while it can and
+     * once it can't it returns the number of valid ones with the rest
+     * of the input string range being in `cont`. That means if the entire
+     * string is a valid UTF-16 string, `cont` will be empty, otherwise it
+     * will begin at the first invalid UTF-16 code unit.
+     *
+     * If you're sure the string is valid or you don't need to handle the
+     * error, you can use the more convenient overload below.
+     */
     std::size_t length(u16string_range r, u16string_range &cont) noexcept;
+
+    /** @brief Get the number of Unicode code points in a string.
+     *
+     * This function keeps reading Unicode code points while it can and
+     * once it can't it returns the number of valid ones with the rest
+     * of the input string range being in `cont`. That means if the entire
+     * string is a valid UTF-32 string, `cont` will be empty, otherwise it
+     * will begin at the first invalid code point.
+     *
+     * If you're sure the string is valid or you don't need to handle the
+     * error, you can use the more convenient overload below.
+     */
     std::size_t length(u32string_range r, u32string_range &cont) noexcept;
+
+    /** @brief Get the number of Unicode code points in a string.
+     *
+     * This function keeps reading Unicode code points while it can and
+     * once it can't it returns the number of valid ones with the rest
+     * of the input string range being in `cont`. That means if the entire
+     * string is a valid Unicode wide string, `cont` will be empty,
+     * otherwise it will begin at the first invalid code unit.
+     *
+     * If you're sure the string is valid or you don't need to handle the
+     * error, you can use the more convenient overload below.
+     *
+     * The behavior of this function is platform dependent as wide
+     * characters represent different things on different systems.
+     */
     std::size_t length(wstring_range r, wstring_range &cont) noexcept;
 
-    /* @brief Get the number of Unicode code points in a valid UTF-8 string.
+    /** @brief Get the number of Unicode code points in a UTF-8 string.
      *
      * If an invalid UTF-8 sequence is encountered, it's considered
      * 1 character and therefore the resulting length will be the
@@ -898,8 +1008,39 @@ namespace utf {
      */
     std::size_t length(string_range r) noexcept;
 
+    /** @brief Get the number of Unicode code points in a UTF-16 string.
+     *
+     * If an invalid UTF-16 sequence is encountered, it's considered
+     * 1 character and therefore the resulting length will be the
+     * number of valid code points plus the number of invalid
+     * code units as if they were replaced with valid code points.
+     *
+     * If you need to stop at an invalid code unit and get the
+     * continuation string, use the overload above.
+     */
     std::size_t length(u16string_range r) noexcept;
+
+    /** @brief Get the number of Unicode code points in a UTF-32 string.
+     *
+     * This, like the above overloads for multibyte encodings, treats
+     * invalid values as code points, so this function effectively just
+     * returns the size of the given range.
+     */
     std::size_t length(u32string_range r) noexcept;
+
+    /** @brief Get the number of Unicode code points in a wide string.
+     *
+     * If an invalid sequence is encountered, it's considered
+     * 1 character and therefore the resulting length will be the
+     * number of valid code points plus the number of invalid
+     * code units as if they were replaced with valid code points.
+     *
+     * If you need to stop at an invalid code unit and get the
+     * continuation string, use the overload above.
+     *
+     * The behavior of this function is platform dependent as wide
+     * characters represent different things on different systems.
+     */
     std::size_t length(wstring_range r) noexcept;
 
     namespace detail {
@@ -956,6 +1097,14 @@ namespace utf {
         };
     } /* namespace detail */
 
+    /** @brief Iterate a Unicode string as a different encoding.
+     *
+     * This returns an ostd::forward_range_tag that will iterate over
+     * the given Unicode character range as a different UTF encoding.
+     * The UTF encoding is specified using the given type `C`, being
+     * UTF-9 for `char`, UTF-16 for `char16_t`, UTF-32 for `char32_t`
+     * and platform specific for `wchar_t`.
+     */
     template<typename C, typename R>
     inline auto iter_u(R &&str) {
         return detail::unicode_range<
@@ -965,44 +1114,245 @@ namespace utf {
         >(std::forward<R>(str));
     }
 
+    /** @brief Like ostd::iter_u but taking bits to specify the encoding.
+     *
+     * This uses utf::unicode_t with `N` to call utf::iter_u().
+     */
     template<std::size_t N, typename R>
     inline auto iter_u(R &&str) {
         return iter_u<unicode_t<N>>(std::forward<R>(str));
     }
 
+    /** @brief Check whether a code point is alphanumeric.
+     *
+     * This is true for either utf::isalpha() or utf::isdigit(). Also
+     * equivalent to std::isalnum().
+     */
     bool isalnum(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is alphabetic.
+     *
+     * This is like std::isalpha() but strictly Unicode and works on the
+     * entire code point range. Returns true for alphabetic characters,
+     * false for others.
+     *
+     * The categories considered alphabetic are `L*`.
+     */
     bool isalpha(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is a blank.
+     *
+     * This is like std::isblank() but strictly Unicode and works on the
+     * entire code point range. Returns true for blanks, false for others.
+     *
+     * The blank characters are only space (U+20) and tab (`U+9`).
+     */
     bool isblank(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is a control character.
+     *
+     * This is like std::iscntrl() but strictly Unicode and works on the
+     * entire code point range. Returns true for blanks, false for others.
+     *
+     * The category considered control characters is `Cc`.
+     */
     bool iscntrl(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is a digit.
+     *
+     * This is like std::isdigit() but strictly Unicode and works on the
+     * entire code point range. Returns true for digit characters,
+     * false for others.
+     *
+     * The category considered a digit is `Nd`.
+     */
     bool isdigit(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is graphic.
+     *
+     * This is true when the input is not utf::isspace() and is
+     * utf::isprint(). Also equivalent to std::isgraph().
+     */
     bool isgraph(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is lowercase.
+     *
+     * This is like std::islower() but strictly Unicode and works on the
+     * entire code point range. Returns true for lowercase characters,
+     * false for others.
+     *
+     * The category considered a lowercase is `Ll`.
+     */
     bool islower(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is printable.
+     *
+     * Equivalent to std::isprint() but for Unicode. This is true for
+     * all characters that are not utf::iscntrl() and that are not
+     * U+2028, U+2029, U+FFF9, U+FFFA, U+FFFB.
+     */
     bool isprint(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is punctuation.
+     *
+     * This is like std::ispunct() but strictly Unicode and works on the
+     * entire code point range. Returns true for punctuation characters,
+     * false for others. Punctuation characters are those that satisfy
+     * utf::isgraph() but are not utf::isalnum().
+     */
     bool ispunct(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is a whitespace.
+     *
+     * This is like std::isspace() but strictly Unicode and works on the
+     * entire code point range. Returns true for whitespace, false for others.
+     *
+     * The categories considered blanks are `Z*` with the `B`, `S` and `WS`
+     * bidirectional categories.
+     */
     bool isspace(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is titlecase.
+     *
+     * This has no standard ctype equivalent. Returns true for
+     * titlecase characters, false for others.
+     *
+     * The category considered a uppercase is `Lt`.
+     */
     bool istitle(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is uppercase.
+     *
+     * This is like std::isipper but strictly Unicode and works on the
+     * entire code point range. Returns true for ippercase characters,
+     * false for others.
+     *
+     * The category considered a uppercase is `Lu`.
+     */
     bool isupper(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is a valid character.
+     *
+     * This is all code points within the range (utf::max_unicode)
+     * that are not surrogate code points (U+D800 to U+DFFF),
+     * non-characters (U+FDD0 to U+FDEF) and end-of-plane
+     * characters (U+FFFE and U+FFFF).
+     *
+     * This is Unicode specific and has no standard ctype equivalent.
+     */
     bool isvalid(char32_t c) noexcept;
+
+    /** @brief Check whether a code point is a hexadecimal digit.
+     *
+     * This only considers the ASCII character range, returning
+     * true for digits (U+30 to U+39) as well as letters A to F
+     * in lowercase and uppercase (U+41 to U+46, U+61 to U+66).
+     *
+     * Behaves exactly the same as std::isxdigit() in the C locale,
+     * but unlike the former it never changes behavior, i.e. it cannot
+     * support codepage extensions, being Unicode only.
+     */
     bool isxdigit(char32_t c) noexcept;
+
+    /** @brief Convert a Unicode code point to lowercase.
+     *
+     * Like std::tolower() but works with Unicode code points. If the
+     * code point is already lowercase or has no lowercase equivalent,
+     * this just returns the input unchanged, otherwise it returns the
+     * matching lowercase variant.
+     */
     char32_t tolower(char32_t c) noexcept;
+
+    /** @brief Convert a Unicode code point to uppercase.
+     *
+     * Like std::toupper() but works with Unicode code points. If the
+     * code point is already uppercase or has no uppercase equivalent,
+     * this just returns the input unchanged, otherwise it returns the
+     * matching uppercase variant.
+     */
     char32_t toupper(char32_t c) noexcept;
 
+    /** @brief Compare two UTF-8 strings.
+     *
+     * Basically returns `s1.compare(s2)`, so for detailed documentation
+     * please refer to basic_char_range::compare().
+     */
     inline int compare(string_range s1, string_range s2) noexcept {
         return s1.compare(s2);
     }
+
+    /** @brief Compare two UTF-16 strings.
+     *
+     * Basically returns `s1.compare(s2)`, so for detailed documentation
+     * please refer to basic_char_range::compare().
+     */
     inline int compare(u16string_range s1, u16string_range s2) noexcept {
         return s1.compare(s2);
     }
+
+    /** @brief Compare two UTF-32 strings.
+     *
+     * Basically returns `s1.compare(s2)`, so for detailed documentation
+     * please refer to basic_char_range::compare().
+     */
     inline int compare(u32string_range s1, u32string_range s2) noexcept {
         return s1.compare(s2);
     }
+
+    /** @brief Compare two wide strings.
+     *
+     * Basically returns `s1.compare(s2)`, so for detailed documentation
+     * please refer to basic_char_range::compare().
+     */
     inline int compare(wstring_range s1, wstring_range s2) noexcept {
         return s1.compare(s2);
     }
 
+    /** @brief Compare two UTF-8 strings as case insensitive.
+     *
+     * The case insensitive comparison is done by advancing by code points
+     * and converting each code point to lowercase using utf::tolower()
+     * before doing the comparison, with invalid code units being
+     * compared as they are (so this function never fails).
+     *
+     * @see basic_char_range::case_compare()
+     */
     int case_compare(string_range s1, string_range s2) noexcept;
+
+    /** @brief Compare two UTF-16 strings as case insensitive.
+     *
+     * The case insensitive comparison is done by advancing by code points
+     * and converting each code point to lowercase using utf::tolower()
+     * before doing the comparison, with invalid code units being
+     * compared as they are (so this function never fails).
+     *
+     * @see basic_char_range::case_compare()
+     */
     int case_compare(u16string_range s1, u16string_range s2) noexcept;
+
+    /** @brief Compare two UTF-32 strings as case insensitive.
+     *
+     * The case insensitive comparison is done by converting each code
+     * point to lowercase using utf::tolower() before doing the comparison,
+     * with invalid code points being compared as they are (so this function
+     * never fails).
+     *
+     * @see basic_char_range::case_compare()
+     */
     int case_compare(u32string_range s1, u32string_range s2) noexcept;
+
+    /** @brief Compare two wide strings as case insensitive.
+     *
+     * The case insensitive comparison is done by advancing by code points
+     * and converting each code point to lowercase using utf::tolower()
+     * before doing the comparison, with invalid code units being
+     * compared as they are (so this function never fails).
+     *
+     * The internal behavior of this function is platform specific
+     * depending on the size of `wchar_t`.
+     *
+     * @see basic_char_range::case_compare()
+     */
     int case_compare(wstring_range s1, wstring_range s2) noexcept;
 /** @} */
 
