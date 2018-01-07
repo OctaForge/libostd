@@ -1039,11 +1039,14 @@ private:
             }
             writer.put('"');
         } else {
-            if constexpr(sizeof(C) == sizeof(std::uint8_t)) {
+            if constexpr(std::is_same_v<utf::unicode_base_t<C>, char>) {
                 range_put_all(writer, val.slice(0, n));
             } else {
-                for (std::size_t i = 0; i < n; ++i) {
-                    write_char_raw(writer, val[i]);
+                while (!val.empty()) {
+                    if (!utf::encode<char>(writer, val)) {
+                        utf::replace<char>(writer);
+                        val.pop_front();
+                    }
                 }
             }
         }
