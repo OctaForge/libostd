@@ -1008,7 +1008,7 @@ private:
 
     template<typename R>
     void write_char_raw(R &writer, char32_t val) const {
-        if (!utf::encode_u8(writer, val)) {
+        if (!utf::encode<char>(writer, val)) {
             write_replacement(writer);
         }
     }
@@ -1047,7 +1047,7 @@ private:
                         write_char_raw(writer, c);
                     }
                     val.pop_front();
-                } else if (!utf::encode_u8(writer, val)) {
+                } else if (!utf::encode<char>(writer, val)) {
                     write_replacement(writer);
                     val.pop_front();
                 }

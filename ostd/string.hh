@@ -782,6 +782,18 @@ namespace utf {
         ) noexcept;
     }
 
+    /* @brief Encode a Unicode code point in the given encoding.
+     *
+     * The encoding is specified by the template parameter `C` which
+     * can be one of the character types (utf::is_character), the
+     * encoding used is picked based on utf::max_units.
+     *
+     * The return value is the number of values written into `sink`.
+     * If none were written, the encoding failed.
+     *
+     * If your input is a string and you want to advance it, use the
+     * utf::encode(R, basic_char_range) variant.
+     */
     template<typename C, typename R>
     inline std::size_t encode(R &sink, char32_t ch) {
         std::size_t ret;
@@ -798,6 +810,21 @@ namespace utf {
         return ret;
     }
 
+    /* @brief Encode a Unicode code point from a string in the given encoding.
+     *
+     * The encoding is specified by the template parameter `C` which
+     * can be one of the character types (utf::is_character), the
+     * encoding used is picked based on utf::max_units.
+     *
+     * Unlike utf::encode(R, char32_t), this takes a string as a second
+     * input and the string can be in any UTF encoding and use any of the
+     * available character types. The function advances the string by one
+     * code point, which may mean multiple values.
+     *
+     * The return value is the number of values written into `sink`.
+     * If none were written, the encoding failed and the string is not
+     * advanced.
+     */
     template<typename C, typename R, typename IC>
     inline std::size_t encode(R &sink, basic_char_range<IC const> &r) {
         if constexpr(max_units<IC> == 1) {
@@ -823,90 +850,6 @@ namespace utf {
             }
         }
         return 0;
-    }
-
-    /* @brief Encode a UTF-32 code point into UTF-8 code units.
-     *
-     * The units are written in `sink` which is an ostd::output_range_tag.
-     * The written values are of type `char` and up to 4 are written. The
-     * number of bytes written is returned from the function. In case of
-     * failure, `0` is returned.
-     *
-     * This function is allowed to fail only in two cases, when a surrogate
-     * code point is provided or when the code point is out of bounds as
-     * defined by Unicode (i.e. 0x10FFFF). It does not throw exceptions
-     * other than those thrown by `sink`.
-     */
-    template<typename R>
-    inline std::size_t encode_u8(R &sink, char32_t ch) {
-        return encode<char>(sink, ch);
-    }
-
-    template<typename R, typename C>
-    inline std::size_t encode_u8(R &sink, basic_char_range<C const> &r) {
-        return encode<char>(sink, r);
-    }
-
-    /* @brief Encode a UTF-32 code point into UTF-16.
-     *
-     * The values are written in `sink` which is an ostd::output_range_tag.
-     * The written values are of type `char16_t` and up to 2 are written.
-     * The number of values written is returned from the function. In case
-     * of failure, `0` is returned.
-     *
-     * This function is allowed to fail only in two cases, when a surrogate
-     * code point is provided or when the code point is out of bounds as
-     * defined by Unicode (i.e. 0x10FFFF). It does not throw exceptions
-     * other than those thrown by `sink`.
-     */
-    template<typename R>
-    inline std::size_t encode_u16(R &sink, char32_t ch) {
-        return encode<char16_t>(sink, ch);
-    }
-
-    template<typename R, typename C>
-    inline std::size_t encode_u16(R &sink, basic_char_range<C const> &r) {
-        return encode<char16_t>(sink, r);
-    }
-
-    template<typename R>
-    inline std::size_t encode_u32(R &sink, char32_t ch) {
-        return encode<char32_t>(sink, ch);
-    }
-
-    template<typename R, typename C>
-    inline std::size_t encode_u32(R &sink, basic_char_range<C const> &r) {
-        return encode<char32_t>(sink, r);
-    }
-
-    /* @brief Encode a UTF-32 code point into a wide Unicode char/sequence.
-     *
-     * The value(s) are written in `sink` which is an ostd::output_range_tag.
-     * The written values are of type `wchar_t` and the amount written depends
-     * on the size of `wchar_t`.
-     *
-     * If `wchar_t` has equal size to `char32_t`, the input is simply type
-     * cast and written into the sink, treating `wchar_t` as UTF-32. If it
-     * has equal size to `char16_t` instead, `wchar_t` is treated as UTF-16
-     * and the input code point is encoded into one or two UTF-16 values.
-     * If neither of these happens, `wchar_t` is treated the same as `char`
-     * and the encoding is UTF-8, writing up to 4 code units.
-     *
-     * This function does not throw exceptions other than those thrown by
-     * `sink`. As for errors, with UTF-32 `wchar_t` it isn't allowed to
-     * fail; with UTF-8 or UTF-16, the failure points are the usual ones
-     * (surrogate code point as input or input greater than 0x10FFFF).
-     *
-     * The return value is the number of values written into the sink.
-     */
-    template<typename R>
-    inline std::size_t encode_uw(R &sink, char32_t ch) {
-        return encode<wchar_t>(sink, ch);
-    }
-
-    template<typename R, typename C>
-    inline std::size_t encode_uw(R &sink, basic_char_range<C const> &r) {
-        return encode<wchar_t>(sink, r);
     }
 
     /* @brief Get the number of Unicode code points in a string.
