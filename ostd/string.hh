@@ -347,30 +347,6 @@ public:
      */
     inline int case_compare(basic_char_range<value_type const> s) const noexcept;
 
-    /** @brief Iterate over the UTF-8 code units of the string.
-     *
-     * Like utf::iter_u8().
-     */
-    inline auto iter_u8() const;
-
-    /** @brief Iterate over the UTF-16 units of the string.
-     *
-     * Like utf::iter_u16().
-     */
-    inline auto iter_u16() const;
-
-    /** @brief Iterate over the code points of the string.
-     *
-     * Like utf::iter_u32().
-     */
-    inline auto iter_u32() const;
-
-    /** @brief Iterate over the Unicode wide characters of the string.
-     *
-     * Like utf::iter_uw().
-     */
-    inline auto iter_uw() const;
-
     /** @brief Iterate over the Unicode units of the given type.
      *
      * Like utf::iter_u().
@@ -937,116 +913,13 @@ namespace utf {
         };
     } /* namespace detail */
 
-    inline auto iter_u8(string_range r) {
-        return detail::unicode_range<char, char>(r);
-    }
-
-    inline auto iter_u8(u16string_range r) {
-        return detail::unicode_range<char16_t, char>(r);
-    }
-
-    inline auto iter_u8(u32string_range r) {
-        return detail::unicode_range<char32_t, char>(r);
-    }
-
-    inline auto iter_u8(wstring_range r) {
-        return detail::unicode_range<wchar_t, char>(r);
-    }
-
-    inline auto iter_u16(string_range r) {
-        return detail::unicode_range<char, char16_t>(r);
-    }
-
-    inline auto iter_u16(u16string_range r) {
-        return detail::unicode_range<char16_t, char16_t>(r);
-    }
-
-    inline auto iter_u16(u32string_range r) {
-        return detail::unicode_range<char32_t, char16_t>(r);
-    }
-
-    inline auto iter_u16(wstring_range r) {
-        return detail::unicode_range<wchar_t, char16_t>(r);
-    }
-
-    /** @brief Iterate over the code points of a UTF-8 string.
-     *
-     * The resulting range is ostd::forward_range_tag. The range will
-     * contain the code points of the given string. On error, which may
-     * be during any string advancement (the constructor or `pop_front()`),
-     * an ostd::utf_error is raised.
-     */
-    inline auto iter_u32(string_range r) {
-        return detail::unicode_range<char, char32_t>{r};
-    }
-
-    /** @brief Iterate over the code points of a UTF-16 string.
-     *
-     * The resulting range is ostd::forward_range_tag. The range will
-     * contain the code points of the given string. On error, which may
-     * be during any string advancement (the constructor or `pop_front()`),
-     * an ostd::utf_error is raised.
-     */
-    inline auto iter_u32(u16string_range r) noexcept {
-        return detail::unicode_range<char16_t, char32_t>{r};
-    }
-
-    /** @brief Iterate over the code points of a UTF-32 string.
-     *
-     * The resulting range is ostd::forward_range_tag. This can actually
-     * fail just like the other ostd::iter_u32() variants if the string
-     * contains surrogates or code points that are out of bounds. If that
-     * happens, an ostd::utf_error is raised.
-     */
-    inline auto iter_u32(u32string_range r) noexcept {
-        return detail::unicode_range<char32_t, char32_t>{r};
-    }
-
-    /** @brief Iterate over the code points of a wide Unicode string.
-     *
-     * The resulting range is ostd::forward_range_tag. The range will
-     * contain the code points of the given string. On error, which may
-     * be during any string advancement (the constructor or `pop_front()`),
-     * an ostd::utf_error is raised.
-     */
-    inline auto iter_u32(wstring_range r) noexcept {
-        return detail::unicode_range<wchar_t, char32_t>{r};
-    }
-
-    inline auto iter_uw(string_range r) {
-        return detail::unicode_range<char, wchar_t>(r);
-    }
-
-    inline auto iter_uw(u16string_range r) {
-        return detail::unicode_range<char16_t, wchar_t>(r);
-    }
-
-    inline auto iter_uw(u32string_range r) {
-        return detail::unicode_range<char32_t, wchar_t>(r);
-    }
-
-    inline auto iter_uw(wstring_range r) {
-        return detail::unicode_range<wchar_t, wchar_t>(r);
-    }
-
-    template<typename C>
-    inline auto iter_u(string_range r) {
-        return detail::unicode_range<char, C>(r);
-    }
-
-    template<typename C>
-    inline auto iter_u(u16string_range r) {
-        return detail::unicode_range<char16_t, C>(r);
-    }
-
-    template<typename C>
-    inline auto iter_u(u32string_range r) {
-        return detail::unicode_range<char32_t, C>(r);
-    }
-
-    template<typename C>
-    inline auto iter_u(wstring_range r) {
-        return detail::unicode_range<wchar_t, C>(r);
+    template<typename C, typename R>
+    inline auto iter_u(R &&str) {
+        return detail::unicode_range<
+            std::remove_const_t<
+                range_value_t<std::remove_cv_t<std::remove_reference_t<R>>>
+            >, C
+        >(std::forward<R>(str));
     }
 
     bool isalnum(char32_t c) noexcept;
@@ -1097,26 +970,6 @@ inline std::size_t basic_char_range<T>::length(
     basic_char_range<T> &cont
 ) const noexcept {
     return utf::length(*this, cont);
-}
-
-template<typename T>
-inline auto basic_char_range<T>::iter_u8() const {
-    return utf::iter_u8(*this);
-}
-
-template<typename T>
-inline auto basic_char_range<T>::iter_u16() const {
-    return utf::iter_u16(*this);
-}
-
-template<typename T>
-inline auto basic_char_range<T>::iter_u32() const {
-    return utf::iter_u32(*this);
-}
-
-template<typename T>
-inline auto basic_char_range<T>::iter_uw() const {
-    return utf::iter_uw(*this);
 }
 
 template<typename T>
