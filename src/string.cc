@@ -14,11 +14,9 @@ namespace utf {
 /* place the vtable in here */
 utf_error::~utf_error() {}
 
-constexpr char32_t MaxCodepoint = 0x10FFFF;
-
 namespace detail {
     inline bool is_invalid_u32(char32_t c) {
-        return (((c >= 0xD800) && (c <= 0xDFFF)) || (c > MaxCodepoint));
+        return (((c >= 0xD800) && (c <= 0xDFFF)) || (c > utf::max_unicode));
     }
 
     static inline std::size_t u8_decode(
@@ -118,7 +116,7 @@ namespace detail {
             ret[2] = char(0x80 |  (ch       & 0x3F));
             return 3;
         }
-        if (ch <= MaxCodepoint) {
+        if (ch <= utf::max_unicode) {
             ret[0] = char(0xF0 |  (ch >> 18));
             ret[1] = char(0x80 | ((ch >> 12) | 0x3F));
             ret[2] = char(0x80 | ((ch >>  6) | 0x3F));
@@ -132,7 +130,7 @@ namespace detail {
         char16_t (&ret)[2], char32_t ch
     ) noexcept {
         /* surrogate code point or out of bounds */
-        if (((ch >= 0xD800) && (ch <= 0xDFFF)) || (ch > MaxCodepoint)) {
+        if (((ch >= 0xD800) && (ch <= 0xDFFF)) || (ch > utf::max_unicode)) {
             return 0;
         }
         if (ch <= 0xFFFF) {
@@ -161,10 +159,7 @@ namespace detail {
     template<typename C>
     inline std::size_t length(basic_char_range<C const> &r) noexcept {
         std::size_t ret = 0;
-        if constexpr(std::is_same_v<C, char32_t> || (
-            std::is_same_v<C, wchar_t> &&
-            (sizeof(wchar_t) == sizeof(char32_t))
-        )) {
+        if constexpr(utf::max_units<C> == 1) {
             ret = r.size();
         } else {
             for (;; ++ret) {
@@ -215,7 +210,7 @@ bool decode(u32string_range &r, char32_t &ret) noexcept {
 
 bool decode(wstring_range &r, char32_t &ret) noexcept {
     std::size_t n, tn = r.size();
-    if constexpr(sizeof(wchar_t) == sizeof(char32_t)) {
+    if constexpr(is_wchar_u32) {
         if (!tn) {
             return false;
         }
@@ -226,7 +221,7 @@ bool decode(wstring_range &r, char32_t &ret) noexcept {
         ret = c;
         r.pop_front();
         return true;
-    } else if constexpr(sizeof(wchar_t) == sizeof(char16_t)) {
+    } else if constexpr(is_wchar_u16) {
         auto *beg = reinterpret_cast<char16_t const *>(r.data());
         n = detail::u16_decode(beg, beg + tn, ret);
     } else {
@@ -319,7 +314,7 @@ bool isvalid(char32_t c) noexcept {
         return false;
     }
     /* must be within range */
-    return (c <= MaxCodepoint);
+    return (c <= utf::max_unicode);
 }
 
 bool isxdigit(char32_t c) noexcept {
@@ -567,15 +562,7 @@ int case_compare(u32string_range s1, u32string_range s2) noexcept {
 }
 
 int case_compare(wstring_range s1, wstring_range s2) noexcept {
-    using C = std::conditional_t<
-        sizeof(wchar_t) == sizeof(char32_t),
-        char32_t,
-        std::conditional_t<
-            sizeof(wchar_t) == sizeof(char16_t),
-            char16_t,
-            unsigned char
-        >
-    >;
+    using C = std::conditional_t<is_wchar_u8, unsigned char, wchar_fixed_t>;
     auto *beg1 = reinterpret_cast<C const *>(s1.data());
     auto *beg2 = reinterpret_cast<C const *>(s2.data());
     return detail::case_compare(beg1, beg1 + s1.size(), beg2, beg2 + s2.size());

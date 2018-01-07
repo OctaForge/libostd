@@ -629,6 +629,85 @@ namespace utf {
  * @{
  */
 
+    using wchar_fixed_t = std::conditional_t<
+        sizeof(wchar_t) == sizeof(char32_t),
+        char32_t,
+        std::conditional_t<
+            sizeof(wchar_t) == sizeof(char16_t),
+            char16_t,
+            char
+        >
+    >;
+
+    namespace detail {
+        template<typename C>
+        struct max_units_base;
+
+        template<>
+        struct max_units_base<char32_t> {
+            static constexpr std::size_t const value = 1;
+        };
+
+        template<>
+        struct max_units_base<char16_t> {
+            static constexpr std::size_t const value = 2;
+        };
+
+        template<>
+        struct max_units_base<char> {
+            static constexpr std::size_t const value = 4;
+        };
+
+        template<>
+        struct max_units_base<wchar_t>: max_units_base<wchar_fixed_t> {};
+    } /* namespace detail */
+
+    template<typename C>
+    static inline constexpr std::size_t const max_units =
+        detail::max_units_base<C>::value;
+
+    static inline constexpr bool const is_wchar_u32 =
+        std::is_same_v<wchar_fixed_t, char32_t>;
+
+    static inline constexpr bool const is_wchar_u16 =
+        std::is_same_v<wchar_fixed_t, char16_t>;
+
+    static inline constexpr bool const is_wchar_u8 =
+        std::is_same_v<wchar_fixed_t, char>;
+
+    namespace detail {
+        template<typename C>
+        struct is_character_base {
+            static constexpr bool const value = false;
+        };
+
+        template<>
+        struct is_character_base<char> {
+            static constexpr bool const value = true;
+        };
+
+        template<>
+        struct is_character_base<char16_t> {
+            static constexpr bool const value = true;
+        };
+
+        template<>
+        struct is_character_base<char32_t> {
+            static constexpr bool const value = true;
+        };
+
+        template<>
+        struct is_character_base<wchar_t> {
+            static constexpr bool const value = true;
+        };
+    }
+
+    template<typename C>
+    static inline constexpr bool const is_character =
+        detail::is_character_base<C>::value;
+
+    static inline constexpr char32_t const max_unicode = 0x10FFFF;
+
     /** @brief Thrown on UTF-8 decoding failure. */
     struct utf_error: std::runtime_error {
         using std::runtime_error::runtime_error;
@@ -739,10 +818,7 @@ namespace utf {
          * actually decodes; in both cases it encodes to utf-8,
          * for utf-8 the whole thing is just an advancing wrapper
          */
-        if constexpr(
-            (sizeof(wchar_t) == sizeof(char32_t)) ||
-            (sizeof(wchar_t) == sizeof(char16_t))
-        ) {
+        if constexpr(is_wchar_u32 || is_wchar_u16) {
             auto rr = r;
             if (char32_t ch; utf::decode(rr, ch)) {
                 if (std::size_t ret; (ret = utf::encode_u8(sink, ch))) {
@@ -821,10 +897,7 @@ namespace utf {
         /* when wchar_t is guaranteed utf-16, we have an identity
          * match so we just advance; otherwise decode and encode
          */
-        if constexpr(
-            (sizeof(wchar_t) != sizeof(char32_t)) &&
-            (sizeof(wchar_t) == sizeof(char16_t))
-        ) {
+        if constexpr(is_wchar_u16) {
             if (!r.empty()) {
                 sink.put(char16_t(r.front()));
                 r.pop_front();
@@ -874,10 +947,10 @@ namespace utf {
     template<typename R>
     inline std::size_t encode_uw(R &sink, char32_t ch) {
         std::size_t n;
-        if constexpr(sizeof(wchar_t) == sizeof(char32_t)) {
+        if constexpr(is_wchar_u32) {
             n = 1;
             sink.put(wchar_t(ch));
-        } else if constexpr(sizeof(wchar_t) == sizeof(char16_t)) {
+        } else if constexpr(is_wchar_u16) {
             char16_t buf[2];
             n = detail::u16_encode(buf, ch);
             for (std::size_t i = 0; i < n; ++i) {
@@ -909,10 +982,7 @@ namespace utf {
          * match much like encode_u16 with wstring, otherwise
          * decode and encode
          */
-        if constexpr(
-            (sizeof(wchar_t) != sizeof(char32_t)) &&
-            (sizeof(wchar_t) == sizeof(char16_t))
-        ) {
+        if constexpr(is_wchar_u16) {
             if (!r.empty()) {
                 sink.put(wchar_t(r.front()));
                 r.pop_front();
@@ -936,10 +1006,7 @@ namespace utf {
          * match so there is no reencoding, otherwise decode and
          * encode...
          */
-        if constexpr(
-            (sizeof(wchar_t) != sizeof(char32_t)) &&
-            (sizeof(wchar_t) != sizeof(char16_t))
-        ) {
+        if constexpr(is_wchar_u8) {
             if (!r.empty()) {
                 sink.put(wchar_t(r.front()));
                 r.pop_front();
@@ -972,12 +1039,7 @@ namespace utf {
     inline std::size_t encode(
         [[maybe_unused]] OR &sink, [[maybe_unused]] IR &r
     ) {
-        static_assert(
-            std::is_same_v<C, char32_t> ||
-            std::is_same_v<C, char16_t> ||
-            std::is_same_v<C, char> ||
-            std::is_same_v<C, wchar_t>, "Invalid input type"
-        );
+        static_assert(is_character<C>, "Invalid input type");
         if constexpr(std::is_same_v<C, char32_t>) {
             return encode_u32(sink, r);
         } else if constexpr(std::is_same_v<C, char16_t>) {
@@ -1059,7 +1121,7 @@ namespace utf {
 
         private:
             void advance() {
-                auto r = basic_char_range<OC>(p_buf, p_buf + sizeof(p_buf));
+                auto r = basic_char_range<OC>(p_buf, p_buf + max_units<OC>);
                 if (std::size_t n; !(n = utf::encode<OC>(r, p_range))) {
                     /* range is unchanged */
                     p_left = basic_char_range<OC>{};
@@ -1071,7 +1133,7 @@ namespace utf {
 
             basic_char_range<IC const> p_range;
             basic_char_range<OC> p_left{};
-            OC p_buf[4];
+            OC p_buf[max_units<OC>];
         };
     } /* namespace detail */
 
