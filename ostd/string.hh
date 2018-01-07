@@ -818,8 +818,9 @@ namespace utf {
      * If none were written, the encoding failed and the string is not
      * advanced.
      */
-    template<typename C, typename R, typename IC>
-    inline std::size_t encode(R &sink, basic_char_range<IC const> &r) {
+    template<typename C, typename OR, typename IR>
+    inline std::size_t encode(OR &sink, IR &r) {
+        using IC = std::remove_const_t<range_value_t<IR>>;
         if constexpr(max_units<IC> == 1) {
             std::size_t n = 0;
             if (!r.empty() && (n = utf::encode<C>(sink, char32_t(r.front())))) {
@@ -845,8 +846,8 @@ namespace utf {
         return 0;
     }
 
-    template<std::size_t N, typename R, typename IC>
-    inline std::size_t encode(R &sink, basic_char_range<IC const> &r) {
+    template<std::size_t N, typename OR, typename IR>
+    inline std::size_t encode(OR &sink, IR &r) {
         return encode<unicode_t<N>>(sink, r);
     }
 
