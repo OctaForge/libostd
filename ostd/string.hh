@@ -354,6 +354,16 @@ public:
     template<typename C>
     inline auto iter_u() const;
 
+    /** @brief Iterate over the Unicode units of the size in bits.
+     *
+     * The type maps to `char` for 8, `char16_t` for 16 and `char32_t`
+     * for 32, or UTF-8, UTF-16 and UTF-32.
+     *
+     * Like utf::iter_u().
+     */
+    template<std::size_t N>
+    inline auto iter_u() const;
+
     /** @brief Implicitly converts a string slice to std::basic_string_view.
      *
      * String views represent more or less the same thing but they're always
@@ -622,16 +632,19 @@ namespace utf {
         template<>
         struct max_units_base<char32_t> {
             static constexpr std::size_t const value = 1;
+            static constexpr std::size_t const bits  = 32;
         };
 
         template<>
         struct max_units_base<char16_t> {
             static constexpr std::size_t const value = 2;
+            static constexpr std::size_t const bits  = 16;
         };
 
         template<>
         struct max_units_base<char> {
             static constexpr std::size_t const value = 4;
+            static constexpr std::size_t const bits  = 8;
         };
 
         template<>
@@ -642,22 +655,26 @@ namespace utf {
     static inline constexpr std::size_t const max_units =
         detail::max_units_base<C>::value;
 
+    template<typename C>
+    static inline constexpr std::size_t const unit_bits =
+        detail::max_units_base<C>::bits;
+
     namespace detail {
         template<std::size_t N>
         struct unicode_t_base;
 
         template<>
-        struct unicode_t_base<1> {
+        struct unicode_t_base<32> {
             using type = char32_t;
         };
 
         template<>
-        struct unicode_t_base<2> {
+        struct unicode_t_base<16> {
             using type = char16_t;
         };
 
         template<>
-        struct unicode_t_base<4> {
+        struct unicode_t_base<8> {
             using type = char;
         };
     }
@@ -666,7 +683,7 @@ namespace utf {
     using unicode_t = typename detail::unicode_t_base<N>::type;
 
     template<typename T>
-    using unicode_base_t = unicode_t<max_units<T>>;
+    using unicode_base_t = unicode_t<unit_bits<T>>;
 
     static inline constexpr bool const is_wchar_u32 =
         std::is_same_v<wchar_fixed_t, char32_t>;
@@ -828,6 +845,11 @@ namespace utf {
         return 0;
     }
 
+    template<std::size_t N, typename R, typename IC>
+    inline std::size_t encode(R &sink, basic_char_range<IC const> &r) {
+        return encode<unicode_t<N>>(sink, r);
+    }
+
     /* @brief Get the number of Unicode code points in a string.
      *
      * This function keeps reading Unicode code points while it can and
@@ -922,6 +944,11 @@ namespace utf {
         >(std::forward<R>(str));
     }
 
+    template<std::size_t N, typename R>
+    inline auto iter_u(R &&str) {
+        return iter_u<unicode_t<N>>(std::forward<R>(str));
+    }
+
     bool isalnum(char32_t c) noexcept;
     bool isalpha(char32_t c) noexcept;
     bool isblank(char32_t c) noexcept;
@@ -976,6 +1003,12 @@ template<typename T>
 template<typename C>
 inline auto basic_char_range<T>::iter_u() const {
     return utf::iter_u<C>(*this);
+}
+
+template<typename T>
+template<std::size_t N>
+inline auto basic_char_range<T>::iter_u() const {
+    return utf::iter_u<N>(*this);
 }
 
 template<typename T>
