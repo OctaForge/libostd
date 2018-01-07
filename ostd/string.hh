@@ -668,15 +668,6 @@ namespace utf {
      */
     bool decode(wstring_range &r, char32_t &ret) noexcept;
 
-    template<typename R, typename C>
-    inline bool decode(R &sink, basic_char_range<C const> &r) {
-        if (char32_t ch; utf::decode(r, ch)) {
-            sink.put(ch);
-            return true;
-        }
-        return false;
-    }
-
     namespace detail {
         std::size_t u8_encode(
             char (&ret)[4], char32_t ch
