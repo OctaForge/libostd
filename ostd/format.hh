@@ -226,13 +226,6 @@ namespace detail {
     static inline constexpr bool is_tuple_like =
         decltype(tuple_like_test<T>(0))::value;
 
-    /* character type tests */
-    template<typename C>
-    static inline constexpr bool is_character = std::is_same_v<C, char> ||
-                                                std::is_same_v<C, wchar_t> ||
-                                                std::is_same_v<C, char16_t> ||
-                                                std::is_same_v<C, char32_t>;
-
     /* test if format traits are available for the type */
     template<typename T, typename R>
     inline std::true_type test_tofmt(decltype(format_traits<T>::to_format(
@@ -1355,7 +1348,7 @@ private:
             return;
         }
         /* character values */
-        if constexpr(detail::is_character<T>) {
+        if constexpr(utf::is_character<T>) {
             if (spec() == 's' || spec() == 'c') {
                 write_char(writer, escape, val);
                 return;
