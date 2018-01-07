@@ -118,9 +118,9 @@ namespace detail {
         }
         if (ch <= utf::max_unicode) {
             ret[0] = char(0xF0 |  (ch >> 18));
-            ret[1] = char(0x80 | ((ch >> 12) | 0x3F));
-            ret[2] = char(0x80 | ((ch >>  6) | 0x3F));
-            ret[3] = char(0x80 |  (ch        | 0x3F));
+            ret[1] = char(0x80 | ((ch >> 12) & 0x3F));
+            ret[2] = char(0x80 | ((ch >>  6) & 0x3F));
+            ret[3] = char(0x80 |  (ch        & 0x3F));
             return 4;
         }
         return 0;
