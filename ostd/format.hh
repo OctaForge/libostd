@@ -1087,6 +1087,7 @@ private:
 
     template<typename R, typename T>
     void write_int(R &writer, bool ptr, bool neg, T val) const {
+        using UT = std::make_unsigned_t<T>;
         /* binary representation is the longest */
         char buf[sizeof(T) * CHAR_BIT];
         std::size_t ndig = 0;
@@ -1102,13 +1103,25 @@ private:
         /* 32 for lowercase variants, 0 for uppercase */
         char cmask = char((isp >= 'a') << 5);
 
-        T base = T(detail::fmt_bases[specn]);
-        if (!val) {
+        UT base = UT(detail::fmt_bases[specn]);
+        bool zeroval = !val;
+        if (zeroval) {
             ndig = 1;
             buf[0] = '0';
         } else {
-            for (; val; val /= base) {
-                auto vb = char(val % base);
+            UT uval;
+            if (neg) {
+                if (base != 10) {
+                    uval = UT(val);
+                    neg = false;
+                } else {
+                    uval = UT(-val);
+                }
+            } else {
+                uval = UT(val);
+            }
+            for (; uval; uval /= base) {
+                auto vb = char(uval % base);
                 buf[ndig++] = (vb + "70"[vb < 10]) | cmask;
             }
         }
@@ -1118,7 +1131,7 @@ private:
             int prec = precision();
             if (std::size_t(prec) > tdig) {
                 tdig = std::size_t(prec);
-            } else if (!prec && !val) {
+            } else if (!prec && zeroval) {
                 tdig = 0;
             }
         }
@@ -1343,11 +1356,11 @@ private:
         }
         /* character values */
         if constexpr(detail::is_character<T>) {
-            if (spec() != 's' && spec() != 'c') {
-                throw format_error{"cannot format chars with the given spec"};
+            if (spec() == 's' || spec() == 'c') {
+                write_char(writer, escape, val);
+                return;
             }
-            write_char(writer, escape, val);
-            return;
+            /* characters are also integers so try that too */
         }
         /* pointers, write as pointer with %s and otherwise as unsigned...
          * char pointers are handled by the string case above
@@ -1360,11 +1373,7 @@ private:
         if constexpr(std::is_integral_v<T> && !std::is_same_v<T, bool>) {
             if constexpr(std::is_signed_v<T>) {
                 /* signed integers */
-                using UT = std::make_unsigned_t<T>;
-                write_int(
-                    writer, false, val < 0,
-                    (val < 0) ? static_cast<UT>(-val) : static_cast<UT>(val)
-                );
+                write_int(writer, false, val < 0, val);
             } else {
                 /* unsigned integers */
                 write_int(writer, false, false, val);
