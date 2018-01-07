@@ -666,6 +666,32 @@ namespace utf {
     static inline constexpr std::size_t const max_units =
         detail::max_units_base<C>::value;
 
+    namespace detail {
+        template<std::size_t N>
+        struct unicode_t_base;
+
+        template<>
+        struct unicode_t_base<1> {
+            using type = char32_t;
+        };
+
+        template<>
+        struct unicode_t_base<2> {
+            using type = char16_t;
+        };
+
+        template<>
+        struct unicode_t_base<4> {
+            using type = char;
+        };
+    }
+
+    template<std::size_t N>
+    using unicode_t = typename detail::unicode_t_base<N>::type;
+
+    template<typename T>
+    using unicode_base_t = unicode_t<max_units<T>>;
+
     static inline constexpr bool const is_wchar_u32 =
         std::is_same_v<wchar_fixed_t, char32_t>;
 
@@ -748,12 +774,55 @@ namespace utf {
     bool decode(wstring_range &r, char32_t &ret) noexcept;
 
     namespace detail {
-        std::size_t u8_encode(
+        std::size_t encode(
             char (&ret)[4], char32_t ch
         ) noexcept;
-        std::size_t u16_encode(
+        std::size_t encode(
             char16_t (&ret)[2], char32_t ch
         ) noexcept;
+    }
+
+    template<typename C, typename R>
+    inline std::size_t encode(R &sink, char32_t ch) {
+        std::size_t ret;
+        if constexpr(max_units<C> == 1) {
+            sink.put(C(ch));
+            ret = 1;
+        } else {
+            unicode_base_t<C> buf[max_units<C>];
+            ret = detail::encode(buf, ch);
+            for (std::size_t i = 0; i < ret; ++i) {
+                sink.put(C(buf[i]));
+            }
+        }
+        return ret;
+    }
+
+    template<typename C, typename R, typename IC>
+    inline std::size_t encode(R &sink, basic_char_range<IC const> &r) {
+        if constexpr(max_units<IC> == 1) {
+            std::size_t n = 0;
+            if (!r.empty() && (n = utf::encode<C>(sink, char32_t(r.front())))) {
+                r.pop_front();
+            }
+            return n;
+        } else if constexpr(max_units<IC> == max_units<C>) {
+            /* FIXME: advance by a whole character always */
+            if (!r.empty()) {
+                sink.put(C(r.front()));
+                r.pop_front();
+                return 1;
+            }
+        } else {
+            auto rr = r;
+            if (char32_t ch; utf::decode(rr, ch)) {
+                if (std::size_t n; (n = utf::encode<C>(sink, ch))) {
+                    r = rr;
+                    return n;
+                }
+            }
+        }
+        return 0;
     }
 
     /* @brief Encode a UTF-32 code point into UTF-8 code units.
@@ -770,39 +839,12 @@ namespace utf {
      */
     template<typename R>
     inline std::size_t encode_u8(R &sink, char32_t ch) {
-        char buf[4];
-        std::size_t n = detail::u8_encode(buf, ch);
-        for (std::size_t i = 0; i < n; ++i) {
-            sink.put(buf[i]);
-        }
-        return n;
+        return encode<char>(sink, ch);
     }
 
     template<typename R, typename C>
     inline std::size_t encode_u8(R &sink, basic_char_range<C const> &r) {
-        if constexpr(max_units<C> == 1) {
-            std::size_t n = 0;
-            if (!r.empty() && (n = utf::encode_u8(sink, char32_t(r.front())))) {
-                r.pop_front();
-            }
-            return n;
-        } else if constexpr(max_units<C> == 2) {
-            auto rr = r;
-            if (char32_t ch; utf::decode(rr, ch)) {
-                if (std::size_t n; (n = utf::encode_u8(sink, ch))) {
-                    r = rr;
-                    return n;
-                }
-            }
-        } else {
-            /* FIXME: advance by a whole character */
-            if (!r.empty()) {
-                sink.put(char(r.front()));
-                r.pop_front();
-                return 1;
-            }
-        }
-        return 0;
+        return encode<char>(sink, r);
     }
 
     /* @brief Encode a UTF-32 code point into UTF-16.
@@ -819,54 +861,22 @@ namespace utf {
      */
     template<typename R>
     inline std::size_t encode_u16(R &sink, char32_t ch) {
-        char16_t buf[2];
-        std::size_t n = detail::u16_encode(buf, ch);
-        for (std::size_t i = 0; i < n; ++i) {
-            sink.put(buf[i]);
-        }
-        return n;
+        return encode<char16_t>(sink, ch);
     }
 
     template<typename R, typename C>
     inline std::size_t encode_u16(R &sink, basic_char_range<C const> &r) {
-        if constexpr(max_units<C> == 1) {
-            std::size_t n = 0;
-            if (!r.empty() && (n = utf::encode_u16(sink, char32_t(r.front())))) {
-                r.pop_front();
-            }
-            return n;
-        } else if constexpr(max_units<C> == 2) {
-            /* FIXME: advance by a whole character */
-            if (!r.empty()) {
-                sink.put(char16_t(r.front()));
-                r.pop_front();
-                return 1;
-            }
-        } else {
-            auto rr = r;
-            if (char32_t ch; utf::decode(rr, ch)) {
-                if (std::size_t n; (n = utf::encode_u16(sink, ch))) {
-                    r = rr;
-                    return n;
-                }
-            }
-        }
-        return 0;
+        return encode<char16_t>(sink, r);
     }
 
     template<typename R>
     inline std::size_t encode_u32(R &sink, char32_t ch) {
-        sink.put(ch);
-        return 1;
+        return encode<char32_t>(sink, ch);
     }
 
     template<typename R, typename C>
     inline std::size_t encode_u32(R &sink, basic_char_range<C const> &r) {
-        if (char32_t ret; decode(r, ret)) {
-            sink.put(ret);
-            return 1;
-        }
-        return 0;
+        return encode<char32_t>(sink, r);
     }
 
     /* @brief Encode a UTF-32 code point into a wide Unicode char/sequence.
@@ -891,68 +901,12 @@ namespace utf {
      */
     template<typename R>
     inline std::size_t encode_uw(R &sink, char32_t ch) {
-        std::size_t n;
-        if constexpr(is_wchar_u32) {
-            n = 1;
-            sink.put(wchar_t(ch));
-        } else if constexpr(is_wchar_u16) {
-            char16_t buf[2];
-            n = detail::u16_encode(buf, ch);
-            for (std::size_t i = 0; i < n; ++i) {
-                sink.put(wchar_t(buf[i]));
-            }
-        } else {
-            char buf[4];
-            n = detail::u8_encode(buf, ch);
-            for (std::size_t i = 0; i < n; ++i) {
-                sink.put(wchar_t(buf[i]));
-            }
-        }
-        return n;
+        return encode<wchar_t>(sink, ch);
     }
 
     template<typename R, typename C>
     inline std::size_t encode_uw(R &sink, basic_char_range<C const> &r) {
-        if constexpr(max_units<C> == 1) {
-            std::size_t n = 0;
-            if (!r.empty() && (n = utf::encode_uw(sink, char32_t(r.front())))) {
-                r.pop_front();
-            }
-            return n;
-        } else if constexpr(max_units<C> == max_units<wchar_t>) {
-            /* FIXME: advance by a whole character */
-            if (!r.empty()) {
-                sink.put(wchar_t(r.front()));
-                r.pop_front();
-                return 1;
-            }
-        } else {
-            auto rr = r;
-            if (char32_t ch; utf::decode(rr, ch)) {
-                if (std::size_t n; (n = utf::encode_uw(sink, ch))) {
-                    r = rr;
-                    return n;
-                }
-            }
-        }
-        return 0;
-    }
-
-    template<typename C, typename OR, typename IR>
-    inline std::size_t encode(
-        [[maybe_unused]] OR &sink, [[maybe_unused]] IR &r
-    ) {
-        static_assert(is_character<C>, "Invalid input type");
-        if constexpr(std::is_same_v<C, char32_t>) {
-            return encode_u32(sink, r);
-        } else if constexpr(std::is_same_v<C, char16_t>) {
-            return encode_u16(sink, r);
-        } else if constexpr(std::is_same_v<C, char>) {
-            return encode_u8(sink, r);
-        } else if constexpr(std::is_same_v<C, wchar_t>) {
-            return encode_uw(sink, r);
-        }
-        return 0;
+        return encode<wchar_t>(sink, r);
     }
 
     /* @brief Get the number of Unicode code points in a string.

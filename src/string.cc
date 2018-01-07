@@ -92,7 +92,7 @@ namespace detail {
         return 1;
     }
 
-    std::size_t u8_encode(
+    std::size_t encode(
         char (&ret)[4], char32_t ch
     ) noexcept {
         if (ch <= 0x7F) {
@@ -126,7 +126,7 @@ namespace detail {
         return 0;
     }
 
-    std::size_t u16_encode(
+    std::size_t encode(
         char16_t (&ret)[2], char32_t ch
     ) noexcept {
         /* surrogate code point or out of bounds */
