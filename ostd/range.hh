@@ -177,17 +177,16 @@ struct contiguous_range_tag: finite_random_access_range_tag {};
 
 namespace detail {
     template<typename R>
-    struct range_category_test {
-        template<typename RR>
-        static char test(typename RR::range_category *);
-        template<typename>
-        static int test(...);
-        static constexpr bool value = (sizeof(test<R>(0)) == sizeof(char));
-    };
+    inline auto range_category_test(int) -> std::integral_constant<
+        bool, !std::is_void_v<typename R::range_category>
+    >;
+
+    template<typename>
+    inline std::false_type range_category_test(...);
 
     template<typename R>
     static inline constexpr bool const test_range_category =
-        range_category_test<R>::value;
+        decltype(range_category_test<R>(0))::value;
 
     template<typename R, bool, bool>
     struct range_traits_base {

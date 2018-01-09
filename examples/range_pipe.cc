@@ -73,7 +73,7 @@ int main() {
     /* more complex pipe */
     writeln("several piped algorithms");
 
-    srand(static_cast<unsigned int>(time(0)));
+    srand(static_cast<unsigned int>(std::time(nullptr)));
     std::array<int, 100> arr;
     generate(iter(arr), []() { return rand() % 128; });
 
