@@ -920,12 +920,12 @@ namespace utf {
     template<typename C, typename R>
     inline std::size_t replace(R &sink) {
         if constexpr(max_units<C> > 2) {
-            sink.put(0xEF);
-            sink.put(0xBF);
-            sink.put(0xBD);
+            sink.put(range_value_t<R>(0xEF));
+            sink.put(range_value_t<R>(0xBF));
+            sink.put(range_value_t<R>(0xBD));
             return 3;
         } else {
-            sink.put(0xFFFD);
+            sink.put(range_value_t<R>(0xFFFD));
         }
         return 1;
     }
