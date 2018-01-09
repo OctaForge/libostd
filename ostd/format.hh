@@ -217,7 +217,8 @@ namespace detail {
      * pair, array, possibly other types added later or overridden...
      */
     template<typename T>
-    inline std::true_type tuple_like_test(typename std::tuple_size<T>::type *);
+    inline auto tuple_like_test(int) ->
+        typename std::is_integral<decltype(std::tuple_size<T>::value)>::type;
 
     template<typename>
     inline std::false_type tuple_like_test(...);
@@ -228,10 +229,12 @@ namespace detail {
 
     /* test if format traits are available for the type */
     template<typename T, typename R>
-    inline std::true_type test_tofmt(decltype(format_traits<T>::to_format(
-        std::declval<T const &>(), std::declval<R &>(),
-        std::declval<format_spec const &>()
-    )) *);
+    inline auto test_tofmt(int) -> typename std::is_void<
+        decltype(format_traits<T>::to_format(
+            std::declval<T const &>(), std::declval<R &>(),
+            std::declval<format_spec const &>()
+        ))
+    >::type;
 
     template<typename, typename>
     inline std::false_type test_tofmt(...);

@@ -592,9 +592,9 @@ static inline constexpr bool const is_contiguous_range =
 
 namespace detail {
     template<typename R, typename T>
-    inline std::true_type test_outrange(typename std::is_same<
-        decltype(std::declval<R &>().put(std::declval<T>())), void
-    >::type *);
+    inline auto test_outrange(int) -> typename std::is_void<
+        decltype(std::declval<R &>().put(std::declval<T>()))
+    >::tyoe;
 
     template<typename, typename>
     inline std::false_type test_outrange(...);
@@ -1208,9 +1208,9 @@ inline auto zip(R1 &&r1, R &&...rr) {
 
 namespace detail {
     template<typename C>
-    inline std::true_type test_direct_iter(
-        decltype(std::declval<C &>().iter()) *
-    );
+    inline auto test_direct_iter(int) -> std::integral_constant<
+        bool, is_input_range<decltype(std::declval<C &>().iter())>
+    >;
 
     template<typename>
     inline std::false_type test_direct_iter(...);
@@ -1219,18 +1219,20 @@ namespace detail {
     static inline constexpr bool const direct_iter_test =
         decltype(test_direct_iter<C>(0))::value;
 
+
     template<typename C>
-    inline std::true_type test_std_iter(
-        decltype(std::begin(std::declval<C &>())) *,
-        decltype(std::end(std::declval<C &>())) *
-    );
+    inline auto test_std_iter(int) -> std::integral_constant<
+        bool,
+        !std::is_void_v<decltype(std::begin(std::declval<C &>()))> &&
+        !std::is_void_v<decltype(std::end(std::declval<C &>()))>
+    >;
 
     template<typename>
     inline std::false_type test_std_iter(...);
 
     template<typename C>
     static inline constexpr bool const std_iter_test =
-        decltype(test_std_iter<C>(0, 0))::value;
+        decltype(test_std_iter<C>(0))::value;
 
     /* direct iter and std iter; the case for std iter is
      * specialized after iterator_range is actually defined
@@ -1303,9 +1305,9 @@ inline auto citer(T const &r) -> decltype(ranged_traits<T const>::iter(r)) {
 
 namespace detail {
     template<typename T>
-    inline std::true_type test_iterable(
-        decltype(ostd::iter(std::declval<T>())) *
-    );
+    inline auto test_iterable(int) -> std::integral_constant<
+        bool, is_input_range<decltype(ostd::iter(std::declval<T>()))>
+    >;
     template<typename>
     inline std::false_type test_iterable(...);
 
