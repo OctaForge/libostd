@@ -1148,14 +1148,12 @@ inline auto enumerate() {
 }
 
 /** @brief A pipeable version of ostd::input_range::take(). */
-template<typename T>
-inline auto take(T n) {
+inline auto take(std::size_t n) {
     return [n](auto &obj) { return obj.take(n); };
 }
 
 /** @brief A pipeable version of ostd::input_range::chunks(). */
-template<typename T>
-inline auto chunks(T n) {
+inline auto chunks(std::size_t n) {
     return [n](auto &obj) { return obj.chunks(n); };
 }
 
