@@ -932,8 +932,7 @@ struct input_range {
      * It is undefined behavior to try to `pop_front()` past the internal
      * counter (i.e. `empty()` must not be true when calling it).
      */
-    template<typename Size>
-    auto take(Size n) const {
+    auto take(std::size_t n) const {
         return detail::take_range<B>(iter(), n);
     }
 
@@ -946,8 +945,7 @@ struct input_range {
      * If the wrapped range's length is not a multiple of `n`, the last chunk
      * will have fewer elements than `n`.
      */
-    template<typename Size>
-    auto chunks(Size n) const {
+    auto chunks(std::size_t n) const {
         return detail::chunks_range<B>(iter(), n);
     }
 
@@ -1521,12 +1519,12 @@ namespace detail {
 
     private:
         T p_range;
-        size_type p_remaining;
+        std::size_t p_remaining;
 
     public:
         take_range() = delete;
 
-        take_range(T const &range, size_type rem):
+        take_range(T const &range, std::size_t rem):
             p_range(range), p_remaining(rem)
         {}
 
@@ -1553,19 +1551,19 @@ namespace detail {
 
     private:
         T p_range;
-        size_type p_chunksize;
+        std::size_t p_chunksize;
 
     public:
         chunks_range() = delete;
 
-        chunks_range(T const &range, range_size_t<T> chs):
+        chunks_range(T const &range, std::size_t chs):
             p_range(range), p_chunksize(chs)
         {}
 
         bool empty() const { return p_range.empty(); }
 
         void pop_front() {
-            range_pop_front_n(p_range, p_chunksize);
+            range_pop_front_n(p_range, range_size_t<T>(p_chunksize));
         }
 
         reference front() const { return p_range.take(p_chunksize); }
