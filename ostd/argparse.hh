@@ -362,88 +362,24 @@ struct arg_optional: arg_argument {
 protected:
     arg_optional() = delete;
 
-    /** @brief Constructs the optional argument with one name.
+    /** @brief Constructs the optional argument.
      *
-     * This version takes an explicit value requirement, see the
-     * appropriate constructors of ostd::arg_argument. The value
-     * requirement can be `EXACTLY`, `OPTIONAL` or `ALL` but never
-     * `REST`. If it's not one of the allowed ones, ostd::arg_error
-     * is thrown.
-     *
-     * The `required` argument specifies whether this optional
-     * argument must be specified. In most cases optional
-     * arguments are optional, but not always.
+     * See arg_description_container::add_optional().
      */
-    arg_optional(
-        string_range name, arg_value req, std::size_t nargs = 1,
-        bool required = false
-    ):
+    arg_optional(arg_value req, std::size_t nargs, bool required):
         arg_argument(req, nargs), p_required(required)
     {
         validate_req(req);
-        p_names.emplace_back(name);
     }
 
-    /** @brief Constructs the optional argument with one name.
+    /** @brief Constructs the optional argument.
      *
-     * This version takes only a number, see the appropriate
-     * constructors of ostd::arg_argument.
-     *
-     * The `required` argument specifies whether this optional
-     * argument must be specified. In most cases optional
-     * arguments are optional, but not always.
+     * See arg_description_container::add_optional(). The ostd::arg_value
+     * requirement is `EXACTLY` here.
      */
-    arg_optional(string_range name, std::size_t nargs, bool required = false):
+    arg_optional(std::size_t nargs, bool required):
         arg_argument(nargs), p_required(required)
-    {
-        p_names.emplace_back(name);
-    }
-
-    /** @brief Constructs the optional argument with two names.
-     *
-     * The typical combination is a short and a long name.
-     *
-     * This version takes an explicit value requirement, see the
-     * appropriate constructors of ostd::arg_argument. The value
-     * requirement can be `EXACTLY`, `OPTIONAL` or `ALL` but never
-     * `REST`. If it's not one of the allowed ones, ostd::arg_error
-     * is thrown.
-     *
-     * The `required` argument specifies whether this optional
-     * argument must be specified. In most cases optional
-     * arguments are optional, but not always.
-     */
-    arg_optional(
-        string_range name1, string_range name2, arg_value req,
-        std::size_t nargs = 1, bool required = false
-    ):
-        arg_argument(req, nargs), p_required(required)
-    {
-        validate_req(req);
-        p_names.emplace_back(name1);
-        p_names.emplace_back(name2);
-    }
-
-    /** @brief Constructs the optional argument with two names.
-     *
-     * The typical combination is a short and a long name.
-     *
-     * This version takes only a number, see the appropriate
-     * constructors of ostd::arg_argument.
-     *
-     * The `required` argument specifies whether this optional
-     * argument must be specified. In most cases optional
-     * arguments are optional, but not always.
-     */
-    arg_optional(
-        string_range name1, string_range name2, std::size_t nargs,
-        bool required = false
-    ):
-        arg_argument(nargs), p_required(required)
-    {
-        p_names.emplace_back(name1);
-        p_names.emplace_back(name2);
-    }
+    {}
 
     /** @brief See arg_description::find_arg().
      *
@@ -602,21 +538,17 @@ protected:
 
     /** @brief Constructs the positional argument.
      *
-     * This version takes an explicit value requirement,
-     * see the appropriate constructors of ostd::arg_argument.
+     * See arg_description_container::add_positional().
      */
-    arg_positional(
-        string_range name, arg_value req = arg_value::EXACTLY,
-        std::size_t nargs = 1
-    ):
+    arg_positional(string_range name, arg_value req, std::size_t nargs):
         arg_argument(req, nargs),
         p_name(name)
     {}
 
     /** @brief Constructs the positional argument.
      *
-     * This version takes only a number, see the appropriate
-     * constructors of ostd::arg_argument.
+     * See arg_description_container::add_positional(). The ostd::arg_value
+     * requirement is `EXACTLY` here.
      */
     arg_positional(string_range name, std::size_t nargs):
         arg_argument(nargs),
@@ -685,24 +617,61 @@ struct arg_mutually_exclusive_group: arg_description {
         return arg_type::MUTUALLY_EXCLUSIVE_GROUP;
     }
 
-    /** @brief Constructs an optional argument in the group.
+    /** @brief Adds an optional argument with one name.
      *
-     * The arguments are perfect-forwarded to the ostd::arg_optional
-     * constructors. The constructors are protected but may be used
-     * from here.
+     * See ostd::arg_description_container::add_optional().  The
+     * only difference is that "required" arguments are not allowed,
+     * so that will always be `false` and cannot be specified.
      */
-    template<typename ...A>
-    arg_optional &add_optional(A &&...args) {
-        auto *opt = new arg_optional(std::forward<A>(args)...);
-        std::unique_ptr<arg_description> p{opt};
-        if (opt->required()) {
-            throw arg_error{
-                "required optional arguments not allowed "
-                "in mutually exclusive groups"
-            };
-        }
-        p_opts.push_back(std::move(p));
-        return *opt;
+    arg_optional &add_optional(
+        string_range name, arg_value req, std::size_t nargs = 1
+    ) {
+        auto &ret = add_member<arg_optional>(req, nargs, false);
+        ret.add_name(name);
+        return ret;
+    }
+
+    /** @brief Adds an optional argument with one name.
+     *
+     * See ostd::arg_description_container::add_optional().  The
+     * only difference is that "required" arguments are not allowed,
+     * so that will always be `false` and cannot be specified.
+     */
+    arg_optional &add_optional(string_range name, std::size_t nargs) {
+        auto &ret = add_member<arg_optional>(nargs, false);
+        ret.add_name(name);
+        return ret;
+    }
+
+    /** @brief Adds an optional argument with two names.
+     *
+     * See ostd::arg_description_container::add_optional().  The
+     * only difference is that "required" arguments are not allowed,
+     * so that will always be `false` and cannot be specified.
+     */
+    arg_optional &add_optional(
+        string_range name1, string_range name2, arg_value req,
+        std::size_t nargs = 1
+    ) {
+        auto &ret = add_member<arg_optional>(req, nargs, false);
+        ret.add_name(name1);
+        ret.add_name(name2);
+        return ret;
+    }
+
+    /** @brief Adds an optional argument with two names.
+     *
+     * See ostd::arg_description_container::add_optional().  The
+     * only difference is that "required" arguments are not allowed,
+     * so that will always be `false` and cannot be specified.
+     */
+    arg_optional &add_optional(
+        string_range name1, string_range name2, std::size_t nargs
+    ) {
+        auto &ret = add_member<arg_optional>(nargs, false);
+        ret.add_name(name1);
+        ret.add_name(name2);
+        return ret;
     }
 
     /** @brief Calls `func` for each argument in the group.
@@ -764,6 +733,15 @@ protected:
         return nullptr;
     }
 
+    /** @brief See arg_description_container::add_member(). */
+    template<typename T, typename ...A>
+    T &add_member(A &&...args) {
+        auto *ap = new T(std::forward<A>(args)...);
+        std::unique_ptr<arg_description> p{ap};
+        p_opts.push_back(std::move(p));
+        return *ap;
+    }
+
 private:
     std::vector<std::unique_ptr<arg_description>> p_opts;
     bool p_required;
@@ -777,46 +755,117 @@ private:
  * may only be inserted from a parser.
  */
 struct arg_description_container {
-    /** @brief Constructs an optional argument in the container.
+    /** @brief Adds an optional argument with one name.
      *
-     * The arguments are perfect-forwarded to the ostd::arg_optional
-     * constructors. The constructors are protected but may be used
-     * from here.
+     * This version takes an explicit value requirement, see the
+     * appropriate constructors of ostd::arg_argument. The value
+     * requirement can be `EXACTLY`, `OPTIONAL` or `ALL` but never
+     * `REST`. If it's not one of the allowed ones, ostd::arg_error
+     * is thrown.
+     *
+     * The `required` argument specifies whether this optional
+     * argument must be specified. In most cases optional
+     * arguments are optional, but not always.
      */
-    template<typename ...A>
-    arg_optional &add_optional(A &&...args) {
-        auto *opt = new arg_optional(std::forward<A>(args)...);
-        std::unique_ptr<arg_description> p{opt};
-        p_opts.push_back(std::move(p));
-        return *opt;
+    arg_optional &add_optional(
+        string_range name, arg_value req,
+        std::size_t nargs = 1, bool required = false
+    ) {
+        auto &ret = add_member<arg_optional>(req, nargs, required);
+        ret.add_name(name);
+        return ret;
     }
 
-    /** @brief Constructs a positional argument in the container.
+    /** @brief Adds an optional argument with one name.
      *
-     * The arguments are perfect-forwarded to the ostd::arg_positional
-     * constructors. The constructors are protected but may be used
-     * from here.
+     * This version takes only a number, see the appropriate
+     * constructors of ostd::arg_argument.
+     *
+     * The `required` argument specifies whether this optional
+     * argument must be specified. In most cases optional
+     * arguments are optional, but not always.
      */
-    template<typename ...A>
-    arg_positional &add_positional(A &&...args) {
-        auto *pos = new arg_positional(std::forward<A>(args)...);
-        std::unique_ptr<arg_description> p{pos};
-        p_opts.push_back(std::move(p));
-        return *pos;
+    arg_optional &add_optional(
+        string_range name, std::size_t nargs, bool required = false
+    ) {
+        auto &ret = add_member<arg_optional>(nargs, required);
+        ret.add_name(name);
+        return ret;
     }
 
-    /** @brief Constructs a mutually exclusive group in the container.
+    /** @brief Adds an optional argument with two names.
      *
-     * The arguments are perfect-forwarded to the
-     * ostd::arg_mutually_exclusive_group constructor. The
-     * constructor is protected but may be used from here.
+     * The typical combination is a short and a long name.
+     *
+     * This version takes an explicit value requirement, see the
+     * appropriate constructors of ostd::arg_argument. The value
+     * requirement can be `EXACTLY`, `OPTIONAL` or `ALL` but never
+     * `REST`. If it's not one of the allowed ones, ostd::arg_error
+     * is thrown.
+     *
+     * The `required` argument specifies whether this optional
+     * argument must be specified. In most cases optional
+     * arguments are optional, but not always.
      */
+    arg_optional &add_optional(
+        string_range name1, string_range name2, arg_value req,
+        std::size_t nargs = 1, bool required = false
+    ) {
+        auto &ret = add_member<arg_optional>(req, nargs, required);
+        ret.add_name(name1);
+        ret.add_name(name2);
+        return ret;
+    }
+
+    /** @brief Adds an optional argument with two names.
+     *
+     * The typical combination is a short and a long name.
+     *
+     * This version takes only a number, see the appropriate
+     * constructors of ostd::arg_argument.
+     *
+     * The `required` argument specifies whether this optional
+     * argument must be specified. In most cases optional
+     * arguments are optional, but not always.
+     */
+    arg_optional &add_optional(
+        string_range name1, string_range name2,
+        std::size_t nargs, bool required = false
+    ) {
+        auto &ret = add_member<arg_optional>(nargs, required);
+        ret.add_name(name1);
+        ret.add_name(name2);
+        return ret;
+    }
+
+    /** @brief Adds a positional argument.
+     *
+     * This version takes an explicit value requirement,
+     * see the appropriate constructors of ostd::arg_argument.
+     */
+    arg_positional &add_positional(
+        string_range name, arg_value req = arg_value::EXACTLY,
+        std::size_t nargs = 1
+    ) {
+        return add_member<arg_positional>(name, req, nargs);
+    }
+
+    /** @brief Adds a positional argument.
+     *
+     * This version takes only a number, see the appropriate
+     * constructors of ostd::arg_argument.
+     */
+    arg_positional &add_positional(string_range name, std::size_t nargs) {
+        return add_member<arg_positional>(name, nargs);
+    }
+
+
+    /** @brief Adds a mutually exclusive group. */
     template<typename ...A>
-    arg_mutually_exclusive_group &add_mutually_exclusive_group(A &&...args) {
-        auto *mgrp = new arg_mutually_exclusive_group(std::forward<A>(args)...);
-        std::unique_ptr<arg_description> p{mgrp};
-        p_opts.push_back(std::move(p));
-        return *mgrp;
+    arg_mutually_exclusive_group &add_mutually_exclusive_group(
+        bool required = false
+    ) {
+        return add_member<arg_mutually_exclusive_group>(required);
     }
 
     /** @brief Calls `func` for each argument in the container.
@@ -865,6 +914,20 @@ protected:
         throw arg_error{"unknown argument '%s'", name};
     }
 
+    /** @brief Adds a member in the container.
+     *
+     * The `T` is the type to add, inherited from ostd::arg_description.
+     * The arguments are forwarded to the constructor. It also makes sure
+     * that when something throws, no resources are leaked.
+     */
+    template<typename T, typename ...A>
+    T &add_member(A &&...args) {
+        auto *ap = new T(std::forward<A>(args)...);
+        std::unique_ptr<arg_description> p{ap};
+        p_opts.push_back(std::move(p));
+        return *ap;
+    }
+
     std::vector<std::unique_ptr<arg_description>> p_opts;
 };
 
@@ -878,8 +941,7 @@ protected:
  * displayed in help listing. If not set, the name is displayed.
  */
 struct arg_group: arg_description, arg_description_container {
-    template<typename HelpFormatter>
-    friend struct basic_arg_parser;
+    friend struct arg_description_container;
 
     /* empty, for vtable placement */
     virtual ~arg_group();
@@ -911,7 +973,7 @@ struct arg_group: arg_description, arg_description_container {
 protected:
     arg_group() = delete;
 
-    /** @brief Constructs the group with a name and an optional title. */
+    /** @brief Constructs the group. See basic_arg_parser::add_group(). */
     arg_group(string_range name, string_range title = string_range{}):
         arg_description(), arg_description_container(),
         p_name(name), p_title(title)
@@ -1133,16 +1195,13 @@ public:
         }
     }
 
-    /** @brief Constructs a group in the container.
+    /** @brief Adds a group in the container.
      *
-     * The arguments are perfect-forwarded to the ostd::arg_group constructor.
-     * The constructor is protected but may be used from here. Groups cannot
-     * be constructed inside ostd::arg_description_container itself.
+     * Groups require a name and optionally a title for help formatting.
      */
     template<typename ...A>
-    arg_group &add_group(A &&...args) {
-        arg_description *p = new arg_group(std::forward<A>(args)...);
-        return static_cast<arg_group &>(*p_opts.emplace_back(p));
+    arg_group &add_group(string_range name, string_range title = string_range{}) {
+        return add_member<arg_group>(name, title);
     }
 
     /** @brief Parses arguments using `argc` and `argv`.
