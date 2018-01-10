@@ -9,21 +9,13 @@
 
 using namespace ostd;
 
-/* have an array, split it in two halves and sum each half in a separate
- * task, which may or may not run in parallel with the other one depending
- * on the scheduler currently in use - several schedulers are shown
- */
-static auto input_array = { 150, 38, 76, 25, 67, 18, -15, 215, 25, -10 };
-
-static auto first_half  = iter(input_array).slice(0, input_array.size() / 2);
-static auto second_half = iter(input_array).slice(input_array.size() / 2);
-
 /* this version uses Go-style channels to exchange data; multiple
  * tasks can put data into channels, the channel itself is a thread
  * safe queue; it goes the other way around too, multiple tasks can
  * wait on a channel for some data to be received
  */
-static void test_channel() {
+template<typename Slice>
+static void test_channel(Slice first_half, Slice second_half) {
     auto c = make_channel<int>();
     auto f = [](auto ch, auto half) {
         ch.put(foldl(half, 0));
@@ -49,7 +41,8 @@ static void test_channel() {
  * scheduler currently in use), so a will always come from t1 and b
  * from t2; in the above test, a can come from either task
  */
-static void test_tid() {
+template<typename Slice>
+static void test_tid(Slice first_half, Slice second_half) {
     auto f = [](auto half) {
         return foldl(half, 0);
     };
@@ -62,10 +55,19 @@ static void test_tid() {
 }
 
 static void test_all() {
+    /* have an array, split it in two halves and sum each half in a separate
+     * task, which may or may not run in parallel with the other one depending
+     * on the scheduler currently in use - several schedulers are shown
+     */
+    static auto input = { 150, 38, 76, 25, 67, 18, -15, 215, 25, -10 };
+
+    static auto first_half  = iter(input).slice(0, input.size() / 2);
+    static auto second_half = iter(input).slice(input.size() / 2);
+
     writeln("  testing channels...");
-    test_channel();
+    test_channel(first_half, second_half);
     writeln("  testing futures...");
-    test_tid();
+    test_tid(first_half, second_half);
 }
 
 int main() {
