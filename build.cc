@@ -28,6 +28,7 @@ namespace fs = ostd::filesystem;
 #include "src/io.cc"
 #include "src/process.cc"
 #include "src/filesystem.cc"
+#include "src/thread_pool.cc"
 #include "src/channel.cc"
 #include "src/string.cc"
 #include "src/argparse.cc"

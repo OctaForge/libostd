@@ -36,7 +36,7 @@ namespace ostd {
 namespace detail {
     struct tpool_func_base {
         tpool_func_base() {}
-        virtual ~tpool_func_base() {}
+        virtual ~tpool_func_base();
         virtual void clone(tpool_func_base *func) = 0;
         virtual void call() = 0;
     };

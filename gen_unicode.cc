@@ -31,7 +31,7 @@ inline code_t hex_to_code(string_range hs) {
         if (!std::isxdigit(c |= 32)) {
             throw std::runtime_error{"malformed code point"};
         }
-        ret = ret * 16 + (c - ((c > '9') ? ('a' - 10) : '0'));
+        ret = ret * 16 + code_t(c - ((c > '9') ? ('a' - 10) : '0'));
     }
     return ret;
 }
@@ -62,7 +62,7 @@ struct parse_state {
                 bits[n] = line;
                 break;
             }
-            bits[n++] = line.slice(0, sc.data() - line.data());
+            bits[n++] = line.slice(0, std::size_t(sc.data() - line.data()));
             sc.pop_front();
             line = sc;
         }
@@ -145,8 +145,8 @@ struct parse_state {
         ](std::size_t i, std::size_t offs) {
             int off = (!int(offs) * 2) - 1;
             return match_pair(i, 2) && (cases.empty() || (
-                (cases[i + 1] == (codes[i + 1] + off)) &&
-                (cases[i    ] == (codes[i    ] + off))
+                (cases[i + 1] == code_t(std::int32_t(codes[i + 1]) + off)) &&
+                (cases[i    ] == code_t(std::int32_t(codes[i    ]) + off))
             ));
         };
 

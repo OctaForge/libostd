@@ -209,6 +209,9 @@
 #  endif
 #  define OSTD_LOCAL
 #else
+#  if defined(OSTD_BUILD_LIB) || defined(OSTD_BUILD_DLL)
+/* -Wunused-macros */
+#  endif
 #  if __GNUC__ >= 4
 #    define OSTD_EXPORT __attribute__((visibility("default")))
 #    define OSTD_LOCAL  __attribute__((visibility("hidden")))
