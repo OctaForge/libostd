@@ -279,7 +279,8 @@ struct parse_state {
         code_vec const &singles
     ) {
         format(
-            writer, "%s %s%s(char32_t c) noexcept {\n", ret_type, prefix, fname
+            writer, "OSTD_EXPORT %s %s%s(char32_t c) noexcept {\n",
+            ret_type, prefix, fname
         );
         format(writer, "    return utf::uctype_func<\n");
         auto it1 = { &ranges, &laces1, &laces2, &singles };

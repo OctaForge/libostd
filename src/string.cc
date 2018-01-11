@@ -8,6 +8,8 @@
 #include <cstring>
 #include <limits>
 #include <type_traits>
+
+#include "ostd/platform.hh"
 #include "ostd/string.hh"
 #include "ostd/format.hh"
 
@@ -40,16 +42,16 @@ sloop:
     return (p - bp);
 }
 
-std::size_t tstrlen(char const *p) noexcept {
+OSTD_EXPORT std::size_t tstrlen(char const *p) noexcept {
     return tstrlen_impl(p);
 }
-std::size_t tstrlen(char16_t const *p) noexcept {
+OSTD_EXPORT std::size_t tstrlen(char16_t const *p) noexcept {
     return tstrlen_impl(p);
 }
-std::size_t tstrlen(char32_t const *p) noexcept {
+OSTD_EXPORT std::size_t tstrlen(char32_t const *p) noexcept {
     return tstrlen_impl(p);
 }
-std::size_t tstrlen(wchar_t const *p) noexcept {
+OSTD_EXPORT std::size_t tstrlen(wchar_t const *p) noexcept {
     return tstrlen_impl(p);
 }
 
@@ -140,7 +142,7 @@ namespace detail {
         return 1;
     }
 
-    std::size_t encode(
+    OSTD_EXPORT std::size_t encode(
         char (&ret)[4], char32_t ch
     ) noexcept {
         if (ch <= 0x7F) {
@@ -174,7 +176,7 @@ namespace detail {
         return 0;
     }
 
-    std::size_t encode(
+    OSTD_EXPORT std::size_t encode(
         char16_t (&ret)[2], char32_t ch
     ) noexcept {
         /* surrogate code point or out of bounds */
@@ -223,7 +225,7 @@ namespace detail {
     }
 } /* namespace detail */
 
-bool decode(string_range &r, char32_t &ret) noexcept {
+OSTD_EXPORT bool decode(string_range &r, char32_t &ret) noexcept {
     auto tn = r.size();
     auto *beg = reinterpret_cast<unsigned char const *>(r.data());
     if (std::size_t n; (n = detail::u8_decode(beg, beg + tn, ret))) {
@@ -233,7 +235,7 @@ bool decode(string_range &r, char32_t &ret) noexcept {
     return false;
 }
 
-bool decode(u16string_range &r, char32_t &ret) noexcept {
+OSTD_EXPORT bool decode(u16string_range &r, char32_t &ret) noexcept {
     auto tn = r.size();
     auto *beg = r.data();
     if (std::size_t n; (n = detail::u16_decode(beg, beg + tn, ret))) {
@@ -243,7 +245,7 @@ bool decode(u16string_range &r, char32_t &ret) noexcept {
     return false;
 }
 
-bool decode(u32string_range &r, char32_t &ret) noexcept {
+OSTD_EXPORT bool decode(u32string_range &r, char32_t &ret) noexcept {
     if (r.empty()) {
         return false;
     }
@@ -256,7 +258,7 @@ bool decode(u32string_range &r, char32_t &ret) noexcept {
     return true;
 }
 
-bool decode(wstring_range &r, char32_t &ret) noexcept {
+OSTD_EXPORT bool decode(wstring_range &r, char32_t &ret) noexcept {
     std::size_t n, tn = r.size();
     if constexpr(is_wchar_u32) {
         if (!tn) {
@@ -283,35 +285,39 @@ bool decode(wstring_range &r, char32_t &ret) noexcept {
     return false;
 }
 
-std::size_t length(string_range r, string_range &cont) noexcept {
+OSTD_EXPORT std::size_t length(string_range r, string_range &cont) noexcept {
     return detail::length(r, cont);
 }
 
-std::size_t length(u16string_range r, u16string_range &cont) noexcept {
+OSTD_EXPORT std::size_t length(u16string_range r, u16string_range &cont)
+    noexcept
+{
     return detail::length(r, cont);
 }
 
-std::size_t length(u32string_range r, u32string_range &cont) noexcept {
+OSTD_EXPORT std::size_t length(u32string_range r, u32string_range &cont)
+    noexcept
+{
     return detail::length(r, cont);
 }
 
-std::size_t length(wstring_range r, wstring_range &cont) noexcept {
+OSTD_EXPORT std::size_t length(wstring_range r, wstring_range &cont) noexcept {
     return detail::length(r, cont);
 }
 
-std::size_t length(string_range r) noexcept {
+OSTD_EXPORT std::size_t length(string_range r) noexcept {
     return detail::length(r);
 }
 
-std::size_t length(u16string_range r) noexcept {
+OSTD_EXPORT std::size_t length(u16string_range r) noexcept {
     return detail::length(r);
 }
 
-std::size_t length(u32string_range r) noexcept {
+OSTD_EXPORT std::size_t length(u32string_range r) noexcept {
     return detail::length(r);
 }
 
-std::size_t length(wstring_range r) noexcept {
+OSTD_EXPORT std::size_t length(wstring_range r) noexcept {
     return detail::length(r);
 }
 
@@ -319,19 +325,19 @@ std::size_t length(wstring_range r) noexcept {
  * the other ones use custom tables for lookups
  */
 
-bool isalnum(char32_t c) noexcept {
+OSTD_EXPORT bool isalnum(char32_t c) noexcept {
     return (utf::isalpha(c) || utf::isdigit(c));
 }
 
-bool isblank(char32_t c) noexcept {
+OSTD_EXPORT bool isblank(char32_t c) noexcept {
     return ((c == ' ') || (c == '\t'));
 }
 
-bool isgraph(char32_t c) noexcept {
+OSTD_EXPORT bool isgraph(char32_t c) noexcept {
     return (!utf::isspace(c) && utf::isprint(c));
 }
 
-bool isprint(char32_t c) noexcept {
+OSTD_EXPORT bool isprint(char32_t c) noexcept {
     switch (c) {
         case 0x2028:
         case 0x2029:
@@ -344,11 +350,11 @@ bool isprint(char32_t c) noexcept {
     }
 }
 
-bool ispunct(char32_t c) noexcept {
+OSTD_EXPORT bool ispunct(char32_t c) noexcept {
     return (utf::isgraph(c) && !utf::isalnum(c));
 }
 
-bool isvalid(char32_t c) noexcept {
+OSTD_EXPORT bool isvalid(char32_t c) noexcept {
     /* surrogate code points */
     if ((c >= 0xD800) && (c <= 0xDFFF)) {
         return false;
@@ -365,7 +371,7 @@ bool isvalid(char32_t c) noexcept {
     return (c <= utf::max_unicode);
 }
 
-bool isxdigit(char32_t c) noexcept {
+OSTD_EXPORT bool isxdigit(char32_t c) noexcept {
     if ((c >= '0') && (c <= '9')) {
         return true;
     }
@@ -478,15 +484,15 @@ struct uctype_func {
 };
 
 /* these are geneated */
-bool isalpha(char32_t c) noexcept;
-bool iscntrl(char32_t c) noexcept;
-bool isdigit(char32_t c) noexcept;
-bool islower(char32_t c) noexcept;
-bool isspace(char32_t c) noexcept;
-bool istitle(char32_t c) noexcept;
-bool isupper(char32_t c) noexcept;
-char32_t tolower(char32_t c) noexcept;
-char32_t toupper(char32_t c) noexcept;
+OSTD_EXPORT bool isalpha(char32_t c) noexcept;
+OSTD_EXPORT bool iscntrl(char32_t c) noexcept;
+OSTD_EXPORT bool isdigit(char32_t c) noexcept;
+OSTD_EXPORT bool islower(char32_t c) noexcept;
+OSTD_EXPORT bool isspace(char32_t c) noexcept;
+OSTD_EXPORT bool istitle(char32_t c) noexcept;
+OSTD_EXPORT bool isupper(char32_t c) noexcept;
+OSTD_EXPORT char32_t tolower(char32_t c) noexcept;
+OSTD_EXPORT char32_t toupper(char32_t c) noexcept;
 
 #if __has_include("string_utf.hh")
 #include "string_utf.hh"
@@ -496,42 +502,42 @@ char32_t toupper(char32_t c) noexcept;
  * is generated during build) by providing a bunch of ASCII only fallbacks
  */
 
-bool isalpha(char32_t c) noexcept {
+OSTD_EXPORT bool isalpha(char32_t c) noexcept {
     return (utf::isupper(c) || utf::islower(c));
 }
 
-bool iscntrl(char32_t c) noexcept {
+OSTD_EXPORT bool iscntrl(char32_t c) noexcept {
     return ((c <= 0x1F) || (c == 0x7F));
 }
 
-bool isdigit(char32_t c) noexcept {
+OSTD_EXPORT bool isdigit(char32_t c) noexcept {
     return ((c >= '0') && (c <= '9'));
 }
 
-bool islower(char32_t c) noexcept {
+OSTD_EXPORT bool islower(char32_t c) noexcept {
     return ((c >= 'a') && (c <= 'z'));
 }
 
-bool isspace(char32_t c) noexcept {
+OSTD_EXPORT bool isspace(char32_t c) noexcept {
     return ((c == ' ') || ((c >= 0x09) && (c <= 0x0D)));
 }
 
-bool istitle(char32_t) noexcept {
+OSTD_EXPORT bool istitle(char32_t) noexcept {
     return false;
 }
 
-bool isupper(char32_t c) noexcept {
+OSTD_EXPORT bool isupper(char32_t c) noexcept {
     return ((c >= 'A') && (c <= 'Z'));
 }
 
-char32_t tolower(char32_t c) noexcept {
+OSTD_EXPORT char32_t tolower(char32_t c) noexcept {
     if (utf::isupper(c)) {
         return c | 32;
     }
     return c;
 }
 
-char32_t toupper(char32_t c) noexcept {
+OSTD_EXPORT char32_t toupper(char32_t c) noexcept {
     if (utf::islower(c)) {
         return c ^ 32;
     }
@@ -593,23 +599,23 @@ namespace detail {
     }
 }
 
-int case_compare(string_range s1, string_range s2) noexcept {
+OSTD_EXPORT int case_compare(string_range s1, string_range s2) noexcept {
     auto *beg1 = reinterpret_cast<unsigned char const *>(s1.data());
     auto *beg2 = reinterpret_cast<unsigned char const *>(s2.data());
     return detail::case_compare(beg1, beg1 + s1.size(), beg2, beg2 + s2.size());
 }
 
-int case_compare(u16string_range s1, u16string_range s2) noexcept {
+OSTD_EXPORT int case_compare(u16string_range s1, u16string_range s2) noexcept {
     auto *beg1 = s1.data(), *beg2 = s2.data();
     return detail::case_compare(beg1, beg1 + s1.size(), beg2, beg2 + s2.size());
 }
 
-int case_compare(u32string_range s1, u32string_range s2) noexcept {
+OSTD_EXPORT int case_compare(u32string_range s1, u32string_range s2) noexcept {
     auto *beg1 = s1.data(), *beg2 = s2.data();
     return detail::case_compare(beg1, beg1 + s1.size(), beg2, beg2 + s2.size());
 }
 
-int case_compare(wstring_range s1, wstring_range s2) noexcept {
+OSTD_EXPORT int case_compare(wstring_range s1, wstring_range s2) noexcept {
     using C = std::conditional_t<is_wchar_u8, unsigned char, wchar_fixed_t>;
     auto *beg1 = reinterpret_cast<C const *>(s1.data());
     auto *beg2 = reinterpret_cast<C const *>(s2.data());

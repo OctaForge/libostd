@@ -61,6 +61,7 @@
 #include <vector>
 #include <stdexcept>
 
+#include <ostd/platform.hh>
 #include <ostd/range.hh>
 #include <ostd/algorithm.hh>
 
@@ -74,10 +75,10 @@ static_assert(
 );
 
 namespace detail {
-    std::size_t tstrlen(char const *p) noexcept;
-    std::size_t tstrlen(char16_t const *p) noexcept;
-    std::size_t tstrlen(char32_t const *p) noexcept;
-    std::size_t tstrlen(wchar_t const *p) noexcept;
+    OSTD_EXPORT std::size_t tstrlen(char const *p) noexcept;
+    OSTD_EXPORT std::size_t tstrlen(char16_t const *p) noexcept;
+    OSTD_EXPORT std::size_t tstrlen(char32_t const *p) noexcept;
+    OSTD_EXPORT std::size_t tstrlen(wchar_t const *p) noexcept;
 }
 
 /** @addtogroup Strings
@@ -800,14 +801,14 @@ namespace utf {
      * The string is advanced past the Unicode character in the front.
      * If the decoding fails, `false` is returned, otherwise it's `true`.
      */
-    bool decode(string_range &r, char32_t &ret) noexcept;
+    OSTD_EXPORT bool decode(string_range &r, char32_t &ret) noexcept;
 
     /* @brief Get the Unicode code point for a UTF-16 sequence.
      *
      * The string is advanced past the Unicode character in the front.
      * If the decoding fails, `false` is returned, otherwise it's `true`.
      */
-    bool decode(u16string_range &r, char32_t &ret) noexcept;
+    OSTD_EXPORT bool decode(u16string_range &r, char32_t &ret) noexcept;
 
     /* @brief Get the Unicode code point from a UTF-32 string.
      *
@@ -815,7 +816,7 @@ namespace utf {
      * returns `false` for the front character, in which case the string
      * will not be advanced.
      */
-     bool decode(u32string_range &r, char32_t &ret) noexcept;
+     OSTD_EXPORT bool decode(u32string_range &r, char32_t &ret) noexcept;
 
     /* @brief Get the Unicode code point for a wide Unicode char/sequence.
      *
@@ -825,13 +826,13 @@ namespace utf {
      * priority (on systems where two or more of the types are the same
      * size).
      */
-    bool decode(wstring_range &r, char32_t &ret) noexcept;
+    OSTD_EXPORT bool decode(wstring_range &r, char32_t &ret) noexcept;
 
     namespace detail {
-        std::size_t encode(
+        OSTD_EXPORT std::size_t encode(
             char (&ret)[4], char32_t ch
         ) noexcept;
-        std::size_t encode(
+        OSTD_EXPORT std::size_t encode(
             char16_t (&ret)[2], char32_t ch
         ) noexcept;
     }
@@ -959,7 +960,8 @@ namespace utf {
      * If you're sure the string is valid or you don't need to handle the
      * error, you can use the more convenient overload below.
      */
-    std::size_t length(string_range r, string_range &cont) noexcept;
+    OSTD_EXPORT std::size_t length(string_range r, string_range &cont)
+        noexcept;
 
     /** @brief Get the number of Unicode code points in a string.
      *
@@ -972,7 +974,8 @@ namespace utf {
      * If you're sure the string is valid or you don't need to handle the
      * error, you can use the more convenient overload below.
      */
-    std::size_t length(u16string_range r, u16string_range &cont) noexcept;
+    OSTD_EXPORT std::size_t length(u16string_range r, u16string_range &cont)
+        noexcept;
 
     /** @brief Get the number of Unicode code points in a string.
      *
@@ -985,7 +988,8 @@ namespace utf {
      * If you're sure the string is valid or you don't need to handle the
      * error, you can use the more convenient overload below.
      */
-    std::size_t length(u32string_range r, u32string_range &cont) noexcept;
+    OSTD_EXPORT std::size_t length(u32string_range r, u32string_range &cont)
+        noexcept;
 
     /** @brief Get the number of Unicode code points in a string.
      *
@@ -1001,7 +1005,8 @@ namespace utf {
      * The behavior of this function is platform dependent as wide
      * characters represent different things on different systems.
      */
-    std::size_t length(wstring_range r, wstring_range &cont) noexcept;
+    OSTD_EXPORT std::size_t length(wstring_range r, wstring_range &cont)
+        noexcept;
 
     /** @brief Get the number of Unicode code points in a UTF-8 string.
      *
@@ -1013,7 +1018,7 @@ namespace utf {
      * If you need to stop at an invalid code unit and get the
      * continuation string, use the overload above.
      */
-    std::size_t length(string_range r) noexcept;
+    OSTD_EXPORT std::size_t length(string_range r) noexcept;
 
     /** @brief Get the number of Unicode code points in a UTF-16 string.
      *
@@ -1025,7 +1030,7 @@ namespace utf {
      * If you need to stop at an invalid code unit and get the
      * continuation string, use the overload above.
      */
-    std::size_t length(u16string_range r) noexcept;
+    OSTD_EXPORT std::size_t length(u16string_range r) noexcept;
 
     /** @brief Get the number of Unicode code points in a UTF-32 string.
      *
@@ -1033,7 +1038,7 @@ namespace utf {
      * invalid values as code points, so this function effectively just
      * returns the size of the given range.
      */
-    std::size_t length(u32string_range r) noexcept;
+    OSTD_EXPORT std::size_t length(u32string_range r) noexcept;
 
     /** @brief Get the number of Unicode code points in a wide string.
      *
@@ -1048,7 +1053,7 @@ namespace utf {
      * The behavior of this function is platform dependent as wide
      * characters represent different things on different systems.
      */
-    std::size_t length(wstring_range r) noexcept;
+    OSTD_EXPORT std::size_t length(wstring_range r) noexcept;
 
     namespace detail {
         template<typename IC, typename OC>
@@ -1135,7 +1140,7 @@ namespace utf {
      * This is true for either utf::isalpha() or utf::isdigit(). Also
      * equivalent to std::isalnum().
      */
-    bool isalnum(char32_t c) noexcept;
+    OSTD_EXPORT bool isalnum(char32_t c) noexcept;
 
     /** @brief Check whether a code point is alphabetic.
      *
@@ -1145,7 +1150,7 @@ namespace utf {
      *
      * The categories considered alphabetic are `L*`.
      */
-    bool isalpha(char32_t c) noexcept;
+    OSTD_EXPORT bool isalpha(char32_t c) noexcept;
 
     /** @brief Check whether a code point is a blank.
      *
@@ -1154,7 +1159,7 @@ namespace utf {
      *
      * The blank characters are only space (U+20) and tab (`U+9`).
      */
-    bool isblank(char32_t c) noexcept;
+    OSTD_EXPORT bool isblank(char32_t c) noexcept;
 
     /** @brief Check whether a code point is a control character.
      *
@@ -1163,7 +1168,7 @@ namespace utf {
      *
      * The category considered control characters is `Cc`.
      */
-    bool iscntrl(char32_t c) noexcept;
+    OSTD_EXPORT bool iscntrl(char32_t c) noexcept;
 
     /** @brief Check whether a code point is a digit.
      *
@@ -1173,14 +1178,14 @@ namespace utf {
      *
      * The category considered a digit is `Nd`.
      */
-    bool isdigit(char32_t c) noexcept;
+    OSTD_EXPORT bool isdigit(char32_t c) noexcept;
 
     /** @brief Check whether a code point is graphic.
      *
      * This is true when the input is not utf::isspace() and is
      * utf::isprint(). Also equivalent to std::isgraph().
      */
-    bool isgraph(char32_t c) noexcept;
+    OSTD_EXPORT bool isgraph(char32_t c) noexcept;
 
     /** @brief Check whether a code point is lowercase.
      *
@@ -1190,7 +1195,7 @@ namespace utf {
      *
      * The category considered a lowercase is `Ll`.
      */
-    bool islower(char32_t c) noexcept;
+    OSTD_EXPORT bool islower(char32_t c) noexcept;
 
     /** @brief Check whether a code point is printable.
      *
@@ -1198,7 +1203,7 @@ namespace utf {
      * all characters that are not utf::iscntrl() and that are not
      * U+2028, U+2029, U+FFF9, U+FFFA, U+FFFB.
      */
-    bool isprint(char32_t c) noexcept;
+    OSTD_EXPORT bool isprint(char32_t c) noexcept;
 
     /** @brief Check whether a code point is punctuation.
      *
@@ -1207,7 +1212,7 @@ namespace utf {
      * false for others. Punctuation characters are those that satisfy
      * utf::isgraph() but are not utf::isalnum().
      */
-    bool ispunct(char32_t c) noexcept;
+    OSTD_EXPORT bool ispunct(char32_t c) noexcept;
 
     /** @brief Check whether a code point is a whitespace.
      *
@@ -1217,7 +1222,7 @@ namespace utf {
      * The categories considered blanks are `Z*` with the `B`, `S` and `WS`
      * bidirectional categories.
      */
-    bool isspace(char32_t c) noexcept;
+    OSTD_EXPORT bool isspace(char32_t c) noexcept;
 
     /** @brief Check whether a code point is titlecase.
      *
@@ -1226,7 +1231,7 @@ namespace utf {
      *
      * The category considered a uppercase is `Lt`.
      */
-    bool istitle(char32_t c) noexcept;
+    OSTD_EXPORT bool istitle(char32_t c) noexcept;
 
     /** @brief Check whether a code point is uppercase.
      *
@@ -1236,7 +1241,7 @@ namespace utf {
      *
      * The category considered a uppercase is `Lu`.
      */
-    bool isupper(char32_t c) noexcept;
+    OSTD_EXPORT bool isupper(char32_t c) noexcept;
 
     /** @brief Check whether a code point is a valid character.
      *
@@ -1247,7 +1252,7 @@ namespace utf {
      *
      * This is Unicode specific and has no standard ctype equivalent.
      */
-    bool isvalid(char32_t c) noexcept;
+    OSTD_EXPORT bool isvalid(char32_t c) noexcept;
 
     /** @brief Check whether a code point is a hexadecimal digit.
      *
@@ -1259,7 +1264,7 @@ namespace utf {
      * but unlike the former it never changes behavior, i.e. it cannot
      * support codepage extensions, being Unicode only.
      */
-    bool isxdigit(char32_t c) noexcept;
+    OSTD_EXPORT bool isxdigit(char32_t c) noexcept;
 
     /** @brief Convert a Unicode code point to lowercase.
      *
@@ -1268,7 +1273,7 @@ namespace utf {
      * this just returns the input unchanged, otherwise it returns the
      * matching lowercase variant.
      */
-    char32_t tolower(char32_t c) noexcept;
+    OSTD_EXPORT char32_t tolower(char32_t c) noexcept;
 
     /** @brief Convert a Unicode code point to uppercase.
      *
@@ -1277,7 +1282,7 @@ namespace utf {
      * this just returns the input unchanged, otherwise it returns the
      * matching uppercase variant.
      */
-    char32_t toupper(char32_t c) noexcept;
+    OSTD_EXPORT char32_t toupper(char32_t c) noexcept;
 
     /** @brief Compare two UTF-8 strings.
      *
@@ -1324,7 +1329,7 @@ namespace utf {
      *
      * @see basic_char_range::case_compare()
      */
-    int case_compare(string_range s1, string_range s2) noexcept;
+    OSTD_EXPORT int case_compare(string_range s1, string_range s2) noexcept;
 
     /** @brief Compare two UTF-16 strings as case insensitive.
      *
@@ -1335,7 +1340,8 @@ namespace utf {
      *
      * @see basic_char_range::case_compare()
      */
-    int case_compare(u16string_range s1, u16string_range s2) noexcept;
+    OSTD_EXPORT int case_compare(u16string_range s1, u16string_range s2)
+        noexcept;
 
     /** @brief Compare two UTF-32 strings as case insensitive.
      *
@@ -1346,7 +1352,8 @@ namespace utf {
      *
      * @see basic_char_range::case_compare()
      */
-    int case_compare(u32string_range s1, u32string_range s2) noexcept;
+    OSTD_EXPORT int case_compare(u32string_range s1, u32string_range s2)
+        noexcept;
 
     /** @brief Compare two wide strings as case insensitive.
      *
@@ -1360,7 +1367,7 @@ namespace utf {
      *
      * @see basic_char_range::case_compare()
      */
-    int case_compare(wstring_range s1, wstring_range s2) noexcept;
+    OSTD_EXPORT int case_compare(wstring_range s1, wstring_range s2) noexcept;
 /** @} */
 
 } /* namespace utf */
