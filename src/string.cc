@@ -5,8 +5,56 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
+#include <limits>
+#include <type_traits>
 #include "ostd/string.hh"
 #include "ostd/format.hh"
+
+namespace ostd {
+namespace detail {
+
+template<typename C>
+inline std::size_t tstrlen_impl(C const *p) noexcept {
+    using SL = std::numeric_limits<std::size_t>;
+    using UL = std::numeric_limits<std::make_unsigned_t<C>>;
+    constexpr std::size_t Lbits = SL::max() / UL::max();
+    constexpr std::size_t Hbits = Lbits << (UL::digits - 1);
+
+    C const *bp = p;
+    if constexpr(sizeof(C) >= sizeof(std::size_t)) {
+        goto sloop;
+    }
+    for (; std::uintptr_t(p) % sizeof(std::size_t); ++p) {
+        if (!*p) {
+            return (p - bp);
+        }
+    }
+    {
+        auto *wp = reinterpret_cast<std::size_t const *>(p);
+        for (; !(((*wp - Lbits) & ~*wp) & Hbits); ++wp) {}
+        p = reinterpret_cast<C const *>(wp);
+    }
+sloop:
+    for (; *p; ++p) {}
+    return (p - bp);
+}
+
+std::size_t tstrlen(char const *p) noexcept {
+    return tstrlen_impl(p);
+}
+std::size_t tstrlen(char16_t const *p) noexcept {
+    return tstrlen_impl(p);
+}
+std::size_t tstrlen(char32_t const *p) noexcept {
+    return tstrlen_impl(p);
+}
+std::size_t tstrlen(wchar_t const *p) noexcept {
+    return tstrlen_impl(p);
+}
+
+} /* namespace detail */
+} /* namespace ostd */
 
 namespace ostd {
 namespace utf {

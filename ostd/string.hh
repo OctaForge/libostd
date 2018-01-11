@@ -73,6 +73,13 @@ static_assert(
     "wchar_t must correspond to either char, char16_t or char32_t"
 );
 
+namespace detail {
+    std::size_t tstrlen(char const *p) noexcept;
+    std::size_t tstrlen(char16_t const *p) noexcept;
+    std::size_t tstrlen(char32_t const *p) noexcept;
+    std::size_t tstrlen(wchar_t const *p) noexcept;
+}
+
 /** @addtogroup Strings
  * @{
  */
@@ -135,7 +142,7 @@ public:
             std::size_t N = std::extent_v<std::remove_reference_t<U>>;
             p_end = beg + N - (beg[N - 1] == '\0');
         } else {
-            p_end = beg + (beg ? std::strlen(beg) : 0);
+            p_end = beg + (beg ? detail::tstrlen(beg) : 0);
         }
     }
 
@@ -181,7 +188,7 @@ public:
      * The data pointed to by the argument must be zero terminated.
      */
     basic_char_range &operator=(value_type *s) noexcept {
-        p_beg = s; p_end = s + (s ? std::strlen(s) : 0); return *this;
+        p_beg = s; p_end = s + (s ? detail::tstrlen(s) : 0); return *this;
     }
 
     /** @brief Checks if the slice is empty. */
