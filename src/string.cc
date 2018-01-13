@@ -20,24 +20,38 @@ template<typename C>
 inline std::size_t tstrlen_impl(C const *p) noexcept {
     using SL = std::numeric_limits<std::size_t>;
     using UL = std::numeric_limits<std::make_unsigned_t<C>>;
+    /* low bits of each UL contained in SL (0000000100000001... etc) */
     constexpr std::size_t Lbits = SL::max() / UL::max();
+    /* high bits of each UL contained in SL (1000000010000000... etc) */
     constexpr std::size_t Hbits = Lbits << (UL::digits - 1);
 
     C const *bp = p;
+    /* 1 unit or less per size_t, simple loop */
     if constexpr(sizeof(C) >= sizeof(std::size_t)) {
         goto sloop;
     }
+    /* need a pointer aligned to sizeof(size_t) */
     for (; std::uintptr_t(p) % sizeof(std::size_t); ++p) {
         if (!*p) {
             return (p - bp);
         }
     }
     {
+        /* (e.g. x86_64 => sizeof(size_t) == 8 * sizeof(char) */
         auto *wp = reinterpret_cast<std::size_t const *>(p);
+        /* check if any unit in the size_t is zero, in binary:
+         *
+         * XXX1 - 0001 => XXX0; XXX0 & YYY0 => 0000; 0000 & 1000 => 0000
+         * XX10 - 0001 => XX01; XX01 & YY01 => 0001; 0001 & 1000 => 0000
+         * 0000 - 0001 => 1111; 1111 & 1111 => 1111; 1111 & 1000 => 1000
+         *
+         * if the check passes, a terminating zero is in that size_t, break
+         */
         for (; !(((*wp - Lbits) & ~*wp) & Hbits); ++wp) {}
         p = reinterpret_cast<C const *>(wp);
     }
 sloop:
+    /* either all of the string if goto'd, or contains terminating zero */
     for (; *p; ++p) {}
     return (p - bp);
 }

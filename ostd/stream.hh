@@ -84,7 +84,7 @@ enum class stream_seek {
 };
 
 
-template<typename T = char, bool = std::is_pod_v<T>>
+template<typename T = char, bool = std::is_trivial_v<T>>
 struct stream_range;
 
 /** @brief Thrown on stream errors. */
@@ -398,7 +398,7 @@ struct stream {
      * By default, it's a `char` range that can be read from if the stream
      * can be read from and written into if the stream can be written into.
      * You can override the type by passing in the template parameter. The
-     * type must always be POD.
+     * type must always be trivial.
      *
      * @tparam T The type to use for reading/writing (`char` by default).
      *
@@ -422,7 +422,7 @@ struct stream {
     /** @brief Writes several values into the stream.
      *
      * Uses write_bytes() to write `count` values from `v` into the stream.
-     * The type must be POD.
+     * The type must be trivial.
      *
      * @throws ostd::stream_error on write failure.
      */
@@ -433,7 +433,7 @@ struct stream {
 
     /** @brief Writes a single value into the stream.
      *
-     * Uses write_bytes() to write the value. The type must be POD.
+     * Uses write_bytes() to write the value. The type must be trivial.
      *
      * @throws ostd::stream_error on write failure.
      */
@@ -447,7 +447,7 @@ struct stream {
      * Uses read_bytes() to read `count` values into `v` from the stream.
      * If an end-of-stream is encountered while reading, this does not
      * throw, but it returns the number of entire values successfully read.
-     * The type must be POD.
+     * The type must be trivial.
      *
      * @returns The number of whole values read.
      *
@@ -462,7 +462,7 @@ struct stream {
     /** @brief Reads a single value from the stream.
      *
      * If the value couldn't be read (reading failed or end-of-stream
-     * occured), this throws ostd::stream_error. The type must be POD.
+     * occured), this throws ostd::stream_error. The type must be trivial.
      *
      * @throws ostd::stream_error on read failure or end-of-stream.
      */
@@ -476,7 +476,7 @@ struct stream {
     /** @brief Reads a single value from the stream.
      *
      * If the value couldn't be read (reading failed or end-of-stream
-     * occured), this throws ostd::stream_error. The type must be POD.
+     * occured), this throws ostd::stream_error. The type must be trivial.
      *
      * @returns The read value.
      *
@@ -548,7 +548,7 @@ private:
  * example).
  *
  * This template is a specialization of undefined base type because stream
- * ranges only work with POD types.
+ * ranges only work with trivial types.
  *
  * @see stream_line_range
  */
@@ -660,7 +660,7 @@ inline stream_range<T> stream::iter() {
  * The lines are read using ostd::stream::get_line().
  *
  * You can provide a custom type for characters, by default it's `char`.
- * It must be POD.
+ * It must be trivial.
  *
  * You can also provide a custom type used to hold the line, which must be a
  * container type over `T` which can append at the end. By default,
