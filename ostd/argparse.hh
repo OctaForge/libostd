@@ -190,7 +190,7 @@ protected:
      * number of arguments.
      */
     arg_argument(arg_value req, std::size_t nargs):
-        arg_description(), p_valreq(req), p_nargs(nargs)
+        arg_description(), p_nargs(nargs), p_valreq(req)
     {}
 
     /** @brief A helper constructor with a number of arguments.
@@ -199,14 +199,14 @@ protected:
      */
     arg_argument(std::size_t nargs):
         arg_description(),
-        p_valreq(arg_value::EXACTLY),
-        p_nargs(nargs)
+        p_nargs(nargs),
+         p_valreq(arg_value::EXACTLY)
     {}
 
 private:
     std::string p_helpstr, p_metavar;
-    arg_value p_valreq;
     std::size_t p_nargs;
+    arg_value p_valreq;
 };
 
 /** @brief An optional argument class.

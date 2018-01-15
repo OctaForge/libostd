@@ -37,7 +37,7 @@ inline std::size_t tstrlen_impl(C const *p) noexcept {
         }
     }
     {
-        /* (e.g. x86_64 => sizeof(size_t) == 8 * sizeof(char) */
+        /* e.g. x86_64 => sizeof(size_t) == 8 * sizeof(char) */
         auto *wp = reinterpret_cast<std::size_t const *>(p);
         /* check if any unit in the size_t is zero, in binary:
          *

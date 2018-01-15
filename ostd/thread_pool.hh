@@ -95,7 +95,8 @@ namespace detail {
         }
     private:
         std::aligned_storage_t<
-            sizeof(tpool_func_impl<std::packaged_task<void()>>)
+            sizeof(tpool_func_impl<std::packaged_task<void()>>),
+            alignof(tpool_func_impl<std::packaged_task<void()>>)
         > p_buf;
         tpool_func_base *p_func;
     };
