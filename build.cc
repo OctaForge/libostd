@@ -5,9 +5,6 @@
  * COPYING.md file further information.
  */
 
-/* for Windows so that we avoid dllimport/dllexport */
-#define OSTD_BUILD_LIB
-
 #include <string>
 #include <vector>
 #include <stdexcept>
@@ -331,9 +328,9 @@ int main(int argc, char **argv) {
         }
 
         if (lib) {
-            args.push_back("-DOSTD_BUILD_LIB");
+            args.push_back("-DOSTD_BUILD");
             if (shared) {
-                args.push_back("-DOSTD_BUILD_DLL");
+                args.push_back("-DOSTD_DLL");
             }
         }
 

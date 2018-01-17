@@ -85,16 +85,19 @@
 /** @brief Use this to annotate externally visible API.
  *
  * On Windows, this will expand differently when building a library and when
- * using the resulting API. You can define `OSTD_BUILD_LIB` to declare that
- * you're currently building a static library (in which case this macro will
- * expand to nothing) or `OSTD_BUILD_DLL` to declare you're building a DLL
- * (in which case it will expand to `__declspec(dllexport)`).
- *
- * When not building a library, this will expand to `__declspec(dllimport)`.
- *
+ * using the resulting API. You can define `OSTD_BUILD` to declare that you
+ * are currently building the library, this is only useful for build systems
+ * that build libostd itself, never for library usage. You can also define
+ * `OSTD_DLL` to declare the libostd library is a dynamic one, when both
+ * using and building the library. If `OSTD_DLL` is defined, then this
+ * will be either `__declspec(dllexport)`  or `__declspec(dllimport)`,
+ * depending on whether `OSTD_BUILD` is defined, otherwise it will be
+ * empty regardless of `OSTD_BUILD`.
+
  * On POSIX compliant systems, there are two possibilities. If your compiler
  * supports it, it can expand to `__attribute__((visibility("default")))`.
- * Otherwise, it will be empty.
+ * Otherwise, it will be empty. The `OSTD_BUILD` macro is not used then,
+ * neither is `OSTD_DLL`.
  *
  * ~~~{.cc}
  * OSTD_EXPORT void foo();
@@ -198,18 +201,18 @@
 #endif
 
 #ifdef OSTD_PLATFORM_WIN32
-#  if defined(OSTD_BUILD_LIB) || defined(OSTD_BUILD_DLL)
-#    ifdef OSTD_BUILD_DLL
+#  ifdef OSTD_DLL
+#    ifdef OSTD_BUILD
 #      define OSTD_EXPORT __declspec(dllexport)
 #    else
-#      define OSTD_EXPORT
+#      define OSTD_EXPORT __declspec(dllimport)
 #    endif
 #  else
-#    define OSTD_EXPORT __declspec(dllimport)
+#    define OSTD_EXPORT
 #  endif
 #  define OSTD_LOCAL
 #else
-#  if defined(OSTD_BUILD_LIB) || defined(OSTD_BUILD_DLL)
+#  if defined(OSTD_BUILD) || defined(OSTD_DLL)
 /* -Wunused-macros */
 #  endif
 #  if __GNUC__ >= 4
