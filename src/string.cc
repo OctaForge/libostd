@@ -28,7 +28,8 @@ inline std::size_t tstrlen_impl(C const *p) noexcept {
     C const *bp = p;
     /* 1 unit or less per size_t, simple loop */
     if constexpr(sizeof(C) >= sizeof(std::size_t)) {
-        goto sloop;
+        for (; *p; ++p) {}
+        return (p - bp);
     }
     /* need a pointer aligned to sizeof(size_t) */
     for (; std::uintptr_t(p) % sizeof(std::size_t); ++p) {
@@ -50,8 +51,7 @@ inline std::size_t tstrlen_impl(C const *p) noexcept {
         for (; !(((*wp - Lbits) & ~*wp) & Hbits); ++wp) {}
         p = reinterpret_cast<C const *>(wp);
     }
-sloop:
-    /* either all of the string if goto'd, or contains terminating zero */
+    /* go to terminating zero, by unit */
     for (; *p; ++p) {}
     return (p - bp);
 }
