@@ -131,6 +131,67 @@ struct pipe {
     }
 };
 
+static void do_exec(char const *file, char **argp, char **envp, bool use_path) {
+    /* we could use execvpe and avoid doing all this, but execvpe is not in
+     * POSIX, so we need to do all this stuff and use execve afterwards...
+     *
+     * if use_path is true and filename contains no slash, interpret as a
+     * command name and look up in PATH (or _CS_PATH if PATH is not set)
+     */
+    std::string fullp;
+    if (use_path && !strchr(file, '/')) {
+        std::string fbpathp;
+        std::size_t pathlen = 0;
+        char const *pathp = getenv("PATH");
+        if (!pathp) {
+            for (std::size_t n = 0;;) {
+                std::size_t nn = confstr(_CS_PATH, fbpathp.data(), n);
+                if (!nn) {
+                    break;
+                }
+                if (nn != n) {
+                    fbpathp.reserve(nn);
+                    n = nn;
+                } else {
+                    pathp = fbpathp.data();
+                    pathlen = n - 1;
+                    break;
+                }
+            }
+        } else {
+            fbpathp.append(pathp);
+            pathlen = fbpathp.size();
+        }
+        if (pathp) {
+            char *mpathp = fbpathp.data();
+            for (std::size_t filelen = strlen(file); *mpathp;) {
+                char const *curp = mpathp;
+                char *colon = strchr(mpathp, ':');
+                if (colon) {
+                    *colon = '\0';
+                    mpathp = colon + 1;
+                } else {
+                    mpathp = fbpathp.data() + pathlen;
+                }
+                fullp.clear();
+                fullp.append(curp);
+                fullp.push_back('/');
+                fullp.append(file, filelen);
+                /* only try if executable */
+                if (!access(fullp.data(), X_OK)) {
+                    file = fullp.data();
+                    break;
+                }
+            }
+        }
+    }
+    if (envp) {
+        execve(file, argp, envp);
+    } else {
+        execv(file, argp);
+    }
+}
+
 OSTD_EXPORT void subprocess::open_impl(
     bool use_path, string_range cmd,
     bool (*func)(string_range &, void *), void *datap,
@@ -243,19 +304,7 @@ OSTD_EXPORT void subprocess::open_impl(
                 std::exit(1);
             }
         }
-        if (use_path) {
-            if (envp) {
-                execvpe(argp.cmd, argpp, envp);
-            } else {
-                execvp(argp.cmd, argpp);
-            }
-        } else {
-            if (envp) {
-                execve(argp.cmd, argpp, envp);
-            } else {
-                execv(argp.cmd, argpp);
-            }
-        }
+        do_exec(argp.cmd, argpp, envp, use_path);
         /* exec has returned, so error has occured */
         fd_errno.write_errno();
         std::exit(1);
