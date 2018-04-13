@@ -79,13 +79,13 @@ struct path {
         p_path(p.p_path), p_fmt(fmt)
     {}
 
-    path(path &&p): path(p) {
-        p.clear();
-    }
+    path(path &&p):
+        p_path(std::move(p.p_path)), p_fmt(p.p_fmt)
+    {}
 
-    path(path &&p, format fmt): path(p, fmt) {
-        p.clear();
-    }
+    path(path &&p, format fmt):
+        p_path(std::move(p.p_path)), p_fmt(fmt)
+    {}
 
     path &operator=(path const &p) {
         p_path = p.p_path;
