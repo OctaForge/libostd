@@ -24,8 +24,15 @@
 #include <utility>
 #include <initializer_list>
 #include <type_traits>
+#include <system_error>
 
+#include <ostd/platform.hh>
 #include <ostd/string.hh>
+#include <ostd/format.hh>
+
+/* path representation is within ostd namespace, there aren't any APIs to
+ * do actual filesystem manipulation, that's all in the fs namespace below
+ */
 
 namespace ostd {
 
@@ -64,6 +71,34 @@ struct path {
         path(iter(init), fmt)
     {}
 
+    path(path const &p):
+        p_path(p.p_path), p_fmt(p.p_fmt)
+    {}
+
+    path(path const &p, format fmt):
+        p_path(p.p_path), p_fmt(fmt)
+    {}
+
+    path(path &&p): path(p) {
+        p.clear();
+    }
+
+    path(path &&p, format fmt): path(p, fmt) {
+        p.clear();
+    }
+
+    path &operator=(path const &p) {
+        p_path = p.p_path;
+        p_fmt = p.p_fmt;
+        return *this;
+    }
+
+    path &operator=(path &&p) {
+        swap(p);
+        p.clear();
+        return *this;
+    }
+
     path join(path const &p) const {
         path ret{*this};
         ret.append(p);
@@ -90,6 +125,15 @@ struct path {
         return p_fmt;
     }
 
+    void clear() {
+        p_path.clear();
+    }
+
+    void swap(path &other) {
+        p_path.swap(other.p_path);
+        std::swap(p_fmt, other.p_fmt);
+    }
+
 private:
     std::string p_path;
     format p_fmt;
@@ -99,9 +143,34 @@ inline path operator/(path const &p1, path const &p2) {
     return p1.join(p2);
 }
 
+template<>
+struct format_traits<path> {
+    template<typename R>
+    static void to_format(path const &p, R &writer, format_spec const &fs) {
+        fs.format_value(writer, p.string());
+    }
+};
+
 /** @} */
 
 } /* namespace ostd */
+
+/* filesystem manipulation that relies on path representation above */
+
+namespace ostd {
+namespace fs {
+
+/** @addtogroup Utilities
+ * @{
+ */
+
+OSTD_EXPORT path cwd();
+OSTD_EXPORT path home();
+
+/** @} */
+
+} /* namesapce fs */
+} /* namesapce ostd */
 
 #endif
 
