@@ -136,23 +136,31 @@ struct path {
         return "";
     }
 
-    std::string root() const {
+    bool has_drive() const {
         if (is_win()) {
-            if (
+            return (has_letter(p_path) || (p_path.substr(0, 2) == "\\\\"));
+        }
+        return false;
+    }
+
+    std::string root() const {
+        if (has_root()) {
+            return std::string{1, separator()};
+        }
+        return "";
+    }
+
+    bool has_root() const {
+        if (is_win()) {
+            return (
                 (p_path.data()[0] == '\\') ||
                 (
                     (p_path.length() >= 3) &&
                     (p_path[2] == '\\') && has_letter(p_path)
                 )
-            ) {
-                return "\\";
-            }
-            return "";
+            );
         }
-        if (p_path.data()[0] == '/') {
-            return "/";
-        }
-        return "";
+        return (p_path.data()[0] == '/');
     }
 
     std::string anchor() const {
@@ -161,14 +169,30 @@ struct path {
         return ret;
     }
 
+    bool has_anchor() const {
+        return has_root() || has_drive();
+    }
+
     path parent() const {
         path rel = relative_to(anchor());
-        if (rel.p_path.empty()) {
+        if (rel.p_path == ".") {
             return *this;
         }
         return ostd::string_range{
             p_path.data(), strrchr(p_path.data(), separator())
         };
+    }
+
+    bool has_parent() const {
+        return (parent().p_path != p_path);
+    }
+
+    path relative() const {
+        return relative_to(anchor());
+    }
+
+    bool has_relative() const {
+        return (relative().p_path != ".");
     }
 
     std::string name() const {
@@ -180,6 +204,10 @@ struct path {
         return rel.p_path.substr(pos + 1);
     }
 
+    bool has_name() const {
+        return !name().empty();
+    }
+
     std::string suffix() const {
         path rel = relative_to(anchor());
         auto pos = rel.p_path.rfind('.');
@@ -187,6 +215,10 @@ struct path {
             return "";
         }
         return rel.p_path.substr(pos);
+    }
+
+    bool has_suffix() const {
+        return !suffix().empty();
     }
 
     std::string suffixes() const {
@@ -198,6 +230,10 @@ struct path {
         return nm.substr(pos);
     }
 
+    bool has_suffixes() const {
+        return !suffixes().empty();
+    }
+
     std::string stem() const {
         auto nm = name();
         auto pos = nm.find('.');
@@ -207,11 +243,14 @@ struct path {
         return nm.substr(0, pos);
     }
 
+    bool has_stem() const {
+        return !stem().empty();
+    }
+
     path relative_to(path other) const {
         if (other.p_fmt != p_fmt) {
             other = path{other, p_fmt};
         }
-        other.strip_sep();
         if (p_path.substr(0, other.p_path.length()) == other.p_path) {
             std::size_t oplen = other.p_path.length();
             if ((p_path.length() > oplen) && (p_path[oplen] == separator())) {
@@ -221,6 +260,64 @@ struct path {
         }
         /* TODO: throw */
         return path{""};
+    }
+
+    path &remove_name() {
+        auto nm = name();
+        if (nm.empty()) {
+            /* TODO: throw */
+            return *this;
+        }
+        p_path.erase(p_path.length() - nm.length() - 1, nm.length() + 1);
+        return *this;
+    }
+
+    path without_name() const {
+        path ret{*this};
+        ret.remove_name();
+        return ret;
+    }
+
+    path &replace_name(string_range name) {
+        remove_name();
+        append_str(std::string{name});
+        return *this;
+    }
+
+    path with_name(string_range name) {
+        path ret{*this};
+        ret.replace_name(name);
+        return ret;
+    }
+
+    path &replace_suffix(string_range sfx) {
+        auto osfx = suffix();
+        if (!osfx.empty()) {
+            p_path.erase(p_path.length() - osfx.length(), osfx.length());
+        }
+        p_path.append(sfx);
+        return *this;
+    }
+
+    path &replace_suffixes(string_range sfx) {
+        auto sfxs = suffixes();
+        if (!sfxs.empty()) {
+            p_path.erase(p_path.length() - sfxs.length(), sfxs.length());
+        }
+        p_path.append(sfx);
+        return *this;
+    }
+
+    path with_suffix(string_range sfx) {
+        path ret{*this};
+        ret.replace_suffix(sfx);
+        return ret;
+    }
+
+    path with_suffixes(string_range sfx) {
+        path ret{*this};
+        ret.replace_suffixes(sfx);
+        return ret;
     }
 
     path join(path const &p) const {
@@ -234,8 +331,27 @@ struct path {
         return *this;
     }
 
+    path &append_concat(path const &p) {
+        std::string pp = std::move(p_path);
+        std::size_t olen = pp.length();
+        pp += p.p_path;
+        clear();
+        append_str(std::move(pp), olen);
+        return *this;
+    }
+
+    path concat(path const &p) const {
+        path ret{*this};
+        ret.append_concat(p);
+        return ret;
+    }
+
     path &operator/=(path const &p) {
         return append(p);
+    }
+
+    path &operator+=(path const &p) {
+        return append_concat(p);
     }
 
     string_range string() const {
@@ -276,12 +392,6 @@ private:
         return path_fmt(p_fmt) == format::windows;
     }
 
-    void strip_sep() {
-        if (!p_path.empty() && (p_path.back() == separator())) {
-            p_path.pop_back();
-        }
-    }
-
     static bool has_letter(std::string const &s) {
         if (s.size() < 2) {
             return false;
@@ -290,17 +400,16 @@ private:
         return (s[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z');
     }
 
-    void append_str(std::string s) {
+    void append_str(std::string s, std::size_t start = 0) {
         char sep = separator();
         bool win = is_win();
         /* replace multiple separator sequences and . parts */
-        std::size_t start = 0;
-        char const *p = s.data();
+        char const *p = &s[start];
         if (win && is_sep(p[0]) && is_sep(p[1])) {
             /* it's okay for windows paths to start with double backslash,
              * but if it's triple or anything like that replace anyway
              */
-            start = 1;
+            start += 1;
             ++p;
         }
         /* special case: path starts with ./ or is simply ., erase */
@@ -372,6 +481,10 @@ private:
 
 inline path operator/(path const &p1, path const &p2) {
     return p1.join(p2);
+}
+
+inline path operator+(path const &p1, path const &p2) {
+    return p1.concat(p2);
 }
 
 template<>
