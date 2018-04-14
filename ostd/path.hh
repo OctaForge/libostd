@@ -110,7 +110,7 @@ struct path {
         return seps[std::size_t(p_fmt)];
     }
 
-    path drive() const {
+    std::string drive() const {
         if (is_win()) {
             if (p_path.substr(0, 2) == "\\\\") {
                 char const *endp = strchr(p_path.data() + 2, '\\');
@@ -121,28 +121,21 @@ struct path {
                 if (!pendp) {
                     return p_path;
                 }
-                return string_range{p_path.data(), pendp};
-            } else if (p_path.length() >= 2) {
-                char ltr = p_path[0] | 32;
-                if ((p_path[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z')) {
-                    return p_path.substr(0, 2);
-                }
+                return std::string{p_path.data(), pendp};
+            } else if (has_letter()) {
+                return p_path.substr(0, 2);
             }
         }
-        return path{""};
+        return "";
     }
 
-    path root() const {
+    std::string root() const {
         if (is_win()) {
-            if (p_path[0] == '\\') {
+            if (
+                (!p_path.empty() && (p_path[0] == '\\')) ||
+                ((p_path.length() >= 3) && (p_path[2] == '\\') && has_letter())
+            ) {
                 return "\\";
-            } else if (p_path.length() >= 3) {
-                char ltr = p_path[0] | 32;
-                if ((p_path[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z')) {
-                    if (p_path[2] == '\\') {
-                        return "\\";
-                    }
-                }
             }
             return "";
         }
@@ -152,7 +145,7 @@ struct path {
         return "";
     }
 
-    path anchor() const {
+    std::string anchor() const {
         auto ret = drive();
         ret.append(root());
         return ret;
@@ -276,6 +269,14 @@ private:
         if (!p_path.empty() && (p_path.back() == separator())) {
             p_path.pop_back();
         }
+    }
+
+    bool has_letter() const {
+        if (p_path.size() < 2) {
+            return false;
+        }
+        char ltr = p_path[0] | 32;
+        return (p_path[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z');
     }
 
     std::string p_path;
