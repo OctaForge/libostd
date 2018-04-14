@@ -313,7 +313,7 @@ private:
             if (is_sep(*p)) {
                 std::size_t cnt = 0;
                 for (;;) {
-                    if (p[cnt + 1] == sep) {
+                    if (is_sep(p[cnt + 1])) {
                         ++cnt;
                         continue;
                     }
