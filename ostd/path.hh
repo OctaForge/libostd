@@ -145,7 +145,8 @@ struct path {
 
     std::string root() const {
         if (has_root()) {
-            return std::string{1, separator()};
+            char sep = separator();
+            return std::string{&sep, 1};
         }
         return "";
     }
@@ -248,6 +249,9 @@ struct path {
     }
 
     path relative_to(path other) const {
+        if (other.p_path == ".") {
+            return *this;
+        }
         if (other.p_fmt != p_fmt) {
             other = path{other, p_fmt};
         }
