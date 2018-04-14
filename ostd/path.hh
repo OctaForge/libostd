@@ -336,11 +336,7 @@ struct path {
     }
 
     path &append_concat(path const &p) {
-        std::string pp = std::move(p_path);
-        std::size_t olen = pp.length();
-        pp += p.p_path;
-        clear();
-        append_str(std::move(pp), olen);
+        append_concat_str(p.p_path);
         return *this;
     }
 
@@ -404,12 +400,11 @@ private:
         return (s[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z');
     }
 
-    void append_str(std::string s, std::size_t start = 0) {
-        char sep = separator();
-        bool win = is_win();
+    void cleanup_str(std::string &s, char sep, bool allow_twoslash) {
+        std::size_t start = 0;
         /* replace multiple separator sequences and . parts */
         char const *p = &s[start];
-        if (win && is_sep(p[0]) && is_sep(p[1])) {
+        if (allow_twoslash && is_sep(p[0]) && is_sep(p[1])) {
             /* it's okay for windows paths to start with double backslash,
              * but if it's triple or anything like that replace anyway
              */
@@ -442,6 +437,31 @@ private:
                 s.replace(start, cnt + 1, 1, sep);
             }
         }
+    }
+
+    void strip_trailing(char sep) {
+        std::size_t plen = p_path.length();
+        if (sep == '\\') {
+            char const *p = p_path.data();
+            if ((plen <= 2) && (p[0] == '\\') && (p[1] == '\\')) {
+                return;
+            }
+            if ((plen <= 3) && has_letter(p_path)) {
+                return;
+            }
+        } else if (plen <= 1) {
+            return;
+        }
+        if (p_path.back() == sep) {
+            p_path.pop_back();
+        }
+    }
+
+    void append_str(std::string s) {
+        char sep = separator();
+        bool win = is_win();
+        /* replace multiple separator sequences and . parts */
+        cleanup_str(s, sep, win);
         /* if the path has a root, replace the previous path, otherwise
          * append a separator followed by the path and be done with it
          *
@@ -452,16 +472,32 @@ private:
         } else if (!s.empty()) {
             /* empty paths are ., don't forget to clear that */
             if (p_path == ".") {
-                p_path.clear();
-            } else if (p_path != "/") {
-                p_path.push_back(sep);
+                /* empty path: replace */
+                p_path = std::move(s);
+            } else {
+                if (p_path.back() != sep) {
+                    p_path.push_back(sep);
+                }
+                p_path.append(s);
+            }
+        }
+        strip_trailing(sep);
+    }
+
+    void append_concat_str(std::string s) {
+        char sep = separator();
+        /* replace multiple separator sequences and . parts */
+        cleanup_str(s, sep, false);
+        if (p_path == ".") {
+            /* empty path: replace */
+            p_path = std::move(s);
+        } else {
+            if ((p_path.back() == sep) && (s.front() == sep)) {
+                p_path.pop_back();
             }
             p_path.append(s);
         }
-        /* strip trailing separator */
-        if ((p_path.length() > 1) && (p_path.back() == sep)) {
-            p_path.pop_back();
-        }
+        strip_trailing(sep);
     }
 
     void convert_path() {
