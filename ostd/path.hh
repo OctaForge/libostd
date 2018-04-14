@@ -21,6 +21,8 @@
 #ifndef OSTD_PATH_HH
 #define OSTD_PATH_HH
 
+#include <string.h>
+
 #include <utility>
 #include <initializer_list>
 #include <type_traits>
@@ -41,7 +43,11 @@ namespace ostd {
  */
 
 struct path {
-    static constexpr char separator = '/';
+#ifdef OSTD_PLATFORM_WIN32
+    static constexpr char native_separator = '\\';
+#else
+    static constexpr char native_separator = '/';
+#endif
 
     enum class format {
         native = 0,
@@ -99,6 +105,121 @@ struct path {
         return *this;
     }
 
+    char separator() const {
+        static const char seps[] = { native_separator, '/', '\\' };
+        return seps[std::size_t(p_fmt)];
+    }
+
+    path drive() const {
+        if (is_win()) {
+            if (p_path.substr(0, 2) == "\\\\") {
+                char const *endp = strchr(p_path.data() + 2, '\\');
+                if (!endp) {
+                    return p_path;
+                }
+                char const *pendp = strchr(endp, '\\');
+                if (!pendp) {
+                    return p_path;
+                }
+                return string_range{p_path.data(), pendp};
+            } else if (p_path.length() >= 2) {
+                char ltr = p_path[0] | 32;
+                if ((p_path[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z')) {
+                    return p_path.substr(0, 2);
+                }
+            }
+        }
+        return path{""};
+    }
+
+    path root() const {
+        if (is_win()) {
+            if (p_path[0] == '\\') {
+                return "\\";
+            } else if (p_path.length() >= 3) {
+                char ltr = p_path[0] | 32;
+                if ((p_path[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z')) {
+                    if (p_path[2] == '\\') {
+                        return "\\";
+                    }
+                }
+            }
+            return "";
+        }
+        if (!p_path.empty() && (p_path[0] == '/')) {
+            return "/";
+        }
+        return "";
+    }
+
+    path anchor() const {
+        auto ret = drive();
+        ret.append(root());
+        return ret;
+    }
+
+    path parent() const {
+        path rel = relative_to(anchor());
+        if (rel.p_path.empty()) {
+            return *this;
+        }
+        return ostd::string_range{
+            p_path.data(), strrchr(p_path.data(), separator())
+        };
+    }
+
+    std::string name() const {
+        path rel = relative_to(anchor());
+        auto pos = rel.p_path.rfind(separator());
+        if (pos == std::string::npos) {
+            return std::move(rel.p_path);
+        }
+        return rel.p_path.substr(pos + 1);
+    }
+
+    std::string suffix() const {
+        path rel = relative_to(anchor());
+        auto pos = rel.p_path.rfind('.');
+        if (pos == std::string::npos) {
+            return "";
+        }
+        return rel.p_path.substr(pos);
+    }
+
+    std::string suffixes() const {
+        auto nm = name();
+        auto pos = nm.find('.');
+        if (pos == std::string::npos) {
+            return "";
+        }
+        return nm.substr(pos);
+    }
+
+    std::string stem() const {
+        auto nm = name();
+        auto pos = nm.find('.');
+        if (pos == std::string::npos) {
+            return nm;
+        }
+        return nm.substr(0, pos);
+    }
+
+    path relative_to(path other) const {
+        if (other.p_fmt != p_fmt) {
+            other = path{other, p_fmt};
+        }
+        other.strip_sep();
+        if (p_path.substr(0, other.p_path.length()) == other.p_path) {
+            std::size_t oplen = other.p_path.length();
+            if ((p_path.length() > oplen) && (p_path[oplen] == separator())) {
+                ++oplen;
+            }
+            return path{p_path.substr(oplen), p_fmt};
+        }
+        /* TODO: throw */
+        return path{""};
+    }
+
     path join(path const &p) const {
         path ret{*this};
         ret.append(p);
@@ -107,7 +228,7 @@ struct path {
 
     path &append(path const &p) {
         if (p_path != "/") {
-            p_path.push_back('/');
+            p_path.push_back(separator());
         }
         p_path += p.string();
         return *this;
@@ -135,6 +256,28 @@ struct path {
     }
 
 private:
+    format path_fmt() const {
+        static const format fmts[] = {
+#ifdef OSTD_PLATFORM_WIN32
+            format::windows,
+#else
+            format::posix,
+#endif
+            format::posix, format::windows
+        };
+        return fmts[std::size_t(p_fmt)];
+    }
+
+    bool is_win() const {
+        return p_fmt == format::windows;
+    }
+
+    void strip_sep() {
+        if (!p_path.empty() && (p_path.back() == separator())) {
+            p_path.pop_back();
+        }
+    }
+
     std::string p_path;
     format p_fmt;
 };
