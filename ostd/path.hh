@@ -345,6 +345,10 @@ private:
             }
             p_path.append(s);
         }
+        /* strip trailing separator */
+        if ((p_path.length() > 1) && (p_path.back() == sep)) {
+            p_path.pop_back();
+        }
     }
 
     void convert_path() {
