@@ -56,16 +56,12 @@ struct path {
     };
 
     template<typename R>
-    path(R range, format fmt = format::native): p_fmt(fmt) {
+    path(R range, format fmt = format::native): p_path("."), p_fmt(fmt) {
         if constexpr(std::is_constructible_v<std::string, R const &>) {
-            p_path = range;
-        } else if (range.empty()) {
-            p_path = ".";
-        } else {
-            p_path = range.front();
-            range.pop_front();
+            append_str(std::string{range});
+        } else if (!range.empty()) {
             for (auto const &elem: range) {
-                append(elem);
+                append_str(std::string{elem});
             }
         }
     }
@@ -83,15 +79,26 @@ struct path {
 
     path(path const &p, format fmt):
         p_path(p.p_path), p_fmt(fmt)
-    {}
+    {
+        if (path_fmt(fmt) != path_fmt(p.p_fmt)) {
+            convert_path();
+        }
+    }
 
     path(path &&p):
         p_path(std::move(p.p_path)), p_fmt(p.p_fmt)
-    {}
+    {
+        p.p_path = ".";
+    }
 
     path(path &&p, format fmt):
         p_path(std::move(p.p_path)), p_fmt(fmt)
-    {}
+    {
+        p.p_path = ".";
+        if (path_fmt(fmt) != path_fmt(p.p_fmt)) {
+            convert_path();
+        }
+    }
 
     path &operator=(path const &p) {
         p_path = p.p_path;
@@ -122,7 +129,7 @@ struct path {
                     return p_path;
                 }
                 return std::string{p_path.data(), pendp};
-            } else if (has_letter()) {
+            } else if (has_letter(p_path)) {
                 return p_path.substr(0, 2);
             }
         }
@@ -132,14 +139,17 @@ struct path {
     std::string root() const {
         if (is_win()) {
             if (
-                (!p_path.empty() && (p_path[0] == '\\')) ||
-                ((p_path.length() >= 3) && (p_path[2] == '\\') && has_letter())
+                (p_path.data()[0] == '\\') ||
+                (
+                    (p_path.length() >= 3) &&
+                    (p_path[2] == '\\') && has_letter(p_path)
+                )
             ) {
                 return "\\";
             }
             return "";
         }
-        if (!p_path.empty() && (p_path[0] == '/')) {
+        if (p_path.data()[0] == '/') {
             return "/";
         }
         return "";
@@ -220,10 +230,7 @@ struct path {
     }
 
     path &append(path const &p) {
-        if (p_path != "/") {
-            p_path.push_back(separator());
-        }
-        p_path += p.string();
+        append_str(p.p_path);
         return *this;
     }
 
@@ -240,7 +247,7 @@ struct path {
     }
 
     void clear() {
-        p_path.clear();
+        p_path = ".";
     }
 
     void swap(path &other) {
@@ -249,7 +256,7 @@ struct path {
     }
 
 private:
-    format path_fmt() const {
+    static format path_fmt(format f) {
         static const format fmts[] = {
 #ifdef OSTD_PLATFORM_WIN32
             format::windows,
@@ -258,11 +265,15 @@ private:
 #endif
             format::posix, format::windows
         };
-        return fmts[std::size_t(p_fmt)];
+        return fmts[std::size_t(f)];
+    }
+
+    static bool is_sep(char c) {
+        return ((c == '/') || (c == '\\'));
     }
 
     bool is_win() const {
-        return p_fmt == format::windows;
+        return path_fmt(p_fmt) == format::windows;
     }
 
     void strip_sep() {
@@ -271,12 +282,84 @@ private:
         }
     }
 
-    bool has_letter() const {
-        if (p_path.size() < 2) {
+    static bool has_letter(std::string const &s) {
+        if (s.size() < 2) {
             return false;
         }
-        char ltr = p_path[0] | 32;
-        return (p_path[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z');
+        char ltr = s[0] | 32;
+        return (s[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z');
+    }
+
+    void append_str(std::string s) {
+        char sep = separator();
+        bool win = is_win();
+        /* replace multiple separator sequences and . parts */
+        std::size_t start = 0;
+        char const *p = s.data();
+        if (win && is_sep(p[0]) && is_sep(p[1])) {
+            /* it's okay for windows paths to start with double backslash,
+             * but if it's triple or anything like that replace anyway
+             */
+            start = 1;
+            ++p;
+        }
+        /* special case: path starts with ./ or is simply ., erase */
+        if ((*p == '.') && (is_sep(p[1]) || (p[1] == '\0'))) {
+            s.erase(start, 2 - int(p[1] == '\0'));
+        }
+        /* replace // and /./ sequences as well as separators */
+        for (; start < s.length(); ++start) {
+            p = &s[start];
+            if (is_sep(*p)) {
+                std::size_t cnt = 0;
+                for (;;) {
+                    if (p[cnt + 1] == sep) {
+                        ++cnt;
+                        continue;
+                    }
+                    if (
+                        (p[cnt + 1] == '.') &&
+                        (is_sep(p[cnt + 2]) || (p[cnt + 2] == '\0'))
+                    ) {
+                        cnt += 2;
+                        continue;
+                    }
+                    break;
+                }
+                s.replace(start, cnt + 1, 1, sep);
+            }
+        }
+        /* if the path has a root, replace the previous path, otherwise
+         * append a separator followed by the path and be done with it
+         *
+         * if this is windows and we have a drive, it's like having a root
+         */
+        if ((s.data()[0] == sep) || (win && has_letter(s))) {
+            p_path = std::move(s);
+        } else if (!s.empty()) {
+            /* empty paths are ., don't forget to clear that */
+            if (p_path == ".") {
+                p_path.clear();
+            } else if (p_path != "/") {
+                p_path.push_back(sep);
+            }
+            p_path.append(s);
+        }
+    }
+
+    void convert_path() {
+        char froms = '\\', tos = '/';
+        if (separator() == '\\') {
+            froms = '/';
+            tos = '\\';
+        } else if (p_path.substr(0, 2) == "\\\\") {
+            p_path.replace(0, 2, 1, '/');
+        }
+        for (auto &c: p_path) {
+            if (c == froms) {
+                c = tos;
+            }
+        }
     }
 
     std::string p_path;
