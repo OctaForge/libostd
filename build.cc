@@ -14,6 +14,7 @@
 #include "ostd/range.hh"
 #include "ostd/format.hh"
 #include "ostd/string.hh"
+#include "ostd/path.hh"
 #include "ostd/filesystem.hh"
 #include "ostd/thread_pool.hh"
 #include "ostd/channel.hh"
@@ -24,6 +25,7 @@ namespace fs = ostd::filesystem;
 /* ugly, but do not explicitly compile */
 #include "src/io.cc"
 #include "src/process.cc"
+#include "srC/path.cc"
 #include "src/filesystem.cc"
 #include "src/thread_pool.cc"
 #include "src/channel.cc"

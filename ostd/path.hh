@@ -366,6 +366,10 @@ struct path {
         p_path = ".";
     }
 
+    bool empty() const {
+        return (p_path == ".");
+    }
+
     void swap(path &other) noexcept {
         p_path.swap(other.p_path);
         std::swap(p_fmt, other.p_fmt);
@@ -688,6 +692,84 @@ namespace fs {
 /** @addtogroup Utilities
  * @{
  */
+
+struct directory_entry {
+    directory_entry() {}
+    directory_entry(ostd::path const &p): p_path(p) {}
+
+    ostd::path const &path() const noexcept {
+        return p_path;
+    }
+
+    operator ostd::path const &() const noexcept {
+        return p_path;
+    }
+
+    void clear() {
+        p_path.clear();
+    }
+
+    void assign(ostd::path const &p) {
+        p_path = p;
+    }
+
+    void assign(ostd::path &&p) {
+        p_path = std::move(p);
+    }
+
+private:
+    ostd::path p_path{};
+};
+
+struct directory_range: input_range<directory_range> {
+    using range_category = input_range_tag;
+    using value_type = directory_entry;
+    using reference = directory_entry const &;
+    using size_type = std::size_t;
+
+    directory_range() = delete;
+    directory_range(path const &p) {
+        open(p);
+    }
+
+    directory_range(directory_range const &r) noexcept:
+        p_current(r.p_current), p_dir(r.p_dir),
+        p_handle(r.p_handle), p_owned(false)
+    {}
+
+    ~directory_range() {
+        close();
+    }
+
+    directory_range &operator=(directory_range const &r) noexcept {
+        close();
+        p_handle = r.p_handle;
+        p_owned = false;
+        return *this;
+    }
+
+    bool empty() const noexcept {
+        return p_current.path().empty();
+    }
+
+    void pop_front() {
+        read_next();
+    }
+
+    reference front() const noexcept {
+        return p_current;
+    }
+
+private:
+    void open(path const &p);
+    void close() noexcept;
+    void read_next();
+
+    directory_entry p_current{};
+    path p_dir{};
+    void *p_handle = nullptr;
+    bool p_owned = false;
+};
 
 OSTD_EXPORT path cwd();
 OSTD_EXPORT path home();
