@@ -85,7 +85,7 @@ struct path {
         }
     }
 
-    path(path &&p):
+    path(path &&p) noexcept:
         p_path(std::move(p.p_path)), p_fmt(p.p_fmt)
     {
         p.p_path = ".";
@@ -106,18 +106,18 @@ struct path {
         return *this;
     }
 
-    path &operator=(path &&p) {
+    path &operator=(path &&p) noexcept {
         swap(p);
         p.clear();
         return *this;
     }
 
-    char separator() const {
+    char separator() const noexcept {
         static const char seps[] = { native_separator, '/', '\\' };
         return seps[std::size_t(p_fmt)];
     }
 
-    string_range drive() const {
+    string_range drive() const noexcept {
         if (is_win()) {
             string_range path = p_path;
             if (has_dslash(path)) {
@@ -137,14 +137,14 @@ struct path {
         return nullptr;
     }
 
-    bool has_drive() const {
+    bool has_drive() const noexcept {
         if (is_win()) {
             return (has_letter(p_path) || has_dslash(p_path));
         }
         return false;
     }
 
-    string_range root() const {
+    string_range root() const noexcept {
         char const *rootp = get_rootp();
         if (rootp) {
             return string_range{rootp, rootp + 1};
@@ -152,11 +152,11 @@ struct path {
         return nullptr;
     }
 
-    bool has_root() const {
+    bool has_root() const noexcept {
         return !!get_rootp();
     }
 
-    string_range anchor() const {
+    string_range anchor() const noexcept {
         string_range dr = drive();
         if (dr.empty()) {
             return root();
@@ -169,7 +169,7 @@ struct path {
         return dr;
     }
 
-    bool has_anchor() const {
+    bool has_anchor() const noexcept {
         return has_root() || has_drive();
     }
 
@@ -183,7 +183,7 @@ struct path {
         };
     }
 
-    bool has_parent() const {
+    bool has_parent() const noexcept {
         return (parent().p_path != p_path);
     }
 
@@ -191,11 +191,7 @@ struct path {
         return relative_to(anchor());
     }
 
-    bool has_relative() const {
-        return (relative().p_path != ".");
-    }
-
-    string_range name() const {
+    string_range name() const noexcept {
         string_range rel = relative_to_str(anchor());
         string_range sep = ostd::find_last(rel, separator());
         if (sep.empty()) {
@@ -205,36 +201,32 @@ struct path {
         return sep;
     }
 
-    bool has_name() const {
+    bool has_name() const noexcept {
         return !name().empty();
     }
 
-    string_range suffix() const {
+    string_range suffix() const noexcept {
         return ostd::find_last(relative_to_str(anchor()), '.');
     }
 
-    bool has_suffix() const {
-        return !suffix().empty();
-    }
-
-    string_range suffixes() const {
+    string_range suffixes() const noexcept {
         return ostd::find(name(), '.');
     }
 
-    bool has_suffixes() const {
+    bool has_suffix() const noexcept {
         return !suffixes().empty();
     }
 
-    string_range stem() const {
+    string_range stem() const noexcept {
         auto nm = name();
         return nm.slice(0, nm.size() - ostd::find(nm, '.').size());
     }
 
-    bool has_stem() const {
+    bool has_stem() const noexcept {
         return !stem().empty();
     }
 
-    bool is_absolute() const {
+    bool is_absolute() const noexcept {
         if (is_win()) {
             if (has_dslash(p_path)) {
                 return true;
@@ -244,7 +236,7 @@ struct path {
         return (p_path.data()[0] == '/');
     }
 
-    bool is_relative() const {
+    bool is_relative() const noexcept {
         return !is_absolute();
     }
 
@@ -344,11 +336,11 @@ struct path {
         return append_concat(p);
     }
 
-    string_range string() const {
+    string_range string() const noexcept {
         return p_path;
     }
 
-    format path_format() const {
+    format path_format() const noexcept {
         return p_fmt;
     }
 
@@ -356,13 +348,13 @@ struct path {
         p_path = ".";
     }
 
-    void swap(path &other) {
+    void swap(path &other) noexcept {
         p_path.swap(other.p_path);
         std::swap(p_fmt, other.p_fmt);
     }
 
 private:
-    static format path_fmt(format f) {
+    static format path_fmt(format f) noexcept {
         static const format fmts[] = {
 #ifdef OSTD_PLATFORM_WIN32
             format::windows,
@@ -374,15 +366,15 @@ private:
         return fmts[std::size_t(f)];
     }
 
-    static bool is_sep(char c) {
+    static bool is_sep(char c) noexcept {
         return ((c == '/') || (c == '\\'));
     }
 
-    bool is_win() const {
+    bool is_win() const noexcept {
         return path_fmt(p_fmt) == format::windows;
     }
 
-    static bool has_letter(string_range s) {
+    static bool has_letter(string_range s) noexcept {
         if (s.size() < 2) {
             return false;
         }
@@ -390,7 +382,7 @@ private:
         return (s[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z');
     }
 
-    static bool has_dslash(string_range s) {
+    static bool has_dslash(string_range s) noexcept {
         if (s.size() < 2) {
             return false;
         }
@@ -514,7 +506,7 @@ private:
         }
     }
 
-    string_range relative_to_str(string_range other) const {
+    string_range relative_to_str(string_range other) const noexcept {
         if (other == ".") {
             return p_path;
         }
@@ -529,7 +521,7 @@ private:
         return nullptr;
     }
 
-    char const *get_rootp() const {
+    char const *get_rootp() const noexcept {
         char const *datap = p_path.data();
         if (is_win()) {
             if (*datap == '\\')  {
