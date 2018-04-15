@@ -133,7 +133,7 @@ struct path {
                 if (!endp) {
                     return path;
                 }
-                char const *pendp = strchr(endp, '\\');
+                char const *pendp = strchr(endp + 1, '\\');
                 if (!pendp) {
                     return path;
                 }
@@ -188,7 +188,7 @@ struct path {
         if (sep.empty()) {
             return *this;
         }
-        return ostd::string_range{p_path.data(), sep.data()};
+        return path{ostd::string_range{p_path.data(), sep.data()}, p_fmt};
     }
 
     bool has_parent() const noexcept {
@@ -250,9 +250,9 @@ struct path {
 
     path relative_to(path const &other) const {
         if (path_fmt(other.p_fmt) != path_fmt(p_fmt)) {
-            return relative_to_str(path{other, p_fmt}.p_path);
+            return path{relative_to_str(path{other, p_fmt}.p_path), p_fmt};
         } else {
-            return relative_to_str(other.p_path);
+            return path{relative_to_str(other.p_path), p_fmt};
         }
     }
 
