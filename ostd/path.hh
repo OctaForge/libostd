@@ -29,8 +29,10 @@
 #include <system_error>
 
 #include <ostd/platform.hh>
+#include <ostd/range.hh>
 #include <ostd/string.hh>
 #include <ostd/format.hh>
+#include <ostd/algorithm.hh>
 
 /* path representation is within ostd namespace, there aren't any APIs to
  * do actual filesystem manipulation, that's all in the fs namespace below
@@ -41,6 +43,10 @@ namespace ostd {
 /** @addtogroup Utilities
  * @{
  */
+
+namespace detail {
+    struct path_range;
+}
 
 struct path {
 #ifdef OSTD_PLATFORM_WIN32
@@ -54,6 +60,8 @@ struct path {
         posix,
         windows
     };
+
+    using range = detail::path_range;
 
     template<typename R>
     path(R range, format fmt = format::native): p_path("."), p_fmt(fmt) {
@@ -70,7 +78,7 @@ struct path {
 
     template<typename T>
     path(std::initializer_list<T> init, format fmt = format::native):
-        path(iter(init), fmt)
+        path(ostd::iter(init), fmt)
     {}
 
     path(path const &p):
@@ -353,6 +361,8 @@ struct path {
         std::swap(p_fmt, other.p_fmt);
     }
 
+    range iter() const noexcept;
+
 private:
     static format path_fmt(format f) noexcept {
         static const format fmts[] = {
@@ -548,6 +558,74 @@ inline path operator/(path const &p1, path const &p2) {
 
 inline path operator+(path const &p1, path const &p2) {
     return p1.concat(p2);
+}
+
+namespace detail {
+    struct path_range: input_range<path_range> {
+        using range_category = forward_range_tag;
+        using value_type = string_range;
+        using reference = string_range;
+        using size_type = std::size_t;
+
+        path_range() = delete;
+        path_range(path const &p): p_rest(p.string()) {
+            string_range drive = p.drive();
+            if (!drive.empty()) {
+                p_current = p.anchor();
+                /* windows drive without root, cut rest a character earlier so
+                 * that the next segment can be retrieved consistently
+                 */
+                if (p_current.size() == drive.size()) {
+                    p_rest = p_rest.slice(drive.size() - 1, p_rest.size());
+                } else {
+                    p_rest = p_rest.slice(drive.size(), p_rest.size());
+                }
+                return;
+            }
+            string_range root = p.root();
+            if (!root.empty()) {
+                p_current = root;
+                /* leave p_rest alone so that it begins with a separator */
+                return;
+            }
+            auto sep = ostd::find(p_rest, p.separator());
+            if (!sep.empty()) {
+                p_current = string_range{p_rest.data(), sep.data()};
+            } else {
+                p_current = p_rest;
+            }
+            p_rest = p_rest.slice(p_current.size(), p_rest.size());
+        }
+
+        bool empty() const noexcept { return p_current.empty(); }
+
+        void pop_front() noexcept {
+            string_range ncur = p_rest;
+            if (!ncur.empty()) {
+                char sep = ncur.front();
+                if (sep != '/') {
+                    sep = '\\';
+                }
+                ncur.pop_front();
+                string_range nsep = ostd::find(ncur, sep);
+                p_current = ncur.slice(0, ncur.size() - nsep.size());
+                p_rest = nsep;
+            } else {
+                p_current = nullptr;
+            }
+        }
+
+        string_range front() const noexcept {
+            return p_current;
+        }
+
+    private:
+        string_range p_current, p_rest;
+    };
+}
+
+inline typename path::range path::iter() const noexcept {
+    return typename path::range{*this};
 }
 
 template<>
