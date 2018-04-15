@@ -331,7 +331,7 @@ struct path {
     }
 
     path &append(path const &p) {
-        append_str(p.p_path);
+        append_str(p.p_path, path_fmt(p.p_fmt) == path_fmt(p_fmt));
         return *this;
     }
 
@@ -457,11 +457,13 @@ private:
         }
     }
 
-    void append_str(std::string s) {
+    void append_str(std::string s, bool norm = false) {
         char sep = separator();
         bool win = is_win();
         /* replace multiple separator sequences and . parts */
-        cleanup_str(s, sep, win);
+        if (!norm) {
+            cleanup_str(s, sep, win);
+        }
         /* if the path has a root, replace the previous path, otherwise
          * append a separator followed by the path and be done with it
          *
