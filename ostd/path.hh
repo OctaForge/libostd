@@ -568,7 +568,7 @@ namespace detail {
         using size_type = std::size_t;
 
         path_range() = delete;
-        path_range(path const &p): p_rest(p.string()) {
+        path_range(path const &p) noexcept: p_rest(p.string()) {
             string_range drive = p.drive();
             if (!drive.empty()) {
                 p_current = p.anchor();
