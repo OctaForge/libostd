@@ -46,6 +46,7 @@ namespace ostd {
 
 namespace detail {
     struct path_range;
+    struct path_parent_range;
 }
 
 struct path {
@@ -182,18 +183,29 @@ struct path {
     }
 
     path parent() const {
-        string_range sep = ostd::find_last(
-            relative_to_str(anchor()), separator()
-        );
-        if (sep.empty()) {
-            return *this;
+        string_range sep;
+        if (is_absolute()) {
+            sep = ostd::find_last(relative_to_str(anchor()), separator());
+            if (sep.empty()) {
+                return path{anchor(), p_fmt};
+            }
+        } else {
+            sep = ostd::find_last(string(), separator());
+            if (sep.empty()) {
+                return *this;
+            }
         }
         return path{ostd::string_range{p_path.data(), sep.data()}, p_fmt};
     }
 
     bool has_parent() const noexcept {
-        return !ostd::find(relative_to_str(anchor()), separator()).empty();
+        if (is_absolute()) {
+            return (string() != anchor());
+        }
+        return !ostd::find(string(), separator()).empty();
     }
+
+    detail::path_parent_range parents() const;
 
     path relative() const {
         return relative_to(anchor());
@@ -622,10 +634,37 @@ namespace detail {
     private:
         string_range p_current, p_rest;
     };
+
+    struct path_parent_range: input_range<path_parent_range> {
+        using range_category = forward_range_tag;
+        using value_type = path;
+        using reference = path;
+        using size_type = std::size_t;
+
+        path_parent_range() = delete;
+        path_parent_range(path const &p): p_path(p) {}
+
+        bool empty() const noexcept { return !p_path.has_parent(); }
+
+        void pop_front() {
+            p_path = p_path.parent();
+        }
+
+        path front() const {
+            return p_path.parent();
+        }
+
+    private:
+        path p_path;
+    };
 }
 
 inline typename path::range path::iter() const noexcept {
     return typename path::range{*this};
+}
+
+inline detail::path_parent_range path::parents() const {
+    return detail::path_parent_range{*this};
 }
 
 template<>
