@@ -66,8 +66,8 @@ static fs::path OSTD_SHARED_LIB = "libostd.so";
 static fs::path OSTD_STATIC_LIB = "libostd.a";
 
 static std::string DEFAULT_CXXFLAGS = "-std=c++1z -I. -O2 -Wall -Wextra "
-                                      "-Wshadow -Wold-style-cast -fPIC ";
-                                      "-D_FILE_OFFSET_BITS=64"
+                                      "-Wshadow -Wold-style-cast -fPIC "
+                                      "-D_FILE_OFFSET_BITS=64";
 static std::string DEFAULT_LDFLAGS  = "-pthread";
 static std::string DEFAULT_ASFLAGS  = "-fPIC";
 
