@@ -117,54 +117,56 @@ struct path {
         return seps[std::size_t(p_fmt)];
     }
 
-    std::string drive() const {
+    string_range drive() const {
         if (is_win()) {
-            if (p_path.substr(0, 2) == "\\\\") {
+            string_range path = p_path;
+            if (has_dslash(path)) {
                 char const *endp = strchr(p_path.data() + 2, '\\');
                 if (!endp) {
-                    return p_path;
+                    return path;
                 }
                 char const *pendp = strchr(endp, '\\');
                 if (!pendp) {
-                    return p_path;
+                    return path;
                 }
-                return std::string{p_path.data(), pendp};
-            } else if (has_letter(p_path)) {
-                return p_path.substr(0, 2);
+                return string_range{path.data(), pendp};
+            } else if (has_letter(path)) {
+                return path.slice(0, 2);
             }
         }
-        return "";
+        return nullptr;
     }
 
     bool has_drive() const {
         if (is_win()) {
-            return (has_letter(p_path) || (p_path.substr(0, 2) == "\\\\"));
+            return (has_letter(p_path) || has_dslash(p_path));
         }
         return false;
     }
 
-    std::string root() const {
-        if (has_root()) {
-            char sep = separator();
-            return std::string{&sep, 1};
+    string_range root() const {
+        char const *rootp = get_rootp();
+        if (rootp) {
+            return string_range{rootp, rootp + 1};
         }
-        return "";
+        return nullptr;
     }
 
     bool has_root() const {
-        if (is_win()) {
-            return (
-                (p_path.data()[0] == '\\') ||
-                (has_letter(p_path) && (p_path.data()[2] == '\\'))
-            );
-        }
-        return (p_path.data()[0] == '/');
+        return !!get_rootp();
     }
 
-    std::string anchor() const {
-        auto ret = drive();
-        ret.append(root());
-        return ret;
+    string_range anchor() const {
+        string_range dr = drive();
+        if (dr.empty()) {
+            return root();
+        }
+        char const *datap = dr.data();
+        std::size_t datas = dr.size();
+        if (datap[datas] == separator()) {
+            return string_range{datap, datap + datas + 1};
+        }
+        return dr;
     }
 
     bool has_anchor() const {
@@ -193,52 +195,39 @@ struct path {
         return (relative().p_path != ".");
     }
 
-    std::string name() const {
-        path rel = relative_to(anchor());
-        auto pos = rel.p_path.rfind(separator());
-        if (pos == std::string::npos) {
-            return std::move(rel.p_path);
+    string_range name() const {
+        string_range rel = relative_to_str(anchor());
+        string_range sep = ostd::find_last(rel, separator());
+        if (sep.empty()) {
+            return rel;
         }
-        return rel.p_path.substr(pos + 1);
+        sep.pop_front();
+        return sep;
     }
 
     bool has_name() const {
         return !name().empty();
     }
 
-    std::string suffix() const {
-        path rel = relative_to(anchor());
-        auto pos = rel.p_path.rfind('.');
-        if (pos == std::string::npos) {
-            return "";
-        }
-        return rel.p_path.substr(pos);
+    string_range suffix() const {
+        return ostd::find_last(relative_to_str(anchor()), '.');
     }
 
     bool has_suffix() const {
         return !suffix().empty();
     }
 
-    std::string suffixes() const {
-        auto nm = name();
-        auto pos = nm.find('.');
-        if (pos == std::string::npos) {
-            return "";
-        }
-        return nm.substr(pos);
+    string_range suffixes() const {
+        return ostd::find(name(), '.');
     }
 
     bool has_suffixes() const {
         return !suffixes().empty();
     }
 
-    std::string stem() const {
+    string_range stem() const {
         auto nm = name();
-        auto pos = nm.find('.');
-        if (pos == std::string::npos) {
-            return nm;
-        }
-        return nm.substr(0, pos);
+        return nm.slice(0, nm.size() - ostd::find(nm, '.').size());
     }
 
     bool has_stem() const {
@@ -247,7 +236,7 @@ struct path {
 
     bool is_absolute() const {
         if (is_win()) {
-            if (p_path.substr(0, 2) == "\\\\") {
+            if (has_dslash(p_path)) {
                 return true;
             }
             return (has_letter(p_path) && (p_path.data()[2] == '\\'));
@@ -259,22 +248,12 @@ struct path {
         return !is_absolute();
     }
 
-    path relative_to(path other) const {
-        if (other.p_path == ".") {
-            return *this;
+    path relative_to(path const &other) const {
+        if (path_fmt(other.p_fmt) != path_fmt(p_fmt)) {
+            return relative_to_str(path{other, p_fmt}.p_path);
+        } else {
+            return relative_to_str(other.p_path);
         }
-        if (other.p_fmt != p_fmt) {
-            other = path{other, p_fmt};
-        }
-        if (p_path.substr(0, other.p_path.length()) == other.p_path) {
-            std::size_t oplen = other.p_path.length();
-            if ((p_path.length() > oplen) && (p_path[oplen] == separator())) {
-                ++oplen;
-            }
-            return path{p_path.substr(oplen), p_fmt};
-        }
-        /* TODO: throw */
-        return path{""};
     }
 
     path &remove_name() {
@@ -283,7 +262,7 @@ struct path {
             /* TODO: throw */
             return *this;
         }
-        p_path.erase(p_path.length() - nm.length() - 1, nm.length() + 1);
+        p_path.erase(p_path.size() - nm.size() - 1, nm.size() + 1);
         return *this;
     }
 
@@ -308,7 +287,7 @@ struct path {
     path &replace_suffix(string_range sfx) {
         auto osfx = suffix();
         if (!osfx.empty()) {
-            p_path.erase(p_path.length() - osfx.length(), osfx.length());
+            p_path.erase(p_path.size() - osfx.size(), osfx.size());
         }
         p_path.append(sfx);
         return *this;
@@ -317,7 +296,7 @@ struct path {
     path &replace_suffixes(string_range sfx) {
         auto sfxs = suffixes();
         if (!sfxs.empty()) {
-            p_path.erase(p_path.length() - sfxs.length(), sfxs.length());
+            p_path.erase(p_path.size() - sfxs.size(), sfxs.size());
         }
         p_path.append(sfx);
         return *this;
@@ -403,12 +382,19 @@ private:
         return path_fmt(p_fmt) == format::windows;
     }
 
-    static bool has_letter(std::string const &s) {
+    static bool has_letter(string_range s) {
         if (s.size() < 2) {
             return false;
         }
         char ltr = s[0] | 32;
         return (s[1] == ':') && (ltr >= 'a') &&  (ltr <= 'z');
+    }
+
+    static bool has_dslash(string_range s) {
+        if (s.size() < 2) {
+            return false;
+        }
+        return (s.slice(0, 2) == "\\\\");
     }
 
     void cleanup_str(std::string &s, char sep, bool allow_twoslash) {
@@ -427,7 +413,7 @@ private:
             s.erase(start, 2 - int(p[1] == '\0'));
         }
         /* replace // and /./ sequences as well as separators */
-        for (; start < s.length(); ++start) {
+        for (; start < s.size(); ++start) {
             p = &s[start];
             if (is_sep(*p)) {
                 std::size_t cnt = 0;
@@ -451,7 +437,7 @@ private:
     }
 
     void strip_trailing(char sep) {
-        std::size_t plen = p_path.length();
+        std::size_t plen = p_path.size();
         if (sep == '\\') {
             char const *p = p_path.data();
             if ((plen <= 2) && (p[0] == '\\') && (p[1] == '\\')) {
@@ -526,6 +512,38 @@ private:
                 c = tos;
             }
         }
+    }
+
+    string_range relative_to_str(string_range other) const {
+        if (other == ".") {
+            return p_path;
+        }
+        std::size_t oplen = other.size();
+        if (string_range{p_path}.slice(0, oplen) == other) {
+            if ((p_path.size() > oplen) && (p_path[oplen] == separator())) {
+                ++oplen;
+            }
+            auto sl = string_range{p_path};
+            return sl.slice(oplen, sl.size());
+        }
+        return nullptr;
+    }
+
+    char const *get_rootp() const {
+        char const *datap = p_path.data();
+        if (is_win()) {
+            if (*datap == '\\')  {
+                return datap;
+            }
+            if (has_letter(p_path) && (datap[2] == '\\')) {
+                return datap + 2;
+            }
+            return nullptr;
+        }
+        if (*p_path.data() == '/') {
+            return datap;
+        }
+        return nullptr;
     }
 
     std::string p_path;
