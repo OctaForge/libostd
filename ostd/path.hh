@@ -65,7 +65,9 @@ struct path {
     using range = detail::path_range;
 
     template<typename R>
-    path(R range, format fmt = format::native): p_path("."), p_fmt(fmt) {
+    path(R range, format fmt = format::native):
+        p_path("."), p_fmt(path_fmt(fmt))
+    {
         if constexpr(std::is_constructible_v<std::string, R const &>) {
             append_str(std::string{range});
         } else if (!range.empty()) {
@@ -75,11 +77,11 @@ struct path {
         }
     }
 
-    path(format fmt = format::native): path(".", fmt) {}
+    path(format fmt = format::native): path(".", path_fmt(fmt)) {}
 
     template<typename T>
     path(std::initializer_list<T> init, format fmt = format::native):
-        path(ostd::iter(init), fmt)
+        path(ostd::iter(init), path_fmt(fmt))
     {}
 
     path(path const &p):
@@ -87,11 +89,9 @@ struct path {
     {}
 
     path(path const &p, format fmt):
-        p_path(p.p_path), p_fmt(fmt)
+        p_path(p.p_path), p_fmt(path_fmt(fmt))
     {
-        if (path_fmt(fmt) != path_fmt(p.p_fmt)) {
-            convert_path();
-        }
+        convert_path(p);
     }
 
     path(path &&p) noexcept:
@@ -101,12 +101,10 @@ struct path {
     }
 
     path(path &&p, format fmt):
-        p_path(std::move(p.p_path)), p_fmt(fmt)
+        p_path(std::move(p.p_path)), p_fmt(path_fmt(fmt))
     {
         p.p_path = ".";
-        if (path_fmt(fmt) != path_fmt(p.p_fmt)) {
-            convert_path();
-        }
+        convert_path(p);
     }
 
     path &operator=(path const &p) {
@@ -261,7 +259,7 @@ struct path {
     }
 
     path relative_to(path const &other) const {
-        if (path_fmt(other.p_fmt) != path_fmt(p_fmt)) {
+        if (other.p_fmt != p_fmt) {
             return path{relative_to_str(path{other, p_fmt}.p_path), p_fmt};
         } else {
             return path{relative_to_str(other.p_path), p_fmt};
@@ -333,7 +331,7 @@ struct path {
     }
 
     path &append(path const &p) {
-        append_str(p.p_path, path_fmt(p.p_fmt) == path_fmt(p_fmt));
+        append_str(p.p_path, p.p_fmt == p_fmt);
         return *this;
     }
 
@@ -393,7 +391,7 @@ private:
     }
 
     bool is_win() const noexcept {
-        return path_fmt(p_fmt) == format::windows;
+        return p_fmt == format::windows;
     }
 
     static bool has_letter(string_range s) noexcept {
@@ -513,7 +511,10 @@ private:
         strip_trailing(sep);
     }
 
-    void convert_path() {
+    void convert_path(path const &p) {
+        if (p.p_fmt == p_fmt) {
+            return;
+        }
         char froms = '\\', tos = '/';
         if (separator() == '\\') {
             froms = '/';
