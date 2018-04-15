@@ -23,6 +23,8 @@
 
 #include <string.h>
 
+#include <stack>
+#include <list>
 #include <utility>
 #include <initializer_list>
 #include <type_traits>
@@ -721,6 +723,9 @@ private:
     ostd::path p_path{};
 };
 
+namespace detail {
+}
+
 struct directory_range: input_range<directory_range> {
     using range_category = input_range_tag;
     using value_type = directory_entry;
@@ -732,7 +737,7 @@ struct directory_range: input_range<directory_range> {
         open(p);
     }
 
-    directory_range(directory_range const &r) noexcept:
+    directory_range(directory_range const &r):
         p_current(r.p_current), p_dir(r.p_dir),
         p_handle(r.p_handle), p_owned(false)
     {}
@@ -761,13 +766,68 @@ struct directory_range: input_range<directory_range> {
     }
 
 private:
-    void open(path const &p);
-    void close() noexcept;
-    void read_next();
+    OSTD_EXPORT void open(path const &p);
+    OSTD_EXPORT void close() noexcept;
+    OSTD_EXPORT void read_next();
 
     directory_entry p_current{};
     path p_dir{};
     void *p_handle = nullptr;
+    bool p_owned = false;
+};
+
+struct recursive_directory_range: input_range<recursive_directory_range> {
+    using range_category = input_range_tag;
+    using value_type = directory_entry;
+    using reference = directory_entry const &;
+    using size_type = std::size_t;
+
+    recursive_directory_range() = delete;
+    recursive_directory_range(path const &p) {
+        open(p);
+    }
+
+    recursive_directory_range(recursive_directory_range const &r):
+        p_current(r.p_current), p_dir(r.p_dir),
+        p_stack(r.p_stack), p_owned(false)
+    {}
+
+    ~recursive_directory_range() {
+        close();
+    }
+
+    recursive_directory_range &operator=(
+        recursive_directory_range const &r
+    ) noexcept {
+        close();
+        p_stack = r.p_stack;
+        p_owned = false;
+        return *this;
+    }
+
+    bool empty() const noexcept {
+        return p_current.path().empty();
+    }
+
+    void pop_front() {
+        read_next();
+    }
+
+    reference front() const noexcept {
+        return p_current;
+    }
+
+private:
+    using hstack = std::stack<void *, std::list<void *>>;
+
+    OSTD_EXPORT void open(path const &p);
+    OSTD_EXPORT void close() noexcept;
+    OSTD_EXPORT void read_next();
+
+    directory_entry p_current{};
+    path p_dir{};
+    hstack p_handles{};
+    hstack *p_stack = nullptr;
     bool p_owned = false;
 };
 
