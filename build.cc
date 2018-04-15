@@ -5,6 +5,9 @@
  * COPYING.md file further information.
  */
 
+/* just glibc bein awful */
+#define _FILE_OFFSET_BITS 64
+
 #include <string>
 #include <vector>
 #include <stdexcept>
@@ -63,7 +66,8 @@ static fs::path OSTD_SHARED_LIB = "libostd.so";
 static fs::path OSTD_STATIC_LIB = "libostd.a";
 
 static std::string DEFAULT_CXXFLAGS = "-std=c++1z -I. -O2 -Wall -Wextra "
-                                      "-Wshadow -Wold-style-cast -fPIC";
+                                      "-Wshadow -Wold-style-cast -fPIC ";
+                                      "-D_FILE_OFFSET_BITS=64"
 static std::string DEFAULT_LDFLAGS  = "-pthread";
 static std::string DEFAULT_ASFLAGS  = "-fPIC";
 
