@@ -88,47 +88,44 @@ OSTD_EXPORT void recursive_directory_range::close() noexcept {
 }
 
 OSTD_EXPORT void recursive_directory_range::read_next() {
-    directory_entry curd;
     if (p_stack->empty()) {
         return;
     }
-    dir_read_next(static_cast<DIR *>(p_stack->top()), curd, p_dir);
     struct stat sb;
-    /* check if dir and recurse maybe */
-    while (!curd.path().empty()) {
-        if (stat(curd.path().string().data(), &sb) < 0) {
-            /* FIXME: throw */
+    if (stat(p_current.path().string().data(), &sb) < 0) {
+        /* FIXME: throw */
+        abort();
+    }
+    if (S_ISDIR(sb.st_mode)) {
+        /* directory, recurse into it and if it contains stuff, return */
+        DIR *nd = opendir(p_current.path().string().data());
+        if (!nd) {
             abort();
         }
-        if (S_ISDIR(sb.st_mode)) {
-            /* directory, recurse into it */
-            DIR *nd = opendir(curd.path().string().data());
-            if (!nd) {
-                abort();
-            }
-            p_dir = curd;
+        directory_entry based = p_current, curd;
+        dir_read_next(nd, curd, based);
+        if (!curd.path().empty()) {
+            p_dir = based;
             p_stack->push(nd);
-            dir_read_next(nd, curd, p_dir);
-            p_current = curd;
-            if (curd.path().empty()) {
-                break;
-            } else {
-                return;
-            }
-        } else {
-            /* not a dir, stick with it */
             p_current = curd;
             return;
+        } else {
+            closedir(nd);
         }
     }
-    /* empty result - done with a dir, pop */
-    closedir(static_cast<DIR *>(p_stack->top()));
-    p_stack->pop();
-    if (!p_stack->empty()) {
-        p_current.assign(p_dir);
-        p_dir.remove_name();
-    } else {
-        p_current.clear();
+    /* didn't recurse into a directory, go to next file */
+    dir_read_next(static_cast<DIR *>(p_stack->top()), p_current, p_dir);
+    /* end of dir, pop while at it */
+    if (p_current.path().empty()) {
+        closedir(static_cast<DIR *>(p_stack->top()));
+        p_stack->pop();
+        if (!p_stack->empty()) {
+            /* got back to another dir, read next so it's valid */
+            p_dir.remove_name();
+            dir_read_next(static_cast<DIR *>(p_stack->top()), p_current, p_dir);
+        } else {
+            p_current.clear();
+        }
     }
 }
 
