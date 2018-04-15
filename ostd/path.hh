@@ -155,10 +155,7 @@ struct path {
         if (is_win()) {
             return (
                 (p_path.data()[0] == '\\') ||
-                (
-                    (p_path.length() >= 3) &&
-                    (p_path[2] == '\\') && has_letter(p_path)
-                )
+                (has_letter(p_path) && (p_path.data()[2] == '\\'))
             );
         }
         return (p_path.data()[0] == '/');
@@ -246,6 +243,20 @@ struct path {
 
     bool has_stem() const {
         return !stem().empty();
+    }
+
+    bool is_absolute() const {
+        if (is_win()) {
+            if (p_path.substr(0, 2) == "\\\\") {
+                return true;
+            }
+            return (has_letter(p_path) && (p_path.data()[2] == '\\'));
+        }
+        return (p_path.data()[0] == '/');
+    }
+
+    bool is_relative() const {
+        return !is_absolute();
     }
 
     path relative_to(path other) const {
