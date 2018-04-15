@@ -174,17 +174,17 @@ struct path {
     }
 
     path parent() const {
-        path rel = relative_to(anchor());
-        if (rel.p_path == ".") {
+        string_range sep = ostd::find_last(
+            relative_to_str(anchor()), separator()
+        );
+        if (sep.empty()) {
             return *this;
         }
-        return ostd::string_range{
-            p_path.data(), strrchr(p_path.data(), separator())
-        };
+        return ostd::string_range{p_path.data(), sep.data()};
     }
 
     bool has_parent() const noexcept {
-        return (parent().p_path != p_path);
+        return !ostd::find(relative_to_str(anchor()), separator()).empty();
     }
 
     path relative() const {
