@@ -21,7 +21,7 @@
 #ifndef OSTD_PATH_HH
 #define OSTD_PATH_HH
 
-#include <string.h>
+#include <cstdint>
 
 #include <stack>
 #include <list>
@@ -695,6 +695,177 @@ namespace fs {
 /** @addtogroup Utilities
  * @{
  */
+
+enum class file_type {
+    none = 0,
+    not_found,
+    regular,
+    directory,
+    symlink,
+    block,
+    character,
+    fifo,
+    socket,
+    unknown
+};
+
+enum class perms {
+    /* occupies 12 bits */
+    none         = 0,
+    owner_read   = 0400,
+    owner_write  = 0200,
+    owner_exec   = 0100,
+    owner_all    = 0700,
+    group_read   = 040,
+    group_write  = 020,
+    group_exec   = 010,
+    group_all    = 070,
+    others_read  = 04,
+    others_write = 02,
+    others_exec  = 01,
+    others_all   = 07,
+    all          = 0777,
+    set_uid      = 04000,
+    set_gid      = 02000,
+    sticky_bit   = 01000,
+    mask         = 07777,
+
+    unknown      = 0xFFFF
+};
+
+inline perms operator|(perms a, perms b) {
+    return perms(int(a) | int(b));
+}
+
+inline perms operator&(perms a, perms b) {
+    return perms(int(a) & int(b));
+}
+
+inline perms operator^(perms a, perms b) {
+    return perms(int(a) ^ int(b));
+}
+
+inline perms operator~(perms v) {
+    return perms(~int(v));
+}
+
+inline perms &operator|=(perms &a, perms b) {
+    a = (a | b);
+    return a;
+}
+
+inline perms &operator&=(perms &a, perms b) {
+    a = (a & b);
+    return a;
+}
+
+inline perms &operator^=(perms &a, perms b) {
+    a = (a ^ b);
+    return a;
+}
+
+struct file_status {
+private:
+    using UT = std::uint_least32_t;
+    UT p_val;
+
+public:
+    file_status() noexcept: file_status(file_type::none) {}
+    file_status(file_type type, perms permissions = perms::unknown) noexcept:
+        p_val(UT(permissions) | (UT(type) << 16))
+    {}
+
+    file_type type() const noexcept {
+        return file_type(p_val >> 16);
+    }
+
+    void type(file_type type) noexcept {
+        p_val = ((p_val & 0xFFFF) | (UT(type) << 16));
+    }
+
+    perms permissions() const noexcept {
+        return perms(p_val & 0xFFFF);
+    }
+
+    void permissions(perms perm) noexcept {
+        p_val = ((p_val & ~UT(0xFFFF)) | UT(perm));
+    }
+};
+
+OSTD_EXPORT file_status status(path const &p);
+OSTD_EXPORT file_status symlink_status(path const &p);
+
+inline bool is_block_file(file_status st) {
+    return st.type() == file_type::block;
+}
+
+inline bool is_block_file(path const &p) {
+    return is_block_file(status(p));
+}
+
+inline bool is_character_file(file_status st) {
+    return st.type() == file_type::character;
+}
+
+inline bool is_character_file(path const &p) {
+    return is_character_file(status(p));
+}
+
+inline bool is_directory(file_status st) {
+    return st.type() == file_type::directory;
+}
+
+inline bool is_directory(path const &p) {
+    return is_directory(status(p));
+}
+
+inline bool is_regular_file(file_status st) {
+    return st.type() == file_type::regular;
+}
+
+inline bool is_regular_file(path const &p) {
+    return is_regular_file(status(p));
+}
+
+inline bool is_fifo(file_status st) {
+    return st.type() == file_type::fifo;
+}
+
+inline bool is_fifo(path const &p) {
+    return is_fifo(status(p));
+}
+
+inline bool is_symlink(file_status st) {
+    return st.type() == file_type::symlink;
+}
+
+inline bool is_symlink(path const &p) {
+    return is_symlink(status(p));
+}
+
+inline bool is_socket(file_status st) {
+    return st.type() == file_type::socket;
+}
+
+inline bool is_socket(path const &p) {
+    return is_socket(status(p));
+}
+
+inline bool is_other(file_status st) {
+    return st.type() == file_type::unknown;
+}
+
+inline bool is_other(path const &p) {
+    return is_other(status(p));
+}
+
+inline bool status_known(file_status st) {
+    return st.type() != file_type::none;
+}
+
+inline bool status_known(path const &p) {
+    return status_known(status(p));
+}
 
 struct directory_entry {
     directory_entry() {}
