@@ -4,21 +4,20 @@
  */
 
 #include <ostd/io.hh>
-#include <ostd/filesystem.hh>
+#include <ostd/path.hh>
 #include <ostd/range.hh>
 
 using namespace ostd;
 
-inline void list_dirs(filesystem::path const &path, int off = 0) {
-    filesystem::directory_iterator ds{path};
+inline void list_dirs(path const &path, int off = 0) {
+    fs::directory_range ds{path};
     for (auto &v: ds) {
-        auto p = filesystem::path{v};
-        if (!filesystem::is_directory(p)) {
+        if (!fs::is_directory(v.path())) {
             continue;
         }
         for_each(range(off), [](int) { write(' '); });
-        writeln(p.filename());
-        list_dirs(p, off + 1);
+        writeln(v.path().name());
+        list_dirs(v.path(), off + 1);
     }
 }
 

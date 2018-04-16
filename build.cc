@@ -28,7 +28,7 @@ namespace fs = ostd::filesystem;
 /* ugly, but do not explicitly compile */
 #include "src/io.cc"
 #include "src/process.cc"
-#include "srC/path.cc"
+#include "src/path.cc"
 #include "src/filesystem.cc"
 #include "src/thread_pool.cc"
 #include "src/channel.cc"

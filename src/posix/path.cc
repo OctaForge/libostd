@@ -150,6 +150,7 @@ OSTD_EXPORT void rdir_range_impl::read_next() {
     if (p_handles.empty()) {
         return;
     }
+    /* can't reuse info from dirent because we need to expand symlinks */
     if (is_directory(p_current.path())) {
         /* directory, recurse into it and if it contains stuff, return */
         DIR *nd = opendir(p_current.path().string().data());
