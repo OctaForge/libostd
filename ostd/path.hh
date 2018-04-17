@@ -764,14 +764,14 @@ inline perms &operator^=(perms &a, perms b) {
     return a;
 }
 
-struct file_status {
+struct file_mode {
 private:
     using UT = std::uint_least32_t;
     UT p_val;
 
 public:
-    file_status() noexcept: file_status(file_type::none) {}
-    file_status(file_type type, perms permissions = perms::unknown) noexcept:
+    file_mode() noexcept: file_mode(file_type::none) {}
+    file_mode(file_type type, perms permissions = perms::unknown) noexcept:
         p_val(UT(permissions) | (UT(type) << 16))
     {}
 
@@ -792,84 +792,84 @@ public:
     }
 };
 
-OSTD_EXPORT file_status status(path const &p);
-OSTD_EXPORT file_status symlink_status(path const &p);
+OSTD_EXPORT file_mode mode(path const &p);
+OSTD_EXPORT file_mode symlink_mode(path const &p);
 
-inline bool is_block_file(file_status st) {
+inline bool is_block_file(file_mode st) {
     return st.type() == file_type::block;
 }
 
 inline bool is_block_file(path const &p) {
-    return is_block_file(status(p));
+    return is_block_file(mode(p));
 }
 
-inline bool is_character_file(file_status st) {
+inline bool is_character_file(file_mode st) {
     return st.type() == file_type::character;
 }
 
 inline bool is_character_file(path const &p) {
-    return is_character_file(status(p));
+    return is_character_file(mode(p));
 }
 
-inline bool is_directory(file_status st) {
+inline bool is_directory(file_mode st) {
     return st.type() == file_type::directory;
 }
 
 inline bool is_directory(path const &p) {
-    return is_directory(status(p));
+    return is_directory(mode(p));
 }
 
-inline bool is_regular_file(file_status st) {
+inline bool is_regular_file(file_mode st) {
     return st.type() == file_type::regular;
 }
 
 inline bool is_regular_file(path const &p) {
-    return is_regular_file(status(p));
+    return is_regular_file(mode(p));
 }
 
-inline bool is_fifo(file_status st) {
+inline bool is_fifo(file_mode st) {
     return st.type() == file_type::fifo;
 }
 
 inline bool is_fifo(path const &p) {
-    return is_fifo(status(p));
+    return is_fifo(mode(p));
 }
 
-inline bool is_symlink(file_status st) {
+inline bool is_symlink(file_mode st) {
     return st.type() == file_type::symlink;
 }
 
 inline bool is_symlink(path const &p) {
-    return is_symlink(status(p));
+    return is_symlink(mode(p));
 }
 
-inline bool is_socket(file_status st) {
+inline bool is_socket(file_mode st) {
     return st.type() == file_type::socket;
 }
 
 inline bool is_socket(path const &p) {
-    return is_socket(status(p));
+    return is_socket(mode(p));
 }
 
-inline bool is_other(file_status st) {
+inline bool is_other(file_mode st) {
     return st.type() == file_type::unknown;
 }
 
 inline bool is_other(path const &p) {
-    return is_other(status(p));
+    return is_other(mode(p));
 }
 
-inline bool status_known(file_status st) {
+inline bool mode_known(file_mode st) {
     return st.type() != file_type::none;
 }
 
-inline bool status_known(path const &p) {
-    return status_known(status(p));
+inline bool mode_known(path const &p) {
+    return mode_known(mode(p));
 }
 
-struct directory_entry {
-    directory_entry() {}
-    directory_entry(ostd::path const &p): p_path(p) {}
+struct file_info {
+    file_info() {}
+    file_info(ostd::path const &p): p_path(p) {}
 
     ostd::path const &path() const noexcept {
         return p_path;
@@ -905,7 +905,7 @@ namespace detail {
             return p_current.path().empty();
         }
 
-        directory_entry const &front() const noexcept {
+        file_info const &front() const noexcept {
             return p_current;
         }
 
@@ -913,7 +913,7 @@ namespace detail {
             close();
         }
 
-        directory_entry p_current{};
+        file_info p_current{};
         path p_dir{};
         void *p_handle = nullptr;
     };
@@ -929,7 +929,7 @@ namespace detail {
             return p_current.path().empty();
         }
 
-        directory_entry const &front() const noexcept {
+        file_info const &front() const noexcept {
             return p_current;
         }
 
@@ -937,7 +937,7 @@ namespace detail {
             close();
         }
 
-        directory_entry p_current{};
+        file_info p_current{};
         path p_dir{};
         hstack p_handles{};
     };
@@ -945,8 +945,8 @@ namespace detail {
 
 struct directory_range: input_range<directory_range> {
     using range_category = input_range_tag;
-    using value_type = directory_entry;
-    using reference = directory_entry const &;
+    using value_type = file_info;
+    using reference = file_info const &;
     using size_type = std::size_t;
 
     directory_range() = delete;
@@ -974,8 +974,8 @@ private:
 
 struct recursive_directory_range: input_range<recursive_directory_range> {
     using range_category = input_range_tag;
-    using value_type = directory_entry;
-    using reference = directory_entry const &;
+    using value_type = file_info;
+    using reference = file_info const &;
     using size_type = std::size_t;
 
     recursive_directory_range() = delete;
@@ -1012,8 +1012,8 @@ OSTD_EXPORT path weakly_canonical(path const &p);
 
 OSTD_EXPORT path relative(path const &p, path const &base = current_path());
 
-inline bool exists(file_status s) noexcept {
-    return (status_known(s) && (s.type() != file_type::not_found));
+inline bool exists(file_mode s) noexcept {
+    return (mode_known(s) && (s.type() != file_type::not_found));
 }
 
 OSTD_EXPORT bool exists(path const &p);

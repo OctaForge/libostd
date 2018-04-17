@@ -62,28 +62,28 @@ static file_type mode_to_type(mode_t mode) {
     return file_type::unknown;
 }
 
-OSTD_EXPORT file_status status(path const &p) {
+OSTD_EXPORT file_mode mode(path const &p) {
     struct stat sb;
     if (stat(p.string().data(), &sb) < 0) {
         if (errno == ENOENT) {
-            return file_status{file_type::not_found, perms::none};
+            return file_mode{file_type::not_found, perms::none};
         }
         /* FIXME: throw */
         abort();
     }
-    return file_status{mode_to_type(sb.st_mode), mode_to_perms(sb.st_mode)};
+    return file_mode{mode_to_type(sb.st_mode), mode_to_perms(sb.st_mode)};
 }
 
-OSTD_EXPORT file_status symlink_status(path const &p) {
+OSTD_EXPORT file_mode symlink_mode(path const &p) {
     struct stat sb;
     if (lstat(p.string().data(), &sb) < 0) {
         if (errno == ENOENT) {
-            return file_status{file_type::not_found, perms::none};
+            return file_mode{file_type::not_found, perms::none};
         }
         /* FIXME: throw */
         abort();
     }
-    return file_status{mode_to_type(sb.st_mode), mode_to_perms(sb.st_mode)};
+    return file_mode{mode_to_type(sb.st_mode), mode_to_perms(sb.st_mode)};
 }
 
 } /* namespace fs */
@@ -93,7 +93,7 @@ namespace ostd {
 namespace fs {
 namespace detail {
 
-static void dir_read_next(DIR *dh, directory_entry &cur, path const &base) {
+static void dir_read_next(DIR *dh, file_info &cur, path const &base) {
     struct dirent d;
     struct dirent *o;
     for (;;) {
@@ -168,7 +168,7 @@ OSTD_EXPORT void rdir_range_impl::read_next() {
         if (!nd) {
             abort();
         }
-        directory_entry based = p_current, curd;
+        file_info based = p_current, curd;
         dir_read_next(nd, curd, based);
         if (!curd.path().empty()) {
             p_dir = based;
