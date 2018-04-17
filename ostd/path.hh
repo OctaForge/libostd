@@ -895,6 +895,34 @@ private:
     ostd::path p_path{};
 };
 
+struct directory_entry {
+    directory_entry() {}
+    directory_entry(ostd::path const &p): p_path(p) {}
+
+    ostd::path const &path() const noexcept {
+        return p_path;
+    }
+
+    operator ostd::path const &() const noexcept {
+        return p_path;
+    }
+
+    void clear() {
+        p_path.clear();
+    }
+
+    void assign(ostd::path const &p) {
+        p_path = p;
+    }
+
+    void assign(ostd::path &&p) {
+        p_path = std::move(p);
+    }
+
+private:
+    ostd::path p_path{};
+};
+
 namespace detail {
     struct OSTD_EXPORT dir_range_impl {
         void open(path const &p);
@@ -905,7 +933,7 @@ namespace detail {
             return p_current.path().empty();
         }
 
-        file_info const &front() const noexcept {
+        directory_entry const &front() const noexcept {
             return p_current;
         }
 
@@ -913,7 +941,7 @@ namespace detail {
             close();
         }
 
-        file_info p_current{};
+        directory_entry p_current{};
         path p_dir{};
         void *p_handle = nullptr;
     };
@@ -929,7 +957,7 @@ namespace detail {
             return p_current.path().empty();
         }
 
-        file_info const &front() const noexcept {
+        directory_entry const &front() const noexcept {
             return p_current;
         }
 
@@ -937,7 +965,7 @@ namespace detail {
             close();
         }
 
-        file_info p_current{};
+        directory_entry p_current{};
         path p_dir{};
         hstack p_handles{};
     };
@@ -945,8 +973,8 @@ namespace detail {
 
 struct directory_range: input_range<directory_range> {
     using range_category = input_range_tag;
-    using value_type = file_info;
-    using reference = file_info const &;
+    using value_type = directory_entry;
+    using reference = directory_entry const &;
     using size_type = std::size_t;
 
     directory_range() = delete;
@@ -974,8 +1002,8 @@ private:
 
 struct recursive_directory_range: input_range<recursive_directory_range> {
     using range_category = input_range_tag;
-    using value_type = file_info;
-    using reference = file_info const &;
+    using value_type = directory_entry;
+    using reference = directory_entry const &;
     using size_type = std::size_t;
 
     recursive_directory_range() = delete;

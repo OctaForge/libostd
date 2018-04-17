@@ -93,7 +93,7 @@ namespace ostd {
 namespace fs {
 namespace detail {
 
-static void dir_read_next(DIR *dh, file_info &cur, path const &base) {
+static void dir_read_next(DIR *dh, directory_entry &cur, path const &base) {
     struct dirent d;
     struct dirent *o;
     for (;;) {
@@ -168,7 +168,7 @@ OSTD_EXPORT void rdir_range_impl::read_next() {
         if (!nd) {
             abort();
         }
-        file_info based = p_current, curd;
+        directory_entry based = p_current, curd;
         dir_read_next(nd, curd, based);
         if (!curd.path().empty()) {
             p_dir = based;
