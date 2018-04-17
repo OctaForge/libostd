@@ -4,8 +4,13 @@
  */
 
 #include <cstdlib>
+#include <pwd.h>
 #include <dirent.h>
+#include <unistd.h>
+#include <sys/types.h>
 #include <sys/stat.h>
+
+#include <vector>
 
 #include "ostd/path.hh"
 
@@ -60,6 +65,9 @@ static file_type mode_to_type(mode_t mode) {
 OSTD_EXPORT file_status status(path const &p) {
     struct stat sb;
     if (stat(p.string().data(), &sb) < 0) {
+        if (errno == ENOENT) {
+            return file_status{file_type::not_found, perms::none};
+        }
         /* FIXME: throw */
         abort();
     }
@@ -69,6 +77,9 @@ OSTD_EXPORT file_status status(path const &p) {
 OSTD_EXPORT file_status symlink_status(path const &p) {
     struct stat sb;
     if (lstat(p.string().data(), &sb) < 0) {
+        if (errno == ENOENT) {
+            return file_status{file_type::not_found, perms::none};
+        }
         /* FIXME: throw */
         abort();
     }
@@ -186,4 +197,131 @@ OSTD_EXPORT void rdir_range_impl::read_next() {
 
 } /* namespace detail */
 } /* namesapce fs */
+} /* namespace ostd */
+
+namespace ostd {
+namespace fs {
+
+OSTD_EXPORT path current_path() {
+    auto pmax = pathconf(".", _PC_PATH_MAX);
+    std::vector<char> rbuf;
+    if (pmax > 0) {
+        rbuf.reserve((pmax > 1024) ? 1024 : pmax);
+    }
+    for (;;) {
+        auto p = getcwd(rbuf.data(), rbuf.capacity());
+        if (!p) {
+            if (errno != ERANGE) {
+                abort();
+            }
+            rbuf.reserve(rbuf.capacity() * 2);
+            continue;
+        }
+        break;
+    }
+    return path{string_range{rbuf.data()}};
+}
+
+OSTD_EXPORT path home_path() {
+    char const *hdir = getenv("HOME");
+    if (hdir) {
+        return path{string_range{hdir}};
+    }
+    struct passwd pwd;
+    struct passwd *ret;
+    std::vector<char> buf;
+    long bufs = sysconf(_SC_GETPW_R_SIZE_MAX);
+    if (bufs < 0) {
+        bufs = 2048;
+    }
+    buf.reserve(bufs);
+    getpwuid_r(getuid(), &pwd, buf.data(), buf.capacity(), &ret);
+    if (!ret) {
+        abort();
+    }
+    return path{string_range{pwd.pw_dir}};
+}
+
+OSTD_EXPORT path temp_path() {
+    char const *envs[] = { "TMPDIR", "TMP", "TEMP", "TEMPDIR", NULL };
+    for (char const **p = envs; *p; ++p) {
+        char const *tdir = getenv(*p);
+        if (tdir) {
+            return path{string_range{tdir}};
+        }
+    }
+    return path{"/tmp"};
+}
+
+OSTD_EXPORT path absolute(path const &p) {
+    if (p.is_absolute()) {
+        return p;
+    }
+    return current_path() / p;
+}
+
+OSTD_EXPORT path canonical(path const &p) {
+    /* TODO: legacy system support */
+    char *rp = realpath(p.string().data(), nullptr);
+    if (!rp) {
+        abort();
+    }
+    path ret{string_range{rp}};
+    free(rp);
+    return ret;
+}
+
+static inline bool try_access(path const &p) {
+    bool ret = !access(p.string().data(), F_OK);
+    if (!ret && (errno != ENOENT)) {
+        abort();
+    }
+    return ret;
+}
+
+OSTD_EXPORT path weakly_canonical(path const &p) {
+    if (try_access(p)) {
+        return canonical(p);
+    }
+    path cp{p};
+    for (;;) {
+        if (!cp.has_name()) {
+            /* went all the way back to root */
+            return p;
+        }
+        cp.remove_name();
+        if (try_access(cp)) {
+            break;
+        }
+    }
+    /* cp refers to an existing section, canonicalize */
+    path ret = canonical(cp);
+    auto pstr = p.string();
+    /*a append the unresolved rest */
+    ret.append(pstr.slice(cp.string().size(), pstr.size()));
+    return ret;
+}
+
+OSTD_EXPORT path relative(path const &p, path const &base) {
+    return weakly_canonical(p).relative_to(weakly_canonical(base));
+}
+
+OSTD_EXPORT bool exists(path const &p) {
+    return try_access(p);
+}
+
+OSTD_EXPORT bool equivalent(path const &p1, path const &p2) {
+    struct stat sb;
+    if (stat(p1.string().data(), &sb) < 0) {
+        abort();
+    }
+    auto stdev = sb.st_dev;
+    auto stino = sb.st_ino;
+    if (stat(p2.string().data(), &sb) < 0) {
+        abort();
+    }
+    return ((sb.st_dev == stdev) && (sb.st_ino == stino));
+}
+
+} /* namespace fs */
 } /* namespace ostd */

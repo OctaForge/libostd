@@ -1001,8 +1001,24 @@ private:
     std::shared_ptr<detail::rdir_range_impl> p_impl;
 };
 
-OSTD_EXPORT path cwd();
-OSTD_EXPORT path home();
+OSTD_EXPORT path current_path();
+OSTD_EXPORT path home_path();
+OSTD_EXPORT path temp_path();
+
+OSTD_EXPORT path absolute(path const &p);
+
+OSTD_EXPORT path canonical(path const &p);
+OSTD_EXPORT path weakly_canonical(path const &p);
+
+OSTD_EXPORT path relative(path const &p, path const &base = current_path());
+
+inline bool exists(file_status s) noexcept {
+    return (status_known(s) && (s.type() != file_type::not_found));
+}
+
+OSTD_EXPORT bool exists(path const &p);
+
+OSTD_EXPORT bool equivalent(path const &p1, path const &p2);
 
 /** @} */
 

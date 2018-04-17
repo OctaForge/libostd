@@ -1,6 +1,6 @@
 /** @example listdir.cc
  *
- * A simple example of integration of std::filesystem with ranges.
+ * A simple example of using ostd::path and ostd::path::fs.
  */
 
 #include <ostd/io.hh>
