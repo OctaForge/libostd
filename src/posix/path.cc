@@ -93,7 +93,9 @@ namespace ostd {
 namespace fs {
 namespace detail {
 
-static void dir_read_next(DIR *dh, directory_entry &cur, path const &base) {
+static void dir_read_next(
+    DIR *dh, path &cur, file_mode &tp, path const &base
+) {
     struct dirent d;
     struct dirent *o;
     for (;;) {
@@ -102,7 +104,7 @@ static void dir_read_next(DIR *dh, directory_entry &cur, path const &base) {
             abort();
         }
         if (!o) {
-            cur = directory_entry{};
+            cur = path{};
             return;
         }
         string_range nm{static_cast<char const *>(o->d_name)};
@@ -111,6 +113,14 @@ static void dir_read_next(DIR *dh, directory_entry &cur, path const &base) {
         }
         path p{base};
         p.append(nm);
+#ifdef DT_UNKNOWN
+        /* most systems have d_type */
+        file_mode md{mode_to_type(DTTOIF(o->d_type))};
+#else
+        /* fallback mainly for legacy */
+        file_mode md = symlink_mode(p);
+#endif
+        tp = md;
         cur = std::move(p);
         break;
     }
@@ -134,7 +144,10 @@ OSTD_EXPORT void dir_range_impl::close() noexcept {
 }
 
 OSTD_EXPORT void dir_range_impl::read_next() {
-    dir_read_next(static_cast<DIR *>(p_handle), p_current, p_dir);
+    path cur;
+    file_mode tp;
+    dir_read_next(static_cast<DIR *>(p_handle), cur, tp, p_dir);
+    p_current = directory_entry{std::move(cur), tp};
 }
 
 /* recursive dir range */
@@ -161,26 +174,29 @@ OSTD_EXPORT void rdir_range_impl::read_next() {
     if (p_handles.empty()) {
         return;
     }
+    path curd;
+    file_mode tp;
     /* can't reuse info from dirent because we need to expand symlinks */
-    if (is_directory(p_current.path())) {
+    if (p_current.is_directory()) {
         /* directory, recurse into it and if it contains stuff, return */
         DIR *nd = opendir(p_current.path().string().data());
         if (!nd) {
             abort();
         }
-        directory_entry based = p_current, curd;
-        dir_read_next(nd, curd, based);
-        if (!curd.path().empty()) {
+        directory_entry based = p_current;
+        dir_read_next(nd, curd, tp, based);
+        if (!curd.empty()) {
             p_dir = based;
             p_handles.push(nd);
-            p_current = curd;
+            p_current = directory_entry{std::move(curd), tp};
             return;
         } else {
             closedir(nd);
         }
     }
     /* didn't recurse into a directory, go to next file */
-    dir_read_next(static_cast<DIR *>(p_handles.top()), p_current, p_dir);
+    dir_read_next(static_cast<DIR *>(p_handles.top()), curd, tp, p_dir);
+    p_current = directory_entry{std::move(curd), tp};
     /* end of dir, pop while at it */
     if (p_current.path().empty()) {
         closedir(static_cast<DIR *>(p_handles.top()));
@@ -188,9 +204,8 @@ OSTD_EXPORT void rdir_range_impl::read_next() {
         if (!p_handles.empty()) {
             /* got back to another dir, read next so it's valid */
             p_dir.remove_name();
-            dir_read_next(static_cast<DIR *>(p_handles.top()), p_current, p_dir);
-        } else {
-            p_current = directory_entry{};
+            dir_read_next(static_cast<DIR *>(p_handles.top()), curd, tp, p_dir);
+            p_current = directory_entry{std::move(curd), tp};
         }
     }
 }

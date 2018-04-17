@@ -795,7 +795,7 @@ public:
 OSTD_EXPORT file_mode mode(path const &p);
 OSTD_EXPORT file_mode symlink_mode(path const &p);
 
-inline bool is_block_file(file_mode st) {
+inline bool is_block_file(file_mode st) noexcept {
     return st.type() == file_type::block;
 }
 
@@ -803,7 +803,7 @@ inline bool is_block_file(path const &p) {
     return is_block_file(mode(p));
 }
 
-inline bool is_character_file(file_mode st) {
+inline bool is_character_file(file_mode st) noexcept {
     return st.type() == file_type::character;
 }
 
@@ -811,7 +811,7 @@ inline bool is_character_file(path const &p) {
     return is_character_file(mode(p));
 }
 
-inline bool is_directory(file_mode st) {
+inline bool is_directory(file_mode st) noexcept {
     return st.type() == file_type::directory;
 }
 
@@ -819,7 +819,7 @@ inline bool is_directory(path const &p) {
     return is_directory(mode(p));
 }
 
-inline bool is_regular_file(file_mode st) {
+inline bool is_regular_file(file_mode st) noexcept {
     return st.type() == file_type::regular;
 }
 
@@ -827,7 +827,7 @@ inline bool is_regular_file(path const &p) {
     return is_regular_file(mode(p));
 }
 
-inline bool is_fifo(file_mode st) {
+inline bool is_fifo(file_mode st) noexcept {
     return st.type() == file_type::fifo;
 }
 
@@ -835,7 +835,7 @@ inline bool is_fifo(path const &p) {
     return is_fifo(mode(p));
 }
 
-inline bool is_symlink(file_mode st) {
+inline bool is_symlink(file_mode st) noexcept {
     return st.type() == file_type::symlink;
 }
 
@@ -843,7 +843,7 @@ inline bool is_symlink(path const &p) {
     return is_symlink(mode(p));
 }
 
-inline bool is_socket(file_mode st) {
+inline bool is_socket(file_mode st) noexcept {
     return st.type() == file_type::socket;
 }
 
@@ -851,7 +851,7 @@ inline bool is_socket(path const &p) {
     return is_socket(mode(p));
 }
 
-inline bool is_other(file_mode st) {
+inline bool is_other(file_mode st) noexcept {
     return st.type() == file_type::unknown;
 }
 
@@ -859,7 +859,7 @@ inline bool is_other(path const &p) {
     return is_other(mode(p));
 }
 
-inline bool mode_known(file_mode st) {
+inline bool mode_known(file_mode st) noexcept {
     return st.type() != file_type::none;
 }
 
@@ -867,9 +867,9 @@ inline bool mode_known(path const &p) {
     return mode_known(mode(p));
 }
 
-struct file_info {
-    file_info() {}
-    file_info(ostd::path const &p): p_path(p) {}
+struct file_status {
+    file_status() {}
+    file_status(ostd::path const &p): p_path(p) {}
 
     ostd::path const &path() const noexcept {
         return p_path;
@@ -895,9 +895,16 @@ private:
     ostd::path p_path{};
 };
 
+namespace detail {
+    struct dir_range_impl;
+    struct rdir_range_impl;
+} /* namespace detail */
+
 struct directory_entry {
     directory_entry() {}
-    directory_entry(ostd::path const &p): p_path(p) {}
+    directory_entry(ostd::path const &p): p_path(p) {
+        refresh();
+    }
 
     ostd::path const &path() const noexcept {
         return p_path;
@@ -907,8 +914,56 @@ struct directory_entry {
         return p_path;
     }
 
+    void refresh() {
+        p_type = symlink_mode(p_path);
+    }
+
+    bool is_block_file() const noexcept {
+        return fs::is_block_file(p_type);
+    }
+
+    bool is_character_file() const noexcept {
+        return fs::is_character_file(p_type);
+    }
+
+    bool is_directory() const noexcept {
+        return fs::is_directory(p_type);
+    }
+
+    bool is_fifo() const noexcept {
+        return fs::is_fifo(p_type);
+    }
+
+    bool is_other() const noexcept {
+        return fs::is_other(p_type);
+    }
+
+    bool is_regular_file() const noexcept {
+        return fs::is_regular_file(p_type);
+    }
+
+    bool is_socket() const noexcept {
+        return fs::is_socket(p_type);
+    }
+
+    bool is_symlink() const noexcept {
+        return fs::is_symlink(p_type);
+    }
+
+    bool exists() const noexcept {
+        return (mode_known(p_type) && (p_type.type() != file_type::not_found));
+    }
+
 private:
+    friend struct detail::dir_range_impl;
+    friend struct detail::rdir_range_impl;
+
+    directory_entry(ostd::path &&p, file_mode tp):
+        p_path(p), p_type(tp)
+    {}
+
     ostd::path p_path{};
+    file_mode p_type{};
 };
 
 namespace detail {

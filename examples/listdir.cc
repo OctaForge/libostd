@@ -12,7 +12,7 @@ using namespace ostd;
 inline void list_dirs(path const &path, int off = 0) {
     fs::directory_range ds{path};
     for (auto &v: ds) {
-        if (!fs::is_directory(v.path())) {
+        if (!v.is_directory()) {
             continue;
         }
         for_each(range(off), [](int) { write(' '); });
