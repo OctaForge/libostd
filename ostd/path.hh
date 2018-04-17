@@ -907,18 +907,6 @@ struct directory_entry {
         return p_path;
     }
 
-    void clear() {
-        p_path.clear();
-    }
-
-    void assign(ostd::path const &p) {
-        p_path = p;
-    }
-
-    void assign(ostd::path &&p) {
-        p_path = std::move(p);
-    }
-
 private:
     ostd::path p_path{};
 };

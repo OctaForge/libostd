@@ -102,7 +102,7 @@ static void dir_read_next(DIR *dh, directory_entry &cur, path const &base) {
             abort();
         }
         if (!o) {
-            cur.clear();
+            cur = directory_entry{};
             return;
         }
         string_range nm{static_cast<char const *>(o->d_name)};
@@ -111,7 +111,7 @@ static void dir_read_next(DIR *dh, directory_entry &cur, path const &base) {
         }
         path p{base};
         p.append(nm);
-        cur.assign(std::move(p));
+        cur = std::move(p);
         break;
     }
 }
@@ -190,7 +190,7 @@ OSTD_EXPORT void rdir_range_impl::read_next() {
             p_dir.remove_name();
             dir_read_next(static_cast<DIR *>(p_handles.top()), p_current, p_dir);
         } else {
-            p_current.clear();
+            p_current = directory_entry{};
         }
     }
 }
