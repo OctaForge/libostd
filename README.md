@@ -20,21 +20,16 @@ files in there directly if you don't need the API documentation.
 Libostd is built using the supplied C++ build tool. You need to compile the
 build tool first using the compiler you will use to build the library itself.
 
-On a typical setup, this will involve:
+On a typical Unix-like setup, this will involve:
 
 ~~~
 c++ build.cc -o build -std=c++1z -I. -pthread
 ./build --help
 ~~~
 
-This will typically build using either GCC or Clang with typically libstdc++
-as a standard library implementation. **Keep in mind that it is you need
-at least Clang 4.0 or GCC 7.1 to build.** To switch to libc++:
-
-~~~
-c++ build.cc -o build -std=c++1z -I. -pthread -stdlib=libc++
-CXXFLAGS="-stdlib=libc++" ./build
-~~~
+This will typically build using either GCC or Clang with the default standard
+library. **Keep in mind that it is you need at least Clang 4.0 or
+GCC 7.1 to build.**
 
 You can skip `-pthread` on Windows.
 
