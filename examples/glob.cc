@@ -6,15 +6,15 @@
 #include <vector>
 
 #include <ostd/io.hh>
-#include <ostd/filesystem.hh>
+#include <ostd/path.hh>
 
 using namespace ostd;
 
 int main() {
     writeln("-- all example sources (examples/*.cc) --\n");
     {
-        auto app = appender<std::vector<filesystem::path>>();
-        glob_match(app, "examples/*.cc");
+        auto app = appender<std::vector<path>>();
+        fs::glob_match(app, "examples/*.cc");
 
         for (auto &ex: app.get()) {
             writefln("found: %s", ex);
@@ -22,8 +22,8 @@ int main() {
     }
     writeln("\n-- recursive source files (src/**/*.cc) --\n");
     {
-        auto app = appender<std::vector<filesystem::path>>();
-        glob_match(app, "src/**/*.cc");
+        auto app = appender<std::vector<path>>();
+        fs::glob_match(app, "src/**/*.cc");
 
         for (auto &ex: app.get()) {
             writefln("found: %s", ex);
@@ -31,8 +31,8 @@ int main() {
     }
     writeln("\n-- 5-character headers (ostd/?????.hh) --\n");
     {
-        auto app = appender<std::vector<filesystem::path>>();
-        glob_match(app, "ostd/?????.hh");
+        auto app = appender<std::vector<path>>();
+        fs::glob_match(app, "ostd/?????.hh");
 
         for (auto &ex: app.get()) {
             writefln("found: %s", ex);
@@ -40,8 +40,8 @@ int main() {
     }
     writeln("\n-- examples starting with f-r (examples/[f-r]*.cc) --\n");
     {
-        auto app = appender<std::vector<filesystem::path>>();
-        glob_match(app, "examples/[f-r]*.cc");
+        auto app = appender<std::vector<path>>();
+        fs::glob_match(app, "examples/[f-r]*.cc");
 
         for (auto &ex: app.get()) {
             writefln("found: %s", ex);
@@ -49,8 +49,8 @@ int main() {
     }
     writeln("\n-- examples not starting with f-r (examples/[!f-r]*.cc) --\n");
     {
-        auto app = appender<std::vector<filesystem::path>>();
-        glob_match(app, "examples/[!f-r]*.cc");
+        auto app = appender<std::vector<path>>();
+        fs::glob_match(app, "examples/[!f-r]*.cc");
 
         for (auto &ex: app.get()) {
             writefln("found: %s", ex);
@@ -58,8 +58,8 @@ int main() {
     }
     writeln("\n-- headers starting with c, f or s (ostd/[cfs]*.hh) --\n");
     {
-        auto app = appender<std::vector<filesystem::path>>();
-        glob_match(app, "ostd/[cfs]*.hh");
+        auto app = appender<std::vector<path>>();
+        fs::glob_match(app, "ostd/[cfs]*.hh");
 
         for (auto &ex: app.get()) {
             writefln("found: %s", ex);

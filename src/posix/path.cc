@@ -4,6 +4,7 @@
  */
 
 #include <cstdlib>
+#include <ctime>
 #include <pwd.h>
 #include <dirent.h>
 #include <unistd.h>
@@ -16,38 +17,6 @@
 
 namespace ostd {
 namespace fs {
-
-static perms mode_to_perms(mode_t mode) {
-    perms ret = perms::none;
-    switch (mode & S_IRWXU) {
-        case S_IRUSR: ret |= perms::owner_read;
-        case S_IWUSR: ret |= perms::owner_write;
-        case S_IXUSR: ret |= perms::owner_exec;
-        case S_IRWXU: ret |= perms::owner_all;
-    }
-    switch (mode & S_IRWXG) {
-        case S_IRGRP: ret |= perms::group_read;
-        case S_IWGRP: ret |= perms::group_write;
-        case S_IXGRP: ret |= perms::group_exec;
-        case S_IRWXG: ret |= perms::group_all;
-    }
-    switch (mode & S_IRWXO) {
-        case S_IROTH: ret |= perms::others_read;
-        case S_IWOTH: ret |= perms::others_write;
-        case S_IXOTH: ret |= perms::others_exec;
-        case S_IRWXO: ret |= perms::others_all;
-    }
-    if (mode & S_ISUID) {
-        ret |= perms::set_uid;
-    }
-    if (mode & S_ISGID) {
-        ret |= perms::set_gid;
-    }
-    if (mode & S_ISVTX) {
-        ret |= perms::sticky_bit;
-    }
-    return ret;
-}
 
 static file_type mode_to_type(mode_t mode) {
     switch (mode & S_IFMT) {
@@ -71,7 +40,7 @@ OSTD_EXPORT file_mode mode(path const &p) {
         /* FIXME: throw */
         abort();
     }
-    return file_mode{mode_to_type(sb.st_mode), mode_to_perms(sb.st_mode)};
+    return file_mode{mode_to_type(sb.st_mode), perms(sb.st_mode & 07777)};
 }
 
 OSTD_EXPORT file_mode symlink_mode(path const &p) {
@@ -83,7 +52,7 @@ OSTD_EXPORT file_mode symlink_mode(path const &p) {
         /* FIXME: throw */
         abort();
     }
-    return file_mode{mode_to_type(sb.st_mode), mode_to_perms(sb.st_mode)};
+    return file_mode{mode_to_type(sb.st_mode), perms(sb.st_mode & 07777)};
 }
 
 } /* namespace fs */
@@ -268,6 +237,12 @@ OSTD_EXPORT path temp_path() {
     return path{"/tmp"};
 }
 
+OSTD_EXPORT void current_path(path const &p) {
+    if (chdir(p.string().data())) {
+        abort();
+    }
+}
+
 OSTD_EXPORT path absolute(path const &p) {
     if (p.is_absolute()) {
         return p;
@@ -336,6 +311,130 @@ OSTD_EXPORT bool equivalent(path const &p1, path const &p2) {
         abort();
     }
     return ((sb.st_dev == stdev) && (sb.st_ino == stino));
+}
+
+static bool mkdir_p(path const &p, mode_t mode) {
+    if (mkdir(p.string().data(), mode)) {
+        if (errno != EEXIST) {
+            abort();
+        }
+        auto tp = fs::mode(p);
+        if (tp.type() != file_type::directory) {
+            abort();
+        }
+        return false;
+    }
+    return true;
+}
+
+OSTD_EXPORT bool create_directory(path const &p) {
+    return mkdir_p(p, 0777);
+}
+
+OSTD_EXPORT bool create_directory(path const &p, path const &ep) {
+    return mkdir_p(p, mode_t(fs::mode(ep).permissions()));
+}
+
+OSTD_EXPORT bool create_directories(path const &p) {
+    if (p.has_parent()) {
+        create_directories(p.parent());
+    }
+    return create_directory(p);
+}
+
+OSTD_EXPORT bool remove(path const &p) {
+    if (!exists(p)) {
+        return false;
+    }
+    if (::remove(p.string().data())) {
+        abort();
+    }
+    return true;
+}
+
+OSTD_EXPORT std::uintmax_t remove_all(path const &p) {
+    std::uintmax_t ret = 0;
+    if (is_directory(p)) {
+        fs::directory_range ds{p};
+        for (auto &v: ds) {
+            ret += remove_all(v.path());
+        }
+    }
+    ret += remove(p);
+    return ret;
+}
+
+OSTD_EXPORT void rename(path const &op, path const &np) {
+    if (::rename(op.string().data(), np.string().data())) {
+        abort();
+    }
+}
+
+/* ugly test for whether nanosecond precision is available in stat
+ * could check for existence of st_mtime macro, but this is more reliable
+ */
+
+template<typename T>
+struct test_mtim {
+    template<typename TT, TT> struct test_stat;
+
+    struct fake_stat {
+        struct timespec st_mtim;
+    };
+
+    struct stat_test: fake_stat, T {};
+
+    template<typename TT>
+    static char test(test_stat<struct timespec fake_stat::*, &TT::st_mtim> *);
+
+    template<typename>
+    static int test(...);
+
+    static constexpr bool value = (sizeof(test<stat_test>(0)) == sizeof(int));
+};
+
+template<bool B>
+struct mtime_impl {
+    template<typename S>
+    static file_time_t get(S const &st) {
+        return std::chrono::system_clock::from_time_t(st.st_mtime);
+    }
+};
+
+template<>
+struct mtime_impl<true> {
+    template<typename S>
+    static file_time_t get(S const &st) {
+        struct timespec ts = st.st_mtim;
+        auto d = std::chrono::seconds{ts.tv_sec} +
+                 std::chrono::nanoseconds{ts.tv_nsec};
+        return file_time_t{
+            std::chrono::duration_cast<std::chrono::system_clock::duration>(d)
+        };
+    }
+};
+
+using mtime = mtime_impl<test_mtim<struct stat>::value>;
+
+OSTD_EXPORT file_time_t last_write_time(path const &p) {
+    struct stat sb;
+    if (stat(p.string().data(), &sb) < 0) {
+        abort();
+    }
+    return mtime::get(sb);
+}
+
+/* TODO: somehow feature-test for utimensat and fallback to utimes */
+OSTD_EXPORT void last_write_time(path const &p, file_time_t new_time) {
+    auto d = new_time.time_since_epoch();
+    auto sec = std::chrono::floor<std::chrono::seconds>(d);
+    auto nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(d - sec);
+    struct timespec times[2] = {
+        {0, UTIME_OMIT}, {time_t(sec.count()), long(nsec.count())}
+    };
+    if (utimensat(0, p.string().data(), times, 0)) {
+        abort();
+    }
 }
 
 } /* namespace fs */

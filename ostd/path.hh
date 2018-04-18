@@ -25,6 +25,7 @@
 
 #include <stack>
 #include <list>
+#include <chrono>
 #include <utility>
 #include <memory>
 #include <initializer_list>
@@ -50,6 +51,10 @@ namespace ostd {
 namespace detail {
     struct path_range;
     struct path_parent_range;
+
+    OSTD_EXPORT bool glob_match_path_impl(
+        char const *fname, char const *wname
+    ) noexcept;
 }
 
 struct path {
@@ -355,6 +360,43 @@ struct path {
 
     path &operator+=(path const &p) {
         return append_concat(p);
+    }
+
+    /** @brief Checks if the given path matches the given glob pattern.
+     *
+     * This matches the given filename against POSIX-style glob patterns.
+     * The following patterns are supported:
+     *
+     * | Pattern | Description                                        |
+     * |---------|----------------------------------------------------|
+     * | *       | 0 or more characters                               |
+     * | ?       | any single character                               |
+     * | [abc]   | one character in the brackets                      |
+     * | [a-z]   | one character within the range in the brackets     |
+     * | [!abc]  | one character not in the brackets                  |
+     * | [!a-z]  | one character not within the range in the brackets |
+     *
+     * The behavior is the same as in POSIX. You can combine ranges and
+     * individual characters in the `[]` pattern together as well as define
+     * multiple ranges in one (e.g. `[a-zA-Z_?]` matching alphabetics,
+     * an underscore and a question mark). The behavior of the range varies
+     * by locale. If the second character in the range is lower in value
+     * than the first one, a match will never happen. To match the `]`
+     * character in the brackets, make it the first one. To match the
+     * dash character, make it the first or the last.
+     *
+     * You can also use the brackets to escape metacharacters. So to
+     * match a literal `*`, use `[*]`.
+     *
+     * Keep in mind that an invalid bracket syntax (unterminated) will
+     * always cause this to return `false`.
+     *
+     * This function is used in ostd::glob_match().
+     */
+    bool match(path const &pattern) noexcept {
+        return detail::glob_match_path_impl(
+            string().data(), pattern.string().data()
+        );
     }
 
     string_range string() const noexcept {
@@ -1076,6 +1118,8 @@ OSTD_EXPORT path current_path();
 OSTD_EXPORT path home_path();
 OSTD_EXPORT path temp_path();
 
+OSTD_EXPORT void current_path(path const &p);
+
 OSTD_EXPORT path absolute(path const &p);
 
 OSTD_EXPORT path canonical(path const &p);
@@ -1090,6 +1134,61 @@ inline bool exists(file_mode s) noexcept {
 OSTD_EXPORT bool exists(path const &p);
 
 OSTD_EXPORT bool equivalent(path const &p1, path const &p2);
+
+OSTD_EXPORT bool create_directory(path const &p);
+OSTD_EXPORT bool create_directory(path const &p, path const &ep);
+OSTD_EXPORT bool create_directories(path const &p);
+
+OSTD_EXPORT bool remove(path const &p);
+OSTD_EXPORT std::uintmax_t remove_all(path const &p);
+
+OSTD_EXPORT void rename(path const &op, path const &np);
+
+using file_time_t = std::chrono::time_point<std::chrono::system_clock>;
+
+OSTD_EXPORT file_time_t last_write_time(path const &p);
+OSTD_EXPORT void last_write_time(path const &p, file_time_t new_time);
+
+namespace detail {
+    OSTD_EXPORT void glob_match_impl(
+        void (*out)(path const &, void *),
+        typename path::range r, path pre, void *data
+    );
+} /* namespace detail */
+
+/** @brief Expands a path with glob patterns.
+ *
+ * Individual expanded paths are put in `out` and are of the standard
+ * std::filesystem::path type. It supports standard patterns as defined
+ * in ostd::glob_match_filename().
+ *
+ * So for example, `*.cc` will expand to `one.cc`, `two.cc` and so on.
+ * A pattern like `foo/[cb]at.txt` will match `foo/cat.txt` and `foo/bat.txt`
+ * but not `foo/Cat.txt`. The `foo/?at.txt` will match `foo/cat.txt`,
+ * `foo/Cat.txt`, `foo/pat.txt`, `foo/vat.txt` or any other character
+ * in the place.
+ *
+ * Additionally, a special `**` pattern is also supported which is not
+ * matched by ostd::glob_match_filename(). It's only allowed if the entire
+ * filename or directory name is `**`. When used as a directory name, it
+ * will expand to all directories in the location and all subdirectories
+ * of those directories. If used as a filename (at the end of the path),
+ * then it expands to directories and subdirectories aswell as all files
+ * in the location and in the directories or subdirectories. Keep in mind
+ * that it is not a regular pattern and a `**` when found in a regular
+ * context (i.e. not as entire filename/directory name) will be treated
+ * as two regular `*` patterns.
+ *
+ * @throws std::filesystem_error if a filesystem error occurs.
+ * @returns The forwarded `out`.
+ */
+template<typename OutputRange>
+inline OutputRange &&glob_match(OutputRange &&out, path const &pattern) {
+    detail::glob_match_impl([](path const &p, void *outp) {
+        static_cast<std::remove_reference_t<OutputRange> *>(outp)->put(p);
+    }, pattern.iter(), path{}, &out);
+    return std::forward<OutputRange>(out);
+}
 
 /** @} */
 
