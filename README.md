@@ -36,23 +36,6 @@ c++ build.cc -o build -std=c++1z -I. -pthread -stdlib=libc++
 CXXFLAGS="-stdlib=libc++" ./build
 ~~~
 
-If you get undefined references about filesystem, you will need to add
-extra linkage.
-
-For libstdc++:
-
-~~~
-c++ build.cc -o build -std=c++1z -I. -pthread -lstdc++fs
-LDFLAGS="-lstdc++fs" ./build
-~~~
-
-For libc++:
-
-~~~
-c++ build.cc -o build -std=c++1z -I. -pthread -stdlib=libc++ -lc++experimental
-CXXFLAGS="-stdlib=libc++" LDFLAGS="-lc++experimental" ./build
-~~~
-
 You can skip `-pthread` on Windows.
 
 Using the tool should be straightforward. The `./build --help` command lists

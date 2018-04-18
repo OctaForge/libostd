@@ -6,7 +6,7 @@
 #include <ostd/format.hh>
 #include <ostd/io.hh>
 #include <ostd/string.hh>
-#include <ostd/filesystem.hh>
+#include <ostd/path.hh>
 
 using namespace ostd;
 
@@ -52,21 +52,21 @@ int main(int argc, char **argv) {
         ++nfailed;
     };
 
-    filesystem::directory_iterator ds{testdir};
-    for (auto &v: ds) {
-        auto p = filesystem::path{v};
-        if (!filesystem::is_regular_file(p)) {
+    fs::directory_range dr{testdir};
+    for (auto &v: dr) {
+        if (!v.is_regular_file()) {
             continue;
         }
+        auto p = v.path();
 #ifdef OSTD_PLATFORM_WIN32
-        if (p.extension().string() != ".exe")
+        if (p.suffix().string() != ".exe")
 #else
-        if (p.extension().string() != "")
+        if (p.has_suffix())
 #endif
         {
             continue;
         }
-        auto modname = p.stem().string();
+        auto modname = p.stem();
         auto exepath = p.string();
 
         auto rf = popen(exepath.data(), "r");

@@ -18,18 +18,17 @@
 #include "ostd/format.hh"
 #include "ostd/string.hh"
 #include "ostd/path.hh"
-#include "ostd/filesystem.hh"
 #include "ostd/thread_pool.hh"
 #include "ostd/channel.hh"
 #include "ostd/argparse.hh"
 
-namespace fs = ostd::filesystem;
+namespace fs = ostd::fs;
+using path = ostd::path;
 
 /* ugly, but do not explicitly compile */
 #include "src/io.cc"
 #include "src/process.cc"
 #include "src/path.cc"
-#include "src/filesystem.cc"
 #include "src/thread_pool.cc"
 #include "src/channel.cc"
 #include "src/string.cc"
@@ -39,31 +38,31 @@ namespace fs = ostd::filesystem;
 #include "gen_unicode.cc"
 
 using strvec = std::vector<std::string>;
-using pathvec = std::vector<fs::path>;
+using pathvec = std::vector<path>;
 
 /* THESE VARIABLES CAN BE ALTERED */
 
 /* all examples in the directory are built */
-static fs::path EXAMPLES_DIR = "examples";
+static path EXAMPLES_DIR = "examples";
 
-static fs::path ASM_SOURCE_DIR = fs::path{"src"} / "asm";
+static path ASM_SOURCE_DIR = path{"src"} / "asm";
 static pathvec ASM_SOURCES = {
     "jump_all_gas", "make_all_gas", "ontop_all_gas"
 };
 
 /* all sources in the directory are built */
-static fs::path CXX_SOURCE_DIR = "src";
+static path CXX_SOURCE_DIR = "src";
 
-static fs::path TEST_DIR = "tests";
+static path TEST_DIR = "tests";
 static pathvec TEST_CASES = {
     "algorithm", "range"
 };
 
-static fs::path OSTD_UNICODE_DATA = "data/UnicodeData-10.0.txt";
-static fs::path OSTD_UNICODE_SRC  = CXX_SOURCE_DIR / "string_utf.hh";
+static path OSTD_UNICODE_DATA = "data/UnicodeData-10.0.txt";
+static path OSTD_UNICODE_SRC  = CXX_SOURCE_DIR / "string_utf.hh";
 
-static fs::path OSTD_SHARED_LIB = "libostd.so";
-static fs::path OSTD_STATIC_LIB = "libostd.a";
+static path OSTD_SHARED_LIB = "libostd.so";
+static path OSTD_STATIC_LIB = "libostd.a";
 
 static std::string DEFAULT_CXXFLAGS = "-std=c++1z -I. -O2 -Wall -Wextra "
                                       "-Wshadow -Wold-style-cast -fPIC "
@@ -129,20 +128,14 @@ static void add_args(strvec &args, std::string const &cmdl) {
     }, cmdl);
 }
 
-static fs::path path_with_ext(fs::path const &p, fs::path const &ext) {
-    fs::path rp = p;
-    rp.replace_extension(ext);
-    return rp;
-}
-
-static void try_remove(fs::path const &path, bool all = false) {
-    try {
+static void try_remove(path const &path, bool all = false) {
+    //try {
         if (all) {
             fs::remove_all(path);
         } else {
             fs::remove(path);
         }
-    } catch (fs::filesystem_error const &) {}
+    //} catch (fs::fs_error const &) {}
 }
 
 static bool verbose = false;
@@ -213,9 +206,9 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    std::string default_lib = OSTD_SHARED_LIB.string();
+    auto default_lib = std::string{OSTD_SHARED_LIB.string()};
     if (build_static) {
-        default_lib = OSTD_STATIC_LIB.string();
+        default_lib = std::string{OSTD_STATIC_LIB.string()};
     }
 
     auto strip = from_env_or("STRIP", "strip");
@@ -242,15 +235,15 @@ int main(int argc, char **argv) {
     add_env(asflags, "ASFLAGS");
 
     auto examples = ostd::appender<pathvec>();
-    ostd::glob_match(examples, EXAMPLES_DIR / "*.cc");
+    fs::glob_match(examples, EXAMPLES_DIR / "*.cc");
     for (auto &ex: examples.get()) {
-        ex.replace_extension();
+        ex.replace_suffix();
     }
 
     auto cxx_sources = ostd::appender<pathvec>();
-    ostd::glob_match(cxx_sources, CXX_SOURCE_DIR / "*.cc");
+    fs::glob_match(cxx_sources, CXX_SOURCE_DIR / "*.cc");
     for (auto &cc: cxx_sources.get()) {
-        cc.replace_extension();
+        cc.replace_suffix();
     }
 
     if (clean) {
@@ -259,19 +252,19 @@ int main(int argc, char **argv) {
         for (auto &ex: examples.get()) {
             auto rp = ex;
             try_remove(rp);
-            rp.replace_extension(".o");
+            rp.replace_suffix(".o");
             try_remove(rp);
         }
         for (auto &aso: ASM_SOURCES) {
-            auto rp = path_with_ext(ASM_SOURCE_DIR / aso, ".o");
+            auto rp = (ASM_SOURCE_DIR / aso).with_suffix(".o");
             try_remove(rp);
-            rp.replace_filename(aso.string() + "_dyn.o");
+            rp.replace_name((aso + "_dyn.o").string());
             try_remove(rp);
         }
         for (auto &cso: cxx_sources.get()) {
-            auto rp = path_with_ext(cso, ".o");
+            auto rp = cso.with_suffix(".o");
             try_remove(rp);
-            rp.replace_filename(cso.string() + "_dyn.o");
+            rp.replace_name((cso + "_dyn.o").string());
             try_remove(rp);
         }
         try_remove(OSTD_UNICODE_SRC);
@@ -316,7 +309,7 @@ int main(int argc, char **argv) {
     };
 
     auto call_cxx = [&](
-        fs::path const &input, fs::path const &output, bool lib, bool shared
+        path const &input, path const &output, bool lib, bool shared
     ) {
         strvec args = { cxx };
         add_args(args, cxxflags);
@@ -325,7 +318,7 @@ int main(int argc, char **argv) {
         auto outp = output;
 
         if (shared) {
-            outp.replace_extension();
+            outp.replace_suffix();
             outp += "_dyn.o";
             echo_q("CXX (shared): %s", ifs);
             add_args(args, SHARED_CXXFLAGS);
@@ -342,8 +335,8 @@ int main(int argc, char **argv) {
 
         args.push_back("-c");
         args.push_back("-o");
-        args.push_back(outp.string());
-        args.push_back(ifs);
+        args.push_back(std::string{outp.string()});
+        args.push_back(std::string{ifs});
 
         exec_v(args);
 
@@ -354,7 +347,7 @@ int main(int argc, char **argv) {
      * the files may check for __PIC__ (at least mips32 does)
      */
     auto call_as = [&](
-        fs::path const &input, fs::path const &output, bool, bool shared
+        path const &input, path const &output, bool, bool shared
     ) {
         strvec args = { as };
         add_args(args, asflags);
@@ -363,7 +356,7 @@ int main(int argc, char **argv) {
         auto outp = output;
 
         if (shared) {
-            outp.replace_extension();
+            outp.replace_suffix();
             outp += "_dyn.o";
             echo_q("AS (shared): %s", ifs);
             add_args(args, SHARED_ASFLAGS);
@@ -373,8 +366,8 @@ int main(int argc, char **argv) {
 
         args.push_back("-c");
         args.push_back("-o");
-        args.push_back(outp.string());
-        args.push_back(ifs);
+        args.push_back(std::string{outp.string()});
+        args.push_back(std::string{ifs});
 
         exec_v(args);
 
@@ -382,7 +375,7 @@ int main(int argc, char **argv) {
     };
 
     auto call_ld = [&](
-        fs::path const &output, pathvec const &files, strvec const &flags
+        path const &output, pathvec const &files, strvec const &flags
     ) {
         echo_q("LD: %s", output);
 
@@ -390,9 +383,9 @@ int main(int argc, char **argv) {
         add_args(args, cxxflags);
 
         args.push_back("-o");
-        args.push_back(output.string());
+        args.push_back(std::string{output.string()});
         for (auto &p: files) {
-            args.push_back(p.string());
+            args.push_back(std::string{p.string()});
         }
         args.insert(args.cend(), flags.begin(), flags.end());
 
@@ -403,13 +396,13 @@ int main(int argc, char **argv) {
         if (build_cfg == "release") {
             args.clear();
             args.push_back(strip);
-            args.push_back(output.string());
+            args.push_back(std::string{output.string()});
             exec_v(args);
         }
     };
 
     auto call_ldlib = [&](
-        fs::path const &output, pathvec const &files, bool shared
+        path const &output, pathvec const &files, bool shared
     ) {
         if (shared) {
             strvec flags;
@@ -421,19 +414,19 @@ int main(int argc, char **argv) {
             echo_q("AR: %s", output);
 
             args.push_back("rcs");
-            args.push_back(output.string());
+            args.push_back(std::string{output.string()});
             for (auto &p: files) {
-                args.push_back(p.string());
+                args.push_back(std::string{p.string()});
             }
 
             exec_v(args);
         }
     };
 
-    auto build_example = [&](fs::path const &name) {
+    auto build_example = [&](path const &name) {
         auto base = name;
-        auto ccf = path_with_ext(base, ".cc");
-        auto obf = path_with_ext(base, ".o");
+        auto ccf = base.with_suffix(".cc");
+        auto obf = base.with_suffix(".o");
 
         call_cxx(ccf, obf, false, false);
         call_ld(base, { obf }, { default_lib });
@@ -441,10 +434,10 @@ int main(int argc, char **argv) {
         try_remove(obf);
     };
 
-    auto build_test = [&](fs::path const &name) {
+    auto build_test = [&](path const &name) {
         auto base = TEST_DIR / name;
-        auto ccf = path_with_ext(base, ".cc");
-        auto obf = path_with_ext(base, ".o");
+        auto ccf = base.with_suffix(".cc");
+        auto obf = base.with_suffix(".o");
 
         try_remove(ccf);
         ostd::file_stream f{ccf.string(), ostd::stream_mode::WRITE};
@@ -483,16 +476,16 @@ int main(int argc, char **argv) {
     ostd::thread_pool tp{};
     tp.start();
 
-    std::queue<std::future<fs::path>> future_obj, future_dynobj;
+    std::queue<std::future<path>> future_obj, future_dynobj;
 
     /* build object files in static and shared (PIC) variants */
     auto build_all = [&](
-        pathvec const &list, fs::path const &spath,
-        fs::path const &sext, auto &buildf
+        pathvec const &list, path const &spath,
+        path const &sext, auto &buildf
     ) {
-        auto build_obj = [&](fs::path const &fpath,  bool shared) {
-            auto srcf = path_with_ext(fpath, sext);
-            auto srco = path_with_ext(srcf, ".o");
+        auto build_obj = [&](path const &fpath,  bool shared) {
+            auto srcf = fpath.with_suffix(sext.string());
+            auto srco = srcf.with_suffix(".o");
             auto &fq = (shared ? future_dynobj : future_obj);
             fq.push(tp.push([&buildf, srcf, srco, shared]() {
                 return buildf(srcf, srco, true, shared);
@@ -516,7 +509,7 @@ int main(int argc, char **argv) {
 
     echo_q("Building the library...");
     build_all(ASM_SOURCES, ASM_SOURCE_DIR, ".S", call_as);
-    build_all(cxx_sources.get(), fs::path{}, ".cc", call_cxx);
+    build_all(cxx_sources.get(), path{}, ".cc", call_cxx);
 
     if (build_static) {
         pathvec objs;
@@ -569,7 +562,7 @@ int main(int argc, char **argv) {
     }
 
     if (build_testsuite) {
-        exec_v({ "./test_runner", TEST_DIR.string() });
+        exec_v({ "./test_runner", std::string{TEST_DIR.string()} });
     }
 
     io_msgs.close();

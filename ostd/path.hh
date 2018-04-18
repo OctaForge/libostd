@@ -296,13 +296,13 @@ struct path {
         return *this;
     }
 
-    path with_name(string_range name) {
+    path with_name(string_range name) const {
         path ret{*this};
         ret.replace_name(name);
         return ret;
     }
 
-    path &replace_suffix(string_range sfx) {
+    path &replace_suffix(string_range sfx = string_range{}) {
         auto osfx = suffix();
         if (!osfx.empty()) {
             p_path.erase(p_path.size() - osfx.size(), osfx.size());
@@ -311,7 +311,7 @@ struct path {
         return *this;
     }
 
-    path &replace_suffixes(string_range sfx) {
+    path &replace_suffixes(string_range sfx = string_range{}) {
         auto sfxs = suffixes();
         if (!sfxs.empty()) {
             p_path.erase(p_path.size() - sfxs.size(), sfxs.size());
@@ -320,13 +320,13 @@ struct path {
         return *this;
     }
 
-    path with_suffix(string_range sfx) {
+    path with_suffix(string_range sfx = string_range{}) const {
         path ret{*this};
         ret.replace_suffix(sfx);
         return ret;
     }
 
-    path with_suffixes(string_range sfx) {
+    path with_suffixes(string_range sfx = string_range{}) const {
         path ret{*this};
         ret.replace_suffixes(sfx);
         return ret;
