@@ -880,7 +880,7 @@ struct path {
      * The path is actually never truly empty, but `.` is considered an
      * empty path.
      */
-    bool empty() const {
+    bool empty() const noexcept {
         return (p_path == ".");
     }
 
