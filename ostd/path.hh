@@ -345,7 +345,7 @@ struct path {
         return false;
     }
 
-    /* @brief Gets the root of the path.
+    /** @brief Gets the root of the path.
      *
      * On POSIX, absolute paths have a root. On Windows, both relative
      * and absolute paths may have a root.
@@ -681,7 +681,7 @@ struct path {
         return *this;
     }
 
-    /* @brief Replaces all suffixes with a new one.
+    /** @brief Replaces all suffixes with a new one.
      *
      * If there is no suffix, it's not an error, the suffix is simply
      * added. For example, `foo.tar.gz` with `.zip` becomees `foo.zip`,
