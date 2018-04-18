@@ -31,14 +31,21 @@ static file_type mode_to_type(mode_t mode) {
     return file_type::unknown;
 }
 
+static std::error_code errno_ec() {
+    return std::error_code{errno, std::system_category()};
+}
+
+static std::error_code ec_from_int(int v) {
+    return std::error_code(v, std::system_category());
+}
+
 OSTD_EXPORT file_mode mode(path const &p) {
     struct stat sb;
     if (stat(p.string().data(), &sb) < 0) {
         if (errno == ENOENT) {
             return file_mode{file_type::not_found, perms::none};
         }
-        /* FIXME: throw */
-        abort();
+        throw fs_error{"stat failure", p, errno_ec()};
     }
     return file_mode{mode_to_type(sb.st_mode), perms(sb.st_mode & 07777)};
 }
@@ -49,8 +56,7 @@ OSTD_EXPORT file_mode symlink_mode(path const &p) {
         if (errno == ENOENT) {
             return file_mode{file_type::not_found, perms::none};
         }
-        /* FIXME: throw */
-        abort();
+        throw fs_error{"lstat failure", p, errno_ec()};
     }
     return file_mode{mode_to_type(sb.st_mode), perms(sb.st_mode & 07777)};
 }
@@ -69,8 +75,7 @@ static void dir_read_next(
     struct dirent *o;
     for (;;) {
         if (readdir_r(dh, &d, &o)) {
-            /* FIXME: throw */
-            abort();
+            throw fs_error{"readdir_r failure", base, errno_ec()};
         }
         if (!o) {
             cur = path{};
@@ -100,8 +105,7 @@ static void dir_read_next(
 OSTD_EXPORT void dir_range_impl::open(path const &p) {
     DIR *d = opendir(p.string().data());
     if (!d) {
-        /* FIXME: throw */
-        abort();
+        throw fs_error{"opendir failure", p, errno_ec()};
     }
     p_dir = p;
     p_handle = d;
@@ -124,8 +128,7 @@ OSTD_EXPORT void dir_range_impl::read_next() {
 OSTD_EXPORT void rdir_range_impl::open(path const &p) {
     DIR *d = opendir(p.string().data());
     if (!d) {
-        /* FIXME: throw */
-        abort();
+        throw fs_error{"opendir failure", p, errno_ec()};
     }
     p_dir = p;
     p_handles.push(d);
@@ -150,7 +153,7 @@ OSTD_EXPORT void rdir_range_impl::read_next() {
         /* directory, recurse into it and if it contains stuff, return */
         DIR *nd = opendir(p_current.path().string().data());
         if (!nd) {
-            abort();
+            throw fs_error{"opendir failure", p_current, errno_ec()};
         }
         directory_entry based = p_current;
         dir_read_next(nd, curd, tp, based);
@@ -196,7 +199,7 @@ OSTD_EXPORT path current_path() {
         auto p = getcwd(rbuf.data(), rbuf.capacity());
         if (!p) {
             if (errno != ERANGE) {
-                abort();
+                throw fs_error{"getcwd failure", errno_ec()};
             }
             rbuf.reserve(rbuf.capacity() * 2);
             continue;
@@ -221,7 +224,7 @@ OSTD_EXPORT path home_path() {
     buf.reserve(bufs);
     getpwuid_r(getuid(), &pwd, buf.data(), buf.capacity(), &ret);
     if (!ret) {
-        abort();
+        throw fs_error{"getpwuid_r failure", errno_ec()};
     }
     return path{string_range{pwd.pw_dir}};
 }
@@ -239,7 +242,7 @@ OSTD_EXPORT path temp_path() {
 
 OSTD_EXPORT void current_path(path const &p) {
     if (chdir(p.string().data())) {
-        abort();
+        throw fs_error{"chdir failure", p, errno_ec()};
     }
 }
 
@@ -254,7 +257,7 @@ OSTD_EXPORT path canonical(path const &p) {
     /* TODO: legacy system support */
     char *rp = realpath(p.string().data(), nullptr);
     if (!rp) {
-        abort();
+        throw fs_error{"realpath failure", p, errno_ec()};
     }
     path ret{string_range{rp}};
     free(rp);
@@ -264,7 +267,7 @@ OSTD_EXPORT path canonical(path const &p) {
 static inline bool try_access(path const &p) {
     bool ret = !access(p.string().data(), F_OK);
     if (!ret && (errno != ENOENT)) {
-        abort();
+        throw fs_error{"access failure", p, errno_ec()};
     }
     return ret;
 }
@@ -303,12 +306,12 @@ OSTD_EXPORT bool exists(path const &p) {
 OSTD_EXPORT bool equivalent(path const &p1, path const &p2) {
     struct stat sb;
     if (stat(p1.string().data(), &sb) < 0) {
-        abort();
+        throw fs_error{"stat failure", p1, p2, errno_ec()};
     }
     auto stdev = sb.st_dev;
     auto stino = sb.st_ino;
     if (stat(p2.string().data(), &sb) < 0) {
-        abort();
+        throw fs_error{"stat failure", p1, p2, errno_ec()};
     }
     return ((sb.st_dev == stdev) && (sb.st_ino == stino));
 }
@@ -316,10 +319,12 @@ OSTD_EXPORT bool equivalent(path const &p1, path const &p2) {
 static bool mkdir_p(path const &p, mode_t mode) {
     if (mkdir(p.string().data(), mode)) {
         if (errno != EEXIST) {
-            abort();
+            throw fs_error{"mkdir failure", p, errno_ec()};
         }
+        int eno = errno;
         auto tp = fs::mode(p);
         if (tp.type() != file_type::directory) {
+            throw fs_error{"mkdir failure", p, ec_from_int(eno)};
             abort();
         }
         return false;
@@ -347,7 +352,7 @@ OSTD_EXPORT bool remove(path const &p) {
         return false;
     }
     if (::remove(p.string().data())) {
-        abort();
+        throw fs_error{"remove failure", p, errno_ec()};
     }
     return true;
 }
@@ -366,7 +371,7 @@ OSTD_EXPORT std::uintmax_t remove_all(path const &p) {
 
 OSTD_EXPORT void rename(path const &op, path const &np) {
     if (::rename(op.string().data(), np.string().data())) {
-        abort();
+        throw fs_error{"rename failure", op, np, errno_ec()};
     }
 }
 
@@ -419,7 +424,7 @@ using mtime = mtime_impl<test_mtim<struct stat>::value>;
 OSTD_EXPORT file_time_t last_write_time(path const &p) {
     struct stat sb;
     if (stat(p.string().data(), &sb) < 0) {
-        abort();
+        throw fs_error{"stat failure", p, errno_ec()};
     }
     return mtime::get(sb);
 }
@@ -433,7 +438,7 @@ OSTD_EXPORT void last_write_time(path const &p, file_time_t new_time) {
         {0, UTIME_OMIT}, {time_t(sec.count()), long(nsec.count())}
     };
     if (utimensat(0, p.string().data(), times, 0)) {
-        abort();
+        throw fs_error{"utimensat failure", p, errno_ec()};
     }
 }
 

@@ -30,6 +30,7 @@
 #include <memory>
 #include <initializer_list>
 #include <type_traits>
+#include <stdexcept>
 #include <system_error>
 
 #include <ostd/platform.hh>
@@ -56,6 +57,13 @@ namespace detail {
         char const *fname, char const *wname
     ) noexcept;
 }
+
+struct path_error: std::runtime_error {
+    using std::runtime_error::runtime_error;
+
+    /* empty, for vtable placement */
+    virtual ~path_error();
+};
 
 struct path {
 #ifdef OSTD_PLATFORM_WIN32
@@ -277,8 +285,7 @@ struct path {
     path &remove_name() {
         auto nm = name();
         if (nm.empty()) {
-            /* TODO: throw */
-            return *this;
+            throw path_error{"path has no name"};
         }
         p_path.erase(p_path.size() - nm.size() - 1, nm.size() + 1);
         return *this;
@@ -734,6 +741,37 @@ struct format_traits<path> {
 namespace ostd {
 namespace fs {
 
+struct fs_error: std::system_error {
+    fs_error(std::string const &warg, std::error_code ec):
+        std::system_error::system_error(ec, warg)
+    {}
+
+    fs_error(std::string const &warg, path const &p1, std::error_code ec):
+        std::system_error::system_error(ec, warg), p_p1(p1)
+    {}
+
+    fs_error(
+        std::string const &warg, path const &p1,
+        path const &p2, std::error_code ec
+    ):
+        std::system_error::system_error(ec, warg), p_p1(p1), p_p2(p2)
+    {}
+
+    /* empty, for vtable placement */
+    virtual ~fs_error();
+
+    path const &path1() const noexcept {
+        return p_p1;
+    }
+
+    path const &path2() const noexcept {
+        return p_p1;
+    }
+
+private:
+    path p_p1{}, p_p2{};
+};
+
 /** @addtogroup Utilities
  * @{
  */
@@ -1179,7 +1217,7 @@ namespace detail {
  * context (i.e. not as entire filename/directory name) will be treated
  * as two regular `*` patterns.
  *
- * @throws std::filesystem_error if a filesystem error occurs.
+ * @throws fs::fs_error if a filesystem error occurs.
  * @returns The forwarded `out`.
  */
 template<typename OutputRange>

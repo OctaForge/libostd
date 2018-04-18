@@ -16,6 +16,18 @@
 #endif
 
 namespace ostd {
+
+/* place the vtables in here */
+
+path_error::~path_error() {}
+
+namespace fs {
+    fs_error::~fs_error() {}
+} /* namespace fs */
+
+} /* namespace ostd */
+
+namespace ostd {
 namespace detail {
 
 inline char const *glob_match_brackets(char match, char const *wp) noexcept {

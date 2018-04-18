@@ -129,13 +129,13 @@ static void add_args(strvec &args, std::string const &cmdl) {
 }
 
 static void try_remove(path const &path, bool all = false) {
-    //try {
+    try {
         if (all) {
             fs::remove_all(path);
         } else {
             fs::remove(path);
         }
-    //} catch (fs::fs_error const &) {}
+    } catch (fs::fs_error const &) {}
 }
 
 static bool verbose = false;
