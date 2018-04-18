@@ -1,6 +1,6 @@
 /** @example listdir.cc
  *
- * A simple example of using ostd::path and ostd::path::fs.
+ * A simple example of using ostd::path and ostd::fs.
  */
 
 #include <ostd/io.hh>
