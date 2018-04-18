@@ -206,9 +206,9 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    auto default_lib = std::string{OSTD_SHARED_LIB.string()};
+    std::string default_lib = OSTD_SHARED_LIB;
     if (build_static) {
-        default_lib = std::string{OSTD_STATIC_LIB.string()};
+        default_lib = OSTD_STATIC_LIB;
     }
 
     auto strip = from_env_or("STRIP", "strip");
@@ -335,8 +335,8 @@ int main(int argc, char **argv) {
 
         args.push_back("-c");
         args.push_back("-o");
-        args.push_back(std::string{outp.string()});
-        args.push_back(std::string{ifs});
+        args.push_back(outp);
+        args.push_back(ifs);
 
         exec_v(args);
 
@@ -366,8 +366,8 @@ int main(int argc, char **argv) {
 
         args.push_back("-c");
         args.push_back("-o");
-        args.push_back(std::string{outp.string()});
-        args.push_back(std::string{ifs});
+        args.push_back(outp);
+        args.push_back(ifs);
 
         exec_v(args);
 
@@ -383,9 +383,9 @@ int main(int argc, char **argv) {
         add_args(args, cxxflags);
 
         args.push_back("-o");
-        args.push_back(std::string{output.string()});
+        args.push_back(output);
         for (auto &p: files) {
-            args.push_back(std::string{p.string()});
+            args.push_back(p);
         }
         args.insert(args.cend(), flags.begin(), flags.end());
 
@@ -396,7 +396,7 @@ int main(int argc, char **argv) {
         if (build_cfg == "release") {
             args.clear();
             args.push_back(strip);
-            args.push_back(std::string{output.string()});
+            args.push_back(output);
             exec_v(args);
         }
     };
@@ -414,9 +414,9 @@ int main(int argc, char **argv) {
             echo_q("AR: %s", output);
 
             args.push_back("rcs");
-            args.push_back(std::string{output.string()});
+            args.push_back(output);
             for (auto &p: files) {
-                args.push_back(std::string{p.string()});
+                args.push_back(p);
             }
 
             exec_v(args);
@@ -562,7 +562,7 @@ int main(int argc, char **argv) {
     }
 
     if (build_testsuite) {
-        exec_v({ "./test_runner", std::string{TEST_DIR.string()} });
+        exec_v({ "./test_runner", TEST_DIR });
     }
 
     io_msgs.close();

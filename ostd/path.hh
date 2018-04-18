@@ -204,7 +204,7 @@ struct path {
                 return path{anchor(), p_fmt};
             }
         } else {
-            sep = ostd::find_last(string(), separator());
+            sep = ostd::find_last(string_range{p_path}, separator());
             if (sep.empty()) {
                 return *this;
             }
@@ -216,7 +216,7 @@ struct path {
         if (is_absolute()) {
             return (string() != anchor());
         }
-        return !ostd::find(string(), separator()).empty();
+        return !ostd::find(string_range{p_path}, separator()).empty();
     }
 
     detail::path_parent_range parents() const;
@@ -406,7 +406,15 @@ struct path {
         );
     }
 
-    string_range string() const noexcept {
+    std::string const &string() const noexcept {
+        return p_path;
+    }
+
+    operator std::string() const {
+        return p_path;
+    }
+
+    operator string_range() const noexcept {
         return p_path;
     }
 

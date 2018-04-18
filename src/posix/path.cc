@@ -289,7 +289,7 @@ OSTD_EXPORT path weakly_canonical(path const &p) {
     }
     /* cp refers to an existing section, canonicalize */
     path ret = canonical(cp);
-    auto pstr = p.string();
+    string_range pstr = p;
     /*a append the unresolved rest */
     ret.append(pstr.slice(cp.string().size(), pstr.size()));
     return ret;
