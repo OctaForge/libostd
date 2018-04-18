@@ -13,7 +13,14 @@
  *
  * This module replaces the C++17 filesystem module, aiming to be simpler
  * and higher level. For instance, it uses purely 8-bit encoding on all
- * platforms, taking care of conversions internally.
+ * platforms, taking care of conversions internally. It also makes sure
+ * the path remains in a normalized (though not canonical, as that needs
+ * actual FS operations) form at all times.
+ *
+ * It also implements an amount of extra functionality such as glob matching.
+ *
+ * @include glob.cc
+ * @include listdir.cc
  *
  * @copyright See COPYING.md in the project tree for further information.
  */
@@ -58,6 +65,14 @@ namespace detail {
     ) noexcept;
 }
 
+/** @brief An exception type thrown on lexical path errors.
+ *
+ * Path errors are thrown whne something in a path itself fails, without
+ * involving system APIs in it. For example, trying to remove a name from
+ * a path that has no name would result in this kind of exception thrown.
+ *
+ * It inherits from std::runtime_error and has the same methods and behavior.
+ */
 struct path_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 
@@ -65,21 +80,133 @@ struct path_error: std::runtime_error {
     virtual ~path_error();
 };
 
+/** @brief A structure representing a file system path.
+ *
+ * Libostd uses this to represent paths as then it can keep track of
+ * the format.
+ *
+ * A path may be composed of a drive, a root (drive and root together make
+ * an anchor) and any number of components with an appropriate separator.
+ *
+ * Two possible path encodings are supported, POSIX style and Windows style.
+ * POSIX style paths use a forward slash (`/`) as a separator, Windows paths
+ * use a backslash (`\`). Windows style paths support a drive component,
+ * POSIX style paths do not.
+ *
+ * Windows style paths may take on the following formats:
+ *
+ * - Absolute paths:
+ *   - `C:\foo\bar\file.ext`
+ *   - `\\host\share\foo\bar\file.ext`
+ * - Relative paths:
+ *   - `foo\bar`
+ *   - `C:foo\bar`
+ *   - `\foo\bar`
+ *
+ * Absolute paths always have a drive. The drive is either a letter followed
+ * by a colon, such as `C:`, or a host+share sequence, `\\host\share`. The
+ * drive is followed by a root, `\`, followed by any number of path elemnets.
+ *
+ * Relative paths may or may not have a drive. If they do, it's always lettered
+ * and is not followed by a root. Additionally, POSIX-style `\foo\bar` is
+ * considered a relative path in the Windows encoding, and do have a root
+ * but not a drive.
+ *
+ * POSIX style paths may take on the following formats:
+ *
+ * - Absolute paths:
+ *   - `/foo/bar/file.ext`
+ * - Relative paths:
+ *   - `foo/bar/file.ext`
+ *
+ * POSIX style paths never contain a drive, but they contain a root if
+ * absolute.
+ *
+ * With both encodings, an empty path is represented as a period (`.`).
+ * However, a non-empty path will never contain any period components.
+ * Therefore, if your input is a path `./foo`, the normalization will
+ * turn it into a simple `foo`. Inner components like this (e.h. `foo/./bar`)
+ * are also normalized properly (e.g. into `foo/bar`).
+ *
+ * The normalization also strips any trailing separators, so e.g. `foo/bar/`
+ * is made into `foo/bar`.
+ *
+ * It is possible to convert from one format to another by copy constructing
+ * with the appropriate format. Keep in mind that this conversion does not
+ * always make perfect sense, e.g. absolute Windows path `C:\foo` is converted
+ * to a relative POSIX path `C:/foo`. The important part is that they are
+ * technically lossless, if you convert there and back you should get the
+ * same path.
+ *
+ * All operations on paths outside the `ostd::fs` namespace are purely lexical
+ * and involve no system calls.
+ *
+ * Paths always use a multibyte encoding regardless of operating system. On
+ * Windows, file system operations with paths assume Unicode (UTF-8), on
+ * POSIX they will assume an 8-bit encoding based on your system locale
+ * or filesystem encoding. As the Windows native encoding is UTF-16/UCS-2,
+ * libostd uses WTF-8/16 style loose encoding to allow for lossless
+ * manipulation of ill-formed UTF-16.
+ */
 struct path {
 #ifdef OSTD_PLATFORM_WIN32
-    static constexpr char native_separator = '\\';
+    static constexpr char const native_separator = '\\';
 #else
-    static constexpr char native_separator = '/';
+    /** @brief The preferred separator for your OS. */
+    static constexpr char const native_separator = '/';
 #endif
 
+    /** @brief Describes the format used for a path.
+     *
+     * The `native` format is only used with constructors (being the default
+     * format) and represents either POSIX or Windows style paths depending
+     * on the system you're on. Keep in mind that the path does not retain
+     * this format, if you try to request the format back it will return
+     * the concrete OS specific value.
+     *
+     * You can use any of the 3 values on any operating system - it is
+     * valid to manipulate Windows paths on Unix-like systems. However,
+     * you cannot expect actual filesystem operations to accept paths
+     * in both encodings (though Windows does support POSIX style separators).
+     */
     enum class format {
         native = 0,
         posix,
         windows
     };
 
+#ifdef OSTD_PLATFORM_WIN32
+    static constexpr format const native_format = format::windows;
+#else
+    /** @brief The preferred format for your OS. */
+    static constexpr format const native_format = format::posix;
+#endif
+
+    /** @brief The range type to iterate over elements of a path.
+     *
+     * For relative paths, the elements are simply the individual separated
+     * pieces. For absolute paths, the first element is the anchor(), i.e.
+     * drive (if possible) plus root.
+     *
+     * The range is an ostd::forward_range_tag and has ostd::string_range
+     * as a value and reference type.
+     */
     using range = detail::path_range;
 
+    /** @brief Constructs a path using a range or a string.
+     *
+     * If said `range` is convertible to a string (e.g. ostd::string_range)
+     * or if it's a string (like std::string), it is converted to a string,
+     * assumed to be a path and normalized.
+     *
+     * Otherwise, it is assumed to be a range (at least ostd::input_range_tag)
+     * with elements being convertible to strings. Each element is normalized
+     * and those elements are then concatenated with the directory separator,
+     * making sure the actual path stays normalized.
+     *
+     * If the path has a drive or a root, the previously built contents of
+     * the path are reset and the path is started over.
+     */
     template<typename R>
     path(R range, format fmt = format::native):
         p_path("."), p_fmt(path_fmt(fmt))
@@ -93,29 +220,53 @@ struct path {
         }
     }
 
+    /** @brief Constructs an empty path (`.`) */
     path(format fmt = format::native): path(".", path_fmt(fmt)) {}
 
+    /** @brief Constructs a path using an initializer list.
+     *
+     * The initializer list components must be convertible to strings.
+     * Then, the initializer list is used exactly like a range.
+     */
     template<typename T>
     path(std::initializer_list<T> init, format fmt = format::native):
         path(ostd::iter(init), path_fmt(fmt))
     {}
 
+    /** @brief Path copy constructor.
+     *
+     * No changes are made, the path is copied as is.
+     */
     path(path const &p):
         p_path(p.p_path), p_fmt(p.p_fmt)
     {}
 
+    /** @brief Path copy constructor with format.
+     *
+     * If the new format differs, the path is re-encoded.
+     */
     path(path const &p, format fmt):
         p_path(p.p_path), p_fmt(path_fmt(fmt))
     {
         convert_path(p);
     }
 
+    /** @brief Path move constructor.
+     *
+     * No changes are made, the path is moved as is and the previous
+     * path is left empty, but valid.
+     */
     path(path &&p) noexcept:
         p_path(std::move(p.p_path)), p_fmt(p.p_fmt)
     {
         p.p_path = ".";
     }
 
+    /** @brief Path move constructor with format.
+     *
+     * The other path is left empty, but valid. The new path will be
+     * reeencoded if necessary.
+     */
     path(path &&p, format fmt):
         p_path(std::move(p.p_path)), p_fmt(path_fmt(fmt))
     {
@@ -123,23 +274,46 @@ struct path {
         convert_path(p);
     }
 
+    /** @brief Path copy assign.
+     *
+     * No changes are made.
+     */
     path &operator=(path const &p) {
         p_path = p.p_path;
         p_fmt = p.p_fmt;
         return *this;
     }
 
+    /** @brief Path move assign.
+     *
+     * The other path is left empty, but valid.
+     */
     path &operator=(path &&p) noexcept {
         swap(p);
         p.clear();
         return *this;
     }
 
+    /** @brief Gets the currently used separator.
+     *
+     * Unlike `native_separator`, this is not a constant and represents
+     * encoding specific path separator.
+     */
     char separator() const noexcept {
         static const char seps[] = { native_separator, '/', '\\' };
         return seps[std::size_t(p_fmt)];
     }
 
+    /** @brief Gets the drive of the path.
+     *
+     * For POSIX-encoded paths, this returns an empty range. For Windows,
+     * this returns the drive portion of the path, if present. Drive may
+     * be present in both relative and absolute paths.
+     *
+     * @see has_drive()
+     * @see root()
+     * @see anchor()
+     */
     string_range drive() const noexcept {
         if (is_win()) {
             string_range path = p_path;
@@ -160,6 +334,10 @@ struct path {
         return nullptr;
     }
 
+    /** @brief Checks if a path has a drive.
+     *
+     * @see drive()
+     */
     bool has_drive() const noexcept {
         if (is_win()) {
             return (has_letter(p_path) || has_dslash(p_path));
@@ -167,6 +345,15 @@ struct path {
         return false;
     }
 
+    /* @brief Gets the root of the path.
+     *
+     * On POSIX, absolute paths have a root. On Windows, both relative
+     * and absolute paths may have a root.
+     *
+     * @see has_root()
+     * @see drive()
+     * @see anchor()
+     */
     string_range root() const noexcept {
         char const *rootp = get_rootp();
         if (rootp) {
@@ -175,10 +362,23 @@ struct path {
         return nullptr;
     }
 
+    /** @brief Checks if a path has a root.
+     *
+     * @see root()
+     */
     bool has_root() const noexcept {
         return !!get_rootp();
     }
 
+    /** @brief Gets the anchor of the path.
+     *
+     * This is the concatenation of a drive and a root. A path has an anchor
+     * if it has either a drive or a root.
+     *
+     * @see has_anchor()
+     * @see drive()
+     * @see root()
+     */
     string_range anchor() const noexcept {
         string_range dr = drive();
         if (dr.empty()) {
@@ -192,10 +392,26 @@ struct path {
         return dr;
     }
 
+    /** @brief Checks if a path has an anchor.
+     *
+     * @see anchor()
+     */
     bool has_anchor() const noexcept {
         return has_root() || has_drive();
     }
 
+    /** @brief Gets the parent path of a path.
+     *
+     * Keep in mind this is purely lexical, so for e.g. `foo/bar/../baz`
+     * this is `foo/bar/..`. Absolute paths have no parent if they're just
+     * an anchor. Relative paths have no parent if they contain no separators.
+     *
+     * This returns a copy of the path for parentless paths, or the parent.
+     * Use has_parent() if you need to check, or compare the path strings,
+     * but that is slower.
+     *
+     * @see has_parent()
+     */
     path parent() const {
         string_range sep;
         if (is_absolute()) {
@@ -212,6 +428,12 @@ struct path {
         return path{ostd::string_range{p_path.data(), sep.data()}, p_fmt};
     }
 
+    /** @brief Checks if a path has a parent.
+     *
+     * This is true if parent() would return a different path.
+     *
+     * @see parent()
+     */
     bool has_parent() const noexcept {
         if (is_absolute()) {
             return (string() != anchor());
@@ -219,12 +441,29 @@ struct path {
         return !ostd::find(string_range{p_path}, separator()).empty();
     }
 
+    /** @brief Gets a range containing all parents of a path.
+     *
+     * For example, for `foo/bar/baz`, this is `{'foo/bar', 'foo'}`. The
+     * range is an ostd::forward_range_tag with each element being a path,
+     * including the reference type.
+     */
     detail::path_parent_range parents() const;
 
+    /** @brief Equivalent to `relative_to(anchor())`. */
     path relative() const {
         return relative_to(anchor());
     }
 
+    /** @brief Gets the name component of the path.
+     *
+     * A name component is the last component of the path that is not an
+     * anchor.
+     *
+     * @see has_name()
+     * @see anchor()
+     * @see stem()
+     * @see suffix()
+     */
     string_range name() const noexcept {
         string_range rel = relative_to_str(anchor());
         string_range sep = ostd::find_last(rel, separator());
@@ -235,31 +474,79 @@ struct path {
         return sep;
     }
 
+    /** @brief Checks if the path has a name.
+     *
+     * @see name()
+     */
     bool has_name() const noexcept {
         return !name().empty();
     }
 
+    /** @brief Gets the suffix of the name component.
+     *
+     * This is the last part of the name after a period, including the
+     * period. For example, for `foo.tar.gz` it's `.gz`. It can be empty.
+     *
+     * @see has_suffix()
+     * @see name()
+     * @see stem()
+     * @see suffixes()
+     */
     string_range suffix() const noexcept {
         return ostd::find_last(relative_to_str(anchor()), '.');
     }
 
+    /** @brief Gets the suffixes of the name component.
+     *
+     * Like suffix(), but gets all the suffixes, so for example for
+     * `foo.tar.gz` this is `.tar.gz`.
+     *
+     * @see suffix()
+     * @see has_suffix()
+     */
     string_range suffixes() const noexcept {
         return ostd::find(name(), '.');
     }
 
+    /** @brief Checks if the name has one or more suffixes.
+     *
+     * @see suffix()
+     */
     bool has_suffix() const noexcept {
         return !suffixes().empty();
     }
 
+    /** @brief Gets the stem part of the name.
+     *
+     * If the name has no suffix, this is equivalent to the name. Otherwise,
+     * it's the name but without the suffix (`foo` in `foo.tar.gz`).
+     *
+     * @see has_stem()
+     * @see suffix()
+     */
     string_range stem() const noexcept {
         auto nm = name();
         return nm.slice(0, nm.size() - ostd::find(nm, '.').size());
     }
 
+    /** @brief Checks if the path has a stem.
+     *
+     * @see stem()
+     */
     bool has_stem() const noexcept {
         return !stem().empty();
     }
 
+    /** @brief Checks if a path is absolute.
+     *
+     * You can find an exact description in the documentation for ostd::path.
+     * In short, on POSIX an absolute path has a root, on Windows it has both
+     * a root and a drive.
+     *
+     * @see is_relative()
+     * @see root()
+     * @see drive()
+     */
     bool is_absolute() const noexcept {
         if (is_win()) {
             if (has_dslash(p_path)) {
@@ -270,18 +557,52 @@ struct path {
         return (p_path.data()[0] == '/');
     }
 
+    /** @brief Checks if a path is relative.
+     *
+     * A path is relative if it's not absolute.
+     *
+     * @see is_absolute()
+     */
     bool is_relative() const noexcept {
         return !is_absolute();
     }
 
+    /** @brief Gets a path lexically relative to `other`.
+     *
+     * This is, like every other operation, purely lexical. For example,
+     * if this path is `/foo/bar/baz` and the given path is `/foo`, the
+     * result is `bar/baz`. Basically, this works by stripping the first
+     * part of the path equal to `other` and returning the rest.
+     *
+     * The other path is converted to the same format as this path if needed.
+     *
+     * If this is not possible, ostd::path_error is thrown.
+     *
+     * @throws ostd::path_error
+     */
     path relative_to(path const &other) const {
+        string_range rto;
         if (other.p_fmt != p_fmt) {
-            return path{relative_to_str(path{other, p_fmt}.p_path), p_fmt};
+            rto = relative_to_str(path{other, p_fmt}.p_path);
         } else {
-            return path{relative_to_str(other.p_path), p_fmt};
+            rto = relative_to_str(other.p_path);
         }
+        if (rto.empty()) {
+            throw path_error{"non-matching paths"};
+        }
+        return path{rto, p_fmt};
     }
 
+    /** @brief Removes the name component of the path.
+     *
+     * If the path has no name component, ostd::path_error is thrown.
+     *
+     * @see without_name()
+     * @see with_name()
+     * @see replace_name()
+     *
+     * @throws ostd::path_error
+     */
     path &remove_name() {
         auto nm = name();
         if (nm.empty()) {
@@ -291,24 +612,66 @@ struct path {
         return *this;
     }
 
+    /** @brief Gets the path except without the name component.
+     *
+     * Same as remove_name(). except it doesn't modify the path.
+     *
+     * @see name()
+     * @see with_name()
+     * @see replace_name()
+     *
+     * @throws ostd::path_error
+     */
     path without_name() const {
         path ret{*this};
         ret.remove_name();
         return ret;
     }
 
+    /** @brief Replaces the name component with another.
+     *
+     * This removes the name first using remove_name() and then appends
+     * the new one.
+     *
+     * @see name()
+     * @see with_name()
+     * @see without_name()
+     *
+     * @throws ostd::path_error
+     */
     path &replace_name(string_range name) {
         remove_name();
         append_str(std::string{name});
         return *this;
     }
 
+    /** @brief Gets the path with the name replaced.
+     *
+     * This is like replace_name(), except it doesn't modify this path.
+     *
+     * @see name()
+     * @see with_name()
+     * @see replace_name()
+     *
+     * @throws ostd::path_error
+     */
     path with_name(string_range name) const {
         path ret{*this};
         ret.replace_name(name);
         return ret;
     }
 
+    /** @brief Replaces the last suffix with a new one.
+     *
+     * If there is no suffix, it's not an error, the suffix is simply
+     * added. For example, `foo.tar.gz` with `.bz2` becomees `foo.tar.bz2`,
+     * and `foo` with `.zip` becomes `foo.zip`.
+     *
+     * If you want to replace all suffixes, use replace_suffixes().
+     *
+     * @see replace_suffixes()
+     * @see with_suffix()
+     */
     path &replace_suffix(string_range sfx = string_range{}) {
         auto osfx = suffix();
         if (!osfx.empty()) {
@@ -318,6 +681,17 @@ struct path {
         return *this;
     }
 
+    /* @brief Replaces all suffixes with a new one.
+     *
+     * If there is no suffix, it's not an error, the suffix is simply
+     * added. For example, `foo.tar.gz` with `.zip` becomees `foo.zip`,
+     * and `foo` with `.txt` becomes `foo.txt`.
+     *
+     * If you want to replace just the last suffix, use replace_suffix().
+     *
+     * @see replace_suffix()
+     * @see with_suffixes()
+     */
     path &replace_suffixes(string_range sfx = string_range{}) {
         auto sfxs = suffixes();
         if (!sfxs.empty()) {
@@ -327,44 +701,99 @@ struct path {
         return *this;
     }
 
+    /** @brief Gets the path, but with another suffix.
+     *
+     * This is just like replace_suffix() but does not modify the path.
+     *
+     * @see replace_suffix()
+     * @see with_suffixes()
+     */
     path with_suffix(string_range sfx = string_range{}) const {
         path ret{*this};
         ret.replace_suffix(sfx);
         return ret;
     }
 
+    /** @brief Gets the path, but with different suffixes.
+     *
+     * This is just like replace_suffixes() but does not modify the path.
+     *
+     * @see replace_suffixes()
+     * @see with_suffix()
+     */
     path with_suffixes(string_range sfx = string_range{}) const {
         path ret{*this};
         ret.replace_suffixes(sfx);
         return ret;
     }
 
+    /** @brief Joins the path with another one and returns the result.
+     *
+     * This is just like append() but does not modify the path.
+     *
+     * Also available as an operator overload `/`.
+     *
+     * @see append()
+     */
     path join(path const &p) const {
         path ret{*this};
         ret.append(p);
         return ret;
     }
 
+    /** @brief Appends another component to the path.
+     *
+     * The component is normalized. It may represent multiple components
+     * if it contains separators. If it contains a root (on POSIX), the
+     * previous contents of the path will be deleted first.
+     *
+     * If you do not wish to put a separator before the new component,
+     * use append_concat().
+     *
+     * Also available as an operator overload `/=`.
+     *
+     * @see join()
+     * @see append_concat()
+     */
     path &append(path const &p) {
         append_str(p.p_path, p.p_fmt == p_fmt);
         return *this;
     }
 
+    /** @brief Appends a sequence without adding a separator.
+     *
+     * This is handy for e.g. extending names. The given component still
+     * undergoes normalization though.
+     *
+     * Also available as an operator overload `+=`.
+     *
+     * @see append()
+     * @see concat()
+     */
     path &append_concat(path const &p) {
         append_concat_str(p.p_path);
         return *this;
     }
 
+    /** @brief Joins two paths together without a separator.
+     *
+     * This is just like append_concat() but does not modify the path.
+     * Also available as an operator overload `+`.
+     *
+     * @see append_concat()
+     */
     path concat(path const &p) const {
         path ret{*this};
         ret.append_concat(p);
         return ret;
     }
 
+    /** @brief Like append(). */
     path &operator/=(path const &p) {
         return append(p);
     }
 
+    /** @brief Like append_concat(). */
     path &operator+=(path const &p) {
         return append_concat(p);
     }
@@ -406,46 +835,71 @@ struct path {
         );
     }
 
+    /** @brief Gets the path as a string.
+     *
+     * For maximum compatibility, this is returned as a const reference
+     * to std::string, not ostd::string_range. A range can be easily
+     * constructed from it.
+     *
+     * The same is also available via implicit conversion operators.
+     */
     std::string const &string() const noexcept {
         return p_path;
     }
 
+    /** @brief Implicitly converts to std::string. */
     operator std::string() const {
         return p_path;
     }
 
+    /** @brief Implicitly converts to ostd::string_range. */
     operator string_range() const noexcept {
         return p_path;
     }
 
+    /** @brief Gets the format of the path.
+     *
+     * This always returns either `format::posix` or `format::windows`,
+     * never `format::native`. If you want to check what the native format
+     * is, use path::native_format.
+     */
     format path_format() const noexcept {
         return p_fmt;
     }
 
+    /** @brief Clears the path.
+     *
+     * This makes the path empty, i.e. `.`.
+     */
     void clear() {
         p_path = ".";
     }
 
+    /** @brief Checks if the path is empty.
+     *
+     * The path is actually never truly empty, but `.` is considered an
+     * empty path.
+     */
     bool empty() const {
         return (p_path == ".");
     }
 
+    /** @brief Swaps the contents with another path. */
     void swap(path &other) noexcept {
         p_path.swap(other.p_path);
         std::swap(p_fmt, other.p_fmt);
     }
 
+    /** @brief Iterates the path by components.
+     *
+     * See path::range for behavior.
+     */
     range iter() const noexcept;
 
 private:
     static format path_fmt(format f) noexcept {
         static const format fmts[] = {
-#ifdef OSTD_PLATFORM_WIN32
-            format::windows,
-#else
-            format::posix,
-#endif
-            format::posix, format::windows
+            native_format, format::posix, format::windows
         };
         return fmts[std::size_t(f)];
     }
@@ -629,10 +1083,18 @@ private:
     format p_fmt;
 };
 
+/** @brief Joins two paths.
+ *
+ * Equivalent to `p1.join(p2)`.
+ */
 inline path operator/(path const &p1, path const &p2) {
     return p1.join(p2);
 }
 
+/** @brief Concatenates two paths.
+ *
+ * Equivalent to `p1.concat(p2)`.
+ */
 inline path operator+(path const &p1, path const &p2) {
     return p1.concat(p2);
 }
@@ -732,8 +1194,17 @@ inline detail::path_parent_range path::parents() const {
     return detail::path_parent_range{*this};
 }
 
+/** @brief ostd::format_traits specialization for paths.
+ *
+ * This allows paths to be formatted as strings. The path is formatted as
+ * in `path.string()` was formatted, using the exact ostd::format_spec.
+ */
 template<>
 struct format_traits<path> {
+    /** @brief Formats the path's string value.
+     *
+     * This is exactly `fs.format_value(writer, p.string())`.
+     */
     template<typename R>
     static void to_format(path const &p, R &writer, format_spec const &fs) {
         fs.format_value(writer, p.string());
@@ -749,15 +1220,31 @@ struct format_traits<path> {
 namespace ostd {
 namespace fs {
 
+/** @addtogroup Utilities
+ * @{
+ */
+
+/** @brief An exception thrown by filesystem operations.
+ *
+ * Unlike ostd::path_error, this is thrown by operations doing syscalls.
+ * It is like std::system_error and represents OS specific error codes.
+ *
+ * The API is identical to std::system_error except it also contains
+ * up to two paths involved in the operation as ostd::path. Whether those
+ * are used depends on the operation.
+ */
 struct fs_error: std::system_error {
+    /** @brief Constructs the error without paths. */
     fs_error(std::string const &warg, std::error_code ec):
         std::system_error::system_error(ec, warg)
     {}
 
+    /** @brief Constructs the error with one path. */
     fs_error(std::string const &warg, path const &p1, std::error_code ec):
         std::system_error::system_error(ec, warg), p_p1(p1)
     {}
 
+    /** @brief Constructs the error with two paths. */
     fs_error(
         std::string const &warg, path const &p1,
         path const &p2, std::error_code ec
@@ -768,10 +1255,12 @@ struct fs_error: std::system_error {
     /* empty, for vtable placement */
     virtual ~fs_error();
 
+    /** @brief Gets the first path involved in the operation. */
     path const &path1() const noexcept {
         return p_p1;
     }
 
+    /** @brief Gets the second path involved in the operation. */
     path const &path2() const noexcept {
         return p_p1;
     }
@@ -780,10 +1269,7 @@ private:
     path p_p1{}, p_p2{};
 };
 
-/** @addtogroup Utilities
- * @{
- */
-
+/** @brief An enumeration representing file types. */
 enum class file_type {
     none = 0,
     not_found,
@@ -797,6 +1283,7 @@ enum class file_type {
     unknown
 };
 
+/** @brief An enumeration representing permissions based on POSIX. */
 enum class perms {
     /* occupies 12 bits */
     none         = 0,
@@ -821,32 +1308,39 @@ enum class perms {
     unknown      = 0xFFFF
 };
 
+/** @brief Allows bitwise OR on permissions. */
 inline perms operator|(perms a, perms b) {
     return perms(int(a) | int(b));
 }
 
+/** @brief Allows bitwise AND on permissions. */
 inline perms operator&(perms a, perms b) {
     return perms(int(a) & int(b));
 }
 
+/** @brief Allows bitwise XOR on permissions. */
 inline perms operator^(perms a, perms b) {
     return perms(int(a) ^ int(b));
 }
 
+/** @brief Allows bitwise NOT on permissions. */
 inline perms operator~(perms v) {
     return perms(~int(v));
 }
 
+/** @brief Allows bitwise OR on permissions. */
 inline perms &operator|=(perms &a, perms b) {
     a = (a | b);
     return a;
 }
 
+/** @brief Allows bitwise AND on permissions. */
 inline perms &operator&=(perms &a, perms b) {
     a = (a & b);
     return a;
 }
 
+/** @brief Allows bitwise XOR on permissions. */
 inline perms &operator^=(perms &a, perms b) {
     a = (a ^ b);
     return a;
