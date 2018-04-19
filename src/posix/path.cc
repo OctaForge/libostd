@@ -9,6 +9,9 @@
 #undef _POSIX_C_SOURCE
 #endif
 
+/* only because glibc is awful, does not apply to other libcs */
+#define _FILE_OFFSET_BITS 64
+
 #define _POSIX_C_SOURCE 200809L
 
 #ifndef _ATFILE_SOURCE
@@ -51,26 +54,111 @@ static std::error_code ec_from_int(int v) {
     return std::error_code(v, std::system_category());
 }
 
-OSTD_EXPORT file_mode mode(path const &p) {
-    struct stat sb;
-    if (stat(p.string().data(), &sb) < 0) {
+/* ugly test for whether nanosecond precision is available in stat
+ * could check for existence of st_mtime macro, but this is more reliable
+ */
+
+template<typename T>
+struct test_mtim {
+    template<typename TT, TT> struct test_stat;
+
+    struct fake_stat {
+        struct timespec st_mtim;
+    };
+
+    struct stat_test: fake_stat, T {};
+
+    template<typename TT>
+    static char test(test_stat<struct timespec fake_stat::*, &TT::st_mtim> *);
+
+    template<typename>
+    static int test(...);
+
+    static constexpr bool value = (sizeof(test<stat_test>(0)) == sizeof(int));
+};
+
+template<bool B>
+struct mtime_impl {
+    template<typename S>
+    static file_time_t get(S const &st) {
+        return std::chrono::system_clock::from_time_t(st.st_mtime);
+    }
+};
+
+template<>
+struct mtime_impl<true> {
+    template<typename S>
+    static file_time_t get(S const &st) {
+        struct timespec ts = st.st_mtim;
+        auto d = std::chrono::seconds{ts.tv_sec} +
+                 std::chrono::nanoseconds{ts.tv_nsec};
+        return file_time_t{
+            std::chrono::duration_cast<std::chrono::system_clock::duration>(d)
+        };
+    }
+};
+
+using mtime = mtime_impl<test_mtim<struct stat>::value>;
+
+static file_status status_get(path const &p, int ret, struct stat &sb) {
+    if (ret < 0) {
         if (errno == ENOENT) {
-            return file_mode{file_type::not_found, perms::none};
+            return file_status{
+                file_mode{file_type::not_found, perms::none},
+                file_time_t{}, 0, 0
+            };
         }
         throw fs_error{"stat failure", p, errno_ec()};
     }
-    return file_mode{mode_to_type(sb.st_mode), perms(sb.st_mode & 07777)};
+    return file_status{
+        file_mode{mode_to_type(sb.st_mode), perms{sb.st_mode & 07777}},
+        mtime::get(sb),
+        std::uintmax_t(sb.st_size),
+        std::uintmax_t(sb.st_nlink)
+    };
+}
+
+OSTD_EXPORT file_status status(path const &p) {
+    struct stat sb;
+    return status_get(p, stat(p.string().data(), &sb), sb);
+}
+
+OSTD_EXPORT file_status symlink_status(path const &p) {
+    struct stat sb;
+    return status_get(p, lstat(p.string().data(), &sb), sb);
+}
+
+OSTD_EXPORT file_mode mode(path const &p) {
+    return status(p).mode();
 }
 
 OSTD_EXPORT file_mode symlink_mode(path const &p) {
-    struct stat sb;
-    if (lstat(p.string().data(), &sb) < 0) {
-        if (errno == ENOENT) {
-            return file_mode{file_type::not_found, perms::none};
-        }
-        throw fs_error{"lstat failure", p, errno_ec()};
+    return symlink_status(p).mode();
+}
+
+OSTD_EXPORT file_time_t last_write_time(path const &p) {
+    return status(p).last_write_time();
+}
+
+OSTD_EXPORT std::uintmax_t file_size(path const &p) {
+    return status(p).size();
+}
+
+OSTD_EXPORT std::uintmax_t hard_link_count(path const &p) {
+    return status(p).hard_link_count();
+}
+
+/* TODO: somehow feature-test for utimensat and fallback to utimes */
+OSTD_EXPORT void last_write_time(path const &p, file_time_t new_time) {
+    auto d = new_time.time_since_epoch();
+    auto sec = std::chrono::floor<std::chrono::seconds>(d);
+    auto nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(d - sec);
+    struct timespec times[2] = {
+        {0, UTIME_OMIT}, {time_t(sec.count()), long(nsec.count())}
+    };
+    if (utimensat(0, p.string().data(), times, 0)) {
+        throw fs_error{"utimensat failure", p, errno_ec()};
     }
-    return file_mode{mode_to_type(sb.st_mode), perms(sb.st_mode & 07777)};
 }
 
 } /* namespace fs */
@@ -384,73 +472,6 @@ OSTD_EXPORT std::uintmax_t remove_all(path const &p) {
 OSTD_EXPORT void rename(path const &op, path const &np) {
     if (::rename(op.string().data(), np.string().data())) {
         throw fs_error{"rename failure", op, np, errno_ec()};
-    }
-}
-
-/* ugly test for whether nanosecond precision is available in stat
- * could check for existence of st_mtime macro, but this is more reliable
- */
-
-template<typename T>
-struct test_mtim {
-    template<typename TT, TT> struct test_stat;
-
-    struct fake_stat {
-        struct timespec st_mtim;
-    };
-
-    struct stat_test: fake_stat, T {};
-
-    template<typename TT>
-    static char test(test_stat<struct timespec fake_stat::*, &TT::st_mtim> *);
-
-    template<typename>
-    static int test(...);
-
-    static constexpr bool value = (sizeof(test<stat_test>(0)) == sizeof(int));
-};
-
-template<bool B>
-struct mtime_impl {
-    template<typename S>
-    static file_time_t get(S const &st) {
-        return std::chrono::system_clock::from_time_t(st.st_mtime);
-    }
-};
-
-template<>
-struct mtime_impl<true> {
-    template<typename S>
-    static file_time_t get(S const &st) {
-        struct timespec ts = st.st_mtim;
-        auto d = std::chrono::seconds{ts.tv_sec} +
-                 std::chrono::nanoseconds{ts.tv_nsec};
-        return file_time_t{
-            std::chrono::duration_cast<std::chrono::system_clock::duration>(d)
-        };
-    }
-};
-
-using mtime = mtime_impl<test_mtim<struct stat>::value>;
-
-OSTD_EXPORT file_time_t last_write_time(path const &p) {
-    struct stat sb;
-    if (stat(p.string().data(), &sb) < 0) {
-        throw fs_error{"stat failure", p, errno_ec()};
-    }
-    return mtime::get(sb);
-}
-
-/* TODO: somehow feature-test for utimensat and fallback to utimes */
-OSTD_EXPORT void last_write_time(path const &p, file_time_t new_time) {
-    auto d = new_time.time_since_epoch();
-    auto sec = std::chrono::floor<std::chrono::seconds>(d);
-    auto nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(d - sec);
-    struct timespec times[2] = {
-        {0, UTIME_OMIT}, {time_t(sec.count()), long(nsec.count())}
-    };
-    if (utimensat(0, p.string().data(), times, 0)) {
-        throw fs_error{"utimensat failure", p, errno_ec()};
     }
 }
 

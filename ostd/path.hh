@@ -1224,6 +1224,9 @@ namespace fs {
  * @{
  */
 
+/** @brief The time point used to represent file access times. */
+using file_time_t = std::chrono::time_point<std::chrono::system_clock>;
+
 /** @brief An exception thrown by filesystem operations.
  *
  * Unlike ostd::path_error, this is thrown by operations doing syscalls.
@@ -1361,21 +1364,53 @@ public:
         return file_type(p_val >> 16);
     }
 
-    void type(file_type type) noexcept {
-        p_val = ((p_val & 0xFFFF) | (UT(type) << 16));
-    }
-
     perms permissions() const noexcept {
         return perms(p_val & 0xFFFF);
     }
-
-    void permissions(perms perm) noexcept {
-        p_val = ((p_val & ~UT(0xFFFF)) | UT(perm));
-    }
 };
+
+struct file_status {
+    file_status(
+        file_mode mode, file_time_t mtime,
+        std::uintmax_t size, std::uintmax_t nlinks
+    ):
+        p_links(nlinks), p_size(size), p_mtime(mtime), p_mode(mode)
+    {}
+
+    file_mode mode() const noexcept {
+        return p_mode;
+    }
+
+    file_time_t last_write_time() const noexcept {
+        return p_mtime;
+    }
+
+    std::uintmax_t hard_link_count() const noexcept {
+        return p_links;
+    }
+
+    std::uintmax_t size() const noexcept {
+        return p_size;
+    }
+
+private:
+    std::uintmax_t p_links;
+    std::uintmax_t p_size;
+    file_time_t p_mtime;
+    file_mode p_mode;
+};
+
+OSTD_EXPORT file_status status(path const &p);
+OSTD_EXPORT file_status symlink_status(path const &p);
 
 OSTD_EXPORT file_mode mode(path const &p);
 OSTD_EXPORT file_mode symlink_mode(path const &p);
+
+OSTD_EXPORT std::uintmax_t file_size(path const &p);
+OSTD_EXPORT std::uintmax_t hard_link_count(path const &p);
+
+OSTD_EXPORT file_time_t last_write_time(path const &p);
+OSTD_EXPORT void last_write_time(path const &p, file_time_t new_time);
 
 inline bool is_block_file(file_mode st) noexcept {
     return st.type() == file_type::block;
@@ -1448,34 +1483,6 @@ inline bool mode_known(file_mode st) noexcept {
 inline bool mode_known(path const &p) {
     return mode_known(mode(p));
 }
-
-struct file_status {
-    file_status() {}
-    file_status(ostd::path const &p): p_path(p) {}
-
-    ostd::path const &path() const noexcept {
-        return p_path;
-    }
-
-    operator ostd::path const &() const noexcept {
-        return p_path;
-    }
-
-    void clear() {
-        p_path.clear();
-    }
-
-    void assign(ostd::path const &p) {
-        p_path = p;
-    }
-
-    void assign(ostd::path &&p) {
-        p_path = std::move(p);
-    }
-
-private:
-    ostd::path p_path{};
-};
 
 namespace detail {
     struct dir_range_impl;
@@ -1683,11 +1690,6 @@ OSTD_EXPORT bool remove(path const &p);
 OSTD_EXPORT std::uintmax_t remove_all(path const &p);
 
 OSTD_EXPORT void rename(path const &op, path const &np);
-
-using file_time_t = std::chrono::time_point<std::chrono::system_clock>;
-
-OSTD_EXPORT file_time_t last_write_time(path const &p);
-OSTD_EXPORT void last_write_time(path const &p, file_time_t new_time);
 
 namespace detail {
     OSTD_EXPORT void glob_match_impl(
