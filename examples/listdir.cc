@@ -22,7 +22,7 @@ inline void list_dirs(path const &path, int off = 0) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 1) {
+    if (argc <= 1) {
         return 1;
     }
     list_dirs(argv[1]);
