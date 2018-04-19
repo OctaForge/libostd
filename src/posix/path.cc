@@ -4,8 +4,16 @@
  */
 
 /* mainly only for glibc, but it's harmless elsewhere */
+
+#ifdef _POSIX_C_SOURCE
+#undef _POSIX_C_SOURCE
+#endif
+
 #define _POSIX_C_SOURCE 200809L
+
+#ifndef _ATFILE_SOURCE
 #define _ATFILE_SOURCE 1
+#endif
 
 #include <cstdlib>
 #include <ctime>
