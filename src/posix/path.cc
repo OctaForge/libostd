@@ -3,6 +3,10 @@
  * This file is part of libostd. See COPYING.md for futher information.
  */
 
+/* mainly only for glibc, but it's harmless elsewhere */
+#define _POSIX_C_SOURCE 200809L
+#define _ATFILE_SOURCE 1
+
 #include <cstdlib>
 #include <ctime>
 #include <pwd.h>
