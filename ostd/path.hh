@@ -1,4 +1,23 @@
-/** @addtogroup Utilities
+/** @defgroup Filesystem Paths and filesystem
+ *
+ * @brief APIs related to path handling and filesystem manipulation.
+ *
+ * libostd provides APIs for handling filesystem paths with support for
+ * POSIX and Windows path encoding on all systems. These operations are
+ * purely lexical and will not involve system calls.
+ *
+ * In addition to that, it also provides a namespace `fs` containing APIs
+ * that manipulate the file system; you can use those to query information
+ * about files as well as change some of it.
+ *
+ * These APIs replace the C++ std::filesystem module. It is meant to be
+ * level and more convenient to use, as well as supported on toolchains
+ * that have a sufficient C++17 support level but do not ship the standard
+ * filesystem module. Unlike the standard filesystem module, libostd paths
+ * always use byte-oriented name encoding (typically UTF-8) and perform
+ * transparent normalization. Glob matching, both lexical and filesystem
+ * based, is also provided.
+ *
  * @{
  */
 
@@ -52,7 +71,7 @@
 
 namespace ostd {
 
-/** @addtogroup Utilities
+/** @addtogroup Filesystem
  * @{
  */
 
@@ -1220,7 +1239,7 @@ struct format_traits<path> {
 namespace ostd {
 namespace fs {
 
-/** @addtogroup Utilities
+/** @addtogroup Filesystem
  * @{
  */
 
@@ -1349,27 +1368,52 @@ inline perms &operator^=(perms &a, perms b) {
     return a;
 }
 
+/** @brief Represents file mode as in `st_mode` of `struct stat`.
+ *
+ * This structure encodes two things, file type and permissions, using
+ * fs::file_type and fs::perms. These are internally encoded within a
+ * single integer and represent the `st_mode` field of `struct stat`
+ * when on POSIX systems.
+ */
 struct file_mode {
 private:
     using UT = std::uint_least32_t;
     UT p_val;
 
 public:
+    /** @brief Constructs the mode as in with file_type::none. */
     file_mode() noexcept: file_mode(file_type::none) {}
+
+    /** @brief Constructs the file mode. */
     file_mode(file_type type, perms permissions = perms::unknown) noexcept:
         p_val(UT(permissions) | (UT(type) << 16))
     {}
 
+    /** @brief Gets the file type. */
     file_type type() const noexcept {
         return file_type(p_val >> 16);
     }
 
+    /** @brief Gets the permissions. */
     perms permissions() const noexcept {
         return perms(p_val & 0xFFFF);
     }
 };
 
+/** @brief Represents file status as in `struct stat`.
+ *
+ * This is similar to `struct stat` on POSIX systems, except it has fewer
+ * fields and is meant to be portable. Its contents represent the file
+ * mode (fs::file_mode), last modification time (fs::file_time_t),
+ * file size (if possible, can be unspecified) and the hard link count.
+ *
+ * There are standalone functions to get these attributes on their own
+ * instead of retrieving all. On POSIX systems, these work by simply
+ * calling fs::status(), so they need to retrieve all the information
+ * anyway, but they may be more efficient on other systems.
+ */
 struct file_status {
+    /** @brief Constructs the status. */
     file_status(
         file_mode mode, file_time_t mtime,
         std::uintmax_t size, std::uintmax_t nlinks
@@ -1377,18 +1421,29 @@ struct file_status {
         p_links(nlinks), p_size(size), p_mtime(mtime), p_mode(mode)
     {}
 
+    /** @brief Gets the file mode. */
     file_mode mode() const noexcept {
         return p_mode;
     }
 
+    /** @brief Gets the file modification time. */
     file_time_t last_write_time() const noexcept {
         return p_mtime;
     }
 
+    /** @brief Gets the hard link count. */
     std::uintmax_t hard_link_count() const noexcept {
         return p_links;
     }
 
+    /** @brief Gets the file size.
+     *
+     * Keep in mind that this is only guaranteed to be define for
+     * regular files (the file size in bytes) and symbolic links
+     * (the length of the encoded path). Otherwise, it is system
+     * dependent and you need to refer to the documentation for
+     * those systems (e.g. `struct stat`).
+     */
     std::uintmax_t size() const noexcept {
         return p_size;
     }
@@ -1400,86 +1455,179 @@ private:
     file_mode p_mode;
 };
 
+/** @brief Gets the file status for the given path.
+ *
+ * This works as in POSIX `stat`. For symbolic links, it refers to the
+ * target of the link, not the symbolic link itself. IF you need to
+ * refer to the symbolic link, use symlink_status().
+ *
+ * It may fail with ostd::fs_error.
+ *
+ * @see symlink_status()
+ * @see mode()
+ * @see file_size()
+ * @see last_write_time()
+ * @see hard_link_count()
+ */
 OSTD_EXPORT file_status status(path const &p);
+
+/** @brief Gets the file or symlink status.
+ *
+ * This is like status(), but when `p` refers to a symlink, the
+ * result refers to the symlink itself rather than the target.
+ *
+ * @see status()
+ */
 OSTD_EXPORT file_status symlink_status(path const &p);
 
+/** @brief Gets the file mode.
+ *
+ * This is effectively equivalent to `status(p).mode()`,
+ * but may be more efficient on some systems.
+ *
+ * @see symlink_mode()
+ * @see status()
+ */
 OSTD_EXPORT file_mode mode(path const &p);
+
+/** @brief Gets the file or symlink mode.
+ *
+ * This is like mode(), but when `p` refers to a symlink, the
+ * result refers to the symlink itself rather than the target.
+ *
+ * @see mode()
+ * @see symlink_status()
+ */
 OSTD_EXPORT file_mode symlink_mode(path const &p);
 
+/** @brief Gets the file size.
+ *
+ * This may not be specified on all systems (see file_status::size()).
+ * This is effectively equivalent to `status(p).file_size()`,
+ * but may be more efficient on some systems.
+ *
+ * @see status()
+ * @see file_status::size()
+ */
 OSTD_EXPORT std::uintmax_t file_size(path const &p);
+
+/** @brief Gets the file hard link count.
+ *
+ * This is effectively equivalent to `status(p).hard_link_count()`,
+ * but may be more efficient on some systems.
+ *
+ * @see status()
+ * @see file_status::hard_linl_count()
+ */
 OSTD_EXPORT std::uintmax_t hard_link_count(path const &p);
 
+/** @brief Gets the file modification time.
+ *
+ * This is effectively equivalent to `status(p).last_write_time()`,
+ * but may be more efficient on some systems.
+ *
+ * @see status()
+ * @see last_write_time(path const &, file_time_t)
+ * @see file_status::last_write_time()
+ */
 OSTD_EXPORT file_time_t last_write_time(path const &p);
+
+/** @brief Sets the file modification time.
+ *
+ * This changes the file modification time as in POSIX `utimensat()`.
+ * It may or may not support nanosecond precision depending on the
+ * operating system.
+ *
+ * @see last_write_time(path const &)
+ */
 OSTD_EXPORT void last_write_time(path const &p, file_time_t new_time);
 
+/** @brief Checks if file mode is file_type::block. */
 inline bool is_block_file(file_mode st) noexcept {
     return st.type() == file_type::block;
 }
 
+/** @brief Like `is_block_file(mode(p))`. */
 inline bool is_block_file(path const &p) {
     return is_block_file(mode(p));
 }
 
+/** @brief Checks if file mode is file_type::character. */
 inline bool is_character_file(file_mode st) noexcept {
     return st.type() == file_type::character;
 }
 
+/** @brief Like `is_character_file(mode(p))`. */
 inline bool is_character_file(path const &p) {
     return is_character_file(mode(p));
 }
 
+/** @brief Checks if file mode is file_type::directory. */
 inline bool is_directory(file_mode st) noexcept {
     return st.type() == file_type::directory;
 }
 
+/** @brief Like `is_directory(mode(p))`. */
 inline bool is_directory(path const &p) {
     return is_directory(mode(p));
 }
 
+/** @brief Checks if file mode is file_type::regular. */
 inline bool is_regular_file(file_mode st) noexcept {
     return st.type() == file_type::regular;
 }
 
+/** @brief Like `is_regular_file(mode(p))`. */
 inline bool is_regular_file(path const &p) {
     return is_regular_file(mode(p));
 }
 
+/** @brief Checks if file mode is file_type::fifo. */
 inline bool is_fifo(file_mode st) noexcept {
     return st.type() == file_type::fifo;
 }
 
+/** @brief Like `is_fifo(mode(p))`. */
 inline bool is_fifo(path const &p) {
     return is_fifo(mode(p));
 }
 
+/** @brief Checks if file mode is file_type::symlink. */
 inline bool is_symlink(file_mode st) noexcept {
     return st.type() == file_type::symlink;
 }
 
+/** @brief Like `is_symlink(mode(p))`. */
 inline bool is_symlink(path const &p) {
     return is_symlink(mode(p));
 }
 
+/** @brief Checks if file mode is file_type::socket. */
 inline bool is_socket(file_mode st) noexcept {
     return st.type() == file_type::socket;
 }
 
+/** @brief Like `is_socket(mode(p))`. */
 inline bool is_socket(path const &p) {
     return is_socket(mode(p));
 }
 
+/** @brief Checks if file mode is file_type::unknown. */
 inline bool is_other(file_mode st) noexcept {
     return st.type() == file_type::unknown;
 }
 
+/** @brief Like `is_other(mode(p))`. */
 inline bool is_other(path const &p) {
     return is_other(mode(p));
 }
 
+/** @brief Checks if file mode is known (not file_type::none). */
 inline bool mode_known(file_mode st) noexcept {
     return st.type() != file_type::none;
 }
 
+/** @brief Like `mode_known(mode(p))`. */
 inline bool mode_known(path const &p) {
     return mode_known(mode(p));
 }
@@ -1489,56 +1637,102 @@ namespace detail {
     struct rdir_range_impl;
 } /* namespace detail */
 
+/** @brief Represents an entry in a directory.
+ *
+ * This will typically be an element of a directory range like
+ * fs::directory_range or fs::recursive_directory_range. You can
+ * use it to retrieve the path of the entry as well as check its type,
+ * which is usually more efficient than checking it manually, because
+ * it is retrieved during the directory traversal. This is also why the
+ * checking functions never throw.
+ */
 struct directory_entry {
+    /** @brief Constructs an empty directory entry. */
     directory_entry() {}
+
+    /** @brief COnstructs a directory entry from a path.
+     *
+     * This calls refresh(), so it may throw. Directory ranges will
+     * not use this constructor and instead construct the entry
+     * internally with their own info.
+     */
     directory_entry(ostd::path const &p): p_path(p) {
         refresh();
     }
 
+    /** @brief Gets the path to the entry.
+     *
+     * When constructed manually, this will be the same path. When
+     * constructed through iteration, this will be the path provided
+     * to the range constructor joined with the entry name.
+     */
     ostd::path const &path() const noexcept {
         return p_path;
     }
 
+    /** @brief Implicit conversion to path.
+     *
+     * See path().
+     */
     operator ostd::path const &() const noexcept {
         return p_path;
     }
 
+    /** @brief Refreshes the entry type.
+     *
+     * Like `symlink_mode(path())`.
+     *
+     * @see symlink_mode()
+     * @see path()
+     */
     void refresh() {
         p_type = symlink_mode(p_path);
     }
 
+    /** @brief Effectively like `is_block_file(path())`. */
     bool is_block_file() const noexcept {
         return fs::is_block_file(p_type);
     }
 
+    /** @brief Effectively like `is_character_file(path())`. */
     bool is_character_file() const noexcept {
         return fs::is_character_file(p_type);
     }
 
+    /** @brief Effectively like `is_directory(path())`. */
     bool is_directory() const noexcept {
         return fs::is_directory(p_type);
     }
 
+    /** @brief Effectively like `is_fifo(path())`. */
     bool is_fifo() const noexcept {
         return fs::is_fifo(p_type);
     }
 
+    /** @brief Effectively like `is_other(path())`. */
     bool is_other() const noexcept {
         return fs::is_other(p_type);
     }
 
+    /** @brief Effectively like `is_regular_file(path())`. */
     bool is_regular_file() const noexcept {
         return fs::is_regular_file(p_type);
     }
 
+    /** @brief Effectively like `is_socket(path())`. */
     bool is_socket() const noexcept {
         return fs::is_socket(p_type);
     }
 
+    /** @brief Effectively like `is_symlink(path())`. */
     bool is_symlink() const noexcept {
         return fs::is_symlink(p_type);
     }
 
+    /** @brief Checks if the entry exists.
+     *
+     * The type most not be file_type::none or file_type::not_found.
+     */
     bool exists() const noexcept {
         return (mode_known(p_type) && (p_type.type() != file_type::not_found));
     }
@@ -1603,6 +1797,20 @@ namespace detail {
     };
 }
 
+/** @brief A simple range for traversal of a directory.
+ *
+ * The range is an ostd::input_range_path, so it is only suitable for
+ * single-pass algorithms. Its elements are fs::directory_entry and
+ * they are not mutable. This simply goes over the directory and
+ * gives you access to each field.
+ *
+ * If you need recursive traversal, use fs::recursive_directory_range.
+ *
+ * Th elements will be only valid entries and never `.` or `..` like
+ * with POSIX `readdir()`. The iteration order is not defined. It is
+ * also not defined whether entries added to the directory during
+ * iteration will be represented in the range.
+ **/
 struct directory_range: input_range<directory_range> {
     using range_category = input_range_tag;
     using value_type = directory_entry;
@@ -1610,20 +1818,35 @@ struct directory_range: input_range<directory_range> {
     using size_type = std::size_t;
 
     directory_range() = delete;
+
+    /** @brief Constructs a directory range using a path.
+     *
+     * Upon failure, this will throw fs::fs_error.
+     *
+     * @throws fs::fs_error
+     */
     directory_range(path const &p):
         p_impl{std::make_shared<detail::dir_range_impl>()}
     {
         p_impl->open(p);
     }
 
+    /** @brief Checks if there are any entries in the range. */
     bool empty() const noexcept {
         return p_impl->empty();
     }
 
+    /** @brief Pops out the current entry and retrieves the next one.
+     *
+     * On failure, this will throw fs::fs_error.
+     *
+     * @throws fs::fs_error
+     */
     void pop_front() {
         p_impl->read_next();
     }
 
+    /** @brief Retrieves the current entry. */
     reference front() const noexcept {
         return p_impl->front();
     }
@@ -1632,6 +1855,13 @@ private:
     std::shared_ptr<detail::dir_range_impl> p_impl;
 };
 
+/** @brief A recursive range for traversal of a directory.
+ *
+ * This is mostly like fs::directory_range, except it is also recursive,
+ * so it will go through any sub-directories. The iteration order within
+ * a directory is still undefined, but the range does guarantee that if
+ * th entry is a directory, it will be listed before its contents.
+ */
 struct recursive_directory_range: input_range<recursive_directory_range> {
     using range_category = input_range_tag;
     using value_type = directory_entry;
@@ -1639,20 +1869,35 @@ struct recursive_directory_range: input_range<recursive_directory_range> {
     using size_type = std::size_t;
 
     recursive_directory_range() = delete;
+
+    /** @brief Constructs a recursive directory range using a path.
+     *
+     * Upon failure, this will throw fs::fs_error.
+     *
+     * @throws fs::fs_error
+     */
     recursive_directory_range(path const &p):
         p_impl{std::make_shared<detail::rdir_range_impl>()}
     {
         p_impl->open(p);
     }
 
+    /** @brief Checks if there are any entries in the range. */
     bool empty() const noexcept {
         return p_impl->empty();
     }
 
+    /** @brief Pops out the current entry and retrieves the next one.
+     *
+     * On failure, this will throw fs::fs_error.
+     *
+     * @throws fs::fs_error
+     */
     void pop_front() {
         p_impl->read_next();
     }
 
+    /** @brief Retrieves the current entry. */
     reference front() const noexcept {
         return p_impl->front();
     }
@@ -1661,34 +1906,234 @@ private:
     std::shared_ptr<detail::rdir_range_impl> p_impl;
 };
 
+/** @brief Gets the current working directory.
+ *
+ * This will return an absolute path referring to the current
+ * working directory. On failure, it will throw fs::fs_error.
+ *
+ * it is equivalent to POSIX `getcwd()`.
+ *
+ * @see current_path(path const &)
+ * @see home_path()
+ * @see temp_path()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT path current_path();
+
+/** @brief Gets the home directory path.
+ *
+ * On POSIX, this will attempt to use the environment variahle `HOME`
+ * and if that is not possible, it will look up the path from the
+ * passwd database.
+ *
+ * On Windows, this will attempt `HOME` and `USERPROFILE`, otherwise
+ * a combination of `HOMEPATH` and `HOMEDRIVE` will be used.
+ *
+ * On failure, it will throw fs::fs_error.
+ *
+ * @see current_path()
+ * @see temp_path()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT path home_path();
+
+/** @brief Gets the temp directory path.
+ *
+ * On failure, it may throw fs::fs_error, but in practice it will never
+ * throw that exceotuib on POSIX systems, because it will only try
+ * environment variables (`TMPDIR`, `TMP`, `TEMP` and `TEMPDIR` in
+ * that order) and return the `/tmp` fallback if none exist.
+ *
+ * On Windows, this will use `GetTempPath()`, which is allowed to fail.
+ *
+ * @see current_path()
+ * @see home_path()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT path temp_path();
 
+/** @brief Sets the current working directory.
+ *
+ * This works as in POSIX `chdir()`.
+ *
+ * @see current_path()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT void current_path(path const &p);
 
+/** @brief Returns an absolute path for the given path.
+ *
+ * If the path is already absolute, it will just copy it.
+ * Otherwise, the result will be `current_path() / p`.
+ *
+ * @see current_path()
+ * @see relative()
+ */
 OSTD_EXPORT path absolute(path const &p);
 
+/** @brief Canonicalizes the given path.
+ *
+ * This is equivalent to calling POSIX `realpath()`. The result is
+ * a path that is absolute, fully expanded and refers to the same
+ * file as the given path.
+ *
+ * @see weakly_canonical()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT path canonical(path const &p);
+
+/** @brief Weakly canonicalizes the given path.
+ *
+ * Unlike canonical(), this also works for paths that do not exist.
+ * The function will try stripping the last component of the given
+ * path until it reaches an existing file; then it canonicalizes
+ * that path and concatenates it with the rest that it stripped off.
+ *
+ * @see canonical()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT path weakly_canonical(path const &p);
 
+/** @brief Makes `p` relative to `base`.
+ *
+ * This is much like path::relative_to(), but it works with weakly
+ * canonicalized `p` and `base`, so it is equivalent to simply
+ * calling `weakly_canonical(p).relative_tp(weakly_canonical(base))`.
+ *
+ * @see weakly_canonical()
+ * @see path::relative_to()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT path relative(path const &p, path const &base = current_path());
 
+/** @brief Checks if the file mode refers to an existing file.
+ *
+ * The type must be mode_known() and must not be file_type::not_found.
+ *
+ * @see exists(path const &)
+ */
 inline bool exists(file_mode s) noexcept {
     return (mode_known(s) && (s.type() != file_type::not_found));
 }
 
+/** @brief Checks if a file exists.
+ *
+ * This merely checks existence, not whether you have the
+ * permissions to actually read, write or execute the file.
+ *
+ * @see exists(file_mode)
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT bool exists(path const &p);
 
+/** @brief Checks if two paths are equivalent.
+ *
+ * On POSIX, paths are equivalent if the devices (`st_dev`)
+ * and inodes (`st_ino`) when calling `stat()` are the same.
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT bool equivalent(path const &p1, path const &p2);
 
+/** @brief Creates a directory.
+ *
+ * This will fail if the path already exists and is not a directory.
+ * It may also fail in other system specific cases. On failure, it
+ * will throw fs::fs_error.
+ *
+ * If the path exists and is a directory, it will return `false`.
+ * Otherwise, `true` is returned.
+ *
+ * The parent directory must exist. The created directory will have
+ * permissions `0777` on POSIX.
+ *
+ * @see create_directory(path const &, path const &)
+ * @see create_directories()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT bool create_directory(path const &p);
+
+/** @brief Creates a directory.
+ *
+ * This is like create_directory(path const &), but it will take
+ * attributes from the reference path `ep`. The attributes taken
+ * depend on the OS, on POSIX it will take the permissions.
+ *
+ * @see create_directory(path const &)
+ * @see create_directories()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT bool create_directory(path const &p, path const &ep);
+
+/** @brief Creates directories.
+ *
+ * Given a path, this will attempt to create a directory and if
+ * any of the directories within that path do not exist, it will
+ * also create those on the way. It is similar to `mkdir -p` on
+ * Unix-like systems.
+ *
+ * @see create_directory()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT bool create_directories(path const &p);
 
+/** @brief Remvoes a file or a directory.
+ *
+ * If it's a directory, it must be empty. It follows POSIX `remove()` behavior.
+ *
+ * If the path does not exist, it will not throw but it will return `false`.
+ *
+ * @see remove_all()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT bool remove(path const &p);
+
+/** @brief Remvoes a file or a directory including contents.
+ *
+ * The number of removed files/directories is returned.
+ *
+ * @see remove()
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT std::uintmax_t remove_all(path const &p);
 
+/** @brief Moves or renames a path.
+ *
+ * This is equivalent to POSIX `rename()`. This means the following:
+ *
+ * If `op` is a file and not a directory:
+ *
+ * - If `np` is the same file or a hard link, nothing happens.
+ * - If `np` is a non-file directory, it is removed before `op` is renamed.
+ * - If `np` does not exist and its parent directory does, `op` is renamed.
+ * - Every other case will fail.
+ *
+ * If `op` is a directory:
+ *
+ * - If `np` is the same directory or a hard link, nothing happens.
+ * - If `np` is an existing directory, it is removed on POSIX, but may
+ *   fail elsewhere. The `op` is then renamed.
+ * - If `np` does not exist and its parent directory does, `op` is renamed.
+ * - Every other case will fail.
+ *
+ * Write permissions are necessary in all cases. The `op` must not be
+ * an ancestor of `np` and `np` must not end with `..`.
+ *
+ * @throws fs::fs_error
+ */
 OSTD_EXPORT void rename(path const &op, path const &np);
 
 namespace detail {
