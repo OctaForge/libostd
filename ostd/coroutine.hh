@@ -782,9 +782,9 @@ public:
         if (this->is_dead()) {
             throw coroutine_error{"dead coroutine"};
         }
-        this->set_args(&args...);
+        p_stor.set_args(&args...);
         base_t::call();
-        return this->get_result();
+        return p_stor.get_result();
     }
 
     /** @brief Calls the coroutine.
