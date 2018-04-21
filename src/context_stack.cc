@@ -12,3 +12,10 @@
 #else
 #  error "Unsupported platform"
 #endif
+
+namespace ostd {
+struct coroutine_context;
+namespace detail {
+    OSTD_EXPORT thread_local coroutine_context *coro_current = nullptr;
+} /* namespace detail */
+} /* namespace ostd */

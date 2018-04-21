@@ -80,10 +80,4 @@ OSTD_EXPORT std::size_t stack_traits::default_size() noexcept {
     return 8 * 8 * 1024;
 }
 
-struct coroutine_context;
-
-namespace detail {
-    OSTD_EXPORT thread_local coroutine_context *coro_current = nullptr;
-}
-
 } /* namespace ostd */

@@ -96,36 +96,10 @@ protected:
     virtual ~coroutine_context();
 
     coroutine_context(coroutine_context const &) = delete;
-
-    /** @brief Moves the given context into this one.
-     *
-     * The other context is deinitialized and set as dead.
-     *
-     * @see operator=(coroutine_context &&)
-     */
-    coroutine_context(coroutine_context &&c):
-        p_stack(std::move(c.p_stack)), p_coro(c.p_coro), p_orig(c.p_orig),
-        p_free(c.p_free), p_except(std::move(c.p_except)), p_state(c.p_state)
-    {
-        c.p_coro = c.p_orig = nullptr;
-        c.p_stack = { nullptr, 0 };
-        c.p_free = nullptr;
-        c.set_dead();
-    }
+    coroutine_context(coroutine_context &&c) = delete;
 
     coroutine_context &operator=(coroutine_context const &) = delete;
-
-    /** @brief Moves the given context into this one.
-     *
-     * Effectively calls swap(coroutine_context &). The current context
-     * is then destroyed by the other context's destructor.
-     *
-     * @returns Returns `*this*`.
-     */
-    coroutine_context &operator=(coroutine_context &&c) {
-        swap(c);
-        return *this;
-    }
+    coroutine_context &operator=(coroutine_context &&c) = delete;
 
     /** @brief Calls the coroutine context.
      *
@@ -154,7 +128,9 @@ protected:
      * @see yield_jump(), yield_done()
      */
     void coro_jump() {
-        p_coro = detail::ostd_jump_fcontext(p_coro, this).ctx;
+        auto tfer = detail::ostd_jump_fcontext(p_coro, this);
+        p_coro = tfer.ctx;
+        p_state = state(std::size_t(tfer.data));
     }
 
     /** @brief Jumps out of the coroutine context.
@@ -165,8 +141,10 @@ protected:
      * @see coro_jump(), yield_done()
      */
     void yield_jump() {
-        p_state = state::HOLD;
-        p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
+        auto tfer = detail::ostd_jump_fcontext(
+            p_orig, reinterpret_cast<void *>(std::size_t(state::HOLD))
+        );
+        static_cast<coroutine_context *>(tfer.data)->p_orig = tfer.ctx;
     }
 
     /** @brief Jumps out of the coroutine context.
@@ -177,8 +155,10 @@ protected:
      * @see coro_jump(), yield_jump()
      */
     void yield_done() {
-        set_dead();
-        p_orig = detail::ostd_jump_fcontext(p_orig, nullptr).ctx;
+        auto tfer = detail::ostd_jump_fcontext(
+            p_orig, reinterpret_cast<void *>(std::size_t(state::TERM))
+        );
+        static_cast<coroutine_context *>(tfer.data)->p_orig = tfer.ctx;
     }
 
     /** @brief Checks if the coroutine is suspended. */
@@ -275,8 +255,8 @@ private:
     }
 
     struct forced_unwind {
-        detail::fcontext_t ctx;
-        forced_unwind(detail::fcontext_t c): ctx(c) {}
+        detail::transfer_t tfer;
+        forced_unwind(detail::transfer_t t): tfer(t) {}
     };
 
     enum class state {
@@ -295,9 +275,9 @@ private:
             return;
         }
         detail::ostd_ontop_fcontext(
-            std::exchange(p_coro, nullptr), nullptr,
+            std::exchange(p_coro, nullptr), this,
             [](detail::transfer_t t) -> detail::transfer_t {
-                throw forced_unwind{t.ctx};
+                throw forced_unwind{t};
             }
         );
     }
@@ -325,19 +305,18 @@ private:
             /* we never got to execute properly, we're HOLD because we
              * jumped here without setting the state to EXEC before that
              */
-            goto release;
+            self.yield_done();
         }
         try {
             self.resume_call();
         } catch (coroutine_context::forced_unwind v) {
             /* forced_unwind is unique */
-            self.p_orig = v.ctx;
+            static_cast<C *>(v.tfer.data)->p_orig = v.tfer.ctx;
         } catch (...) {
             /* some other exception, will be rethrown later */
             self.p_except = std::current_exception();
         }
         /* switch back, release stack */
-release:
         self.yield_done();
     }
 
@@ -736,30 +715,10 @@ public:
     }
 
     coroutine(coroutine const &) = delete;
-
-    /** @brief Moves a coroutine.
-     *
-     * Moves the given coroutine's context and any other data into the new
-     * coroutine. The other coroutine is left in a dead state.
-     *
-     * @see operator=(coroutine &&)
-     */
-    coroutine(coroutine &&c) noexcept:
-        base_t(std::move(c)), p_stor(std::move(c.p_stor))
-    {
-        c.p_stor.p_func = nullptr;
-    }
+    coroutine(coroutine &&c) = delete;
 
     coroutine &operator=(coroutine const &) = delete;
-
-    /** @brief Moves a coroutine.
-     *
-     * Effectively like a call to swap(coroutine &).
-     */
-    coroutine &operator=(coroutine &&c) noexcept {
-        base_t::operator=(std::move(c));
-        p_stor.swap(c.p_stor);
-    }
+    coroutine &operator=(coroutine &&c) = delete;
 
     /** @brief Checks if the coroutine is alive. */
     explicit operator bool() const noexcept {
@@ -987,34 +946,10 @@ public:
     }
 
     generator(generator const &) = delete;
-
-    /** @brief Moves a generator.
-     *
-     * Moves the given generator's context and any other data into the new
-     * generator. The other generator is left in a dead state.
-     *
-     * @see operator=(generator &&)
-     */
-    generator(generator &&c) noexcept:
-        base_t(std::move(c)), p_func(std::move(c.p_func)), p_result(c.p_result)
-    {
-        c.p_func = nullptr;
-        c.p_result = nullptr;
-    }
+    generator(generator &&c) = delete;
 
     generator &operator=(generator const &) = delete;
-
-    /** @brief Moves a generator.
-     *
-     * Effectively like a call to swap(generator &).
-     */
-    generator &operator=(generator &&c) noexcept {
-        base_t::operator=(std::move(c));
-        p_func = std::move(c.p_func);
-        p_result = c.p_result;
-        c.p_func = nullptr;
-        c.p_result = nullptr;
-    }
+    generator &operator=(generator &&c) = delete;
 
     /** @brief Checks if the generator is alive. */
     explicit operator bool() const noexcept {
