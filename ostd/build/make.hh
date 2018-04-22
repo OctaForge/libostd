@@ -60,7 +60,7 @@ struct make_error: std::runtime_error {
 
 namespace detail {
     static bool check_exec(
-        string_range tname, std::vector<std::string> const &deps
+        string_range tname, std::vector<string_range> const &deps
     ) {
         if (!fs::exists(tname)) {
             return true;
@@ -215,16 +215,12 @@ private:
 struct make_task {
     make_task() = delete;
     make_task(
-        string_range target, std::vector<std::string> deps, make_rule &rl
+        string_range target, std::vector<string_range> deps, make_rule &rl
     ) {
         p_coro = std::make_unique<coroutine<void()>>(
-            [target, deps = std::move(deps), &rl](auto) {
-                std::vector<string_range> rdeps;
-                for (auto &s: deps) {
-                    rdeps.push_back(s);
-                }
+            [target, deps = std::move(deps), &rl](auto) mutable {
                 rl.call(target, iterator_range<string_range *>(
-                    rdeps.data(), rdeps.data() + rdeps.size()
+                    deps.data(), deps.data() + deps.size()
                 ));
             }
         );
@@ -289,8 +285,8 @@ struct make {
     }
 
 private:
-
     struct rule_inst {
+        std::vector<std::string> deps;
         string_range sub;
         make_rule *rule;
     };
@@ -356,36 +352,16 @@ private:
         }
     }
 
-    void exec_deps(
-        std::vector<rule_inst> const &rlist, std::vector<std::string> &rdeps,
-        string_range tname
-    ) {
-        std::string repd;
-        for (auto &sr: rlist) {
-            for (auto &target: sr.rule->depends()) {
-                string_range atgt = ostd::iter(target);
-                repd.clear();
-                auto lp = ostd::find(atgt, '%');
-                if (!lp.empty()) {
-                    repd.append(atgt.slice(0, &lp[0] - &atgt[0]));
-                    repd.append(sr.sub);
-                    ++lp;
-                    if (!lp.empty()) {
-                        repd.append(lp);
-                    }
-                    atgt = ostd::iter(repd);
-                }
-                rdeps.push_back(std::string{atgt});
-                exec_rule(atgt, tname);
-            }
-        }
-    }
-
     void exec_rlist(string_range tname, std::vector<rule_inst> const &rlist) {
-        std::vector<std::string> rdeps;
-        if ((rlist.size() > 1) || !rlist[0].rule->depends().empty()) {
+        std::vector<string_range> rdeps;
+        if ((rlist.size() > 1) || !rlist[0].deps.empty()) {
             wait_for([&rlist, &rdeps, &tname, this]() {
-                exec_deps(rlist, rdeps, tname);
+                for (auto &sr: rlist) {
+                    for (auto &tgt: sr.deps) {
+                        rdeps.push_back(tgt);
+                        exec_rule(tgt, tname);
+                    }
+                }
             });
         }
         make_rule *rl = nullptr;
@@ -432,7 +408,12 @@ private:
         for (auto &rule: p_rules) {
             if (target == string_range{rule.target()}) {
                 rlist.emplace_back();
-                rlist.back().rule = &rule;
+                rule_inst &sr = rlist.back();
+                sr.rule = &rule;
+                sr.deps.reserve(rule.depends().size());
+                for (auto &d: rule.depends()) {
+                    sr.deps.push_back(d);
+                }
                 if (rule.has_body()) {
                     if (frule && exact) {
                         throw make_error{"redefinition of rule '%s'", target};
@@ -456,6 +437,20 @@ private:
                 rule_inst &sr = rlist.back();
                 sr.rule = &rule;
                 sr.sub = sub;
+                sr.deps.reserve(rule.depends().size());
+                for (auto &d: rule.depends()) {
+                    string_range dp = d;
+                    auto lp = ostd::find(dp, '%');
+                    if (!lp.empty()) {
+                        auto repd = std::string{dp.slice(0, &lp[0] - &dp[0])};
+                        repd.append(sub);
+                        lp.pop_front();
+                        repd.append(lp);
+                        sr.deps.push_back(std::move(repd));
+                    } else {
+                        sr.deps.push_back(d);
+                    }
+                }
                 if (frule) {
                     if (sub.size() == frule->sub.size()) {
                         throw make_error{"redefinition of rule '%s'", target};
