@@ -228,7 +228,6 @@ struct make_task {
                 ));
             }
         );
-        p_coro->resume();
     }
 
     bool done() const {
@@ -237,6 +236,21 @@ struct make_task {
 
     void resume() {
         p_coro->resume();
+    }
+
+    void add_task(std::future<void> f) {
+        for (;;) {
+            auto fs = f.wait_for(std::chrono::seconds(0));
+            if (fs != std::future_status::ready) {
+                /* keep yielding until ready */
+                auto &cc = static_cast<coroutine<void()> &>(
+                    *coroutine_context::current()
+                );
+                (coroutine<void()>::yield_type(cc))();
+            } else {
+                break;
+            }
+        }
     }
 
 private:
@@ -255,26 +269,14 @@ struct make {
     }
 
     void push_task(std::function<void()> func) {
-        auto f = p_tpool.push([func = std::move(func), this]() {
+        p_current->add_task(p_tpool.push([func = std::move(func), this]() {
             func();
             {
                 std::lock_guard<std::mutex> l{p_mtx};
                 p_avail = true;
             }
             p_cond.notify_one();
-        });
-        for (;;) {
-            auto fs = f.wait_for(std::chrono::seconds(0));
-            if (fs != std::future_status::ready) {
-                /* keep yielding until ready */
-                auto &cc = static_cast<coroutine<void()> &>(
-                    *coroutine_context::current()
-                );
-                (coroutine<void()>::yield_type(cc))();
-            } else {
-                break;
-            }
-        }
+        }));
     }
 
     make_rule &rule(string_range tgt) {
@@ -320,6 +322,7 @@ private:
                 try {
                     auto t = std::move(tasks.front());
                     tasks.pop();
+                    p_current = &t;
                     t.resume();
                     if (!t.done()) {
                         /* still not dead, re-push */
@@ -332,6 +335,7 @@ private:
                             auto t = std::move(tasks.front());
                             tasks.pop();
                             while (!t.done()) {
+                                p_current = &t;
                                 t.resume();
                             }
                         } catch (make_error const &) {
@@ -393,6 +397,8 @@ private:
         }
         if (rl && (rl->action() || detail::check_exec(tname, rdeps))) {
             make_task t{tname, std::move(rdeps), *rl};
+            p_current = &t;
+            t.resume();
             if (!t.done()) {
                 p_waiting.top()->push(std::move(t));
             }
@@ -473,6 +479,7 @@ private:
     std::mutex p_mtx{};
     std::condition_variable p_cond{};
     std::stack<std::queue<make_task> *> p_waiting{};
+    make_task *p_current = nullptr;
     bool p_avail = false;
 };
 
