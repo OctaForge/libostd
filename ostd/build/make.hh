@@ -287,7 +287,6 @@ struct make {
 private:
     struct rule_inst {
         std::vector<std::string> deps;
-        string_range sub;
         make_rule *rule;
     };
 
@@ -405,6 +404,7 @@ private:
         }
         rule_inst *frule = nullptr;
         bool exact = false;
+        string_range prev_sub{};
         for (auto &rule: p_rules) {
             if (target == string_range{rule.target()}) {
                 rlist.emplace_back();
@@ -436,7 +436,6 @@ private:
                 rlist.emplace_back();
                 rule_inst &sr = rlist.back();
                 sr.rule = &rule;
-                sr.sub = sub;
                 sr.deps.reserve(rule.depends().size());
                 for (auto &d: rule.depends()) {
                     string_range dp = d;
@@ -452,15 +451,16 @@ private:
                     }
                 }
                 if (frule) {
-                    if (sub.size() == frule->sub.size()) {
+                    if (sub.size() == prev_sub.size()) {
                         throw make_error{"redefinition of rule '%s'", target};
                     }
-                    if (sub.size() < frule->sub.size()) {
+                    if (sub.size() < prev_sub.size()) {
                         *frule = sr;
                         rlist.pop_back();
                     }
                 } else {
                     frule = &sr;
+                    prev_sub = sub;
                 }
             }
         }
