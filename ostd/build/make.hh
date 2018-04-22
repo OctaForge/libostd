@@ -212,6 +212,37 @@ private:
     bool p_action = false;
 };
 
+struct make_task {
+    make_task() = delete;
+    make_task(
+        string_range target, std::vector<std::string> deps, make_rule &rl
+    ) {
+        p_coro = std::make_unique<coroutine<void()>>(
+            [target, deps = std::move(deps), &rl](auto) {
+                std::vector<string_range> rdeps;
+                for (auto &s: deps) {
+                    rdeps.push_back(s);
+                }
+                rl.call(target, iterator_range<string_range *>(
+                    rdeps.data(), rdeps.data() + rdeps.size()
+                ));
+            }
+        );
+        p_coro->resume();
+    }
+
+    bool done() const {
+        return !*p_coro;
+    }
+
+    void resume() {
+        p_coro->resume();
+    }
+
+private:
+    std::unique_ptr<coroutine<void()>> p_coro{};
+};
+
 struct make {
     make(int threads = std::thread::hardware_concurrency()) {
         p_tpool.start(threads);
@@ -264,8 +295,8 @@ private:
 
     template<typename F>
     void wait_for(F func) {
-        std::queue<std::unique_ptr<coroutine<void()>>> coros;
-        p_waiting.push(&coros);
+        std::queue<make_task> tasks;
+        p_waiting.push(&tasks);
         try {
             func();
         } catch (...) {
@@ -273,35 +304,35 @@ private:
             throw;
         }
         p_waiting.pop();
-        if (coros.empty()) {
+        if (tasks.empty()) {
             /* nothing to wait for, so return */
             return;
         }
-        /* cycle until coroutines are done */
+        /* cycle until tasks are done */
         std::unique_lock<std::mutex> lk{p_mtx};
         while (!p_avail) {
             p_cond.wait(lk);
         }
-        std::queue<std::unique_ptr<coroutine<void()>>> acoros;
-        while (!coros.empty()) {
+        std::queue<make_task> atasks;
+        while (!tasks.empty()) {
             p_avail = false;
-            while (!coros.empty()) {
+            while (!tasks.empty()) {
                 try {
-                    auto c = std::move(coros.front());
-                    coros.pop();
-                    c->resume();
-                    if (*c) {
+                    auto t = std::move(tasks.front());
+                    tasks.pop();
+                    t.resume();
+                    if (!t.done()) {
                         /* still not dead, re-push */
-                        acoros.push(std::move(c));
+                        atasks.push(std::move(t));
                     }
                 } catch (make_error const &) {
                     writeln("waiting for the remaining tasks to finish...");
-                    for (; !coros.empty(); coros.pop()) {
+                    for (; !tasks.empty(); tasks.pop()) {
                         try {
-                            auto c = std::move(coros.front());
-                            coros.pop();
-                            while (*c) {
-                                c->resume();
+                            auto t = std::move(tasks.front());
+                            tasks.pop();
+                            while (!t.done()) {
+                                t.resume();
                             }
                         } catch (make_error const &) {
                             /* no rethrow */
@@ -310,10 +341,10 @@ private:
                     throw;
                 }
             }
-            if (acoros.empty()) {
+            if (atasks.empty()) {
                 break;
             }
-            coros.swap(acoros);
+            tasks.swap(atasks);
             /* so we're not busylooping */
             while (!p_avail) {
                 p_cond.wait(lk);
@@ -361,20 +392,9 @@ private:
             }
         }
         if (rl && (rl->action() || detail::check_exec(tname, rdeps))) {
-            auto coro = std::make_unique<coroutine<void()>>(
-                [tname, rdeps, rl](auto) {
-                    std::vector<string_range> rdepsl;
-                    for (auto &s: rdeps) {
-                        rdepsl.push_back(s);
-                    }
-                    rl->call(tname, iterator_range<string_range *>(
-                        rdepsl.data(), rdepsl.data() + rdepsl.size()
-                    ));
-                }
-            );
-            coro->resume();
-            if (*coro) {
-                p_waiting.top()->push(std::move(coro));
+            make_task t{tname, std::move(rdeps), *rl};
+            if (!t.done()) {
+                p_waiting.top()->push(std::move(t));
             }
         }
     }
@@ -452,7 +472,7 @@ private:
 
     std::mutex p_mtx{};
     std::condition_variable p_cond{};
-    std::stack<std::queue<std::unique_ptr<coroutine<void()>>> *> p_waiting{};
+    std::stack<std::queue<make_task> *> p_waiting{};
     bool p_avail = false;
 };
 
