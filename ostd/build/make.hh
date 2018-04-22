@@ -200,7 +200,7 @@ private:
         if constexpr (std::is_constructible_v<std::string, R const &>) {
             p_deps.emplace_back(v);
         } else {
-            for (auto &sv: v) {
+            for (auto const &sv: v) {
                 p_deps.emplace_back(sv);
             }
         }
