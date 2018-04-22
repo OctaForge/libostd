@@ -251,6 +251,10 @@ struct make {
         return p_rules.back();
     }
 
+    unsigned int threads() const noexcept {
+        return p_tpool.threads();
+    }
+
 private:
 
     struct rule_inst {

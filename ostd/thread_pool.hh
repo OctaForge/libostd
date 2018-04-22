@@ -196,6 +196,11 @@ struct thread_pool {
         return ret;
     }
 
+    /** @brief Gets the number of threads in the pool. */
+    unsigned int threads() const noexcept {
+        return p_thrs.size();
+    }
+
 private:
     void thread_run() {
         for (;;) {
