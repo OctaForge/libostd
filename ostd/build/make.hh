@@ -213,48 +213,70 @@ private:
 };
 
 struct make_task {
-    make_task() = delete;
-    make_task(
-        string_range target, std::vector<string_range> deps, make_rule &rl
-    ) {
-        p_coro = std::make_unique<coroutine<void()>>(
+    make_task() {}
+    virtual ~make_task();
+
+    virtual bool done() const = 0;
+    virtual void resume() = 0;
+    virtual void add_task(std::future<void> f) = 0;
+};
+
+namespace detail {
+    struct make_task_coro: make_task {
+        make_task_coro() = delete;
+
+        make_task_coro(
+            string_range target, std::vector<string_range> deps, make_rule &rl
+        ): p_coro(
             [target, deps = std::move(deps), &rl](auto) mutable {
                 rl.call(target, iterator_range<string_range *>(
                     deps.data(), deps.data() + deps.size()
                 ));
             }
-        );
-    }
+        ) {}
 
-    bool done() const {
-        return !*p_coro;
-    }
+        bool done() const {
+            return !p_coro;
+        }
 
-    void resume() {
-        p_coro->resume();
-    }
+        void resume() {
+            p_coro.resume();
+        }
 
-    void add_task(std::future<void> f) {
-        for (;;) {
-            auto fs = f.wait_for(std::chrono::seconds(0));
-            if (fs != std::future_status::ready) {
-                /* keep yielding until ready */
-                auto &cc = static_cast<coroutine<void()> &>(
-                    *coroutine_context::current()
-                );
-                (coroutine<void()>::yield_type(cc))();
-            } else {
-                break;
+        void add_task(std::future<void> f) {
+            for (;;) {
+                auto fs = f.wait_for(std::chrono::seconds(0));
+                if (fs != std::future_status::ready) {
+                    /* keep yielding until ready */
+                    auto &cc = static_cast<coroutine<void()> &>(
+                        *coroutine_context::current()
+                    );
+                    (coroutine<void()>::yield_type(cc))();
+                } else {
+                    break;
+                }
             }
         }
-    }
 
-private:
-    std::unique_ptr<coroutine<void()>> p_coro{};
-};
+    private:
+        coroutine<void()> p_coro;
+    };
+}
+
+inline make_task *make_task_coroutine(
+    string_range target, std::vector<string_range> deps, make_rule &rl
+) {
+    return new detail::make_task_coro{target, std::move(deps), rl};
+}
 
 struct make {
-    make(int threads = std::thread::hardware_concurrency()) {
+    using task_factory = std::function<
+        make_task *(string_range, std::vector<string_range>, make_rule &)
+    >;
+
+    make(
+        task_factory factory, int threads = std::thread::hardware_concurrency()
+    ): p_factory(factory) {
         p_tpool.start(threads);
     }
 
@@ -292,7 +314,7 @@ private:
 
     template<typename F>
     void wait_for(F func) {
-        std::queue<make_task> tasks;
+        std::queue<std::unique_ptr<make_task>> tasks;
         p_waiting.push(&tasks);
         try {
             func();
@@ -310,16 +332,16 @@ private:
         while (!p_avail) {
             p_cond.wait(lk);
         }
-        std::queue<make_task> atasks;
+        std::queue<std::unique_ptr<make_task>> atasks;
         while (!tasks.empty()) {
             p_avail = false;
             while (!tasks.empty()) {
                 try {
                     auto t = std::move(tasks.front());
                     tasks.pop();
-                    p_current = &t;
-                    t.resume();
-                    if (!t.done()) {
+                    p_current = t.get();
+                    t->resume();
+                    if (!t->done()) {
                         /* still not dead, re-push */
                         atasks.push(std::move(t));
                     }
@@ -329,9 +351,9 @@ private:
                         try {
                             auto t = std::move(tasks.front());
                             tasks.pop();
-                            while (!t.done()) {
-                                p_current = &t;
-                                t.resume();
+                            while (!t->done()) {
+                                p_current = t.get();
+                                t->resume();
                             }
                         } catch (make_error const &) {
                             /* no rethrow */
@@ -371,10 +393,12 @@ private:
             }
         }
         if (rl && (rl->action() || detail::check_exec(tname, rdeps))) {
-            make_task t{tname, std::move(rdeps), *rl};
-            p_current = &t;
-            t.resume();
-            if (!t.done()) {
+            std::unique_ptr<make_task> t{
+                p_factory(tname, std::move(rdeps), *rl)
+            };
+            p_current = t.get();
+            t->resume();
+            if (!t->done()) {
                 p_waiting.top()->push(std::move(t));
             }
         }
@@ -473,7 +497,8 @@ private:
 
     std::mutex p_mtx{};
     std::condition_variable p_cond{};
-    std::stack<std::queue<make_task> *> p_waiting{};
+    std::stack<std::queue<std::unique_ptr<make_task>> *> p_waiting{};
+    task_factory p_factory{};
     make_task *p_current = nullptr;
     bool p_avail = false;
 };
