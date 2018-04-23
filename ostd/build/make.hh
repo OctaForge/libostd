@@ -58,78 +58,6 @@ struct make_error: std::runtime_error {
     {}
 };
 
-namespace detail {
-    static bool check_exec(
-        string_range tname, std::vector<string_range> const &deps
-    ) {
-        if (!fs::exists(tname)) {
-            return true;
-        }
-        for (auto &dep: deps) {
-            if (!fs::exists(dep)) {
-                return true;
-            }
-        }
-        auto get_ts = [](string_range fname) {
-            path p{fname};
-            if (!fs::is_regular_file(p)) {
-                return fs::file_time_t{};
-            }
-            return fs::last_write_time(p);
-        };
-        auto tts = get_ts(tname);
-        if (tts == fs::file_time_t{}) {
-            return true;
-        }
-        for (auto &dep: deps) {
-            auto sts = get_ts(dep);
-            if ((sts != fs::file_time_t{}) && (tts < sts)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /* this lets us properly match % patterns in target names */
-    static string_range match_pattern(
-        string_range expanded, string_range toexpand
-    ) {
-        auto rep = ostd::find(toexpand, '%');
-        /* no subst found */
-        if (rep.empty()) {
-            return nullptr;
-        }
-        /* get the part before % */
-        auto fp = toexpand.slice(0, &rep[0] - &toexpand[0]);
-        /* part before % does not compare, so ignore */
-        if (expanded.size() <= fp.size()) {
-            return nullptr;
-        }
-        if (expanded.slice(0, fp.size()) != fp) {
-            return nullptr;
-        }
-        /* pop out front part */
-        expanded = expanded.slice(fp.size(), expanded.size());
-        /* part after % */
-        ++rep;
-        if (rep.empty()) {
-            return expanded;
-        }
-        /* part after % does not compare, so ignore */
-        if (expanded.size() <= rep.size()) {
-            return nullptr;
-        }
-        size_t es = expanded.size();
-        if (expanded.slice(es - rep.size(), es) != rep) {
-            return nullptr;
-        }
-        /* cut off latter part */
-        expanded = expanded.slice(0, expanded.size() - rep.size());
-        /* we got what we wanted... */
-        return expanded;
-    }
-}
-
 struct make_rule {
     using body_func = std::function<
         void(string_range, iterator_range<string_range *>)
@@ -280,7 +208,7 @@ inline make_task *make_task_simple(
     return new detail::make_task_simple{target, std::move(deps), rl};
 }
 
-struct make {
+struct OSTD_EXPORT make {
     using task_factory = std::function<
         make_task *(string_range, std::vector<string_range>, make_rule &)
     >;
@@ -291,24 +219,9 @@ struct make {
         p_tpool.start(threads);
     }
 
-    void exec(string_range target) {
-        wait_for([&target, this]() {
-            exec_rule(target);
-        });
-    }
+    void exec(string_range target);
 
-    std::shared_future<void> push_task(std::function<void()> func) {
-        return p_current->add_task(
-            p_tpool.push([func = std::move(func), this]() {
-                func();
-                {
-                    std::lock_guard<std::mutex> l{p_mtx};
-                    p_avail = true;
-                }
-                p_cond.notify_one();
-            })
-        );
-    }
+    std::shared_future<void> push_task(std::function<void()> func);
 
     make_rule &rule(string_range tgt) {
         p_rules.emplace_back(tgt);
@@ -325,6 +238,8 @@ private:
         make_rule *rule;
     };
 
+    OSTD_LOCAL void wait_rest(std::queue<std::unique_ptr<make_task>> &tasks);
+
     template<typename F>
     void wait_for(F func) {
         std::queue<std::unique_ptr<make_task>> tasks;
@@ -336,172 +251,20 @@ private:
             throw;
         }
         p_waiting.pop();
-        if (tasks.empty()) {
-            /* nothing to wait for, so return */
-            return;
-        }
-        /* cycle until tasks are done */
-        std::unique_lock<std::mutex> lk{p_mtx};
-        while (!p_avail) {
-            p_cond.wait(lk);
-        }
-        std::queue<std::unique_ptr<make_task>> atasks;
-        while (!tasks.empty()) {
-            p_avail = false;
-            while (!tasks.empty()) {
-                try {
-                    auto t = std::move(tasks.front());
-                    tasks.pop();
-                    p_current = t.get();
-                    t->resume();
-                    if (!t->done()) {
-                        /* still not dead, re-push */
-                        atasks.push(std::move(t));
-                    }
-                } catch (make_error const &) {
-                    writeln("waiting for the remaining tasks to finish...");
-                    for (; !tasks.empty(); tasks.pop()) {
-                        try {
-                            auto t = std::move(tasks.front());
-                            tasks.pop();
-                            while (!t->done()) {
-                                p_current = t.get();
-                                t->resume();
-                            }
-                        } catch (make_error const &) {
-                            /* no rethrow */
-                        }
-                    }
-                    throw;
-                }
-            }
-            if (atasks.empty()) {
-                break;
-            }
-            tasks.swap(atasks);
-            /* so we're not busylooping */
-            while (!p_avail) {
-                p_cond.wait(lk);
-            }
-        }
+        wait_rest(tasks);
     }
 
-    void exec_rlist(string_range tname, std::vector<rule_inst> const &rlist) {
-        std::vector<string_range> rdeps;
-        if ((rlist.size() > 1) || !rlist[0].deps.empty()) {
-            wait_for([&rlist, &rdeps, &tname, this]() {
-                for (auto &sr: rlist) {
-                    for (auto &tgt: sr.deps) {
-                        rdeps.push_back(tgt);
-                        exec_rule(tgt, tname);
-                    }
-                }
-            });
-        }
-        make_rule *rl = nullptr;
-        for (auto &sr: rlist) {
-            if (sr.rule->has_body()) {
-                rl = sr.rule;
-                break;
-            }
-        }
-        if (rl && (rl->action() || detail::check_exec(tname, rdeps))) {
-            std::unique_ptr<make_task> t{
-                p_factory(tname, std::move(rdeps), *rl)
-            };
-            p_current = t.get();
-            t->resume();
-            if (!t->done()) {
-                p_waiting.top()->push(std::move(t));
-            }
-        }
-    }
+    OSTD_LOCAL void exec_rlist(
+        string_range tname, std::vector<rule_inst> const &rlist
+    );
 
-    void exec_rule(string_range target, string_range from = nullptr) {
-        std::vector<rule_inst> &rlist = p_cache[target];
-        find_rules(target, rlist);
-        if (rlist.empty()) {
-            if (fs::exists(target)) {
-                return;
-            }
-            if (from.empty()) {
-                throw make_error{"no rule to exec target '%s'", target};
-            } else {
-                throw make_error{
-                    "no rule to exec target '%s' (needed by '%s')", target, from
-                };
-            }
-        }
-        exec_rlist(target, rlist);
-    }
+    OSTD_LOCAL void exec_rule(
+        string_range target, string_range from = nullptr
+    );
 
-    void find_rules(string_range target, std::vector<rule_inst> &rlist) {
-        if (!rlist.empty()) {
-            return;
-        }
-        rule_inst *frule = nullptr;
-        bool exact = false;
-        string_range prev_sub{};
-        for (auto &rule: p_rules) {
-            if (target == string_range{rule.target()}) {
-                rlist.emplace_back();
-                rule_inst &sr = rlist.back();
-                sr.rule = &rule;
-                sr.deps.reserve(rule.depends().size());
-                for (auto &d: rule.depends()) {
-                    sr.deps.push_back(d);
-                }
-                if (rule.has_body()) {
-                    if (frule && exact) {
-                        throw make_error{"redefinition of rule '%s'", target};
-                    }
-                    if (!frule) {
-                        frule = &rlist.back();
-                    } else {
-                        *frule = rlist.back();
-                        rlist.pop_back();
-                    }
-                    exact = true;
-                }
-                continue;
-            }
-            if (exact || !rule.has_body()) {
-                continue;
-            }
-            string_range sub = detail::match_pattern(target, rule.target());
-            if (!sub.empty()) {
-                rlist.emplace_back();
-                rule_inst &sr = rlist.back();
-                sr.rule = &rule;
-                sr.deps.reserve(rule.depends().size());
-                for (auto &d: rule.depends()) {
-                    string_range dp = d;
-                    auto lp = ostd::find(dp, '%');
-                    if (!lp.empty()) {
-                        auto repd = std::string{dp.slice(0, &lp[0] - &dp[0])};
-                        repd.append(sub);
-                        lp.pop_front();
-                        repd.append(lp);
-                        sr.deps.push_back(std::move(repd));
-                    } else {
-                        sr.deps.push_back(d);
-                    }
-                }
-                if (frule) {
-                    if (sub.size() == prev_sub.size()) {
-                        throw make_error{"redefinition of rule '%s'", target};
-                    }
-                    if (sub.size() < prev_sub.size()) {
-                        *frule = sr;
-                        rlist.pop_back();
-                    }
-                } else {
-                    frule = &sr;
-                    prev_sub = sub;
-                }
-            }
-        }
-    }
+    OSTD_LOCAL void find_rules(
+        string_range target, std::vector<rule_inst> &rlist
+    );
 
     std::vector<make_rule> p_rules{};
     std::unordered_map<string_range, std::vector<rule_inst>> p_cache{};
