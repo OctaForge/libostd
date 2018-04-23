@@ -218,8 +218,67 @@ struct make_task {
 
     virtual bool done() const = 0;
     virtual void resume() = 0;
-    virtual void add_task(std::future<void> f) = 0;
+    virtual std::shared_future<void> add_task(std::future<void> f) = 0;
 };
+
+namespace detail {
+    struct make_task_simple: make_task {
+        make_task_simple() = delete;
+
+        make_task_simple(
+            string_range target, std::vector<string_range> deps, make_rule &rl
+        ): p_body(
+            [target, deps = std::move(deps), &rl]() mutable {
+                rl.call(target, iterator_range<string_range *>(
+                    deps.data(), deps.data() + deps.size()
+                ));
+            }
+        ) {}
+
+        bool done() const {
+            return p_futures.empty();
+        }
+
+        void resume() {
+            if (p_body) {
+                std::exchange(p_body, nullptr)();
+            }
+            /* go over futures and erase those that are done */
+            for (auto it = p_futures.begin(); it != p_futures.end();) {
+                auto fs = it->wait_for(std::chrono::seconds(0));
+                if (fs == std::future_status::ready) {
+                    /* maybe propagate exception */
+                    auto f = std::move(*it);
+                    it = p_futures.erase(it);
+                    try {
+                        f.get();
+                    } catch (...) {
+                        p_futures.clear();
+                        throw;
+                    }
+                    continue;
+                }
+                ++it;
+            }
+        }
+
+        std::shared_future<void> add_task(std::future<void> f) {
+            auto sh = f.share();
+            p_futures.push_back(sh);
+            return sh;
+        }
+
+    private:
+        std::function<void()> p_body;
+        std::list<std::shared_future<void>> p_futures{};
+    };
+}
+
+inline make_task *make_task_simple(
+    string_range target, std::vector<string_range> deps, make_rule &rl
+) {
+    return new detail::make_task_simple{target, std::move(deps), rl};
+}
 
 struct make {
     using task_factory = std::function<
@@ -238,15 +297,17 @@ struct make {
         });
     }
 
-    void push_task(std::function<void()> func) {
-        p_current->add_task(p_tpool.push([func = std::move(func), this]() {
-            func();
-            {
-                std::lock_guard<std::mutex> l{p_mtx};
-                p_avail = true;
-            }
-            p_cond.notify_one();
-        }));
+    std::shared_future<void> push_task(std::function<void()> func) {
+        return p_current->add_task(
+            p_tpool.push([func = std::move(func), this]() {
+                func();
+                {
+                    std::lock_guard<std::mutex> l{p_mtx};
+                    p_avail = true;
+                }
+                p_cond.notify_one();
+            })
+        );
     }
 
     make_rule &rule(string_range tgt) {

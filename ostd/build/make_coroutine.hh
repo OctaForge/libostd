@@ -17,6 +17,7 @@
 
 #include <vector>
 #include <future>
+#include <chrono>
 
 #include <ostd/string.hh>
 #include <ostd/coroutine.hh>
@@ -51,7 +52,7 @@ namespace detail {
             p_coro.resume();
         }
 
-        void add_task(std::future<void> f) {
+        std::shared_future<void> add_task(std::future<void> f) {
             for (;;) {
                 auto fs = f.wait_for(std::chrono::seconds(0));
                 if (fs != std::future_status::ready) {
@@ -64,6 +65,10 @@ namespace detail {
                     break;
                 }
             }
+            /* maybe propagate exception */
+            f.get();
+            /* future is done, nothing to actually share */
+            return std::shared_future<void>{};
         }
 
     private:
