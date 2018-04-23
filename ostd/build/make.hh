@@ -29,13 +29,13 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <future>
 #include <stdexcept>
 #include <chrono>
 #include <type_traits>
 
 #include <ostd/range.hh>
 #include <ostd/string.hh>
-#include <ostd/coroutine.hh>
 #include <ostd/thread_pool.hh>
 #include <ostd/path.hh>
 #include <ostd/io.hh>
@@ -220,54 +220,6 @@ struct make_task {
     virtual void resume() = 0;
     virtual void add_task(std::future<void> f) = 0;
 };
-
-namespace detail {
-    struct make_task_coro: make_task {
-        make_task_coro() = delete;
-
-        make_task_coro(
-            string_range target, std::vector<string_range> deps, make_rule &rl
-        ): p_coro(
-            [target, deps = std::move(deps), &rl](auto) mutable {
-                rl.call(target, iterator_range<string_range *>(
-                    deps.data(), deps.data() + deps.size()
-                ));
-            }
-        ) {}
-
-        bool done() const {
-            return !p_coro;
-        }
-
-        void resume() {
-            p_coro.resume();
-        }
-
-        void add_task(std::future<void> f) {
-            for (;;) {
-                auto fs = f.wait_for(std::chrono::seconds(0));
-                if (fs != std::future_status::ready) {
-                    /* keep yielding until ready */
-                    auto &cc = static_cast<coroutine<void()> &>(
-                        *coroutine_context::current()
-                    );
-                    (coroutine<void()>::yield_type(cc))();
-                } else {
-                    break;
-                }
-            }
-        }
-
-    private:
-        coroutine<void()> p_coro;
-    };
-}
-
-inline make_task *make_task_coroutine(
-    string_range target, std::vector<string_range> deps, make_rule &rl
-) {
-    return new detail::make_task_coro{target, std::move(deps), rl};
-}
 
 struct make {
     using task_factory = std::function<
