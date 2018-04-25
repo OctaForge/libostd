@@ -82,9 +82,13 @@ struct make_rule {
     }
 
     make_rule &body(std::function<void()> act_f) noexcept {
-        p_body = [act_f = std::move(act_f)](auto, auto) {
-            act_f();
-        };
+        if (act_f) {
+            p_body = [act_f = std::move(act_f)](auto, auto) {
+                act_f();
+            };
+        } else {
+            p_body = body_func{};
+        }
         return *this;
     }
 
