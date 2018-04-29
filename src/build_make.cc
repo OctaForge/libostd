@@ -49,6 +49,9 @@ static string_range match_pattern(
     auto rep = ostd::find(toexpand, '%');
     /* no subst found */
     if (rep.empty()) {
+        if (expanded == toexpand) {
+            return expanded;
+        }
         return nullptr;
     }
     /* get the part before % */
@@ -135,52 +138,32 @@ void make::find_rules(string_range target, std::vector<rule_inst> &rlist) {
         return;
     }
     rule_inst *frule = nullptr;
-    bool exact = false;
     string_range prev_sub{};
     for (auto &rule: p_rules) {
-        if (target == string_range{rule.target()}) {
-            rlist.emplace_back();
-            rule_inst &sr = rlist.back();
-            sr.rule = &rule;
-            sr.deps.reserve(rule.depends().size());
-            for (auto &d: rule.depends()) {
-                sr.deps.push_back(d);
-            }
-            if (rule.has_body()) {
-                if (frule && exact) {
-                    throw make_error{"redefinition of rule '%s'", target};
-                }
-                if (!frule) {
-                    frule = &rlist.back();
-                } else {
-                    *frule = rlist.back();
-                    rlist.pop_back();
-                }
-                exact = true;
-            }
-            continue;
-        }
-        if (exact || !rule.has_body()) {
-            continue;
-        }
         string_range sub = match_pattern(target, rule.target());
         if (!sub.empty()) {
             rlist.emplace_back();
             rule_inst &sr = rlist.back();
             sr.rule = &rule;
             sr.deps.reserve(rule.depends().size());
+            bool ematch = (sub.size() == target.size());
             for (auto &d: rule.depends()) {
                 string_range dp = d;
-                auto lp = ostd::find(dp, '%');
-                if (!lp.empty()) {
-                    auto repd = std::string{dp.slice(0, &lp[0] - &dp[0])};
-                    repd.append(sub);
-                    lp.pop_front();
-                    repd.append(lp);
-                    sr.deps.push_back(std::move(repd));
-                } else {
-                    sr.deps.push_back(d);
+                if (!ematch) {
+                    auto lp = ostd::find(dp, '%');
+                    if (!lp.empty()) {
+                        auto repd = std::string{dp.slice(0, &lp[0] - &dp[0])};
+                        repd.append(sub);
+                        lp.pop_front();
+                        repd.append(lp);
+                        sr.deps.push_back(std::move(repd));
+                        continue;
+                    }
                 }
+                sr.deps.push_back(d);
+            }
+            if (!rule.has_body() && !ematch) {
+                throw make_error{"pattern rule '%s' needs a body", target};
             }
             if (frule) {
                 if (sub.size() == prev_sub.size()) {
