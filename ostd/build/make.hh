@@ -58,6 +58,19 @@ struct make_error: std::runtime_error {
     {}
 };
 
+struct OSTD_EXPORT make_pattern {
+    make_pattern() = delete;
+    make_pattern(string_range target):
+        p_target(target)
+    {}
+
+    std::pair<std::size_t, std::size_t> match(string_range target);
+    std::string replace(string_range dep) const;
+private:
+    std::string p_target;
+    std::vector<string_range> p_subs{};
+};
+
 struct make_rule {
     using body_func = std::function<
         void(string_range, iterator_range<string_range *>)
@@ -68,7 +81,11 @@ struct make_rule {
         p_target(target)
     {}
 
-    string_range target() const noexcept {
+    make_pattern &target() noexcept {
+        return p_target;
+    }
+
+    make_pattern const &target() const noexcept {
         return p_target;
     }
 
@@ -139,7 +156,7 @@ private:
         }
     }
 
-    std::string p_target;
+    make_pattern p_target;
     std::vector<std::string> p_deps{};
     body_func p_body{};
     bool p_action = false;

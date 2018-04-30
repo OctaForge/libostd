@@ -84,6 +84,42 @@ static string_range match_pattern(
     return expanded;
 }
 
+OSTD_EXPORT std::pair<
+    std::size_t, std::size_t
+> make_pattern::match(string_range target) {
+    using PT = std::pair<std::size_t, std::size_t>;
+
+    string_range sub = match_pattern(target, p_target);
+    p_subs.clear();
+
+    std::size_t subl = sub.size();
+    if (subl == 0) {
+        return PT{0, 0};
+    }
+    p_subs.push_back(sub);
+
+    std::size_t tarl = target.size();
+    if (subl == tarl) {
+        return PT{sub.size(), 0};
+    }
+    return PT{target.data() + tarl - sub.data() - subl, subl};
+}
+
+OSTD_EXPORT std::string make_pattern::replace(string_range dep) const {
+    if (p_subs.empty()) {
+        return std::string{dep};
+    }
+    auto lp = ostd::find(dep, '%');
+    if (lp.empty()) {
+        return std::string{dep};
+    }
+    auto ret = std::string{dep.slice(0, &lp[0] - &dep[0])};
+    ret.append(p_subs[0]);
+    lp.pop_front();
+    ret.append(lp);
+    return ret;
+}
+
 void make::exec_rlist(string_range tname, std::vector<rule_inst> const &rlist) {
     std::vector<string_range> rdeps;
     if ((rlist.size() > 1) || !rlist[0].deps.empty()) {
@@ -138,44 +174,38 @@ void make::find_rules(string_range target, std::vector<rule_inst> &rlist) {
         return;
     }
     rule_inst *frule = nullptr;
-    string_range prev_sub{};
+    std::size_t pfnl = 0, psubl = 0;
     for (auto &rule: p_rules) {
-        string_range sub = match_pattern(target, rule.target());
-        if (!sub.empty()) {
+        auto &tgt = rule.target();
+        auto [fnl, subl] = tgt.match(target);
+        if ((fnl + subl) > 0) {
             rlist.emplace_back();
             rule_inst &sr = rlist.back();
             sr.rule = &rule;
             sr.deps.reserve(rule.depends().size());
-            bool ematch = (sub.size() == target.size());
             for (auto &d: rule.depends()) {
-                string_range dp = d;
-                if (!ematch) {
-                    auto lp = ostd::find(dp, '%');
-                    if (!lp.empty()) {
-                        auto repd = std::string{dp.slice(0, &lp[0] - &dp[0])};
-                        repd.append(sub);
-                        lp.pop_front();
-                        repd.append(lp);
-                        sr.deps.push_back(std::move(repd));
-                        continue;
-                    }
-                }
-                sr.deps.push_back(d);
+                sr.deps.push_back(tgt.replace(d));
             }
-            if (!rule.has_body() && !ematch) {
-                throw make_error{"pattern rule '%s' needs a body", target};
+            if (!rule.has_body()) {
+                if (fnl != target.size()) {
+                    throw make_error{"pattern rule '%s' needs a body", target};
+                }
+                continue;
             }
             if (frule) {
-                if (sub.size() == prev_sub.size()) {
+                if ((pfnl == fnl) && (psubl == subl)) {
                     throw make_error{"redefinition of rule '%s'", target};
                 }
-                if (sub.size() < prev_sub.size()) {
+                if ((fnl > pfnl) || ((fnl == pfnl) && (subl < psubl))) {
                     *frule = sr;
+                    pfnl = fnl;
+                    psubl = subl;
                     rlist.pop_back();
                 }
             } else {
                 frule = &sr;
-                prev_sub = sub;
+                pfnl = fnl;
+                psubl = subl;
             }
         }
     }
