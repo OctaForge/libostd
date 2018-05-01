@@ -118,6 +118,18 @@ struct make_rule {
         return *this;
     }
 
+    make_rule &cond(std::function<bool(string_range)> cond_f) noexcept {
+        p_cond = std::move(cond_f);
+        return *this;
+    }
+
+    bool cond(string_range target) const {
+        if (!p_cond) {
+            return true;
+        }
+        return p_cond(target);
+    }
+
     iterator_range<std::string const *> depends() const noexcept {
         return iterator_range<std::string const *>(
             p_deps.data(), p_deps.data() + p_deps.size()
@@ -159,6 +171,7 @@ private:
     make_pattern p_target;
     std::vector<std::string> p_deps{};
     body_func p_body{};
+    std::function<bool(string_range)> p_cond{};
     bool p_action = false;
 };
 

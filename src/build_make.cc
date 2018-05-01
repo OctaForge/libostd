@@ -176,6 +176,9 @@ void make::find_rules(string_range target, std::vector<rule_inst> &rlist) {
     rule_inst *frule = nullptr;
     std::size_t pfnl = 0, psubl = 0;
     for (auto &rule: p_rules) {
+        if (!rule.cond(target)) {
+            continue;
+        }
         auto &tgt = rule.target();
         auto [fnl, subl] = tgt.match(target);
         if ((fnl + subl) > 0) {
