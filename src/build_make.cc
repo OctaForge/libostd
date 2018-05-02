@@ -185,10 +185,9 @@ void make::find_rules(string_range target, std::vector<rule_inst> &rlist) {
             rlist.emplace_back();
             rule_inst &sr = rlist.back();
             sr.rule = &rule;
-            sr.deps.reserve(rule.depends().size());
-            for (auto &d: rule.depends()) {
+            rule.depends([&sr, &tgt](string_range d) {
                 sr.deps.push_back(tgt.replace(d));
-            }
+            });
             if (!rule.has_body()) {
                 if (fnl != target.size()) {
                     throw make_error{"pattern rule '%s' needs a body", target};

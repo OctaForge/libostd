@@ -75,6 +75,9 @@ struct make_rule {
     using body_func = std::function<
         void(string_range, iterator_range<string_range *>)
     >;
+    using depend_func = std::function<
+        void(decltype(appender<std::vector<std::string>>()) &)
+    >;
 
     make_rule() = delete;
     make_rule(string_range target):
@@ -130,15 +133,20 @@ struct make_rule {
         return p_cond(target);
     }
 
-    iterator_range<std::string const *> depends() const noexcept {
-        return iterator_range<std::string const *>(
-            p_deps.data(), p_deps.data() + p_deps.size()
-        );
+    void depends(std::function<void(string_range)> body) const {
+        auto app = appender<std::vector<std::string>>();
+        for (auto &f: p_deps) {
+            app.clear();
+            f(app);
+            for (auto &s: app.get()) {
+                body(s);
+            }
+        }
     }
 
     template<typename ...A>
-    make_rule &depend(A const &...args) {
-        (add_depend(args), ...);
+    make_rule &depend(A &&...args) {
+        (add_depend(std::forward<A>(args)), ...);
         return *this;
     }
 
@@ -157,19 +165,23 @@ private:
     >;
 
     template<typename R>
-    void add_depend(R const &v) {
+    void add_depend(R &&v) {
         if constexpr (std::is_constructible_v<std::string, R const &>) {
-            p_deps.emplace_back(v);
+            p_deps.push_back([s = std::string{v}](auto &app) {
+                app.put(std::move(s));
+            });
+        } else if constexpr(std::is_constructible_v<depend_func, R &&>) {
+            p_deps.push_back(std::forward<R>(v));
         } else {
             R mr{v};
             for (auto const &sv: mr) {
-                p_deps.emplace_back(sv);
+                add_depend(sv);
             }
         }
     }
 
     make_pattern p_target;
-    std::vector<std::string> p_deps{};
+    std::vector<depend_func> p_deps{};
     body_func p_body{};
     std::function<bool(string_range)> p_cond{};
     bool p_action = false;
