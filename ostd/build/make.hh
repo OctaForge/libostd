@@ -76,7 +76,7 @@ struct make_rule {
         void(string_range, iterator_range<string_range *>)
     >;
     using depend_func = std::function<
-        void(decltype(appender<std::vector<std::string>>()) &)
+        void(string_range, decltype(appender<std::vector<std::string>>()) &)
     >;
 
     make_rule() = delete;
@@ -133,11 +133,13 @@ struct make_rule {
         return p_cond(target);
     }
 
-    void depends(std::function<void(string_range)> body) const {
+    void depends(
+        string_range tgt, std::function<void(string_range)> body
+    ) const {
         auto app = appender<std::vector<std::string>>();
         for (auto &f: p_deps) {
             app.clear();
-            f(app);
+            f(tgt, app);
             for (auto &s: app.get()) {
                 body(s);
             }
@@ -167,7 +169,7 @@ private:
     template<typename R>
     void add_depend(R &&v) {
         if constexpr (std::is_constructible_v<std::string, R const &>) {
-            p_deps.push_back([s = std::string{v}](auto &app) {
+            p_deps.push_back([s = std::string{v}](auto, auto &app) {
                 app.put(std::move(s));
             });
         } else if constexpr(std::is_constructible_v<depend_func, R &&>) {

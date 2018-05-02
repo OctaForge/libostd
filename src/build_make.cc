@@ -185,7 +185,7 @@ void make::find_rules(string_range target, std::vector<rule_inst> &rlist) {
             rlist.emplace_back();
             rule_inst &sr = rlist.back();
             sr.rule = &rule;
-            rule.depends([&sr, &tgt](string_range d) {
+            rule.depends(target, [&sr, &tgt](string_range d) {
                 sr.deps.push_back(tgt.replace(d));
             });
             if (!rule.has_body()) {
