@@ -71,6 +71,15 @@ private:
     std::vector<string_range> p_subs{};
 };
 
+inline auto make_depend_simple(string_range dep) {
+    return [d = std::string{dep}](
+        string_range, decltype(appender<std::vector<std::string>>()) &app
+    ) {
+        /* need to copy as it may be called multiple times */
+        app.put(d);
+    };
+}
+
 struct make_rule {
     using body_func = std::function<
         void(string_range, iterator_range<string_range *>)
@@ -169,9 +178,7 @@ private:
     template<typename R>
     void add_depend(R &&v) {
         if constexpr (std::is_constructible_v<std::string, R const &>) {
-            p_deps.push_back([s = std::string{v}](auto, auto &app) {
-                app.put(std::move(s));
-            });
+            p_deps.push_back(make_depend_simple(v));
         } else if constexpr(std::is_constructible_v<depend_func, R &&>) {
             p_deps.push_back(std::forward<R>(v));
         } else {
