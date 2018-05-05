@@ -1118,6 +1118,16 @@ inline path operator+(path const &p1, path const &p2) {
     return p1.concat(p2);
 }
 
+/** @brief Checks if two paths are the same. */
+inline bool operator==(path const &p1, path const &p2) {
+    return (p1.string() == p2.string());
+}
+
+/** @brief Checks if two paths are not the same. */
+inline bool operator!=(path const &p1, path const &p2) {
+    return !(p1 == p2);
+}
+
 namespace detail {
     struct path_range: input_range<path_range> {
         using range_category = forward_range_tag;
