@@ -58,7 +58,7 @@ static pathvec TEST_CASES = {
     "algorithm", "range"
 };
 
-static path OSTD_UNICODE_DATA = "data/UnicodeData-10.0.txt";
+static path OSTD_UNICODE_DATA = "data/UnicodeData-11.0.txt";
 static path OSTD_UNICODE_SRC  = CXX_SOURCE_DIR / "string_utf.hh";
 
 static path OSTD_SHARED_LIB = "libostd.so";
