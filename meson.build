@@ -31,3 +31,14 @@ endif
 if get_option('build-examples')
     subdir('examples')
 endif
+
+pkg = import('pkgconfig')
+
+pkg.generate(
+    libraries: libostd_lib,
+    version: meson.project_version(),
+    name: 'libostd',
+    filebase: 'libostd',
+    url: 'https://git.octaforge.org/octaforge/libostd',
+    description: 'OctaForge C++ utility library'
+)
