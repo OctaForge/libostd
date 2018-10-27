@@ -66,7 +66,7 @@ libostd_extra_src += custom_target('libostd_unicode_tables',
     ]
 )
 
-libostd_lib = library('ostd',
+libostd_lib = both_libraries('ostd',
     libostd_src, libostd_extra_src,
     dependencies: thread_dep,
     include_directories: libostd_includes + [include_directories('.')],
@@ -77,7 +77,7 @@ libostd_lib = library('ostd',
 
 libostd = declare_dependency(
     include_directories: libostd_includes,
-    link_with: libostd_lib
+    link_with: libostd_lib.get_shared_lib()
 )
 
 install_headers(libostd_header_src, install_dir: dir_package_include)
