@@ -508,7 +508,7 @@ OSTD_EXPORT bool isupper(char32_t c) noexcept;
 OSTD_EXPORT char32_t tolower(char32_t c) noexcept;
 OSTD_EXPORT char32_t toupper(char32_t c) noexcept;
 
-#if __has_include("string_utf.hh")
+#ifndef OSTD_NO_UNICODE_TABLES
 #include "string_utf.hh"
 #else
 
@@ -558,7 +558,7 @@ OSTD_EXPORT char32_t toupper(char32_t c) noexcept {
     return c;
 }
 
-#endif /* __has_include("string_utf.hh") */
+#endif /* !OSTD_NO_UNICODE_TABLES */
 
 namespace detail {
     template<typename C>

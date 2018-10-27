@@ -17,33 +17,15 @@ files in there directly if you don't need the API documentation.
 
 ## Building
 
-Libostd is built using the supplied C++ build tool. You need to compile the
-build tool first using the compiler you will use to build the library itself.
-
-On a typical Unix-like setup, this will involve:
+Libostd is built using Meson. Therefore, you need to install Meson and then
+you can compile it as usual. Typically, this will be something like
 
 ~~~
-c++ build.cc -o build -std=c++1z -I. -pthread
-./build --help
+mkdir build && cd build
+meson ..
+ninja all
 ~~~
 
 This will typically build using either GCC or Clang with the default standard
 library. **Keep in mind that it is you need at least Clang 4.0 or
 GCC 7.1 to build.**
-
-You can skip `-pthread` on Windows.
-
-Using the tool should be straightforward. The `./build --help` command lists
-the available options.
-
-It also recognizes the environment variables `CXX` (the C++ compiler used
-to build, defaults to `c++`), `AS` (the assembler used to build, defaults to
-`c++` as well, as Clang and GCC can compile assembly files), `AR` (the tool
-to create static lib archives, `ar` by default) and `STRIP` (the tool used
-to strip the library in release mode, `strip` by default).
-
-Additionally, the `CXXFLAGS`, `LDFLAGS` and `ASFLAGS` environment variables
-are also used. The `CXXFLAGS` are passed when compiling C++ source files as
-well as when linking (the compiler is used to link). The `LDFLAGS` are passed
-additionally to `CXXFLAGS` only when linking. The `ASFLAGS` are passed to
-the assembler (`CXXFLAGS` are not, even when Clang/GCC is used).

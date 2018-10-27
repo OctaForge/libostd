@@ -19,6 +19,12 @@
 #include <ostd/string.hh>
 #include <ostd/algorithm.hh>
 
+#ifdef OSTD_GEN_UNICODE_BUILD
+#define OSTD_NO_UNICODE_TABLES
+#include "src/string.cc"
+#include "src/io.cc"
+#endif
+
 namespace ostd {
 namespace unicode_gen {
 
