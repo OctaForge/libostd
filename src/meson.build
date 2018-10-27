@@ -80,4 +80,9 @@ libostd = declare_dependency(
     link_with: libostd_lib.get_shared_lib()
 )
 
+libostd_static = declare_dependency(
+    include_directories: libostd_includes,
+    link_with: libostd_lib.get_static_lib()
+)
+
 install_headers(libostd_header_src, install_dir: dir_package_include)
