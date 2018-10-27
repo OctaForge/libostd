@@ -16,12 +16,10 @@ unicode_data = join_paths('data', 'UnicodeData-11.0.txt')
 libostd_includes = [include_directories('.')]
 
 tgt_compiler_id = meson.get_compiler('cpp').get_id()
-
 if tgt_compiler_id == 'gcc' or tgt_compiler_id == 'clang'
-    add_global_arguments(
-        '-Wextra', '-Wshadow', '-Wold-style-cast',
-        language: 'cpp'
-    )
+    extra_cxxflags = ['-Wextra', '-Wshadow', '-Wold-style-cast']
+else
+    extra_cxxflags = []
 endif
 
 subdir('src')
