@@ -50,7 +50,8 @@ libostd_gen_unicode_exe = executable('gen_unicode',
     ['../gen_unicode.cc'],
     include_directories: libostd_includes,
     cpp_args: '-DOSTD_GEN_UNICODE_BUILD',
-    install: false
+    install: false,
+    native: true
 )
 
 libostd_extra_src = []
