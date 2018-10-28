@@ -6,15 +6,38 @@ test_runner_exe = executable('test_runner',
     install: false
 )
 
-libostd_tests_src = [
-    'algorithm.cc',
-    'range.cc'
+libostd_gen_test_exe = executable('gen_test',
+    ['gen_test.cc'],
+    install: false,
+    native: true
+)
+
+libostd_tests_names = [
+    'algorithm',
+    'range'
 ]
 
+libostd_tests_indices = [
+    0, 1
+]
+
+libostd_tests_src = []
+
+foreach test_name: libostd_tests_names
+    libostd_tests_src += custom_target('test_' + test_name,
+        output: [test_name + '.cc'],
+        install: false,
+        command: [
+            libostd_gen_test_exe, test_name,
+            join_paths(meson.current_build_dir(), test_name + '.cc')
+        ]
+    )
+endforeach
+
 test_target = []
-foreach test_src: libostd_tests_src
-    test_target += executable(test_src.split('.')[0],
-        [test_src],
+foreach test_idx: libostd_tests_indices
+    test_target += executable(libostd_tests_names[test_idx],
+        [libostd_tests_src[test_idx]],
         dependencies: libostd,
         include_directories: libostd_includes,
         cpp_args: extra_cxxflags,
