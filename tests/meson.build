@@ -25,18 +25,18 @@ libostd_tests_src = []
 
 foreach test_name: libostd_tests_names
     libostd_tests_src += custom_target('test_' + test_name,
-        output: [test_name + '.cc'],
+        output: ['test_' + test_name + '.cc'],
         install: false,
         command: [
             libostd_gen_test_exe, test_name,
-            join_paths(meson.current_build_dir(), test_name + '.cc')
+            join_paths(meson.current_build_dir(), 'test_' + test_name + '.cc')
         ]
     )
 endforeach
 
 test_target = []
 foreach test_idx: libostd_tests_indices
-    test_target += executable(libostd_tests_names[test_idx],
+    test_target += executable('test_' + libostd_tests_names[test_idx],
         [libostd_tests_src[test_idx]],
         dependencies: libostd,
         include_directories: libostd_includes,
