@@ -200,90 +200,167 @@ static void dir_read_next(
     }
 }
 
-/* dir range */
-
-OSTD_EXPORT void dir_range_impl::open(path const &p) {
-    DIR *d = opendir(p.string().data());
-    if (!d) {
-        throw fs_error{"opendir failure", p, errno_ec()};
-    }
-    p_dir = p;
-    p_handle = d;
-    read_next();
-}
-
-OSTD_EXPORT void dir_range_impl::close() noexcept {
-    closedir(static_cast<DIR *>(p_handle));
-}
-
-OSTD_EXPORT void dir_range_impl::read_next() {
-    path cur;
-    file_mode tp;
-    dir_read_next(static_cast<DIR *>(p_handle), cur, tp, p_dir);
-    p_current = directory_entry{std::move(cur), tp};
-}
-
-/* recursive dir range */
-
-OSTD_EXPORT void rdir_range_impl::open(path const &p) {
-    DIR *d = opendir(p.string().data());
-    if (!d) {
-        throw fs_error{"opendir failure", p, errno_ec()};
-    }
-    p_dir = p;
-    p_handles.push(d);
-    read_next();
-}
-
-OSTD_EXPORT void rdir_range_impl::close() noexcept {
-    while (!p_handles.empty()) {
-        closedir(static_cast<DIR *>(p_handles.top()));
-        p_handles.pop();
-    }
-}
-
-OSTD_EXPORT void rdir_range_impl::read_next() {
-    if (p_handles.empty()) {
-        return;
-    }
-    path curd;
-    file_mode tp;
-    /* can't reuse info from dirent because we need to expand symlinks */
-    if (p_current.is_directory()) {
-        /* directory, recurse into it and if it contains stuff, return */
-        DIR *nd = opendir(p_current.path().string().data());
-        if (!nd) {
-            throw fs_error{"opendir failure", p_current, errno_ec()};
+struct dir_range_impl {
+    void open(path const &p) {
+        DIR *d = opendir(p.string().data());
+        if (!d) {
+            throw fs_error{"opendir failure", p, errno_ec()};
         }
-        directory_entry based = p_current;
-        dir_read_next(nd, curd, tp, based);
-        if (!curd.empty()) {
-            p_dir = based;
-            p_handles.push(nd);
-            p_current = directory_entry{std::move(curd), tp};
+        p_dir = p;
+        p_handle = d;
+        read_next();
+    }
+
+    void close() noexcept {
+        closedir(static_cast<DIR *>(p_handle));
+    }
+
+    void read_next() {
+        path cur;
+        file_mode tp;
+        dir_read_next(static_cast<DIR *>(p_handle), cur, tp, p_dir);
+        p_current = directory_entry{std::move(cur), tp};
+    }
+
+    bool empty() const noexcept {
+        return p_current.path().empty();
+    }
+
+    directory_entry const &front() const noexcept {
+        return p_current;
+    }
+
+    ~dir_range_impl() {
+        close();
+    }
+
+    directory_entry p_current{};
+    path p_dir{};
+    void *p_handle = nullptr;
+};
+
+struct rdir_range_impl {
+    using hstack = std::stack<void *, std::list<void *>>;
+
+    void open(path const &p) {
+        DIR *d = opendir(p.string().data());
+        if (!d) {
+            throw fs_error{"opendir failure", p, errno_ec()};
+        }
+        p_dir = p;
+        p_handles.push(d);
+        read_next();
+    }
+
+    void close() noexcept {
+        while (!p_handles.empty()) {
+            closedir(static_cast<DIR *>(p_handles.top()));
+            p_handles.pop();
+        }
+    }
+
+    void read_next() {
+        if (p_handles.empty()) {
             return;
-        } else {
-            closedir(nd);
+        }
+        path curd;
+        file_mode tp;
+        /* can't reuse info from dirent because we need to expand symlinks */
+        if (p_current.is_directory()) {
+            /* directory, recurse into it and if it contains stuff, return */
+            DIR *nd = opendir(p_current.path().string().data());
+            if (!nd) {
+                throw fs_error{"opendir failure", p_current, errno_ec()};
+            }
+            directory_entry based = p_current;
+            dir_read_next(nd, curd, tp, based);
+            if (!curd.empty()) {
+                p_dir = based;
+                p_handles.push(nd);
+                p_current = directory_entry{std::move(curd), tp};
+                return;
+            } else {
+                closedir(nd);
+            }
+        }
+        /* didn't recurse into a directory, go to next file */
+        dir_read_next(static_cast<DIR *>(p_handles.top()), curd, tp, p_dir);
+        p_current = directory_entry{std::move(curd), tp};
+        /* end of dir, pop while at it */
+        if (p_current.path().empty()) {
+            closedir(static_cast<DIR *>(p_handles.top()));
+            p_handles.pop();
+            if (!p_handles.empty()) {
+                /* got back to another dir, read next so it's valid */
+                p_dir.remove_name();
+                dir_read_next(static_cast<DIR *>(p_handles.top()), curd, tp, p_dir);
+                p_current = directory_entry{std::move(curd), tp};
+            }
         }
     }
-    /* didn't recurse into a directory, go to next file */
-    dir_read_next(static_cast<DIR *>(p_handles.top()), curd, tp, p_dir);
-    p_current = directory_entry{std::move(curd), tp};
-    /* end of dir, pop while at it */
-    if (p_current.path().empty()) {
-        closedir(static_cast<DIR *>(p_handles.top()));
-        p_handles.pop();
-        if (!p_handles.empty()) {
-            /* got back to another dir, read next so it's valid */
-            p_dir.remove_name();
-            dir_read_next(static_cast<DIR *>(p_handles.top()), curd, tp, p_dir);
-            p_current = directory_entry{std::move(curd), tp};
-        }
+
+    bool empty() const noexcept {
+        return p_current.path().empty();
     }
-}
+
+    directory_entry const &front() const noexcept {
+        return p_current;
+    }
+
+    ~rdir_range_impl() {
+        close();
+    }
+
+    directory_entry p_current{};
+    path p_dir{};
+    hstack p_handles{};
+};
 
 } /* namespace detail */
 } /* namesapce fs */
+} /* namespace ostd */
+
+namespace ostd {
+namespace fs {
+
+OSTD_EXPORT directory_range::directory_range(path const &p):
+    p_impl{std::make_shared<detail::dir_range_impl>()}
+{
+    p_impl->open(p);
+}
+
+OSTD_EXPORT bool directory_range::empty() const noexcept {
+    return p_impl->empty();
+}
+
+OSTD_EXPORT void directory_range::pop_front() {
+    p_impl->read_next();
+}
+
+OSTD_EXPORT directory_range::reference directory_range::front() const noexcept {
+    return p_impl->front();
+}
+
+OSTD_EXPORT recursive_directory_range::recursive_directory_range(path const &p):
+    p_impl{std::make_shared<detail::rdir_range_impl>()}
+{
+    p_impl->open(p);
+}
+
+OSTD_EXPORT bool recursive_directory_range::empty() const noexcept {
+    return p_impl->empty();
+}
+
+OSTD_EXPORT void recursive_directory_range::pop_front() {
+    p_impl->read_next();
+}
+
+OSTD_EXPORT recursive_directory_range::reference
+recursive_directory_range::front() const noexcept {
+    return p_impl->front();
+}
+
+} /* namespace fs */
 } /* namespace ostd */
 
 namespace ostd {

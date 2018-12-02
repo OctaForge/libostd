@@ -1759,54 +1759,6 @@ private:
     file_mode p_type{};
 };
 
-namespace detail {
-    struct OSTD_EXPORT dir_range_impl {
-        void open(path const &p);
-        void close() noexcept;
-        void read_next();
-
-        bool empty() const noexcept {
-            return p_current.path().empty();
-        }
-
-        directory_entry const &front() const noexcept {
-            return p_current;
-        }
-
-        ~dir_range_impl() {
-            close();
-        }
-
-        directory_entry p_current{};
-        path p_dir{};
-        void *p_handle = nullptr;
-    };
-
-    struct OSTD_EXPORT rdir_range_impl {
-        using hstack = std::stack<void *, std::list<void *>>;
-
-        void open(path const &p);
-        void close() noexcept;
-        void read_next();
-
-        bool empty() const noexcept {
-            return p_current.path().empty();
-        }
-
-        directory_entry const &front() const noexcept {
-            return p_current;
-        }
-
-        ~rdir_range_impl() {
-            close();
-        }
-
-        directory_entry p_current{};
-        path p_dir{};
-        hstack p_handles{};
-    };
-}
-
 /** @brief A simple range for traversal of a directory.
  *
  * The range is an ostd::input_range_path, so it is only suitable for
@@ -1821,7 +1773,7 @@ namespace detail {
  * also not defined whether entries added to the directory during
  * iteration will be represented in the range.
  **/
-struct directory_range: input_range<directory_range> {
+struct OSTD_EXPORT directory_range: input_range<directory_range> {
     using range_category = input_range_tag;
     using value_type = directory_entry;
     using reference = directory_entry const &;
@@ -1835,16 +1787,10 @@ struct directory_range: input_range<directory_range> {
      *
      * @throws fs::fs_error
      */
-    directory_range(path const &p):
-        p_impl{std::make_shared<detail::dir_range_impl>()}
-    {
-        p_impl->open(p);
-    }
+    directory_range(path const &p);
 
     /** @brief Checks if there are any entries in the range. */
-    bool empty() const noexcept {
-        return p_impl->empty();
-    }
+    bool empty() const noexcept;
 
     /** @brief Pops out the current entry and retrieves the next one.
      *
@@ -1852,14 +1798,10 @@ struct directory_range: input_range<directory_range> {
      *
      * @throws fs::fs_error
      */
-    void pop_front() {
-        p_impl->read_next();
-    }
+    void pop_front();
 
     /** @brief Retrieves the current entry. */
-    reference front() const noexcept {
-        return p_impl->front();
-    }
+    reference front() const noexcept;
 
 private:
     std::shared_ptr<detail::dir_range_impl> p_impl;
@@ -1872,7 +1814,9 @@ private:
  * a directory is still undefined, but the range does guarantee that if
  * th entry is a directory, it will be listed before its contents.
  */
-struct recursive_directory_range: input_range<recursive_directory_range> {
+struct OSTD_EXPORT recursive_directory_range:
+    input_range<recursive_directory_range>
+{
     using range_category = input_range_tag;
     using value_type = directory_entry;
     using reference = directory_entry const &;
@@ -1886,16 +1830,10 @@ struct recursive_directory_range: input_range<recursive_directory_range> {
      *
      * @throws fs::fs_error
      */
-    recursive_directory_range(path const &p):
-        p_impl{std::make_shared<detail::rdir_range_impl>()}
-    {
-        p_impl->open(p);
-    }
+    recursive_directory_range(path const &p);
 
     /** @brief Checks if there are any entries in the range. */
-    bool empty() const noexcept {
-        return p_impl->empty();
-    }
+    bool empty() const noexcept;
 
     /** @brief Pops out the current entry and retrieves the next one.
      *
@@ -1903,14 +1841,10 @@ struct recursive_directory_range: input_range<recursive_directory_range> {
      *
      * @throws fs::fs_error
      */
-    void pop_front() {
-        p_impl->read_next();
-    }
+    void pop_front();
 
     /** @brief Retrieves the current entry. */
-    reference front() const noexcept {
-        return p_impl->front();
-    }
+    reference front() const noexcept;
 
 private:
     std::shared_ptr<detail::rdir_range_impl> p_impl;
