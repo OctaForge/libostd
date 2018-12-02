@@ -49,8 +49,6 @@
 
 #include <cstdint>
 
-#include <stack>
-#include <list>
 #include <chrono>
 #include <utility>
 #include <memory>

@@ -27,6 +27,8 @@
 #include <sys/stat.h>
 
 #include <vector>
+#include <stack>
+#include <list>
 
 #include "ostd/path.hh"
 

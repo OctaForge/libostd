@@ -23,6 +23,8 @@
 #define OSTD_BUILD_MAKE_HH
 
 #include <list>
+#include <stack>
+#include <queue>
 #include <vector>
 #include <unordered_map>
 #include <functional>
