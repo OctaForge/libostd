@@ -38,16 +38,18 @@
  *                                                     *
  *******************************************************/
 
+.file "make_arm_aapcs_elf_gas.S"
 .text
 .globl ostd_make_fcontext
 .align 2
 .type ostd_make_fcontext,%function
+.syntax unified
 ostd_make_fcontext:
     @ shift address in A1 to lower 16 byte boundary
     bic  a1, a1, #15
 
     @ reserve space for context-data on context-stack
-    sub  a1, a1, #128
+    sub  a1, a1, #124
 
     @ third arg of ostd_make_fcontext() == address of context-function
     str  a3, [a1, #104]

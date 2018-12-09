@@ -1,6 +1,6 @@
 .align 2
-.globl .ostd_jump_fcontext
-.ostd_jump_fcontext:
+.globl .ostd_ontop_fcontext
+.ostd_ontop_fcontext:
     # reserve space on stack
     subi  1, 1, 184
 

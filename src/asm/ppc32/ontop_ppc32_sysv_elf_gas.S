@@ -73,6 +73,7 @@
  *                                                     *
  *******************************************************/
 
+.file "ontop_ppc32_sysv_elf_gas.S"
 .text
 .globl ostd_ontop_fcontext
 .align 2

@@ -38,10 +38,12 @@
  *                                                     *
  *******************************************************/
 
+.file "jump_arm_aapcs_elf_gas.S"
 .text
 .globl ostd_jump_fcontext
 .align 2
 .type ostd_jump_fcontext,%function
+.syntax unified
 ostd_jump_fcontext:
     @ save LR as PC
     push {lr}

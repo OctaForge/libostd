@@ -21,21 +21,21 @@
 #  else
 #    include "x86_64/jump_x86_64_sysv_elf_gas.S"
 #  endif
-#elif defined(__ppc__)
-#  if defined(__APPLE__)
-#    include "ppc32/jump_ppc32_sysv_macho_gas.S"
-#  elif defined(_AIX)
-#    include "ppc32/jump_ppc32_sysv_xcoff_gas.S"
-#  else
-#    include "ppc32/jump_ppc32_sysv_elf_gas.S"
-#  endif
-#elif defined(__ppc64__)
+#elif defined(__ppc64__) || defined(__PPC64__)
 #  if defined(__APPLE__)
 #    include "ppc64/jump_ppc64_sysv_macho_gas.S"
 #  elif defined(_AIX)
 #    include "ppc64/jump_ppc64_sysv_xcoff_gas.S"
 #  else
 #    include "ppc64/jump_ppc64_sysv_elf_gas.S"
+#  endif
+#elif defined(__ppc__) || defined(__PPC__)
+#  if defined(__APPLE__)
+#    include "ppc32/jump_ppc32_sysv_macho_gas.S"
+#  elif defined(_AIX)
+#    include "ppc32/jump_ppc32_sysv_xcoff_gas.S"
+#  else
+#    include "ppc32/jump_ppc32_sysv_elf_gas.S"
 #  endif
 #elif defined(__aarch64__)
 #  if defined(__APPLE__)

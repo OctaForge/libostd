@@ -38,10 +38,12 @@
  *                                                     *
  *******************************************************/
 
+.file "ontop_arm_aapcs_elf_gas.S"
 .text
 .globl ostd_ontop_fcontext
 .align 2
 .type ostd_ontop_fcontext,%function
+.syntax unified
 ostd_ontop_fcontext:
     @ save LR as PC
     push {lr}
