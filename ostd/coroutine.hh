@@ -224,36 +224,14 @@ protected:
     template<typename C, typename SA>
     void make_context(SA &sa) {
         p_stack = sa.allocate();
-
-        void *sp = get_stack_ptr<SA>();
-        auto asize = std::size_t(p_stack.size - std::size_t(
-            static_cast<unsigned char *>(p_stack.ptr) -
-            static_cast<unsigned char *>(sp)
-        ));
-
-        p_coro = detail::ostd_make_fcontext(sp, asize, &context_call<C, SA>);
-        new (sp) SA(std::move(sa));
+        p_coro = detail::ostd_make_fcontext(
+            p_stack.ptr, p_stack.size, &context_call<C, SA>
+        );
+        new (&p_salloc) SA(std::move(sa));
         p_free = &free_stack_call<SA>;
     }
 
 private:
-    /* we also store the stack allocator at the end of the stack */
-    template<typename SA>
-    void *get_stack_ptr() {
-        /* 16 byte stack pointer alignment */
-        constexpr std::size_t salign = 16;
-        /* makes enough space so that we can store the allocator at
-         * stack pointer location (we'll need it for dealloc later)
-         */
-        constexpr std::size_t sasize = sizeof(SA);
-
-        void *sp = static_cast<unsigned char *>(p_stack.ptr) - sasize - salign;
-        std::size_t space = sasize + salign;
-        sp = std::align(salign, sasize, sp, space);
-
-        return sp;
-    }
-
     struct forced_unwind {
         detail::transfer_t tfer;
         forced_unwind(detail::transfer_t t): tfer(t) {}
@@ -285,7 +263,7 @@ private:
     template<typename SA>
     static void free_stack_call(void *data) {
         auto &self = *(static_cast<coroutine_context *>(data));
-        auto &sa = *(static_cast<SA *>(self.get_stack_ptr<SA>()));
+        auto &sa = *(reinterpret_cast<SA *>(&self.p_salloc));
         SA dsa{std::move(sa)};
         sa.~SA();
         dsa.deallocate(self.p_stack);
@@ -320,6 +298,10 @@ private:
         self.yield_done();
     }
 
+    /* eventually generalize for any stack allocator, for now use
+     * the size of the biggest stack allocator we have in the library
+     */
+    std::aligned_storage_t<sizeof(stack_pool), alignof(stack_pool)> p_salloc;
     stack_context p_stack;
     detail::fcontext_t p_coro = nullptr;
     detail::fcontext_t p_orig = nullptr;
