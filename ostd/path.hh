@@ -225,13 +225,13 @@ struct path {
      * the path are reset and the path is started over.
      */
     template<typename R>
-    path(R range, format fmt = format::native):
+    path(R irange, format fmt = format::native):
         p_path("."), p_fmt(path_fmt(fmt))
     {
         if constexpr(std::is_constructible_v<std::string, R const &>) {
-            append_str(std::string{range});
-        } else if (!range.empty()) {
-            for (auto const &elem: range) {
+            append_str(std::string{irange});
+        } else if (!irange.empty()) {
+            for (auto const &elem: irange) {
                 append_str(std::string{elem});
             }
         }
@@ -333,19 +333,19 @@ struct path {
      */
     string_range drive() const noexcept {
         if (is_win()) {
-            string_range path = p_path;
-            if (has_dslash(path)) {
+            string_range tpath = p_path;
+            if (has_dslash(tpath)) {
                 char const *endp = strchr(p_path.data() + 2, '\\');
                 if (!endp) {
-                    return path;
+                    return tpath;
                 }
                 char const *pendp = strchr(endp + 1, '\\');
                 if (!pendp) {
-                    return path;
+                    return tpath;
                 }
-                return string_range{path.data(), pendp};
-            } else if (has_letter(path)) {
-                return path.slice(0, 2);
+                return string_range{tpath.data(), pendp};
+            } else if (has_letter(tpath)) {
+                return tpath.slice(0, 2);
             }
         }
         return nullptr;

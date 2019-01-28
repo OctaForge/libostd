@@ -180,7 +180,7 @@ namespace detail {
     };
 
     inline char const *escape_fmt_char(char v, char quote) {
-        if ((v >= 0 && v < 0x20) || (v == quote)) {
+        if ((static_cast<unsigned char>(v) < 0x20) || (v == quote)) {
             return fmt_escapes[std::size_t(v)];
         } else if (v == 0x7F) {
             return "\\x7F";

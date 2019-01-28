@@ -113,7 +113,7 @@ static file_status status_get(path const &p, int ret, struct stat &sb) {
         throw fs_error{"stat failure", p, errno_ec()};
     }
     return file_status{
-        file_mode{mode_to_type(sb.st_mode), perms{sb.st_mode & 07777}},
+        file_mode{mode_to_type(sb.st_mode), perms{int(sb.st_mode) & 07777}},
         mtime::get(sb),
         std::uintmax_t(sb.st_size),
         std::uintmax_t(sb.st_nlink)
