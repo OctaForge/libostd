@@ -102,8 +102,10 @@ OSTD_EXPORT std::size_t stack_traits::page_size() noexcept {
 }
 
 OSTD_EXPORT std::size_t stack_traits::minimum_size() noexcept {
-    /* typically 8 KiB but can be much larger on some platforms */
-    return SIGSTKSZ;
+    /* always at least 2 pages, typically 8k on x86_64, but for
+     * example on ppc64 this will be 128k because 64k page size
+     */
+    return std::max(std::size_t(SIGSTKSZ), 2 * page_size());
 }
 
 OSTD_EXPORT std::size_t stack_traits::maximum_size() noexcept {
@@ -112,8 +114,8 @@ OSTD_EXPORT std::size_t stack_traits::maximum_size() noexcept {
 }
 
 OSTD_EXPORT std::size_t stack_traits::default_size() noexcept {
-    /* default to at least 64 KiB (see minimum_size comment) */
-    constexpr std::size_t r = std::max(8 * 8 * 1024, SIGSTKSZ);
+    /* at least 64k unless minimum is bigger (typically 64k page platforms) */
+    std::size_t r = std::max(std::size_t(8 * 8 * 1024), minimum_size());
     if (is_unbounded()) {
         return r;
     }
