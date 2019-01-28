@@ -60,6 +60,24 @@ struct coroutine_error: std::runtime_error {
     virtual ~coroutine_error();
 };
 
+namespace detail {
+    struct stack_free_iface {
+        stack_free_iface() {}
+        /* empty, for vtable placement */
+        virtual ~stack_free_iface();
+        virtual void free(stack_context &ps) = 0;
+    };
+
+    template<typename SA>
+    struct stack_free_obj: stack_free_iface {
+        stack_free_obj(SA &&sa): p_alloc{std::move(sa)} {}
+        void free(stack_context &ps) {
+            p_alloc.deallocate(ps);
+        }
+        SA p_alloc;
+    };
+} /* namespace detail */
+
 /** @brief An encapsulated context any coroutine-type inherits from.
  *
  * Internally, this provides some basic infrastructure for creating and
@@ -193,17 +211,6 @@ protected:
         }
     }
 
-    /** @brief Swaps the current context with another. */
-    void swap(coroutine_context &other) noexcept {
-        using std::swap;
-        swap(p_stack, other.p_stack);
-        swap(p_coro, other.p_coro);
-        swap(p_orig, other.p_orig);
-        swap(p_free, other.p_free);
-        swap(p_except, other.p_except);
-        swap(p_state, other.p_state);
-    }
-
     /** @brief Allocates a stack and creates a context.
      *
      * Only call this once at the point where no context was created yet.
@@ -227,8 +234,12 @@ protected:
         p_coro = detail::ostd_make_fcontext(
             p_stack.ptr, p_stack.size, &context_call<C, SA>
         );
-        new (&p_salloc) SA(std::move(sa));
-        p_free = &free_stack_call<SA>;
+        using SF = detail::stack_free_obj<SA>;
+        if (sizeof(SF) <= sizeof(p_salloc)) {
+            p_sfree = ::new(&p_salloc) SF{std::move(sa)};
+        } else {
+            p_sfree = new SF{std::move(sa)};
+        }
     }
 
 private:
@@ -260,18 +271,12 @@ private:
         );
     }
 
-    template<typename SA>
-    static void free_stack_call(void *data) {
-        auto &self = *(static_cast<coroutine_context *>(data));
-        auto &sa = *(reinterpret_cast<SA *>(&self.p_salloc));
-        SA dsa{std::move(sa)};
-        sa.~SA();
-        dsa.deallocate(self.p_stack);
-    }
-
     void free_stack() {
-        if (p_free) {
-            p_free(this);
+        using SF = detail::stack_free_iface;
+        if (static_cast<void *>(p_sfree) == &p_salloc) {
+            p_sfree->~SF();
+        } else {
+            delete p_sfree;
         }
     }
 
@@ -298,14 +303,12 @@ private:
         self.yield_done();
     }
 
-    /* eventually generalize for any stack allocator, for now use
-     * the size of the biggest stack allocator we have in the library
-     */
-    std::aligned_storage_t<sizeof(stack_pool), alignof(stack_pool)> p_salloc;
+    /* 3 pointer big is enough to cover just about any allocator */
+    std::aligned_storage_t<sizeof(void *) * 3> p_salloc;
+    detail::stack_free_iface *p_sfree;
     stack_context p_stack;
     detail::fcontext_t p_coro = nullptr;
     detail::fcontext_t p_orig = nullptr;
-    void (*p_free)(void *) = nullptr;
     std::exception_ptr p_except;
     state p_state = state::HOLD;
 };
@@ -744,12 +747,6 @@ public:
         return p_stor.get_result();
     }
 
-    /** @brief Swaps two coroutines' states. */
-    void swap(coroutine &other) noexcept {
-        p_stor.swap(other.p_stor);
-        base_t::swap(other);
-    }
-
     /** @brief Returns the RTTI of the function stored in the coroutine. */
     std::type_info const &target_type() const {
         return p_stor.p_func.target_type();
@@ -778,12 +775,6 @@ private:
 
     detail::coro_stor<yield_type, R, A...> p_stor;
 };
-
-/** @brief Swaps two coroutines' states. */
-template<typename R, typename ...A>
-inline void swap(coroutine<R(A...)> &a, coroutine<R(A...)> &b) noexcept {
-    a.swap(b);
-}
 
 namespace detail {
     template<typename T> struct generator_range;
@@ -1008,14 +999,6 @@ public:
         return nullptr;
     }
 
-    /** @brief Swaps two generators' states. */
-    void swap(generator &other) noexcept {
-        using std::swap;
-        swap(p_func, other.p_func);
-        swap(p_result, other.p_result);
-        coroutine_context::swap(other);
-    }
-
     /** @brief Returns the RTTI of the function stored in the generator. */
     std::type_info const &target_type() const {
         return p_func.target_type();
@@ -1050,12 +1033,6 @@ private:
      */
     std::remove_reference_t<T> *p_result = nullptr;
 };
-
-/** @brief Swaps two generators' states. */
-template<typename T>
-inline void swap(generator<T> &a, generator<T> &b) noexcept {
-    a.swap(b);
-}
 
 namespace detail {
     template<typename T>
