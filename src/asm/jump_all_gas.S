@@ -21,7 +21,7 @@
 #  else
 #    include "x86_64/jump_x86_64_sysv_elf_gas.S"
 #  endif
-#elif defined(__ppc64__) || defined(__PPC64__)
+#elif defined(__ppc64__) || defined(__PPC64__) || defined(__powerpc64__)
 #  if defined(__APPLE__)
 #    include "ppc64/jump_ppc64_sysv_macho_gas.S"
 #  elif defined(_AIX)
@@ -29,7 +29,7 @@
 #  else
 #    include "ppc64/jump_ppc64_sysv_elf_gas.S"
 #  endif
-#elif defined(__ppc__) || defined(__PPC__)
+#elif defined(__ppc__) || defined(__PPC__) || defined(__powerpc__)
 #  if defined(__APPLE__)
 #    include "ppc32/jump_ppc32_sysv_macho_gas.S"
 #  elif defined(_AIX)
@@ -51,6 +51,8 @@
 #  endif
 #elif defined(__mips__)
 #  include "mips32/jump_mips32_o32_elf_gas.S"
+#elif defined(__riscv) && (__riscv_xlen == 64)
+#  include "riscv64/jump_riscv64_sysv_elf_gas.S"
 #else
     #error "Unsupported architecture"
 #endif
