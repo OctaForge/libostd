@@ -488,7 +488,7 @@ inline UnaryFunction for_each(InputRange range, UnaryFunction func) {
     for (; !range.empty(); range.pop_front()) {
         func(range.front());
     }
-    return std::move(func);
+    return func;
 }
 
 /** @brief A pipeable version of ostd::for_each().
