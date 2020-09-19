@@ -24,6 +24,7 @@
 #include <stdexcept>
 #include <memory>
 
+#include <ostd/platform.hh>
 #include <ostd/generic_condvar.hh>
 
 namespace ostd {
@@ -33,7 +34,7 @@ namespace ostd {
  */
 
 /** @brief Thrown when manipulating a channel that has been closed. */
-struct channel_error: std::logic_error {
+struct OSTD_EXPORT channel_error: std::logic_error {
     using std::logic_error::logic_error;
     /* empty, for vtable placement */
     virtual ~channel_error();

@@ -88,7 +88,7 @@ template<typename T = char, bool = std::is_trivial_v<T>>
 struct stream_range;
 
 /** @brief Thrown on stream errors. */
-struct stream_error: std::system_error {
+struct OSTD_EXPORT stream_error: std::system_error {
     using std::system_error::system_error;
     /* empty, for vtable placement */
     virtual ~stream_error();
@@ -102,7 +102,7 @@ struct stream_line_range;
  * All streams derive from this, for example ostd::file_steram.
  * They implement the virtual interface provided by this class.
  */
-struct stream {
+struct OSTD_EXPORT stream {
     /** @brief The stream offset type. */
     using offset_type = stream_off_t;
 

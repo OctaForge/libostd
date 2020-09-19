@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <condition_variable>
 
+#include <ostd/platform.hh>
+
 namespace ostd {
 
 /** @addtogroup Concurrency
@@ -23,7 +25,7 @@ namespace ostd {
  */
 
 namespace detail {
-    struct cond_iface {
+    struct OSTD_EXPORT cond_iface {
         cond_iface() {}
         virtual ~cond_iface();
         virtual void notify_one() = 0;

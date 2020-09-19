@@ -54,14 +54,14 @@ namespace ostd {
  *
  * These can include a dead coroutine/generator call/access.
  */
-struct coroutine_error: std::runtime_error {
+struct OSTD_EXPORT coroutine_error: std::runtime_error {
     using std::runtime_error::runtime_error;
     /* empty, for vtable placement */
     virtual ~coroutine_error();
 };
 
 namespace detail {
-    struct stack_free_iface {
+    struct OSTD_EXPORT stack_free_iface {
         stack_free_iface() {}
         /* empty, for vtable placement */
         virtual ~stack_free_iface();
@@ -84,7 +84,7 @@ namespace detail {
  * managing the coroutine as well as its entry point. All coroutine types
  * inherit from this.
  */
-struct coroutine_context {
+struct OSTD_EXPORT coroutine_context {
     /** @brief Gets the currently executing coroutine context.
      *
      * Sometimes custom coroutine types might want to bypass being able

@@ -32,7 +32,7 @@ namespace ostd {
  */
 
 /** @brief Thrown on errors in ostd::split_args(). */
-struct word_error: std::runtime_error {
+struct OSTD_EXPORT word_error: std::runtime_error {
     using std::runtime_error::runtime_error;
     /* empty, for vtable placement */
     virtual ~word_error();
@@ -81,7 +81,7 @@ Sink &&split_args(Sink &&out, string_range str) {
 }
 
 /** @brief Thrown on errors in ostd::subprocess. */
-struct subprocess_error: std::runtime_error {
+struct OSTD_EXPORT subprocess_error: std::runtime_error {
     using std::runtime_error::runtime_error;
     /* empty, for vtable placement */
     virtual ~subprocess_error();

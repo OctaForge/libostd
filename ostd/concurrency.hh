@@ -212,7 +212,7 @@ private:
  * The `start` method will also set the internal current scheduler pointer
  * so that APIs such as ostd::spawn() can work.
  */
-struct scheduler {
+struct OSTD_EXPORT scheduler {
 private:
     struct stack_allocator {
         stack_allocator() = delete;
@@ -544,7 +544,7 @@ namespace detail {
 
     OSTD_EXPORT extern thread_local csched_task *current_csched_task;
 
-    struct csched_task: coroutine_context {
+    struct OSTD_EXPORT csched_task: coroutine_context {
         friend struct coroutine_context;
 
         csched_task() = delete;

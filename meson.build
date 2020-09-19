@@ -22,6 +22,12 @@ else
     extra_cxxflags = []
 endif
 
+cxx = meson.get_compiler('cpp')
+
+if cxx.has_argument('-fvisibility=hidden')
+    add_global_arguments('-fvisibility=hidden', language: 'cpp')
+endif
+
 subdir('src')
 
 if get_option('build-tests')

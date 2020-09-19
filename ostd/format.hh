@@ -55,7 +55,7 @@ enum format_flags {
 };
 
 /** @brief Thrown when format string does not properly match the arguments. */
-struct format_error: std::runtime_error {
+struct OSTD_EXPORT format_error: std::runtime_error {
     using std::runtime_error::runtime_error;
     /* empty, for vtable placement */
     virtual ~format_error();

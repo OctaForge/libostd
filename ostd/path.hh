@@ -90,7 +90,7 @@ namespace detail {
  *
  * It inherits from std::runtime_error and has the same methods and behavior.
  */
-struct path_error: std::runtime_error {
+struct OSTD_EXPORT path_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 
     /* empty, for vtable placement */

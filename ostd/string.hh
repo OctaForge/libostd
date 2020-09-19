@@ -790,7 +790,7 @@ namespace utf {
     static inline constexpr char32_t const max_unicode = 0x10FFFF;
 
     /** @brief Thrown on UTF-8 decoding failure. */
-    struct utf_error: std::runtime_error {
+    struct OSTD_EXPORT utf_error: std::runtime_error {
         using std::runtime_error::runtime_error;
         /* empty, for vtable placement */
         virtual ~utf_error();

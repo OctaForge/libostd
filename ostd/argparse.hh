@@ -41,7 +41,7 @@ namespace ostd {
  */
 
 /** @brief The error thrown on parsing and other failures. */
-struct arg_error: std::runtime_error {
+struct OSTD_EXPORT arg_error: std::runtime_error {
     using std::runtime_error::runtime_error;
 
     /* empty, for vtable placement */
@@ -98,7 +98,7 @@ enum class arg_value {
  *
  * This base class is abstract so it cannot be instantiated.
  */
-struct arg_description {
+struct OSTD_EXPORT arg_description {
     friend struct arg_description_container;
     friend struct arg_mutually_exclusive_group;
     friend struct arg_group;
@@ -138,7 +138,7 @@ protected:
  *
  * It's not instantiated directly.
  */
-struct arg_argument: arg_description {
+struct OSTD_EXPORT arg_argument: arg_description {
     /* empty, for vtable placement */
     virtual ~arg_argument();
 
@@ -225,7 +225,7 @@ private:
  *
  *See ostd::basic_arg_parser for more.
  */
-struct arg_optional: arg_argument {
+struct OSTD_EXPORT arg_optional: arg_argument {
     template<typename HelpFormatter>
     friend struct basic_arg_parser;
     friend struct arg_description_container;
@@ -459,7 +459,7 @@ private:
  *
  *See ostd::basic_arg_parser for more.
  */
-struct arg_positional: arg_argument {
+struct OSTD_EXPORT arg_positional: arg_argument {
     template<typename HelpFormatter>
     friend struct basic_arg_parser;
     friend struct arg_description_container;
@@ -603,7 +603,7 @@ private:
  * A mutually exclusive group can also have the `required` flag set
  * in which case one of the arguments must always be used.
  */
-struct arg_mutually_exclusive_group: arg_description {
+struct OSTD_EXPORT arg_mutually_exclusive_group: arg_description {
     friend struct arg_description_container;
 
     /* empty, for vtable placement */
@@ -940,7 +940,7 @@ protected:
  * A group is named and can optionally have a title. The title is
  * displayed in help listing. If not set, the name is displayed.
  */
-struct arg_group: arg_description, arg_description_container {
+struct OSTD_EXPORT arg_group: arg_description, arg_description_container {
     friend struct arg_description_container;
 
     /* empty, for vtable placement */
