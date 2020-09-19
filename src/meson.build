@@ -49,7 +49,7 @@ thread_dep = dependency('threads')
 libostd_gen_unicode_exe = executable('gen_unicode',
     ['../gen_unicode.cc'],
     include_directories: libostd_includes,
-    cpp_args: extra_cxxflags + ['-DOSTD_GEN_UNICODE_BUILD'],
+    cpp_args: ['-DOSTD_GEN_UNICODE_BUILD'],
     install: false,
     native: true
 )
@@ -70,7 +70,6 @@ libostd_lib = both_libraries('ostd',
     libostd_src, libostd_extra_src,
     dependencies: thread_dep,
     include_directories: libostd_includes + [include_directories('.')],
-    cpp_args: extra_cxxflags,
     install: true,
     version: meson.project_version()
 )

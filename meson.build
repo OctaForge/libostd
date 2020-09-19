@@ -1,6 +1,6 @@
 project('libostd', ['cpp'],
     version: '0.1.0',
-    default_options: ['buildtype=plain', 'cpp_std=c++17'],
+    default_options: ['buildtype=plain', 'cpp_std=c++17', 'warning_level=3'],
     meson_version: '>=0.46'
 )
 
@@ -15,14 +15,16 @@ unicode_data = join_paths('data', 'UnicodeData-11.0.txt')
 
 libostd_includes = [include_directories('.')]
 
-tgt_compiler_id = meson.get_compiler('cpp').get_id()
-if tgt_compiler_id == 'gcc' or tgt_compiler_id == 'clang'
-    extra_cxxflags = ['-Wextra', '-Wshadow', '-Wold-style-cast']
-else
-    extra_cxxflags = []
-endif
-
 cxx = meson.get_compiler('cpp')
+
+if get_option('buildtype') != 'plain'
+    if cxx.has_argument('-Wshadow')
+        add_global_arguments('-Wshadow', language: 'cpp')
+    endif
+    if cxx.has_argument('-Wold-style-cast')
+        add_global_arguments('-Wold-style-cast', language: 'cpp')
+    endif
+endif
 
 if cxx.has_argument('-fvisibility=hidden')
     add_global_arguments('-fvisibility=hidden', language: 'cpp')
