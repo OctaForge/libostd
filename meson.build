@@ -11,7 +11,7 @@ dir_lib     = join_paths(dir_prefix, get_option('libdir'))
 
 dir_package_include = join_paths(dir_include, 'ostd')
 
-unicode_data = join_paths('data', 'UnicodeData-11.0.txt')
+unicode_data = join_paths('data', 'UnicodeData-13.0.txt')
 
 libostd_includes = [include_directories('.')]
 

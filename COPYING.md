@@ -34,7 +34,7 @@ to the project here.
 Additional thanks to Dale Weiler aka graphitemaster (reference code in the
 Neothyne project) and cppreference.com.
 
-**The data/UnicodeData-11.0.txt file is taken from the Unicode Character
+**The data/UnicodeData-13.0.txt file is taken from the Unicode Character
 Database and provided under the following license:**
 
 COPYRIGHT AND PERMISSION NOTICE
