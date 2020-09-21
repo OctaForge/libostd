@@ -20,6 +20,7 @@ foreach example: libostd_examples_src
         [example],
         dependencies: [libostd, thread_dep],
         include_directories: libostd_includes,
+        cpp_args: extra_cxxflags,
         install: false
     )
 endforeach

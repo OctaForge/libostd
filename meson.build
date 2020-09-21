@@ -17,17 +17,19 @@ libostd_includes = [include_directories('.')]
 
 cxx = meson.get_compiler('cpp')
 
+extra_cxxflags = []
+
 if get_option('buildtype') != 'plain'
     if cxx.has_argument('-Wshadow')
-        add_global_arguments('-Wshadow', language: 'cpp')
+        extra_cxxflags += '-Wshadow'
     endif
     if cxx.has_argument('-Wold-style-cast')
-        add_global_arguments('-Wold-style-cast', language: 'cpp')
+        extra_cxxflags += '-Wold-style-cast'
     endif
 endif
 
 if cxx.has_argument('-fvisibility=hidden')
-    add_global_arguments('-fvisibility=hidden', language: 'cpp')
+    extra_cxxflags += '-fvisibility=hidden'
 endif
 
 subdir('src')

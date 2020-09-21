@@ -2,6 +2,7 @@ test_runner_exe = executable('test_runner',
     ['test_runner.cc'],
     dependencies: libostd,
     include_directories: libostd_includes,
+    cpp_args: extra_cxxflags,
     install: false
 )
 
@@ -39,6 +40,7 @@ foreach test_idx: libostd_tests_indices
         [libostd_tests_src[test_idx]],
         dependencies: libostd,
         include_directories: libostd_includes,
+        cpp_args: extra_cxxflags,
         install: false
     )
 endforeach
