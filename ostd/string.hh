@@ -126,6 +126,14 @@ public:
         p_beg(v.p_beg), p_end(v.p_end)
     {}
 
+    /** @brief Slices can be constructed from string views. */
+    template<typename U>
+    basic_char_range(std::basic_string_view<
+        std::remove_const_t<value_type>, U
+    > const &v) noexcept:
+        p_beg{v.data()}, p_end{v.data() + v.size()}
+    {}
+
     /** @brief Constructs a slice from a pointer or a static array.
      *
      * This constructor handles two cases. The input must be convertible
