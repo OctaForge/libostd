@@ -21,7 +21,7 @@ namespace ostd {
 
 /* place the vtables in here */
 
-path_error::~path_error() {}
+OSTD_EXPORT path_error::~path_error() {}
 
 namespace fs {
     fs_error::~fs_error() {}

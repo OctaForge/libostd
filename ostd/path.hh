@@ -1263,7 +1263,7 @@ using file_time_t = std::chrono::time_point<std::chrono::system_clock>;
  * up to two paths involved in the operation as ostd::path. Whether those
  * are used depends on the operation.
  */
-struct fs_error: std::system_error {
+struct OSTD_EXPORT fs_error: std::system_error {
     /** @brief Constructs the error without paths. */
     fs_error(std::string const &warg, std::error_code ec):
         std::system_error::system_error(ec, warg)

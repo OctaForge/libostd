@@ -198,7 +198,7 @@ private:
     bool p_action = false;
 };
 
-struct make_task {
+struct OSTD_EXPORT make_task {
     make_task() {}
     virtual ~make_task();
 

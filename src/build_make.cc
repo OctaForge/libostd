@@ -9,7 +9,7 @@ namespace ostd {
 namespace build {
 
 /* place the vtable in here */
-make_task::~make_task() {}
+OSTD_EXPORT make_task::~make_task() {}
 
 static bool check_exec(
     string_range tname, std::vector<string_range> const &deps
